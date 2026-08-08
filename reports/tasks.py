@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
+import time as time_module
 from datetime import datetime, time as dt_time, timedelta
 from urllib import error as urlerror
 from urllib import request as urlrequest
@@ -10,9 +12,11 @@ from celery import shared_task
 from django.apps import apps
 from django.conf import settings
 from django.core.cache import cache as django_cache
+from django.core.files import File
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.core.validators import validate_email
+from django.db import transaction
 from django.db.models import Count, Q
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -154,7 +158,17 @@ def monitor_infrastructure_capacity_task(self) -> dict:
     so the memory ratio needs to be visible *before* it gets there.
     """
     task_id, retries, trace_id = _task_ctx(self)
-    report: dict = {"redis_used_percent": None, "expired_sessions": None, "alerts": []}
+    report: dict = {
+        "redis_used_percent": None,
+        "expired_sessions": None,
+        "cpu_percent": None,
+        "memory_percent": None,
+        "disk_percent": None,
+        "queue_lengths": {},
+        "http_5xx_percent": None,
+        "http_average_ms": None,
+        "alerts": [],
+    }
 
     def _threshold(name: str, default: int) -> int:
         # Deliberately not `value or default`: a configured 0 means "always
@@ -200,15 +214,120 @@ def monitor_infrastructure_capacity_task(self) -> dict:
     except Exception:
         logger.debug("Session backlog probe failed", exc_info=True)
 
+    # Host/container resource pressure. psutil sees host resources on the
+    # current Docker deployment; disk_usage('/') observes the same backing
+    # filesystem whose exhaustion would stop uploads and PostgreSQL writes.
+    try:
+        def _cpu_sample():
+            with open("/proc/stat", "r", encoding="ascii") as proc_stat:
+                fields = [int(value) for value in proc_stat.readline().split()[1:]]
+            idle = fields[3] + (fields[4] if len(fields) > 4 else 0)
+            return sum(fields), idle
+
+        total_before, idle_before = _cpu_sample()
+        time_module.sleep(0.15)
+        total_after, idle_after = _cpu_sample()
+        total_delta = max(1, total_after - total_before)
+        cpu_percent = round(
+            max(0.0, min(100.0, (1 - ((idle_after - idle_before) / total_delta)) * 100)),
+            1,
+        )
+
+        meminfo = {}
+        with open("/proc/meminfo", "r", encoding="ascii") as proc_mem:
+            for line in proc_mem:
+                key, raw = line.split(":", 1)
+                meminfo[key] = int(raw.strip().split()[0])
+        total_memory = int(meminfo.get("MemTotal") or 0)
+        available_memory = int(meminfo.get("MemAvailable") or 0)
+        memory_percent = round(
+            ((total_memory - available_memory) / total_memory) * 100,
+            1,
+        ) if total_memory else 0.0
+        report["cpu_percent"] = cpu_percent
+        report["memory_percent"] = memory_percent
+        if cpu_percent >= _threshold("CPU_ALERT_PERCENT", 85):
+            report["alerts"].append(f"CPU usage at {cpu_percent}%.")
+            opmetrics.increment("infra.cpu.high")
+        if memory_percent >= _threshold("MEMORY_ALERT_PERCENT", 85):
+            report["alerts"].append(f"Memory usage at {memory_percent}%.")
+            opmetrics.increment("infra.memory.high")
+    except Exception:
+        logger.debug("CPU/memory capacity probe failed", exc_info=True)
+
+    try:
+        disk = shutil.disk_usage("/")
+        disk_percent = round((disk.used / disk.total) * 100, 1) if disk.total else 0.0
+        report["disk_percent"] = disk_percent
+        if disk_percent >= _threshold("DISK_ALERT_PERCENT", 80):
+            report["alerts"].append(
+                f"Disk usage at {disk_percent}% ({round(disk.free / (1024 ** 3), 1)} GB free)."
+            )
+            opmetrics.increment("infra.disk.high")
+    except Exception:
+        logger.debug("Disk capacity probe failed", exc_info=True)
+
+    try:
+        import redis as redis_client
+
+        broker_url = str(getattr(settings, "CELERY_BROKER_URL", "") or "")
+        broker = redis_client.from_url(broker_url, socket_connect_timeout=2, socket_timeout=2)
+        queue_limit = _threshold("CELERY_QUEUE_ALERT_LENGTH", 200)
+        for queue_name in ("default", "notifications", "images", "periodic"):
+            length = int(broker.llen(queue_name) or 0)
+            report["queue_lengths"][queue_name] = length
+            if length >= queue_limit:
+                report["alerts"].append(
+                    f"Celery queue '{queue_name}' contains {length} pending tasks."
+                )
+                opmetrics.increment(f"infra.queue.high.{queue_name}")
+    except Exception:
+        logger.debug("Celery queue probe failed", exc_info=True)
+
+    # Application health from the current UTC-hour bucket. Minimum samples keep
+    # one isolated failure/slow request from producing a misleading percentage.
+    try:
+        metric_snapshot = opmetrics.snapshot()
+        request_count = int(metric_snapshot.get("http.requests.total") or 0)
+        error_count = int(metric_snapshot.get("http.responses.5xx") or 0)
+        timing_count = int(metric_snapshot.get("http.response.duration.count") or 0)
+        timing_sum = int(metric_snapshot.get("http.response.duration.sum_ms") or 0)
+        min_samples = _threshold("HTTP_ALERT_MIN_SAMPLES", 20)
+        if request_count:
+            error_percent = round(error_count * 100 / request_count, 2)
+            report["http_5xx_percent"] = error_percent
+            if request_count >= min_samples and error_percent >= float(
+                getattr(settings, "HTTP_5XX_ALERT_PERCENT", 2.0) or 2.0
+            ):
+                report["alerts"].append(
+                    f"HTTP 5xx rate at {error_percent}% ({error_count}/{request_count})."
+                )
+                opmetrics.increment("infra.http.5xx_high")
+        if timing_count:
+            average_ms = round(timing_sum / timing_count, 1)
+            report["http_average_ms"] = average_ms
+            if timing_count >= min_samples and average_ms >= _threshold(
+                "HTTP_LATENCY_ALERT_MS", 2000
+            ):
+                report["alerts"].append(
+                    f"Average HTTP response time at {average_ms} ms ({timing_count} samples)."
+                )
+                opmetrics.increment("infra.http.latency_high")
+    except Exception:
+        logger.debug("HTTP operational metrics probe failed", exc_info=True)
+
     if report["alerts"]:
         try:
             from .telegram_alerts import TelegramAlert, queue_telegram_alert
 
             queue_telegram_alert(
                 TelegramAlert(
-                    # Bucketed by day so a sustained condition alerts once daily
-                    # rather than on every run.
-                    event_key=f"infra:capacity:{timezone.localdate().isoformat()}",
+                    # One alert per hour while a condition persists: prompt
+                    # enough for an outage, bounded enough to avoid alert spam.
+                    event_key=(
+                        "infra:capacity:"
+                        + timezone.localtime().strftime("%Y%m%d%H")
+                    ),
                     category="support",
                     text="⚠️ <b>تنبيه سعة البنية التحتية</b>\n" + "\n".join(report["alerts"]),
                 )
@@ -1679,3 +1798,262 @@ def render_achievement_pdf_task(self, achievement_file_id: int, base_url: str | 
     store_rendered_pdf(cache_key, pdf_bytes)
     opmetrics.increment("pdf.rendered.achievement")
     return True
+
+
+@shared_task(bind=True, ignore_result=False, max_retries=0, soft_time_limit=90, time_limit=120)
+def render_group_report_pdf_task(self, group_id: int, base_url: str | None, cache_key: str) -> bool:
+    from .models import SchoolGroup
+    from .pdf_offload import store_rendered_pdf
+    from .pdf_report import _generate_report_pdf_weasy
+    from .services_group_export import build_group_snapshot
+
+    group = SchoolGroup.objects.filter(pk=group_id).first()
+    if group is None:
+        return False
+    html = render_to_string(
+        "reports/pdf/group_report_pdf.html",
+        {"snapshot": build_group_snapshot(group), "group": group},
+    )
+    payload = _generate_report_pdf_weasy(html=html, base_url=base_url)
+    store_rendered_pdf(cache_key, payload)
+    opmetrics.increment("pdf.rendered.group_report")
+    return True
+
+
+@shared_task(bind=True, ignore_result=False, max_retries=0, soft_time_limit=90, time_limit=120)
+def render_leadership_pdf_task(self, portfolio_id: int, base_url: str | None, cache_key: str) -> bool:
+    from .models import SchoolLeadershipPortfolio
+    from .pdf_leadership import generate_leadership_portfolio_pdf
+    from .pdf_offload import store_rendered_pdf
+
+    portfolio = SchoolLeadershipPortfolio.objects.select_related("school").filter(pk=portfolio_id).first()
+    if portfolio is None:
+        return False
+    payload = generate_leadership_portfolio_pdf(portfolio, base_url=base_url)
+    store_rendered_pdf(cache_key, payload)
+    opmetrics.increment("pdf.rendered.leadership")
+    return True
+
+
+@shared_task(bind=True, ignore_result=False, max_retries=0, soft_time_limit=90, time_limit=120)
+def render_user_guide_pdf_task(self, base_url: str, cache_key: str) -> bool:
+    from .pdf_offload import store_rendered_pdf
+    from .pdf_user_guide import generate_user_guide_pdf
+
+    store_rendered_pdf(cache_key, generate_user_guide_pdf(base_url=base_url))
+    opmetrics.increment("pdf.rendered.user_guide")
+    return True
+
+
+@shared_task(bind=True, ignore_result=True, max_retries=0, soft_time_limit=25 * 60, time_limit=30 * 60)
+def build_generated_export_task(self, job_id: int) -> bool:
+    """Build a ZIP in the media worker and persist it to private R2 storage."""
+    from .cache_utils import redis_cache_lock
+    from .models import GeneratedExportJob, School, SchoolYearArchive, Teacher
+    from .services_archive import (
+        archive_snapshot_capacity_error,
+        sync_school_archive_storage_usage,
+    )
+    from .services_export import (
+        archive_zip_filename,
+        build_school_export_zip_file,
+        export_zip_filename,
+    )
+
+    with redis_cache_lock(f"generated-export:build:{int(job_id)}", timeout=31 * 60) as acquired:
+        if not acquired:
+            logger.info("Generated export already owned by another worker job=%s", job_id)
+            return True
+
+        with transaction.atomic():
+            job = (
+                GeneratedExportJob.objects.select_for_update()
+                .select_related("school", "requested_by", "archive")
+                .filter(pk=job_id)
+                .first()
+            )
+            if job is None:
+                return False
+            if job.status == GeneratedExportJob.Status.READY:
+                return True
+            job.status = GeneratedExportJob.Status.RUNNING
+            job.started_at = timezone.now()
+            job.error_message = ""
+            job.save(update_fields=["status", "started_at", "error_message"])
+
+        zip_file = None
+        archive = None
+        try:
+            school = School.objects.get(pk=job.school_id)
+            requested_by = Teacher.objects.filter(pk=job.requested_by_id).first()
+            params = dict(job.parameters or {})
+
+            if job.kind == GeneratedExportJob.Kind.SCHOOL_ZIP:
+                zip_file = build_school_export_zip_file(school, request=None)
+                filename = export_zip_filename(school)
+                metadata = None
+            else:
+                academic_year = str(params.get("academic_year") or "").strip()
+                if not academic_year:
+                    raise ValueError("السنة الدراسية مطلوبة لإنشاء الأرشيف.")
+                school_wide = bool(params.get("school_wide", True))
+                zip_file, metadata = build_school_export_zip_file(
+                    school,
+                    academic_year=academic_year,
+                    teacher=requested_by,
+                    school_wide=school_wide,
+                    request=None,
+                    return_metadata=True,
+                )
+                filename = archive_zip_filename(school, academic_year)
+
+            try:
+                zip_file.seek(0, 2)
+                size_bytes = int(zip_file.tell())
+                zip_file.seek(0)
+            except Exception:
+                size_bytes = int((metadata or {}).get("archive_size_bytes") or 0)
+
+            if job.kind == GeneratedExportJob.Kind.ARCHIVE_SNAPSHOT:
+                capacity_error = archive_snapshot_capacity_error(school, size_bytes)
+                if capacity_error:
+                    raise ValueError(capacity_error)
+
+                academic_year = str(params.get("academic_year") or "").strip()
+                with transaction.atomic():
+                    School.objects.select_for_update().get(pk=school.pk)
+                    locked_job = GeneratedExportJob.objects.select_for_update().get(pk=job.pk)
+                    if locked_job.status == GeneratedExportJob.Status.READY:
+                        return True
+                    latest_version = (
+                        SchoolYearArchive.objects.filter(
+                            school=school,
+                            academic_year=academic_year,
+                        )
+                        .order_by("-version")
+                        .values_list("version", flat=True)
+                        .first()
+                        or 0
+                    )
+                    archive = SchoolYearArchive(
+                        school=school,
+                        academic_year=academic_year,
+                        version=int(latest_version) + 1,
+                        status=(
+                            SchoolYearArchive.Status.PARTIAL
+                            if metadata["is_partial"]
+                            else SchoolYearArchive.Status.READY
+                        ),
+                        archive_sha256=metadata["archive_sha256"],
+                        file_count=metadata["file_count"],
+                        missing_file_count=metadata["missing_file_count"],
+                        failed_pdf_count=metadata["failed_pdf_count"],
+                        report_count=metadata["report_count"],
+                        achievement_count=metadata["achievement_count"],
+                        leadership_count=metadata["leadership_count"],
+                        ticket_count=metadata["ticket_count"],
+                        circular_count=metadata["circular_count"],
+                        notification_count=metadata["notification_count"],
+                        notes=metadata["notes"],
+                        created_by=requested_by,
+                    )
+                    archive.archive_file.save(filename, File(zip_file), save=False)
+                    archive.save()
+                    locked_job.status = GeneratedExportJob.Status.READY
+                    locked_job.archive = archive
+                    locked_job.filename = filename
+                    locked_job.size_bytes = size_bytes
+                    locked_job.completed_at = timezone.now()
+                    locked_job.expires_at = None
+                    locked_job.save(
+                        update_fields=[
+                            "status", "archive", "filename", "size_bytes",
+                            "completed_at", "expires_at",
+                        ]
+                    )
+                sync_school_archive_storage_usage(school)
+            else:
+                job.artifact_file.save(filename, File(zip_file), save=False)
+                job.status = GeneratedExportJob.Status.READY
+                job.filename = filename
+                job.content_type = "application/zip"
+                job.size_bytes = size_bytes
+                job.completed_at = timezone.now()
+                job.expires_at = timezone.now() + timedelta(
+                    hours=max(1, int(getattr(settings, "GENERATED_EXPORT_RETENTION_HOURS", 6) or 6))
+                )
+                job.save(
+                    update_fields=[
+                        "artifact_file", "status", "filename", "content_type",
+                        "size_bytes", "completed_at", "expires_at",
+                    ]
+                )
+
+            opmetrics.increment(f"generated_export.success.{job.kind}")
+            logger.info(
+                "Generated export ready job=%s kind=%s school=%s bytes=%s",
+                job.pk,
+                job.kind,
+                job.school_id,
+                size_bytes,
+            )
+            return True
+        except Exception as exc:
+            logger.exception("Generated export failed job=%s", job_id)
+            GeneratedExportJob.objects.filter(pk=job_id).update(
+                status=GeneratedExportJob.Status.FAILED,
+                error_message=str(exc)[:500],
+                completed_at=timezone.now(),
+            )
+            opmetrics.increment("generated_export.failed")
+            if archive is not None and getattr(archive.archive_file, "name", ""):
+                try:
+                    persisted = bool(
+                        archive.pk
+                        and SchoolYearArchive.objects.filter(pk=archive.pk).exists()
+                    )
+                    if not persisted:
+                        archive.archive_file.delete(save=False)
+                except Exception:
+                    pass
+            if (
+                job.kind != GeneratedExportJob.Kind.ARCHIVE_SNAPSHOT
+                and getattr(job.artifact_file, "name", "")
+            ):
+                try:
+                    job.artifact_file.delete(save=False)
+                except Exception:
+                    pass
+            raise
+        finally:
+            if zip_file is not None:
+                try:
+                    zip_file.close()
+                except Exception:
+                    pass
+
+
+@shared_task(ignore_result=True, soft_time_limit=300, time_limit=600)
+def cleanup_generated_exports_task() -> int:
+    """Delete expired ad-hoc artifacts while retaining their audit rows."""
+    from .models import GeneratedExportJob
+
+    expired = GeneratedExportJob.objects.filter(
+        status=GeneratedExportJob.Status.READY,
+        archive__isnull=True,
+        expires_at__isnull=False,
+        expires_at__lte=timezone.now(),
+    ).exclude(artifact_file="")
+    cleaned = 0
+    for job in expired.iterator(chunk_size=100):
+        try:
+            job.artifact_file.delete(save=False)
+            GeneratedExportJob.objects.filter(pk=job.pk).update(
+                artifact_file="",
+                status=GeneratedExportJob.Status.EXPIRED,
+            )
+            cleaned += 1
+        except Exception:
+            logger.exception("Unable to clean generated export job=%s", job.pk)
+    opmetrics.increment("generated_export.cleaned", cleaned)
+    return cleaned

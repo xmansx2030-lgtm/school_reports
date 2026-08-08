@@ -57,6 +57,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--moyasar-environment", choices=("live", "test"))
     parser.add_argument("--pdf-offload-enabled", choices=BOOL_CHOICES)
     parser.add_argument("--celery-media-concurrency", type=int)
+    parser.add_argument("--web-concurrency", type=int)
     parser.add_argument(
         "--moyasar-key-from-stdin",
         action="store_true",
@@ -81,6 +82,10 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
         if not 1 <= args.celery_media_concurrency <= 8:
             raise SystemExit("CELERY_MEDIA_CONCURRENCY must be between 1 and 8.")
         values["CELERY_MEDIA_CONCURRENCY"] = str(args.celery_media_concurrency)
+    if args.web_concurrency is not None:
+        if not 1 <= args.web_concurrency <= 4:
+            raise SystemExit("WEB_CONCURRENCY must be between 1 and 4 on this host.")
+        values["WEB_CONCURRENCY"] = str(args.web_concurrency)
 
     if args.moyasar_key_from_stdin:
         key = sys.stdin.read().strip()

@@ -4,7 +4,7 @@ from .base import *
 from .audit import AuditLog
 from .billing import SchoolSubscription, SubscriptionPlan
 from .reports import Report
-from .schools import Department, DepartmentMembership, School, SchoolMembership, Teacher
+from .schools import Department, DepartmentMembership, ReportType, School, SchoolMembership, Teacher
 from .tickets import Ticket
 from .notifications import Notification, TicketImage
 from .assignments import Assignment, AssignmentEvidence
@@ -14,6 +14,20 @@ from .lab import LabAsset, LabAssetHandover, LabExperiment
 from .meetings import Decision, Meeting, MeetingMinutes
 from .plans import Initiative, Plan
 from .scopes import Delegation, StaffScope
+
+
+def _invalidate_dashboard_after_commit(*school_ids) -> None:
+    ids = tuple(sorted({int(sid) for sid in school_ids if sid}))
+    if not ids:
+        return
+
+    def _invalidate():
+        from ..cache_utils import invalidate_school_dashboard
+
+        for school_id in ids:
+            invalidate_school_dashboard(school_id)
+
+    transaction.on_commit(_invalidate)
 
 
 def _bump_nav_context_role_version(user_id):
@@ -36,11 +50,55 @@ def invalidate_nav_context_after_membership_save(sender, instance, **kwargs):
     if kwargs.get("raw"):
         return
     _bump_nav_context_role_version(getattr(instance, "teacher_id", None))
+    _invalidate_dashboard_after_commit(getattr(instance, "school_id", None))
 
 
 @receiver(models.signals.post_delete, sender=SchoolMembership)
 def invalidate_nav_context_after_membership_delete(sender, instance, **kwargs):
     _bump_nav_context_role_version(getattr(instance, "teacher_id", None))
+    _invalidate_dashboard_after_commit(getattr(instance, "school_id", None))
+
+
+@receiver(post_save, sender=Teacher)
+def invalidate_school_dashboards_after_teacher_save(sender, instance, **kwargs):
+    if kwargs.get("raw"):
+        return
+    school_ids = SchoolMembership.objects.filter(teacher_id=instance.pk).values_list(
+        "school_id", flat=True
+    )
+    _invalidate_dashboard_after_commit(*school_ids)
+
+
+@receiver(models.signals.pre_delete, sender=Teacher)
+def remember_teacher_schools_before_delete(sender, instance, **kwargs):
+    instance._dashboard_school_ids = tuple(
+        SchoolMembership.objects.filter(teacher_id=instance.pk).values_list("school_id", flat=True)
+    )
+
+
+@receiver(models.signals.post_delete, sender=Teacher)
+def invalidate_school_dashboards_after_teacher_delete(sender, instance, **kwargs):
+    _invalidate_dashboard_after_commit(*getattr(instance, "_dashboard_school_ids", ()))
+
+
+@receiver(post_save, sender=Report)
+@receiver(models.signals.post_delete, sender=Report)
+@receiver(post_save, sender=Ticket)
+@receiver(models.signals.post_delete, sender=Ticket)
+def invalidate_dashboard_after_school_activity(sender, instance, **kwargs):
+    if kwargs.get("raw"):
+        return
+    _invalidate_dashboard_after_commit(getattr(instance, "school_id", None))
+
+
+@receiver(post_save, sender=Department)
+@receiver(models.signals.post_delete, sender=Department)
+@receiver(post_save, sender=ReportType)
+@receiver(models.signals.post_delete, sender=ReportType)
+def invalidate_dashboard_after_department_change(sender, instance, **kwargs):
+    if kwargs.get("raw"):
+        return
+    _invalidate_dashboard_after_commit(getattr(instance, "school_id", None))
 
 
 # النطاق والتفويض يبطلان القائمة كما تبطلها العضوية.

@@ -235,15 +235,22 @@ def leadership_portfolio_print(request: HttpRequest, pk: int) -> HttpResponse:
 def leadership_portfolio_pdf(request: HttpRequest, pk: int) -> HttpResponse:
     portfolio = _manager_portfolio_or_404(request, pk)
     _ensure_leadership_sections(portfolio)
-    html = render_to_string(
-        "reports/pdf/leadership_portfolio.html",
-        _leadership_context(portfolio),
-        request=request,
-    )
     try:
-        from weasyprint import HTML
+        from ..pdf_leadership import generate_leadership_portfolio_pdf
+        from ..pdf_offload import render_pdf_offloaded
+        from ..tasks import render_leadership_pdf_task
 
-        pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
+        base_url = request.build_absolute_uri("/")
+        pdf = render_pdf_offloaded(
+            task=render_leadership_pdf_task,
+            task_args=[portfolio.pk, base_url],
+            render_locally=lambda: generate_leadership_portfolio_pdf(
+                portfolio,
+                request=request,
+                base_url=base_url,
+            ),
+            label=f"leadership:{portfolio.pk}",
+        )
     except Exception:
         logger.exception("Leadership portfolio PDF generation failed")
         return HttpResponse("تعذر توليد ملف PDF حاليًا.", status=503)

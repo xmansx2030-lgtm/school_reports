@@ -93,51 +93,18 @@ def user_guide_download(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def user_guide_download_pdf(request: HttpRequest) -> HttpResponse:
     """Download the user guide as a PDF (includes platform logo)."""
-    guide_html = render_to_string(
-        "reports/partials/user_guide_content.html",
-        {"pdf_mode": True},
-        request=request,
-    )
-
-    logo_src = None
     try:
-        import base64
+        from ..pdf_offload import render_pdf_offloaded
+        from ..pdf_user_guide import generate_user_guide_pdf
+        from ..tasks import render_user_guide_pdf_task
 
-        fpath = finders.find("img/logo1.png")
-        if fpath:
-            with open(fpath, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode("ascii")
-            logo_src = f"data:image/png;base64,{b64}"
-    except Exception:
-        logo_src = None
-
-    if not logo_src:
-        # Fallback to absolute URL (works on Linux/production when static is served).
-        logo_src = request.build_absolute_uri(static("img/logo1.png"))
-    html = render_to_string(
-        "reports/user_guide_pdf.html",
-        {
-            "title": "دليل استخدام منصة توثيق",
-            "logo_url": logo_src,
-            # ``guide_html`` ناتج ``render_to_string`` لقالب ثابت في المستودع،
-            # لا مدخلَ مستخدمٍ فيه. ويُصيَّر إلى PDF لا إلى صفحة تُقدَّم لمتصفّح.
-            "guide_html": mark_safe(guide_html),  # noqa: S308
-        },
-        request=request,
-    )
-
-    try:
-        from weasyprint import HTML
-    except Exception:
-        logging.getLogger(__name__).exception("WeasyPrint is not available for PDF rendering")
-        return HttpResponse(
-            "تعذر توليد ملف PDF على هذا الخادم حاليًا. شغّل المشروع على Docker/Render (Linux) أو ثبّت مكتبات WeasyPrint على Windows.",
-            status=503,
-            content_type="text/plain; charset=utf-8",
+        base_url = request.build_absolute_uri("/")
+        pdf_bytes = render_pdf_offloaded(
+            task=render_user_guide_pdf_task,
+            task_args=[base_url],
+            render_locally=lambda: generate_user_guide_pdf(base_url=base_url),
+            label="user-guide",
         )
-
-    try:
-        pdf_bytes = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
     except Exception:
         logging.getLogger(__name__).exception("Failed to render user guide PDF")
         return HttpResponse(

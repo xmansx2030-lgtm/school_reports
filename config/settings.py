@@ -311,6 +311,19 @@ try:
 except Exception:
     UNREAD_COUNT_CACHE_TTL_SECONDS = 15
 
+# School dashboard aggregate queries are hot and change much less often than
+# they are read. Keep the fresh TTL inside the agreed 30–60 second window; a
+# stale copy is used only while one worker owns the Redis rebuild lock.
+try:
+    SCHOOL_DASHBOARD_CACHE_TTL_SECONDS = max(
+        30, min(60, int(os.getenv("SCHOOL_DASHBOARD_CACHE_TTL_SECONDS", "45") or "45"))
+    )
+except (TypeError, ValueError):
+    SCHOOL_DASHBOARD_CACHE_TTL_SECONDS = 45
+SCHOOL_DASHBOARD_STALE_TTL_SECONDS = int(os.getenv("SCHOOL_DASHBOARD_STALE_TTL_SECONDS", "300") or "300")
+SCHOOL_DASHBOARD_LOCK_TTL_SECONDS = int(os.getenv("SCHOOL_DASHBOARD_LOCK_TTL_SECONDS", "15") or "15")
+SCHOOL_DASHBOARD_LOCK_WAIT_SECONDS = float(os.getenv("SCHOOL_DASHBOARD_LOCK_WAIT_SECONDS", "1.5") or "1.5")
+
 
 # ----------------- Applications -----------------
 INSTALLED_APPS = [
@@ -413,6 +426,22 @@ try:
 except (TypeError, ValueError):
     OVERLOAD_RETRY_AFTER_SECONDS = 5
 
+# Aggregate tenant budget. This complements per-user/IP throttles and prevents
+# one large school from consuming the whole database/concurrency allowance.
+SCHOOL_RATE_LIMIT_ENABLED = _env_bool("SCHOOL_RATE_LIMIT_ENABLED", True)
+try:
+    SCHOOL_RATE_LIMIT_REQUESTS = max(
+        60, int(os.getenv("SCHOOL_RATE_LIMIT_REQUESTS", "900") or "900")
+    )
+except (TypeError, ValueError):
+    SCHOOL_RATE_LIMIT_REQUESTS = 900
+try:
+    SCHOOL_RATE_LIMIT_WINDOW_SECONDS = max(
+        10, int(os.getenv("SCHOOL_RATE_LIMIT_WINDOW_SECONDS", "60") or "60")
+    )
+except (TypeError, ValueError):
+    SCHOOL_RATE_LIMIT_WINDOW_SECONDS = 60
+
 
 # ----------------- Middleware -----------------
 MIDDLEWARE = [
@@ -439,6 +468,9 @@ MIDDLEWARE = [
     "reports.middleware.SearchEngineIndexingMiddleware",
     "reports.middleware.IdleLogoutMiddleware",
     "reports.middleware.ActiveSchoolGuardMiddleware",
+    # ActiveSchoolGuard has already authorised and attached request.active_school,
+    # so the tenant limiter adds no database query.
+    "core.middleware.SchoolRateLimitMiddleware",
     "reports.middleware.SubscriptionMiddleware",
     "reports.middleware.ForcePasswordChangeMiddleware",
     "reports.middleware.ContentSecurityPolicyMiddleware",
@@ -741,6 +773,10 @@ CELERY_TASK_ROUTES = {
     "reports.tasks.process_ticket_image": {"queue": "images"},
     # توليد PDF: أثقل عملية في المنصة، ومكانها عامل الوسائط لا عامل الويب.
     "reports.tasks.render_achievement_pdf_task": {"queue": "images"},
+    "reports.tasks.render_group_report_pdf_task": {"queue": "images"},
+    "reports.tasks.render_leadership_pdf_task": {"queue": "images"},
+    "reports.tasks.render_user_guide_pdf_task": {"queue": "images"},
+    "reports.tasks.build_generated_export_task": {"queue": "images"},
     "reports.tasks.send_daily_manager_summary_task": {"queue": "periodic"},
     "reports.tasks._daily_summary_for_school": {"queue": "periodic"},
     "reports.tasks.check_subscription_expiry_task": {"queue": "periodic"},
@@ -751,7 +787,19 @@ CELERY_TASK_ROUTES = {
     "reports.tasks.cleanup_audit_logs_task": {"queue": "periodic"},
     "reports.tasks.cleanup_expired_sessions_task": {"queue": "periodic"},
     "reports.tasks.monitor_infrastructure_capacity_task": {"queue": "periodic"},
+    "reports.tasks.cleanup_generated_exports_task": {"queue": "periodic"},
 }
+
+# Heavy ZIPs are durable background jobs; PDFs render in the media worker and
+# return through a short-lived Redis key. Both keep CPU work out of Gunicorn.
+HEAVY_EXPORT_ASYNC_ENABLED = _env_bool(
+    "HEAVY_EXPORT_ASYNC_ENABLED", ENV == "production"
+)
+PDF_OFFLOAD_ENABLED = _env_bool("PDF_OFFLOAD_ENABLED", True)
+PDF_OFFLOAD_TIMEOUT_SECONDS = float(os.getenv("PDF_OFFLOAD_TIMEOUT_SECONDS", "45") or "45")
+GENERATED_EXPORT_RETENTION_HOURS = max(
+    1, int(os.getenv("GENERATED_EXPORT_RETENTION_HOURS", "6") or "6")
+)
 
 
 # ----------------- Audit Logs Retention -----------------
@@ -782,6 +830,13 @@ try:
     )
 except (TypeError, ValueError):
     EXPIRED_SESSION_ALERT_THRESHOLD = 100_000
+CPU_ALERT_PERCENT = int(os.getenv("CPU_ALERT_PERCENT", "85") or "85")
+MEMORY_ALERT_PERCENT = int(os.getenv("MEMORY_ALERT_PERCENT", "85") or "85")
+DISK_ALERT_PERCENT = int(os.getenv("DISK_ALERT_PERCENT", "80") or "80")
+CELERY_QUEUE_ALERT_LENGTH = int(os.getenv("CELERY_QUEUE_ALERT_LENGTH", "200") or "200")
+HTTP_ALERT_MIN_SAMPLES = int(os.getenv("HTTP_ALERT_MIN_SAMPLES", "20") or "20")
+HTTP_5XX_ALERT_PERCENT = float(os.getenv("HTTP_5XX_ALERT_PERCENT", "2.0") or "2.0")
+HTTP_LATENCY_ALERT_MS = int(os.getenv("HTTP_LATENCY_ALERT_MS", "2000") or "2000")
 
 
 # ----------------- Landing page pricing cache -----------------
@@ -945,8 +1000,13 @@ if crontab is not None:
     if INFRA_CAPACITY_MONITOR_ENABLED:
         CELERY_BEAT_SCHEDULE["monitor-infrastructure-capacity"] = {
             "task": "reports.tasks.monitor_infrastructure_capacity_task",
-            "schedule": crontab(minute="*/30"),
+            "schedule": crontab(minute="*/5"),
         }
+
+    CELERY_BEAT_SCHEDULE["cleanup-generated-exports-hourly"] = {
+        "task": "reports.tasks.cleanup_generated_exports_task",
+        "schedule": crontab(minute=20),
+    }
 
     if DAILY_MANAGER_REPORT_ENABLED:
         CELERY_BEAT_SCHEDULE["send-daily-manager-summary"] = {

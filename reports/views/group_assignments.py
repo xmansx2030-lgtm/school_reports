@@ -381,23 +381,31 @@ def group_report_pdf(request):
     from django.http import HttpResponse
     from django.template.loader import render_to_string
 
+    from ..pdf_offload import render_pdf_offloaded
     from ..services_group_export import build_group_snapshot, group_export_filename
+    from ..tasks import render_group_report_pdf_task
 
     groups = _director_groups(request)
     group = _selected_group(request, groups)
-    snapshot = build_group_snapshot(group)
-
-    html = render_to_string(
-        "reports/pdf/group_report_pdf.html",
-        {"snapshot": snapshot, "group": group},
-        request=request,
-    )
-
     try:
         from ..pdf_report import _generate_report_pdf_weasy
 
-        payload = _generate_report_pdf_weasy(
-            html=html, base_url=request.build_absolute_uri("/")
+        base_url = request.build_absolute_uri("/")
+
+        def _render_locally():
+            snapshot = build_group_snapshot(group)
+            html = render_to_string(
+                "reports/pdf/group_report_pdf.html",
+                {"snapshot": snapshot, "group": group},
+                request=request,
+            )
+            return _generate_report_pdf_weasy(html=html, base_url=base_url)
+
+        payload = render_pdf_offloaded(
+            task=render_group_report_pdf_task,
+            task_args=[group.pk, base_url],
+            render_locally=_render_locally,
+            label=f"group-report:{group.pk}",
         )
     except Exception:
         # تعذّر توليد PDF لا يجوز أن يترك المستخدم بصفحة خطأ: نعيده إلى

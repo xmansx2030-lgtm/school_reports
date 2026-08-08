@@ -24,8 +24,11 @@ from ..report_ai import (
     validate_report_text,
 )
 from ..gender_labels import school_gender_labels, school_gender_template_context
+from ..generated_exports import async_exports_enabled, enqueue_generated_export
+from ..models import GeneratedExportJob
 
 from ._helpers import *
+from .export_jobs import generated_export_job_response
 # Star imports skip underscore names; the size formatter is needed by name.
 from ..services_archive import _human_size
 from ._helpers import (
@@ -769,6 +772,20 @@ def school_archive_create(request: HttpRequest) -> HttpResponse:
         messages.error(request, "لا يمكن إنشاء نسخة فارغة؛ لا توجد بيانات حية لهذه السنة.")
         return redirect(f"{reverse('reports:school_archive')}?year={selected_year}")
 
+    if async_exports_enabled():
+        job, created = enqueue_generated_export(
+            school=active_school,
+            requested_by=request.user,
+            kind=GeneratedExportJob.Kind.ARCHIVE_SNAPSHOT,
+            parameters={"academic_year": selected_year, "school_wide": True},
+        )
+        if created:
+            messages.info(
+                request,
+                "بدأ إنشاء نسخة الأرشيف في الخلفية. يمكنك متابعة استخدام المنصة.",
+            )
+        return redirect(f"{reverse('reports:school_archive_export')}?job={job.pk}")
+
     zip_file = None
     archive = None
     try:
@@ -973,6 +990,14 @@ def school_archive_export(request: HttpRequest) -> HttpResponse:
     from django.http import FileResponse
     from ..services_export import build_school_export_zip_file, archive_zip_filename
 
+    job_id = request.GET.get("job")
+    if job_id:
+        return generated_export_job_response(
+            request,
+            job_id=job_id,
+            fallback_url=reverse("reports:school_archive"),
+        )
+
     active_school = _get_active_school(request)
     if active_school is None:
         messages.error(request, "فضلاً اختر/حدّد مدرسة أولاً.")
@@ -991,6 +1016,20 @@ def school_archive_export(request: HttpRequest) -> HttpResponse:
     if selected_year not in years:
         messages.error(request, "السنة المطلوبة غير متاحة في الأرشيف.")
         return redirect("reports:school_archive")
+
+    if async_exports_enabled():
+        job, created = enqueue_generated_export(
+            school=active_school,
+            requested_by=request.user,
+            kind=GeneratedExportJob.Kind.YEAR_ZIP,
+            parameters={
+                "academic_year": selected_year,
+                "school_wide": school_wide,
+            },
+        )
+        if created:
+            messages.info(request, "بدأ تجهيز أرشيف السنة في الخلفية.")
+        return redirect(f"{reverse('reports:school_archive_export')}?job={job.pk}")
 
     try:
         zip_file = build_school_export_zip_file(
@@ -2018,9 +2057,21 @@ def share_achievement_pdf(request: HttpRequest, token: str) -> HttpResponse:
     if not getattr(ach_file, "pdf_file", None):
         try:
             from django.core.files.base import ContentFile
-            from ..pdf_achievement import generate_achievement_pdf
+            from ..pdf_achievement import achievement_pdf_filename, generate_achievement_pdf
+            from ..pdf_offload import render_pdf_offloaded
+            from ..tasks import render_achievement_pdf_task
 
-            pdf_bytes, filename = generate_achievement_pdf(request=request, ach_file=ach_file)
+            base_url = request.build_absolute_uri("/")
+            filename = achievement_pdf_filename(ach_file)
+            pdf_bytes = render_pdf_offloaded(
+                task=render_achievement_pdf_task,
+                task_args=[ach_file.pk, base_url],
+                render_locally=lambda: generate_achievement_pdf(
+                    request=request,
+                    ach_file=ach_file,
+                )[0],
+                label=f"shared-achievement:{ach_file.pk}",
+            )
 
             try:
                 ach_file.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)

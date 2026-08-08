@@ -16,6 +16,9 @@ from ..services_export import (
     export_summary_counts,
 )
 from ..services_archive import school_archive_enabled
+from ..generated_exports import async_exports_enabled, enqueue_generated_export
+from ..models import GeneratedExportJob
+from .export_jobs import generated_export_job_response
 
 _XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -91,9 +94,27 @@ def school_data_export_download(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def school_data_export_zip(request: HttpRequest) -> HttpResponse:
     """تنزيل أرشيف ZIP يحوي ملفات المدرسة الفعلية + ملف Excel فهرس."""
+    job_id = request.GET.get("job")
+    if job_id:
+        return generated_export_job_response(
+            request,
+            job_id=job_id,
+            fallback_url=reverse("reports:school_data_export"),
+        )
+
     active_school, redirect_resp = _require_manager_school(request)
     if redirect_resp is not None:
         return redirect_resp
+
+    if async_exports_enabled():
+        job, created = enqueue_generated_export(
+            school=active_school,
+            requested_by=request.user,
+            kind=GeneratedExportJob.Kind.SCHOOL_ZIP,
+        )
+        if created:
+            messages.info(request, "بدأ تجهيز ملف ZIP في الخلفية.")
+        return redirect(f"{reverse('reports:school_data_export_zip')}?job={job.pk}")
 
     try:
         zip_file = build_school_export_zip_file(active_school, request=request)

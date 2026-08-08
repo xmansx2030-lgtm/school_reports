@@ -13,6 +13,7 @@ from ._helpers import (
     _clean_query_params, _clean_query_value, _parse_date_safe,
 )
 from ..context_processors import nav_context
+from ..cache_utils import get_school_dashboard_payload
 from ..gender_labels import school_gender_labels
 
 
@@ -1128,10 +1129,14 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
         ctx['recent_activities'] = recent_activities
 
     selected_period = _normalize_dashboard_period(request.GET.get("period"))
-    dashboard_payload = _build_school_dashboard_payload(
-        active_school,
-        selected_period,
-        reporttypes_count=reporttypes_count,
+    dashboard_payload = get_school_dashboard_payload(
+        school_id=int(getattr(active_school, "pk", 0) or 0),
+        period=selected_period,
+        builder=lambda: _build_school_dashboard_payload(
+            active_school,
+            selected_period,
+            reporttypes_count=reporttypes_count,
+        ),
     )
 
     wants_json = (
@@ -1287,10 +1292,15 @@ def admin_dashboard_data(request: HttpRequest) -> HttpResponse:
     except Exception:
         reporttypes_count = 0
 
-    payload = _build_school_dashboard_payload(
-        active_school,
-        _normalize_dashboard_period(request.GET.get("period")),
-        reporttypes_count=reporttypes_count,
+    selected_period = _normalize_dashboard_period(request.GET.get("period"))
+    payload = get_school_dashboard_payload(
+        school_id=int(getattr(active_school, "pk", 0) or 0),
+        period=selected_period,
+        builder=lambda: _build_school_dashboard_payload(
+            active_school,
+            selected_period,
+            reporttypes_count=reporttypes_count,
+        ),
     )
     return JsonResponse(payload, json_dumps_params={"ensure_ascii": False})
 
