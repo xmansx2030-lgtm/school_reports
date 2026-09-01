@@ -94,6 +94,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--subscription-activation-email-enabled", choices=BOOL_CHOICES)
     parser.add_argument("--subscription-expiry-reminder-email-enabled", choices=BOOL_CHOICES)
     parser.add_argument(
+        "--operations-github-repository",
+        help="GitHub owner/repository used by the production operations monitor.",
+    )
+    parser.add_argument(
         "--fcm-service-account-from-stdin",
         action="store_true",
         help="Read and install a Firebase service-account JSON document from stdin.",
@@ -123,6 +127,14 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
         if not 1 <= args.web_concurrency <= 4:
             raise SystemExit("WEB_CONCURRENCY must be between 1 and 4 on this host.")
         values["WEB_CONCURRENCY"] = str(args.web_concurrency)
+
+    if getattr(args, "operations_github_repository", None):
+        repository = args.operations_github_repository.strip()
+        if len(repository) > 160 or not re.fullmatch(
+            r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository
+        ):
+            raise SystemExit("OPERATIONS_GITHUB_REPOSITORY must use owner/repository format.")
+        values["OPERATIONS_GITHUB_REPOSITORY"] = repository
 
     if args.web_push_enabled:
         values["WEB_PUSH_ENABLED"] = args.web_push_enabled

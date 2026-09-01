@@ -39,6 +39,7 @@ class WebPushRuntimeConfigTests(SimpleTestCase):
             "resend_config_from_stdin": False,
             "resend_system_backend": False,
             "fcm_service_account_from_stdin": False,
+            "operations_github_repository": None,
         }
         values.update(overrides)
         return SimpleNamespace(**values)
@@ -107,6 +108,29 @@ class WebPushRuntimeConfigTests(SimpleTestCase):
         self.assertIn("SECRET_KEY=untouched", content)
         self.assertIn("WEB_PUSH_ENABLED=True", content)
         self.assertEqual(set(changed), {"WEB_PUSH_ENABLED", "WEB_PUSH_SUBJECT"})
+
+    def test_operations_repository_is_validated_and_collected(self):
+        values = _collect(
+            self._args(
+                web_push_enabled=None,
+                web_push_config_from_stdin=False,
+                operations_github_repository="xmansx2030-lgtm/school_reports",
+            )
+        )
+        self.assertEqual(
+            values["OPERATIONS_GITHUB_REPOSITORY"],
+            "xmansx2030-lgtm/school_reports",
+        )
+
+    def test_invalid_operations_repository_is_rejected(self):
+        with self.assertRaisesMessage(SystemExit, "owner/repository"):
+            _collect(
+                self._args(
+                    web_push_enabled=None,
+                    web_push_config_from_stdin=False,
+                    operations_github_repository="https://github.com/owner/repo",
+                )
+            )
 
     def test_fcm_service_account_is_validated_and_collected(self):
         import json

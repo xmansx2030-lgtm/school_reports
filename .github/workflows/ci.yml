@@ -241,6 +241,24 @@ jobs:
           | ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
               "mkdir -p '$DEPLOY_PATH' && tar xzf - -C '$DEPLOY_PATH'"
 
+      - name: Bind the server to this repository
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+            "set -eu; \
+             DEPLOY_PATH='$DEPLOY_PATH' python3 \
+               '$DEPLOY_PATH/deploy/hetzner/apply_runtime_config.py' \
+               --operations-github-repository '$SOURCE_REPOSITORY'; \
+             if git -C '$DEPLOY_PATH' rev-parse --git-dir >/dev/null 2>&1; then \
+               git -C '$DEPLOY_PATH' remote set-url origin \
+                 'https://github.com/$SOURCE_REPOSITORY.git'; \
+               git -C '$DEPLOY_PATH' remote remove upstream 2>/dev/null || true; \
+             fi"
+
       - name: Configure stable Web Push keys
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
@@ -266,10 +284,10 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
           FCM_SERVICE_ACCOUNT_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
         run: |
-          test -n "$FCM_SERVICE_ACCOUNT_JSON" || {
-            echo "::error::FCM_SERVICE_ACCOUNT_JSON is not configured"
-            exit 1
-          }
+          if [ -z "$FCM_SERVICE_ACCOUNT_JSON" ]; then
+            echo "FCM_SERVICE_ACCOUNT_JSON is not configured; preserving the server credential."
+            exit 0
+          fi
           printf '%s' "$FCM_SERVICE_ACCOUNT_JSON" \
           | ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
               "DEPLOY_PATH='$DEPLOY_PATH' python3 \
