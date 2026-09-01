@@ -110,7 +110,7 @@ EOF
 فالأوامر اليدوية تعمل الآن على الصورة الصحيحة بلا أن يتذكر أحد تصديرها. وللتراجع إلى إصدار أقدم:
 
 ```bash
-APP_IMAGE=ghcr.io/azzam1122112-dot/school_reports:<sha> \
+APP_IMAGE=ghcr.io/xmansx2030-lgtm/school_reports:<sha> \
   bash deploy/hetzner/remote_deploy.sh
 ```
 

@@ -1,7 +1,7 @@
 from django.db import migrations, models
 
 
-CONTROL_REPOSITORY = "azzam1122112-dot/school_reports"
+CONTROL_REPOSITORY = "xmansx2030-lgtm/school_reports"
 
 
 def configure_managed_deployments(apps, schema_editor):
