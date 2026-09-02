@@ -212,6 +212,34 @@ Redirect Rule "Root to app redirect"  (enabled: false)
 
 ---
 
+## 11. عالٍ — ‏`Permissions-Policy` من الحافة تُعطّل الإملاء الصوتي
+
+*مُضاف بتاريخ 2026-09-02، بعد البنود أعلاه، فترتيبه هنا زمنيّ لا حسب الأثر.*
+
+الرأس الحيّ لا يطابق [Caddyfile.fragment](../deploy/hetzner/Caddyfile.fragment):
+يحوي `fullscreen=(self)` و`publickey-credentials-get=()`، ولا وجود لهما في
+المشروع قط — ولا في تاريخه. فالحافة تكتب رأسها فوق رأس الأصل، كما في البند ٦.
+
+```
+الحيّ (Cloudflare): accelerometer=(), autoplay=(), camera=(), …, microphone=(), …
+الأصل  (Caddy):     accelerometer=(), ambient-light-sensor=(), …, microphone=(self), …
+```
+
+**الأثر:** `microphone=()` ليست «اسأل المستخدم» بل «لا أحد، أبداً». يرفض
+المتصفّح `getUserMedia` بـ `NotAllowedError` قبل أن تظهر نافذة الإذن، فبطاقة
+«اكتب تقريرك بصوتك» معطّلة كلياً، وتطلب من المعلّم تفعيل إذن لا مكان لتفعيله:
+الرأس يعلو أي منح يمنحه المستخدم. الأصل صحّح رأسه، ولا أثر لذلك ما دامت الحافة
+تستبدله.
+
+**الإصلاح:** Rules → Transform Rules (أو Managed Transforms إن كان الرأس من
+قاعدة مُدارة) → عدّل `microphone=()` إلى `microphone=(self)`. أو أسقط
+`Permissions-Policy` من الحافة ودع Caddy يتولّاه — قائمته أشمل أصلاً.
+
+يحرس هذا [post_deploy_smoke.py](../scripts/post_deploy_smoke.py) الآن، فيفشل
+النشر ما دامت الحافة تعيد المنع.
+
+---
+
 ## ما تأكّد سليماً
 
 - **البريد مُعدّ إعداداً صحيحاً.** `v=spf1 -all` على الجذر مع نطاق فرعي مخصّص
