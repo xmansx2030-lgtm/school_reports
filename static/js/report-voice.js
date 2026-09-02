@@ -93,6 +93,8 @@
       quota: root.querySelector("[data-voice-quota]"),
       result: root.querySelector("[data-voice-result]"),
       output: root.querySelector("[data-voice-output]"),
+      raw: root.querySelector("[data-voice-raw]"),
+      rawOutput: root.querySelector("[data-voice-raw-output]"),
       append: root.querySelector("[data-voice-append]"),
       replace: root.querySelector("[data-voice-replace]"),
       discard: root.querySelector("[data-voice-discard]")
@@ -249,6 +251,14 @@
       }
     }
 
+    function showRaw(rawText) {
+      if (!el.raw || !el.rawOutput) return;
+      var differs = rawText && rawText !== suggestion;
+      el.rawOutput.textContent = differs ? rawText : "";
+      el.raw.open = false;
+      el.raw.hidden = !differs;
+    }
+
     function startRecording() {
       if (remaining <= 0) {
         status("اكتمل رصيدك اليوم. يعود تلقائيًا غدًا.", "error");
@@ -382,6 +392,9 @@
           suggestion = String(data.text || "").trim();
           if (!suggestion) throw new Error("لم يصل نص من التسجيل. حاول مرة أخرى.");
           if (el.output) el.output.textContent = suggestion;
+          /* التفريغ الحرفي يُعرض حين يختلف عن المحرَّر وحده: تكراره كما هو ضجيج،
+             وإخفاؤه عند اختلافه يترك المعلّم بلا وسيلة لكشف تفريغ خاطئ. */
+          showRaw(String(data.raw_text || "").trim());
           if (el.result) el.result.hidden = false;
           renderQuota(data.remaining);
           status("راجع النص، ثم أضفه إلى " + documentName + " أو استبدل به النص الحالي.", "success");

@@ -33,6 +33,11 @@ from .report_ai import figures_in
 # التجميل يختصر الحشو، فلا يُعقل أن يذهب معه نصف ما قاله المعلّم.
 MIN_POLISHED_LENGTH_RATIO = 0.5
 
+# ونصفُ كلماته على الأقل يجب أن تكون كلماتٍ قالها. حارس الطول وحده يمرّر
+# نصّاً مختلَقاً بطول التفريغ نفسه — وهو ما حدث: «تم عمل دورة تدريبية» عاد
+# «ابدأ اليوم بتقرير عن»، متساويين في الطول وخاليين من الأرقام، فمرّ.
+MIN_POLISHED_OVERLAP_RATIO = 0.5
+
 
 logger = logging.getLogger(__name__)
 
@@ -211,24 +216,6 @@ def _multipart(fields: dict[str, str], *, filename: str, content_type: str, payl
     return bytes(body), f"multipart/form-data; boundary={boundary}"
 
 
-def _transcription_hint() -> str:
-    """سياقٌ قصير يرفع دقّة المصطلحات المدرسية وأسماء الأعلام."""
-    return (
-        "تقرير مدرسي سعودي بالعربية الفصحى. مصطلحات متوقعة: الحصة، الفسحة، "
-        "الإذاعة المدرسية، النشاط، الفعالية، ولي الأمر، الصف، المرحلة، "
-        "المعلم، قائد المدرسة، الخطة، الهدف، الشواهد، التوثيق."
-    )
-
-
-def _meeting_transcription_hint() -> str:
-    """سياق يرفع دقة أسماء عناصر المحضر ومصطلحات المتابعة."""
-    return (
-        "محضر اجتماع مدرسي سعودي بالعربية الفصحى. مصطلحات متوقعة: جدول الأعمال، "
-        "الحضور، الاعتذار، المناقشة، القرار، التوصية، التكليف، المسؤول، موعد "
-        "التنفيذ، المتابعة، اللجنة، القسم، قائد المدرسة، أمين الاجتماع."
-    )
-
-
 def _cleanup_instructions() -> str:
     return """
 أنت محرر عربي متخصص في التقارير المدرسية السعودية.
@@ -272,6 +259,33 @@ def _meeting_cleanup_instructions() -> str:
 """.strip()
 
 
+# الحركات والتطويل يضيفهما التجميل، فلا يجوز أن يجعلا الكلمة كلمةً أخرى.
+_ARABIC_MARKS = re.compile(r"[ً-ْـ]")
+_WORD_SEPARATORS = re.compile(r"[^\w؀-ۿ]+", re.UNICODE)
+
+
+def _normalise_word(word: str) -> str:
+    """يوحّد ما يصحّحه التحرير عادةً: الهمزات، والتاء المربوطة، والألف المقصورة.
+
+    ثم يُسقط «و» و«ف» و«ال» من أول الكلمة: التجميل يربط الجمل ويعرّف الأسماء،
+    فـ«تفاعل» و«وتفاعل» كلمة واحدة قالها المعلّم لا كلمتان.
+    """
+    text = word.translate(str.maketrans("أإآىة", "ااايه"))
+    for prefix in ("وال", "فال", "و", "ف", "ال"):
+        if len(text) > len(prefix) + 1 and text.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+
+def _words(text: str) -> set[str]:
+    stripped = _ARABIC_MARKS.sub("", str(text or ""))
+    return {
+        _normalise_word(word)
+        for word in _WORD_SEPARATORS.split(stripped)
+        if len(word) > 1
+    }
+
+
 def _extract_output_text(payload: dict) -> str:
     parts: list[str] = []
     for output_item in payload.get("output") or []:
@@ -310,14 +324,19 @@ def _post(request: Request, *, timeout: float, stage: str) -> dict:
         ) from exc
 
 
-def _transcribe_audio(
-    payload: bytes,
-    extension: str,
-    *,
-    hint: str,
-    filename_prefix: str,
-) -> str:
-    """المرحلة الأولى: تفريغ حرفي لما قيل."""
+def _transcribe_audio(payload: bytes, extension: str, *, filename_prefix: str) -> str:
+    """المرحلة الأولى: تفريغ حرفي لما قيل.
+
+    **لا يُرسل حقل ``prompt``.** كان يحمل قائمة مصطلحات مدرسية لترفع دقّتها،
+    وكانت الكلفة أكبر من العائد: ``gpt-4o-mini-transcribe`` يسرّب نصّ الـ prompt
+    إلى المخرَج حين يقع في المقطع صمتٌ أو ضجيج خلفي، فيعود «تفريغاً» مصوغاً من
+    السياق لا ممّا قاله المعلّم — وقد وصل ذلك إلى معلّم فعلاً: أملى «تم عمل دورة
+    تدريبية» فعاد له «ابدأ اليوم بتقرير عن».
+
+    ضبطُ المصطلحات محلّه مرحلة التجميل، وهي محروسة بمقارنة الأرقام والطول
+    والتداخل اللفظي. أما هنا فالحرفية أهم من الأناقة: فقرةٌ مختلَقة في تقرير
+    رسمي أسوأ من مصطلحٍ مكتوبٍ بغير دقّة.
+    """
     model = str(getattr(settings, "VOICE_REPORT_MODEL", "gpt-4o-mini-transcribe") or "").strip()
     body, content_type = _multipart(
         {
@@ -325,7 +344,6 @@ def _transcribe_audio(
             "language": "ar",
             "response_format": "json",
             "temperature": "0",
-            "prompt": hint,
         },
         filename=f"{filename_prefix}.{extension}",
         content_type=f"audio/{extension}",
@@ -349,21 +367,11 @@ def _transcribe_audio(
 
 
 def transcribe_audio(payload: bytes, extension: str) -> str:
-    return _transcribe_audio(
-        payload,
-        extension,
-        hint=_transcription_hint(),
-        filename_prefix="report",
-    )
+    return _transcribe_audio(payload, extension, filename_prefix="report")
 
 
 def transcribe_meeting_audio(payload: bytes, extension: str) -> str:
-    return _transcribe_audio(
-        payload,
-        extension,
-        hint=_meeting_transcription_hint(),
-        filename_prefix="meeting-minutes",
-    )
+    return _transcribe_audio(payload, extension, filename_prefix="meeting-minutes")
 
 
 def _polish_dictation(raw_text: str, *, instructions: str) -> str:
@@ -412,6 +420,15 @@ def _polish_dictation(raw_text: str, *, instructions: str) -> str:
     if len(polished) < MIN_POLISHED_LENGTH_RATIO * len(raw_text.strip()):
         logger.warning("Voice report polish dropped most of the dictation; keeping the transcript.")
         return raw_text
+
+    # ومخرَجٌ بطول التفريغ وبأرقامه لا يزال قد يكون كلاماً آخر بالكامل. فالسؤال
+    # الأخير: كم من كلماته كلماتٌ قالها المعلّم؟
+    polished_words = _words(polished)
+    if polished_words:
+        shared = polished_words & _words(raw_text)
+        if len(shared) < MIN_POLISHED_OVERLAP_RATIO * len(polished_words):
+            logger.warning("Voice report polish rewrote the dictation; keeping the transcript.")
+            return raw_text
     return polished
 
 

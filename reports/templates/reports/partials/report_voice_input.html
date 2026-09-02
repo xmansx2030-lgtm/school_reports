@@ -79,6 +79,15 @@
       <span>راجعه قبل إدراجه — لن يتغيّر {% if meeting_minutes_mode %}المحضر{% else %}التقرير{% endif %} حتى تختار</span>
     </div>
     <div class="report-voice-result-text" data-voice-output></div>
+    {# النص الحرفي بجوار المحرَّر: نصٌّ منمَّق لا يطابق ما قيل يبدو صحيحًا وحده. #}
+    <details class="report-voice-raw" data-voice-raw hidden>
+      <summary>النص كما قيل حرفيًا</summary>
+      <div class="report-voice-raw-text" data-voice-raw-output></div>
+      <p class="report-voice-raw-note">
+        إن اختلف عمّا قلته فالخلل في تفريغ الصوت لا في التحرير — سجّل مرة أخرى في
+        مكان أهدأ، وبلّغ الدعم إن تكرر.
+      </p>
+    </details>
     <div class="report-voice-result-actions">
       <button type="button" class="report-voice-accept" data-voice-append>
         <i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة إلى النص الحالي

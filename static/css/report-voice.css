@@ -217,6 +217,36 @@
   font-weight: 650;
   line-height: 1.9;
 }
+/* التفريغ الحرفي: مطويّ افتراضيًا — مرجعٌ عند الشك لا نصٌّ ثانٍ يُقرأ. */
+.report-voice-raw {
+  border-top: 1px solid #edf2ef;
+  background: #fbfdfc;
+}
+.report-voice-raw > summary {
+  padding: 9px 12px;
+  color: #64736c;
+  font-size: .74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.report-voice-raw-text {
+  max-height: 200px;
+  overflow: auto;
+  padding: 0 12px 6px;
+  color: #4a5a52;
+  white-space: pre-wrap;
+  font-size: .82rem;
+  font-weight: 600;
+  line-height: 1.85;
+}
+.report-voice-raw-note {
+  margin: 0;
+  padding: 0 12px 12px;
+  color: #6d7c74;
+  font-size: .7rem;
+  font-weight: 700;
+  line-height: 1.8;
+}
 .report-voice-result-actions {
   padding: 10px 12px 12px;
   border-top: 1px solid #edf2ef;
@@ -260,6 +290,10 @@ html[data-theme="dark"] .report-voice-result { background: #13251e; border-color
 html[data-theme="dark"] .report-voice-result-head { border-color: #294238; background: #183027; color: #8fe0b2; }
 html[data-theme="dark"] .report-voice-result-head span { color: #aebdb5; }
 html[data-theme="dark"] .report-voice-result-text { color: #e7f1ec; }
+html[data-theme="dark"] .report-voice-raw { border-color: #294238; background: #16291f; }
+html[data-theme="dark"] .report-voice-raw > summary { color: #aebdb5; }
+html[data-theme="dark"] .report-voice-raw-text { color: #cfe0d6; }
+html[data-theme="dark"] .report-voice-raw-note { color: #aebdb5; }
 html[data-theme="dark"] .report-voice-result-actions { border-color: #294238; }
 
 @media (max-width: 520px) {

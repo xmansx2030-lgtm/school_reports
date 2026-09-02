@@ -111,6 +111,9 @@ class VoiceReportEndpointTests(TestCase):
         body = response.json()
         self.assertTrue(body["ok"])
         self.assertEqual(body["text"], "اليوم نُفِّذ نشاط توعوي.")
+        # التفريغ الحرفي يعود معه: بدونه لا يستطيع المعلّم كشف تفريغٍ مخالف
+        # لما قاله، ولا نعرف نحن أي المرحلتين أخطأت حين يشتكي.
+        self.assertEqual(body["raw_text"], "اليوم نفذت نشاط يعني توعوي")
         self.assertEqual(body["remaining"], 2)
         self.assertEqual(body["daily_limit"], 3)
         self.assertEqual(transcribe.call_count, 1)
@@ -250,8 +253,12 @@ class TranscriptionRequestTests(TestCase):
         self.assertIn("ar".encode(), body)
         # اسم الملف يُصاغ على الخادم؛ اسم العميل لا يصل الترويسة أبدًا.
         self.assertIn(b'filename="report.webm"', body)
+        # ولا ``prompt``: النموذج يسرّبه إلى المخرَج عند الصمت والضجيج، فيعود
+        # نصّ السياق «تفريغاً» لكلامٍ لم يُقل.
+        self.assertNotIn(b'name="prompt"', body)
 
-    def test_meeting_transcription_uses_minutes_vocabulary_and_filename(self):
+    def test_no_vocabulary_prompt_is_sent_with_the_minutes_recording(self):
+        """المحضر كالتقرير: لا سياق يُرسل مع الصوت، وله اسم ملفّه وحده."""
         from reports.voice_report import transcribe_meeting_audio
 
         captured = {}
@@ -269,8 +276,8 @@ class TranscriptionRequestTests(TestCase):
 
         self.assertEqual(text, "نوقشت الخطة وأوصت اللجنة بالمتابعة")
         self.assertIn(b'filename="meeting-minutes.webm"', captured["body"])
-        self.assertIn("القرار".encode("utf-8"), captured["body"])
-        self.assertIn("التوصية".encode("utf-8"), captured["body"])
+        self.assertNotIn(b'name="prompt"', captured["body"])
+        self.assertNotIn("مصطلحات متوقعة".encode("utf-8"), captured["body"])
 
     def test_meeting_polish_keeps_raw_text_when_a_number_changes(self):
         from reports.voice_report import polish_meeting_dictation
@@ -324,6 +331,28 @@ class TranscriptionRequestTests(TestCase):
             polished = polish_dictation("اليوم نفذت نشاط توعوي يعني وحضره ٤٥ طالب")
 
         self.assertEqual(polished, "اليوم نُفِّذ نشاط توعوي وحضره 45 طالبًا.")
+
+    def test_a_polish_that_writes_different_words_is_discarded(self):
+        """الشكوى التي أطلقت هذا الحارس: طولٌ واحد، وبلا أرقام، وكلامٌ آخر."""
+        from reports.voice_report import polish_dictation
+
+        raw = "تم عمل دورة تدريبية"
+
+        with patch(
+            "reports.voice_report._post",
+            return_value=self._polished("ابدأ اليوم بتقرير عن"),
+        ):
+            self.assertEqual(polish_dictation(raw), raw)
+
+    def test_editing_the_same_words_survives_the_overlap_guard(self):
+        """التصحيح الإملائي والربط ليسا كلاماً آخر، فلا يجوز أن يسقطا."""
+        from reports.voice_report import polish_dictation
+
+        raw = "اليوم يعني نفذنا نشاط توعوي في الاذاعه المدرسيه وتفاعل الطلاب معه"
+        polished = "اليوم نُفِّذ نشاط توعوي في الإذاعة المدرسية، وتفاعل الطلاب معه."
+
+        with patch("reports.voice_report._post", return_value=self._polished(polished)):
+            self.assertEqual(polish_dictation(raw), polished)
 
     def test_a_polish_that_swallows_most_of_the_dictation_is_discarded(self):
         from reports.voice_report import polish_dictation

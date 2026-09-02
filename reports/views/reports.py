@@ -599,8 +599,17 @@ def transcribe_report_voice(request: HttpRequest) -> JsonResponse:
         getattr(request, "trace_id", None),
     )
     opmetrics.increment("report.voice.success")
+    # ‏``raw_text`` يصل المعلّم كما وصل من التفريغ: نصٌّ أنيق لا يطابق ما قيل
+    # يبدو صحيحاً إن لم يكن بجواره الأصل. وبغيابه لا يستطيع أحد — لا المعلّم
+    # ولا السجلّات — تمييز خطأ التفريغ من خطأ التجميل.
     return _voice_json(
-        {"ok": True, "text": text, "remaining": remaining, "daily_limit": limit}
+        {
+            "ok": True,
+            "text": text,
+            "raw_text": raw_text,
+            "remaining": remaining,
+            "daily_limit": limit,
+        }
     )
 
 
