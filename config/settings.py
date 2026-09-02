@@ -284,27 +284,61 @@ MANSOUR_ASSISTANT_ENABLED = _env_bool(
     "MANSOUR_ASSISTANT_ENABLED",
     bool(OPENAI_API_KEY),
 )
-_mansour_configured_model = (
-    os.getenv("MANSOUR_ASSISTANT_MODEL") or "gpt-5-mini"
-).strip()
+# OpenAI retires the whole GPT-5 family on 11 Dec 2026. A server whose ``.env``
+# still names ``gpt-5-mini`` would fail every AI request that morning, so a
+# retired id is remapped here rather than trusted — changing the default alone
+# would not reach a deployment that sets the variable explicitly, and ours do.
+#
+# The replacement OpenAI names for ``gpt-5-mini`` is ``gpt-5.6-terra``, at eight
+# times its input price. ``gpt-5.6-luna`` is the honest swap: a newer generation
+# than the model it replaces and cheaper than it ($0.20/$1.20 against
+# $0.25/$2.00 per 1M tokens). Quality is bought with ``reasoning.effort``, which
+# costs output tokens on the cheap tier, long before it is worth buying a tier.
+DEFAULT_OPENAI_TEXT_MODEL = "gpt-5.6-luna"
+RETIRED_OPENAI_TEXT_MODELS = {
+    "gpt-5-nano": DEFAULT_OPENAI_TEXT_MODEL,
+    "gpt-5-nano-2025-08-07": DEFAULT_OPENAI_TEXT_MODEL,
+    "gpt-5-mini": DEFAULT_OPENAI_TEXT_MODEL,
+    "gpt-5-mini-2025-08-07": DEFAULT_OPENAI_TEXT_MODEL,
+    "gpt-5": "gpt-5.6-sol",
+    "gpt-5-2025-08-07": "gpt-5.6-sol",
+}
+
+
+def _openai_text_model(value: str | None) -> str:
+    """Resolve a configured text model, replacing ids OpenAI has retired."""
+    name = (value or "").strip()
+    if not name:
+        return DEFAULT_OPENAI_TEXT_MODEL
+    return RETIRED_OPENAI_TEXT_MODELS.get(name, name)
+
+
+# GPT-5.6 dropped the GPT-5 ``minimal`` effort in favour of ``none`` and added
+# ``xhigh``/``max`` above ``high``. An environment still carrying ``minimal``
+# would be rejected by the API, so it is mapped instead of silently defaulted.
+OPENAI_REASONING_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
+RETIRED_OPENAI_REASONING_EFFORTS = {"minimal": "none"}
+
+# The call sites that want the model to answer without deliberating: the report
+# rewrite, the dictation polish, and Mansour's quality retry. All three edit
+# text that is already written, so reasoning buys them nothing but latency.
+AI_FAST_REASONING_EFFORT = "none"
+
+_mansour_configured_model = os.getenv("MANSOUR_ASSISTANT_MODEL")
 MANSOUR_ASSISTANT_QUALITY_MODE = _env_bool(
     "MANSOUR_ASSISTANT_QUALITY_MODE",
     True,
 )
-# ``gpt-5-nano`` is useful for classification and very high-volume extraction,
-# but customer-facing Arabic support needs stronger instruction following and
-# synthesis. Keep an explicit escape hatch for cost-sensitive installations.
-MANSOUR_ASSISTANT_MODEL = (
-    "gpt-5-mini"
-    if MANSOUR_ASSISTANT_QUALITY_MODE and _mansour_configured_model == "gpt-5-nano"
-    else _mansour_configured_model
-)
+MANSOUR_ASSISTANT_MODEL = _openai_text_model(_mansour_configured_model)
 
 _mansour_reasoning_effort = (
     os.getenv("MANSOUR_ASSISTANT_REASONING_EFFORT") or "low"
 ).strip().lower()
-if _mansour_reasoning_effort not in {"minimal", "low", "medium", "high"}:
-    _mansour_reasoning_effort = "minimal"
+_mansour_reasoning_effort = RETIRED_OPENAI_REASONING_EFFORTS.get(
+    _mansour_reasoning_effort, _mansour_reasoning_effort
+)
+if _mansour_reasoning_effort not in OPENAI_REASONING_EFFORTS:
+    _mansour_reasoning_effort = "low"
 MANSOUR_ASSISTANT_REASONING_EFFORT = _mansour_reasoning_effort
 
 _mansour_text_verbosity = (
@@ -344,9 +378,9 @@ except (TypeError, ValueError):
 
 # ----------------- AI report writing assistant -----------------
 REPORT_AI_ENABLED = _env_bool("REPORT_AI_ENABLED", bool(OPENAI_API_KEY))
-REPORT_AI_MODEL = (
+REPORT_AI_MODEL = _openai_text_model(
     os.getenv("REPORT_AI_MODEL") or MANSOUR_ASSISTANT_MODEL
-).strip()
+)
 
 try:
     REPORT_AI_MAX_OUTPUT_TOKENS = max(
@@ -368,9 +402,34 @@ except (TypeError, ValueError):
 # ----------------- Voice dictation for reports -----------------
 # التسجيل يصل في الذاكرة ولا يُكتب على القرص ولا يُخزَّن، ويُفرَّغ ثم يُنسى.
 VOICE_REPORT_ENABLED = _env_bool("VOICE_REPORT_ENABLED", bool(OPENAI_API_KEY))
-VOICE_REPORT_MODEL = (os.getenv("VOICE_REPORT_MODEL") or "gpt-4o-mini-transcribe").strip()
+# ``gpt-4o-mini-transcribe`` يُغلق في 26 فبراير 2027، وبديله ``gpt-transcribe``.
+# البديل يقبل ``languages`` و``keywords`` بدل ``language`` المفردة، فالمعرّف
+# وحده لا يكفي — انظر ``reports/voice_report.py``.
+DEFAULT_TRANSCRIPTION_MODEL = "gpt-transcribe"
+RETIRED_TRANSCRIPTION_MODELS = {
+    "whisper-1": DEFAULT_TRANSCRIPTION_MODEL,
+    "gpt-4o-transcribe": DEFAULT_TRANSCRIPTION_MODEL,
+    "gpt-4o-mini-transcribe": DEFAULT_TRANSCRIPTION_MODEL,
+}
+_voice_configured_model = (os.getenv("VOICE_REPORT_MODEL") or "").strip()
+VOICE_REPORT_MODEL = RETIRED_TRANSCRIPTION_MODELS.get(
+    _voice_configured_model,
+    _voice_configured_model or DEFAULT_TRANSCRIPTION_MODEL,
+)
 # نموذج مرحلة الترقيم والتنسيق. يتبع نموذج تحسين التقارير ما لم يُضبط صراحةً.
-VOICE_REPORT_POLISH_MODEL = (os.getenv("VOICE_REPORT_POLISH_MODEL") or REPORT_AI_MODEL).strip()
+VOICE_REPORT_POLISH_MODEL = _openai_text_model(
+    os.getenv("VOICE_REPORT_POLISH_MODEL") or REPORT_AI_MODEL
+)
+
+# مصطلحات حرفية يمرّرها ``gpt-transcribe`` في ``keywords`` لرفع دقّة أسماء
+# المنصّة والمصطلحات المدرسية. فارغة افتراضياً عن قصد: المصطلح المُلقَّن قد
+# يظهر في التفريغ دون أن يُنطق، وهو ما سبق أن أفسد تقرير معلّم عبر ``prompt``.
+# لا تُملأ إلا بعد قياسٍ على تسجيلات حقيقية. قائمة مفصولة بفواصل.
+VOICE_REPORT_KEYWORDS = tuple(
+    part.strip()
+    for part in (os.getenv("VOICE_REPORT_KEYWORDS") or "").split(",")
+    if part.strip()
+)
 
 # القيد الفعلي على الخادم هو الحجم؛ أما المدة فيفرضها المسجّل في المتصفّح
 # بإيقافٍ تلقائي، لأن قياس مدة مقطع مضغوط خادمياً يحتاج فكّ ترميز كامل.

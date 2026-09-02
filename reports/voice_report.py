@@ -21,12 +21,13 @@ import logging
 import re
 import secrets
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
+from .ai_client import log_usage, request_json, truncation_reason
 from .ai_errors import AI_SERVICE_PAUSED_MESSAGE, is_openai_spend_limit_error
 from .report_ai import figures_in
 
@@ -194,18 +195,32 @@ def _api_key() -> str:
     return key
 
 
-def _multipart(fields: dict[str, str], *, filename: str, content_type: str, payload: bytes):
+def _multipart(
+    fields: dict[str, str | list[str]],
+    *,
+    filename: str,
+    content_type: str,
+    payload: bytes,
+):
     """يبني جسم ``multipart/form-data`` بلا اعتماد خارجي.
 
     اسم الملف يُصاغ هنا من امتدادٍ في قائمة بيضاء ولا يأتي من العميل أبداً:
     اسمٌ يحمل سطراً جديداً يعني حقن ترويسة داخل الطلب المرسل إلى المزوّد.
+
+    القيمة القائمة تُرسَل حقولاً مكرّرة باسمٍ لاحقته ``[]``، وهي صياغة
+    المصفوفات في هذه الواجهة نفسها (``timestamp_granularities[]`` وأخواتها).
     """
     boundary = "----tawtheeq" + secrets.token_hex(16)
     body = bytearray()
     for name, value in fields.items():
-        body += f"--{boundary}\r\n".encode("utf-8")
-        body += f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8")
-        body += str(value).encode("utf-8") + b"\r\n"
+        values = value if isinstance(value, list) else [value]
+        part_name = f"{name}[]" if isinstance(value, list) else name
+        for item in values:
+            body += f"--{boundary}\r\n".encode("utf-8")
+            body += (
+                f'Content-Disposition: form-data; name="{part_name}"\r\n\r\n'
+            ).encode("utf-8")
+            body += str(item).encode("utf-8") + b"\r\n"
     body += f"--{boundary}\r\n".encode("utf-8")
     body += (
         f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
@@ -307,8 +322,7 @@ def _clean(value: str) -> str:
 
 def _post(request: Request, *, timeout: float, stage: str) -> dict:
     try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310 — عنوان ثابت
-            return json.loads(response.read().decode("utf-8"))
+        return request_json(request, timeout=timeout, stage=stage)
     except HTTPError as exc:
         if is_openai_spend_limit_error(exc):
             logger.warning("Voice report %s stopped by the configured spend limit.", stage)
@@ -324,6 +338,26 @@ def _post(request: Request, *, timeout: float, stage: str) -> dict:
         ) from exc
 
 
+def _transcription_keywords() -> list[str]:
+    """المصطلحات المدرسية التي يُتوقّع سماعها، مُنقّاة قبل الإرسال.
+
+    الواجهة ترفض الطلب **كاملاً** إذا حمل مصطلحٌ أحد المحارف ``<`` أو ``>``
+    أو سطراً جديداً، فيسقط التسجيل كلّه بسبب إعدادٍ خاطئ. التنقية هنا تحذف
+    المصطلح المخالف بدل أن تُسقط التفريغ.
+    """
+    raw = getattr(settings, "VOICE_REPORT_KEYWORDS", ()) or ()
+    if isinstance(raw, str):
+        raw = [part for part in raw.split(",")]
+    cleaned: list[str] = []
+    for item in raw:
+        term = str(item or "").strip()
+        if not term or any(char in term for char in "<>\r\n"):
+            continue
+        if term not in cleaned:
+            cleaned.append(term)
+    return cleaned[:100]
+
+
 def _transcribe_audio(payload: bytes, extension: str, *, filename_prefix: str) -> str:
     """المرحلة الأولى: تفريغ حرفي لما قيل.
 
@@ -336,15 +370,31 @@ def _transcribe_audio(payload: bytes, extension: str, *, filename_prefix: str) -
     ضبطُ المصطلحات محلّه مرحلة التجميل، وهي محروسة بمقارنة الأرقام والطول
     والتداخل اللفظي. أما هنا فالحرفية أهم من الأناقة: فقرةٌ مختلَقة في تقرير
     رسمي أسوأ من مصطلحٍ مكتوبٍ بغير دقّة.
+
+    **و``keywords`` ليس ``prompt``.** الحقل الجديد في ``gpt-transcribe`` يأخذ
+    مصطلحات حرفية لا سياقاً سردياً، فلا يملك نصّاً يسرّبه. ومع ذلك يبقى فارغاً
+    افتراضياً: الوثيقة نفسها تحذّر من ظهور مصطلح لم يُنطق، والحادثة السابقة
+    تكفي سبباً لألّا يُفعَّل إلا بقياسٍ يثبت أنه يرفع الدقّة.
     """
-    model = str(getattr(settings, "VOICE_REPORT_MODEL", "gpt-4o-mini-transcribe") or "").strip()
+    model = str(
+        getattr(settings, "VOICE_REPORT_MODEL", "gpt-transcribe") or ""
+    ).strip()
+    fields: dict[str, str | list[str]] = {
+        "model": model,
+        "response_format": "json",
+        "temperature": "0",
+    }
+    # ``gpt-transcribe`` استبدل ``language`` المفردة بـ``languages``، والوثيقة
+    # تنصّ على ألّا يُرسَل الحقلان معاً. والنماذج الأقدم لا تعرف الجمع.
+    if model.startswith("gpt-transcribe"):
+        fields["languages"] = ["ar"]
+        keywords = _transcription_keywords()
+        if keywords:
+            fields["keywords"] = keywords
+    else:
+        fields["language"] = "ar"
     body, content_type = _multipart(
-        {
-            "model": model,
-            "language": "ar",
-            "response_format": "json",
-            "temperature": "0",
-        },
+        fields,
         filename=f"{filename_prefix}.{extension}",
         content_type=f"audio/{extension}",
         payload=payload,
@@ -380,14 +430,16 @@ def _polish_dictation(raw_text: str, *, instructions: str) -> str:
         getattr(
             settings,
             "VOICE_REPORT_POLISH_MODEL",
-            getattr(settings, "REPORT_AI_MODEL", "gpt-5-mini"),
+            getattr(settings, "REPORT_AI_MODEL", "gpt-5.6-luna"),
         )
     )
     body = {
         "model": model,
         "instructions": instructions,
         "input": raw_text,
-        "reasoning": {"effort": "minimal"},
+        "reasoning": {
+            "effort": str(getattr(settings, "AI_FAST_REASONING_EFFORT", "none"))
+        },
         "max_output_tokens": int(getattr(settings, "VOICE_REPORT_MAX_OUTPUT_TOKENS", 1200)),
         "store": False,
     }
@@ -401,6 +453,13 @@ def _polish_dictation(raw_text: str, *, instructions: str) -> str:
 
     try:
         payload = _post(request, timeout=timeout, stage="polish")
+        log_usage(payload, stage="voice-polish", model=model)
+        # فقرةٌ انقطعت عند سقف الرموز تصل بحقل نصّ سليم الشكل. والتفريغ الخام
+        # كاملٌ وإن كان بلا ترقيم، فهو أصدق من تجميلٍ مقطوع في منتصف جملة.
+        reason = truncation_reason(payload)
+        if reason:
+            logger.warning("Voice report polish was incomplete (%s); keeping the transcript.", reason)
+            return raw_text
         polished = _clean(_extract_output_text(payload))
     except VoiceReportError:
         # التفريغ الخام نصٌّ صحيح وإن كان بلا ترقيم. إسقاط الطلب كله لأن

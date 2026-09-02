@@ -210,7 +210,7 @@ class AudioTypeTests(TestCase):
 @override_settings(
     VOICE_REPORT_ENABLED=True,
     OPENAI_API_KEY="sk-test-key",
-    VOICE_REPORT_MODEL="gpt-4o-mini-transcribe",
+    VOICE_REPORT_MODEL="gpt-transcribe",
 )
 class TranscriptionRequestTests(TestCase):
     """ما يُرسل فعلاً إلى المزوّد."""
@@ -240,7 +240,7 @@ class TranscriptionRequestTests(TestCase):
                 _json.dumps({"text": "اليوم نُفِّذ نشاط توعوي في الإذاعة المدرسية"}).encode("utf-8")
             )
 
-        with patch("reports.voice_report.urlopen", fake_urlopen):
+        with patch("reports.ai_client.urlopen", fake_urlopen):
             text = transcribe_audio(b"0" * 5000, "webm")
 
         self.assertEqual(text, "اليوم نُفِّذ نشاط توعوي في الإذاعة المدرسية")
@@ -248,8 +248,11 @@ class TranscriptionRequestTests(TestCase):
         self.assertTrue(captured["content_type"].startswith("multipart/form-data; boundary="))
         body = captured["body"]
         self.assertIn(b'name="model"', body)
-        self.assertIn(b"gpt-4o-mini-transcribe", body)
-        self.assertIn(b'name="language"', body)
+        self.assertIn(b"gpt-transcribe", body)
+        # ``gpt-transcribe`` استبدل ``language`` المفردة بـ``languages``،
+        # والوثيقة تمنع إرسال الحقلين معاً.
+        self.assertIn(b'name="languages[]"', body)
+        self.assertNotIn(b'name="language"', body)
         self.assertIn("ar".encode(), body)
         # اسم الملف يُصاغ على الخادم؛ اسم العميل لا يصل الترويسة أبدًا.
         self.assertIn(b'filename="report.webm"', body)
@@ -271,13 +274,58 @@ class TranscriptionRequestTests(TestCase):
                 _json.dumps({"text": "نوقشت الخطة وأوصت اللجنة بالمتابعة"}).encode("utf-8")
             )
 
-        with patch("reports.voice_report.urlopen", fake_urlopen):
+        with patch("reports.ai_client.urlopen", fake_urlopen):
             text = transcribe_meeting_audio(b"0" * 5000, "webm")
 
         self.assertEqual(text, "نوقشت الخطة وأوصت اللجنة بالمتابعة")
         self.assertIn(b'filename="meeting-minutes.webm"', captured["body"])
         self.assertNotIn(b'name="prompt"', captured["body"])
         self.assertNotIn("مصطلحات متوقعة".encode("utf-8"), captured["body"])
+
+    def _captured_transcription_body(self) -> bytes:
+        from reports.voice_report import transcribe_audio
+
+        captured = {}
+
+        def fake_urlopen(request, timeout=None):
+            captured["body"] = request.data
+            import json as _json
+
+            return self._fake_response(
+                _json.dumps({"text": "اليوم نُفِّذ نشاط توعوي في الإذاعة"}).encode("utf-8")
+            )
+
+        with patch("reports.ai_client.urlopen", fake_urlopen):
+            transcribe_audio(b"0" * 5000, "webm")
+        return captured["body"]
+
+    @override_settings(VOICE_REPORT_MODEL="gpt-4o-mini-transcribe")
+    def test_a_legacy_model_still_receives_the_singular_language_field(self):
+        """النماذج قبل ``gpt-transcribe`` لا تعرف ``languages``."""
+        body = self._captured_transcription_body()
+
+        self.assertIn(b'name="language"', body)
+        self.assertNotIn(b'name="languages[]"', body)
+
+    def test_no_keywords_are_sent_unless_they_are_configured(self):
+        """الافتراضي فارغ: مصطلحٌ مُلقَّن قد يظهر في تفريغ لم يُنطق فيه."""
+        self.assertNotIn(b'name="keywords[]"', self._captured_transcription_body())
+
+    @override_settings(VOICE_REPORT_KEYWORDS=("توثيق", "الإذاعة المدرسية"))
+    def test_configured_keywords_are_sent_as_repeated_fields(self):
+        body = self._captured_transcription_body()
+
+        self.assertEqual(body.count(b'name="keywords[]"'), 2)
+        self.assertIn("الإذاعة المدرسية".encode("utf-8"), body)
+
+    @override_settings(VOICE_REPORT_KEYWORDS=("سليم", "خطر <script>", "سطر\nثانٍ", ""))
+    def test_a_malformed_keyword_is_dropped_instead_of_failing_the_recording(self):
+        """الواجهة ترفض الطلب كاملاً على محرف واحد، فيضيع تسجيل المعلّم."""
+        body = self._captured_transcription_body()
+
+        self.assertEqual(body.count(b'name="keywords[]"'), 1)
+        self.assertIn("سليم".encode("utf-8"), body)
+        self.assertNotIn(b"<script>", body)
 
     def test_meeting_polish_keeps_raw_text_when_a_number_changes(self):
         from reports.voice_report import polish_meeting_dictation
@@ -299,15 +347,38 @@ class TranscriptionRequestTests(TestCase):
         ):
             self.assertEqual(polish_dictation("نص خام بلا ترقيم"), "نص خام بلا ترقيم")
 
-    def _polished(self, text: str) -> dict:
-        return {
+    def _polished(self, text: str, *, status: str = "completed", reason: str = "") -> dict:
+        payload = {
+            "status": status,
             "output": [
                 {
                     "type": "message",
                     "content": [{"type": "output_text", "text": text}],
                 }
-            ]
+            ],
         }
+        if reason:
+            payload["incomplete_details"] = {"reason": reason}
+        return payload
+
+    def test_a_polish_cut_off_at_the_token_ceiling_keeps_the_raw_transcript(self):
+        """التفريغ الخام كاملٌ وإن كان بلا ترقيم، والمجمَّل المبتور ناقص.
+
+        النصّ هنا يحمل أرقام التفريغ نفسها وطولاً كافياً وتداخلاً لفظياً تاماً،
+        أي أنه يعبر الحرّاس الثلاثة القائمة. ولا يكشفه إلا ``status``.
+        """
+        from reports.voice_report import polish_dictation
+
+        raw = "اليوم نفذنا نشاط توعوي وحضره 54 طالب وكان في الاذاعه المدرسيه"
+        with patch(
+            "reports.voice_report._post",
+            return_value=self._polished(
+                "اليوم نُفِّذ نشاط توعوي وحضره 54 طالبًا وكان في الإذاعة",
+                status="incomplete",
+                reason="max_output_tokens",
+            ),
+        ):
+            self.assertEqual(polish_dictation(raw), raw)
 
     def test_a_polish_that_changes_a_dictated_number_is_discarded(self):
         """نصٌّ أنيق برقمٍ لم يقله المعلّم أسوأ من تفريغٍ بلا ترقيم."""

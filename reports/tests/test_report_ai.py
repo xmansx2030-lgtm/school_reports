@@ -57,28 +57,31 @@ class _FakeOpenAIResponse:
 class _FakeTextOpenAIResponse:
     """A stubbed rewrite, so the fact-integrity guard can be exercised."""
 
-    def __init__(self, text: str):
-        self.text = text
-
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         return False
 
+    def __init__(self, text: str, *, status: str = "completed", reason: str = ""):
+        self.text = text
+        self.status = status
+        self.reason = reason
+
     def read(self):
-        return json.dumps(
-            {
-                "output": [
-                    {
-                        "type": "message",
-                        "role": "assistant",
-                        "content": [{"type": "output_text", "text": self.text}],
-                    }
-                ]
-            },
-            ensure_ascii=False,
-        ).encode("utf-8")
+        payload = {
+            "status": self.status,
+            "output": [
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": self.text}],
+                }
+            ],
+        }
+        if self.reason:
+            payload["incomplete_details"] = {"reason": self.reason}
+        return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
 def _spend_limit_error(code: str = "organization_spend_limit_exceeded") -> HTTPError:
@@ -96,7 +99,7 @@ def _spend_limit_error(code: str = "organization_spend_limit_exceeded") -> HTTPE
     ALLOWED_HOSTS=["testserver"],
     OPENAI_API_KEY="test-report-ai-key",
     REPORT_AI_ENABLED=True,
-    REPORT_AI_MODEL="gpt-5-nano",
+    REPORT_AI_MODEL="gpt-5.6-luna",
     REPORT_AI_MAX_OUTPUT_TOKENS=700,
     REPORT_AI_TIMEOUT_SECONDS=25,
     RATELIMIT_ENABLE=False,
@@ -209,7 +212,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("600 حرفًا", form.errors["idea"][0])
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_platform_switch_hides_and_blocks_report_improvement(self, mocked_urlopen):
         self._login()
         platform_settings = PlatformSettings.get_solo()
@@ -231,7 +234,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
         mocked_urlopen.assert_not_called()
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_meeting_minutes_use_a_domain_specific_conservative_prompt(self, mocked_urlopen):
         from reports.report_ai import improve_meeting_minutes_text
 
@@ -258,7 +261,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("reports:login"), response.url)
 
-    @patch("reports.report_ai.urlopen", return_value=_FakeOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
     def test_endpoint_returns_preview_without_saving_or_sending_extra_data(self, mocked_urlopen):
         self._login()
         original = "نفذنا برنامج يوم الأحد واستفاد 35 طالب وكان فيه أنشطة توعوية."
@@ -281,7 +284,7 @@ class ReportAIImprovementTests(TestCase):
 
         api_request = mocked_urlopen.call_args.args[0]
         request_body = json.loads(api_request.data.decode("utf-8"))
-        self.assertEqual(request_body["model"], "gpt-5-nano")
+        self.assertEqual(request_body["model"], "gpt-5.6-luna")
         self.assertEqual(request_body["input"], original)
         self.assertFalse(request_body["store"])
         self.assertIn("لا تخترع", request_body["instructions"])
@@ -290,7 +293,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertNotIn("يجب ألا يُرسل", api_request.data.decode("utf-8"))
         self.assertNotIn("test-report-ai-key", api_request.data.decode("utf-8"))
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_short_text_is_rejected_without_api_call(self, mocked_urlopen):
         self._login()
 
@@ -305,7 +308,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertIn("20 حرفًا", response.json()["message"])
         mocked_urlopen.assert_not_called()
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_report_text_over_600_characters_is_rejected_without_api_call(self, mocked_urlopen):
         self._login()
 
@@ -320,7 +323,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
         mocked_urlopen.assert_not_called()
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_ai_rewrite_over_600_characters_is_rejected_and_refunded(self, mocked_urlopen):
         self._login()
         mocked_urlopen.return_value = _FakeTextOpenAIResponse("ب" * 601)
@@ -336,7 +339,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
 
     @patch(
-        "reports.report_ai.urlopen",
+        "reports.ai_client.urlopen",
         # The rewrite has to match the text being improved: a canned reply that
         # introduces a figure the teacher never wrote is now refused outright.
         return_value=_FakeTextOpenAIResponse(
@@ -362,7 +365,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertIn("الثلاثة", limited.json()["message"])
         self.assertEqual(mocked_urlopen.call_count, 3)
 
-    @patch("reports.report_ai.urlopen", side_effect=_spend_limit_error())
+    @patch("reports.ai_client.urlopen", side_effect=_spend_limit_error())
     def test_spend_limit_returns_clear_service_paused_message(self, _mocked_urlopen):
         self._login()
 
@@ -380,7 +383,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
 
     @override_settings(REPORT_AI_ENABLED=False)
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_failed_service_call_does_not_consume_daily_allowance(self, mocked_urlopen):
         self._login()
 
@@ -394,7 +397,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
         mocked_urlopen.assert_not_called()
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_rewrite_that_changes_a_figure_is_rejected_and_refunded(self, mocked_urlopen):
         """A polished sentence with the wrong number is worse than no polish."""
         self._login()
@@ -415,7 +418,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertIn("الأرقام", response.json()["message"])
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_rewrite_that_drops_a_figure_is_rejected(self, mocked_urlopen):
         self._login()
         mocked_urlopen.return_value = _FakeTextOpenAIResponse(
@@ -433,7 +436,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("الأرقام", response.json()["message"])
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_arabic_indic_digits_count_as_the_same_figure(self, mocked_urlopen):
         self._login()
         mocked_urlopen.return_value = _FakeTextOpenAIResponse(
@@ -451,7 +454,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["ok"])
 
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_rewrite_that_summarises_instead_of_editing_is_rejected(self, mocked_urlopen):
         self._login()
         mocked_urlopen.return_value = _FakeTextOpenAIResponse("نُفّذ برنامج توعوي ناجح.")
@@ -474,7 +477,7 @@ class ReportAIImprovementTests(TestCase):
         self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)
 
     @override_settings(REPORT_AI_ENABLED=False)
-    @patch("reports.report_ai.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_disabled_feature_returns_safe_service_message(self, mocked_urlopen):
         self._login()
 
@@ -489,3 +492,35 @@ class ReportAIImprovementTests(TestCase):
         self.assertIn("غير مفعلة", response.json()["message"])
         self.assertEqual(response.json()["remaining"], REPORT_AI_DAILY_LIMIT)
         mocked_urlopen.assert_not_called()
+
+    @patch("reports.ai_client.urlopen")
+    def test_a_rewrite_cut_off_at_the_token_ceiling_is_never_delivered(
+        self, mocked_urlopen
+    ):
+        """نصف جملة تُعتمَد تقريراً رسمياً أسوأ من خطأ صريح.
+
+        ``max_output_tokens`` سقفٌ للتفكير والإخراج المرئي معاً، فقد يلتهم
+        التفكيرُ الميزانية ويعود النصّ مقطوعاً — وحقل ``output_text`` يبدو
+        سليماً تماماً، فلا يفضحه إلا ``status``. والنصّ هنا يحمل الأرقام نفسها
+        وطولاً معقولاً، أي أنه يعبر حارسَي الأرقام والطول بلا مشكلة.
+        """
+        self._login()
+        mocked_urlopen.return_value = _FakeTextOpenAIResponse(
+            "نُفّذ البرنامج صباح يوم الأحد، واستفاد منه 35 طالبًا، وتضمّن أنشطة توعوية و",
+            status="incomplete",
+            reason="max_output_tokens",
+        )
+
+        response = self.client.post(
+            reverse("reports:improve_report_text"),
+            data=json.dumps(
+                {"text": "نفذنا برنامج يوم الأحد واستفاد 35 طالب وكان فيه أنشطة توعوية."}
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("لم تكتمل", response.json()["message"])
+        # ولا تُحتسب محاولة على صياغة لم تُسلَّم.
+        self.assertEqual(report_ai_daily_remaining(self.teacher.pk), REPORT_AI_DAILY_LIMIT)

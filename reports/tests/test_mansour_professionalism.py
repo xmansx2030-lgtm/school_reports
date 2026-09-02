@@ -191,7 +191,7 @@ class MansourSharedSecretTests(SimpleTestCase):
                 self.assertFalse(contains_shared_secret(question))
 
     def test_a_pasted_password_never_reaches_the_model_provider(self):
-        with patch("reports.mansour_assistant.urlopen") as mocked_urlopen:
+        with patch("reports.ai_client.urlopen") as mocked_urlopen:
             answer, sources = ask_mansour(
                 "كلمة مروري 123456 ممكن تغيرها لي؟", plans=[], audience="teacher"
             )

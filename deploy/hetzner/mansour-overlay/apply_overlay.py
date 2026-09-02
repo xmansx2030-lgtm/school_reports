@@ -33,7 +33,7 @@ MANSOUR_ASSISTANT_ENABLED = _env_bool(
     bool(OPENAI_API_KEY),
 )
 MANSOUR_ASSISTANT_MODEL = (
-    os.getenv("MANSOUR_ASSISTANT_MODEL") or "gpt-5-mini"
+    os.getenv("MANSOUR_ASSISTANT_MODEL") or "gpt-5.6-luna"
 ).strip()
 
 try:

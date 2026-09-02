@@ -4,12 +4,13 @@ import json
 import logging
 import re
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
+from .ai_client import log_usage, request_json, truncation_reason
 from .ai_errors import AI_SERVICE_PAUSED_MESSAGE, is_openai_spend_limit_error
 from .report_limits import (
     REPORT_DETAILS_MAX_LENGTH,
@@ -242,12 +243,14 @@ def _improve_text(
             getattr(
                 settings,
                 "REPORT_AI_MODEL",
-                getattr(settings, "MANSOUR_ASSISTANT_MODEL", "gpt-5-mini"),
+                getattr(settings, "MANSOUR_ASSISTANT_MODEL", "gpt-5.6-luna"),
             )
         ),
         "instructions": instructions,
         "input": original,
-        "reasoning": {"effort": "minimal"},
+        "reasoning": {
+            "effort": str(getattr(settings, "AI_FAST_REASONING_EFFORT", "none"))
+        },
         "max_output_tokens": int(getattr(settings, "REPORT_AI_MAX_OUTPUT_TOKENS", 700)),
         "store": False,
     }
@@ -263,8 +266,7 @@ def _improve_text(
 
     timeout = float(getattr(settings, "REPORT_AI_TIMEOUT_SECONDS", 25))
     try:
-        with urlopen(request, timeout=timeout) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+        payload = request_json(request, timeout=timeout, stage="report-improve")
     except HTTPError as exc:
         if is_openai_spend_limit_error(exc):
             logger.warning("Report AI request stopped by the configured spend limit.")
@@ -276,6 +278,19 @@ def _improve_text(
         raise ReportAIUnavailable(
             "تعذر الوصول إلى خدمة التحسين الآن. تحقق من الاتصال ثم أعد المحاولة."
         ) from exc
+
+    log_usage(payload, stage="report-improve", model=str(body["model"]))
+
+    # فقرةٌ انقطعت عند سقف الرموز تصل سليمة الشكل: ``output_text`` موجود،
+    # والحقل الوحيد الذي يفضحها هو ``status``. واعتمادها يعني تقريراً رسمياً
+    # ينتهي في منتصف جملة.
+    reason = truncation_reason(payload)
+    if reason:
+        logger.warning("Report AI response was incomplete: %s.", reason)
+        raise ReportAIError(
+            f"لم تكتمل الصياغة المقترحة لـ{document_name}، ولم أعتمدها ناقصة. "
+            "أعد المحاولة بنص أقصر."
+        )
 
     return verify_improved_text(
         original,

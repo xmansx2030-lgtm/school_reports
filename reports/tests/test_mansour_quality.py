@@ -147,7 +147,7 @@ class MansourWarmthPassTests(SimpleTestCase):
             ),
         ]
 
-        with patch("reports.mansour_assistant.urlopen", side_effect=responses) as mocked:
+        with patch("reports.ai_client.urlopen", side_effect=responses) as mocked:
             answer, _sources = ask_mansour(
                 "الصورة ما ترضى تترفع والتقرير يرفض يحفظ",
                 audience="teacher",

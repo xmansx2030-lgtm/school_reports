@@ -89,8 +89,10 @@ class _FakeWeakComplaintOpenAIResponse:
 
 
 class _FakeTextOpenAIResponse:
-    def __init__(self, text: str):
+    def __init__(self, text: str, *, status: str = "completed", reason: str = ""):
         self.text = text
+        self.status = status
+        self.reason = reason
 
     def __enter__(self):
         return self
@@ -99,18 +101,19 @@ class _FakeTextOpenAIResponse:
         return False
 
     def read(self):
-        return json.dumps(
-            {
-                "output": [
-                    {
-                        "type": "message",
-                        "role": "assistant",
-                        "content": [{"type": "output_text", "text": self.text}],
-                    }
-                ]
-            },
-            ensure_ascii=False,
-        ).encode("utf-8")
+        payload = {
+            "status": self.status,
+            "output": [
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": self.text}],
+                }
+            ],
+        }
+        if self.reason:
+            payload["incomplete_details"] = {"reason": self.reason}
+        return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
 class _FakeSupportOpenAIResponse:
@@ -140,6 +143,27 @@ class _FakeSupportOpenAIResponse:
         ).encode("utf-8")
 
 
+def _prompt_text(body: dict) -> str:
+    """نصّ التعليمات كما يصل النموذج فعلاً.
+
+    لم تعد التعليمات في الحقل العلوي ``instructions``: البادئة الثابتة انتقلت
+    إلى كتلة ``input_text`` داخل رسالة ``developer`` لأن ذلك الحقل لا يقبل
+    نقطة فصل للتخزين، ويليها السياق المتغيّر في رسالة ``developer`` ثانية.
+    """
+    parts: list[str] = []
+    for item in body.get("input") or []:
+        if item.get("role") != "developer":
+            continue
+        content = item.get("content")
+        if isinstance(content, str):
+            parts.append(content)
+            continue
+        for block in content or []:
+            if isinstance(block, dict) and block.get("type") == "input_text":
+                parts.append(str(block.get("text") or ""))
+    return "\n\n".join(parts)
+
+
 def _spend_limit_error(code: str = "organization_spend_limit_exceeded") -> HTTPError:
     body = json.dumps({"error": {"code": code}}).encode("utf-8")
     return HTTPError(
@@ -155,7 +179,7 @@ def _spend_limit_error(code: str = "organization_spend_limit_exceeded") -> HTTPE
     ALLOWED_HOSTS=["testserver"],
     OPENAI_API_KEY="test-secret-key",
     MANSOUR_ASSISTANT_ENABLED=True,
-    MANSOUR_ASSISTANT_MODEL="gpt-5-nano",
+    MANSOUR_ASSISTANT_MODEL="gpt-5.6-luna",
     RATELIMIT_ENABLE=False,
 )
 class MansourAssistantTests(TestCase):
@@ -411,7 +435,7 @@ class MansourAssistantTests(TestCase):
         self.assertTrue(payload["sources"])
         self.assertEqual(payload["sources"][0]["url"], "/complaints/#complaint-form")
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
     def test_endpoint_calls_responses_api_server_side(self, mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -431,7 +455,7 @@ class MansourAssistantTests(TestCase):
 
         request = mocked_urlopen.call_args.args[0]
         request_body = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(request_body["model"], "gpt-5-nano")
+        self.assertEqual(request_body["model"], "gpt-5.6-luna")
         self.assertEqual(
             request_body["reasoning"],
             {"effort": settings.MANSOUR_ASSISTANT_REASONING_EFFORT},
@@ -446,15 +470,15 @@ class MansourAssistantTests(TestCase):
         )
         self.assertRegex(request_body["safety_identifier"], r"^tawtheeq_[a-f0-9]{16}$")
         self.assertFalse(request_body["store"])
-        self.assertIn("باقة المدرسة", request_body["instructions"])
-        self.assertIn("650", request_body["instructions"])
-        self.assertIn("الفئة: مدير مدرسة", request_body["instructions"])
-        self.assertIn("#pricing", request_body["instructions"])
+        self.assertIn("باقة المدرسة", _prompt_text(request_body))
+        self.assertIn("650", _prompt_text(request_body))
+        self.assertIn("الفئة: مدير مدرسة", _prompt_text(request_body))
+        self.assertIn("#pricing", _prompt_text(request_body))
         self.assertNotIn("test-secret-key", request.data.decode("utf-8"))
         self.assertEqual(response.json()["audience"], "manager")
         self.assertEqual(response.json()["audience_label"], "مدير مدرسة")
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
     def test_authenticated_page_context_is_available_to_the_model(self, mocked_urlopen):
         teacher = Teacher.objects.create_user(
             phone="500009908",
@@ -480,11 +504,11 @@ class MansourAssistantTests(TestCase):
         self.assertEqual(response.status_code, 200)
         request = mocked_urlopen.call_args.args[0]
         request_body = json.loads(request.data.decode("utf-8"))
-        self.assertIn("تقاريري - منصة توثيق", request_body["instructions"])
-        self.assertIn("/reports/my/", request_body["instructions"])
-        self.assertNotIn("token=secret", request_body["instructions"])
+        self.assertIn("تقاريري - منصة توثيق", _prompt_text(request_body))
+        self.assertIn("/reports/my/", _prompt_text(request_body))
+        self.assertNotIn("token=secret", _prompt_text(request_body))
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
     def test_authenticated_assistant_receives_minimal_personal_journey_context(
         self, mocked_urlopen
     ):
@@ -517,7 +541,7 @@ class MansourAssistantTests(TestCase):
         self.assertEqual(response.status_code, 200)
         request = mocked_urlopen.call_args.args[0]
         body = json.loads(request.data.decode("utf-8"))
-        instructions = body["instructions"]
+        instructions = _prompt_text(body)
         self.assertIn("مساعد شخصي داخل الحساب", instructions)
         self.assertIn("الدور الفعلي: المعلم", instructions)
         self.assertIn("رحلة المعلم", instructions)
@@ -527,7 +551,7 @@ class MansourAssistantTests(TestCase):
         self.assertNotIn(teacher.name, instructions)
         self.assertNotIn(teacher.phone, instructions)
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeWeakComplaintOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeWeakComplaintOpenAIResponse())
     def test_complaint_intent_quality_guard_rewrites_weak_model_answer(self, _mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -542,8 +566,8 @@ class MansourAssistantTests(TestCase):
         self.assertEqual(payload["sources"][0]["url"], "/complaints/#complaint-form")
 
     @override_settings(MANSOUR_ASSISTANT_REASONING_EFFORT="medium")
-    @patch("reports.mansour_assistant.urlopen")
-    def test_verbose_model_answer_is_rewritten_with_minimal_reasoning(self, mocked_urlopen):
+    @patch("reports.ai_client.urlopen")
+    def test_verbose_model_answer_is_rewritten_without_reasoning(self, mocked_urlopen):
         verbose_answer = "\n".join(f"معلومة مفيدة {index}" for index in range(15))
         concise_answer = "لباقة 40 معلمًا، اختر الاحترافية لأنها تستوعب حتى 50 معلمًا."
         mocked_urlopen.side_effect = [
@@ -563,7 +587,9 @@ class MansourAssistantTests(TestCase):
         first_body = json.loads(mocked_urlopen.call_args_list[0].args[0].data.decode("utf-8"))
         retry_body = json.loads(mocked_urlopen.call_args_list[1].args[0].data.decode("utf-8"))
         self.assertEqual(first_body["reasoning"], {"effort": "medium"})
-        self.assertEqual(retry_body["reasoning"], {"effort": "minimal"})
+        # إعادة الصياغة لا تستحق تفكيراً: النصّ مكتوب وما تبقّى تشذيبه. و``none``
+        # هو ما حلّ محلّ ``minimal`` في جيل 5.6، والقديم يُرفض بـ400.
+        self.assertEqual(retry_body["reasoning"], {"effort": "none"})
 
     def test_retrieval_is_scoped_to_the_selected_role(self):
         manager_items = select_knowledge(
@@ -733,7 +759,7 @@ class MansourAssistantTests(TestCase):
             payload["sources"],
         )
 
-    @patch("reports.mansour_assistant.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_undocumented_error_code_opens_ticket_without_model_guessing(self, mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -747,7 +773,7 @@ class MansourAssistantTests(TestCase):
         self.assertIn("/support/new/", [source["url"] for source in payload["sources"]])
         mocked_urlopen.assert_not_called()
 
-    @patch("reports.mansour_assistant.urlopen")
+    @patch("reports.ai_client.urlopen")
     def test_refund_request_does_not_invent_an_undocumented_workflow(self, mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -798,7 +824,7 @@ class MansourAssistantTests(TestCase):
         self.assertIn("ارفع ملفًا واحدًا", payload["answer"])
         self.assertNotIn("/support/new/", [source["url"] for source in payload["sources"]])
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeSupportOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeSupportOpenAIResponse())
     def test_valid_model_support_answer_does_not_offer_ticket(self, _mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -960,7 +986,7 @@ class MansourAssistantTests(TestCase):
 
         self.assertEqual(resolved_for(teacher), "teacher")
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
     def test_anonymous_user_cannot_claim_an_unknown_privileged_role(self, mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -979,7 +1005,7 @@ class MansourAssistantTests(TestCase):
         self.assertIn("مدير مدرسة", response.json()["answer"])
         mocked_urlopen.assert_not_called()
 
-    @patch("reports.mansour_assistant.urlopen", return_value=_FakeOpenAIResponse())
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
     def test_public_endpoint_does_not_depend_on_a_csrf_cookie(self, _mocked_urlopen):
         csrf_client = Client(enforce_csrf_checks=True)
 
@@ -1046,7 +1072,7 @@ class MansourAssistantTests(TestCase):
         self.assertIn("التجربة المجانية", response.json()["answer"])
         self.assertNotIn("OPENAI", response.content.decode("utf-8"))
 
-    @patch("reports.mansour_assistant.urlopen", side_effect=URLError("down"))
+    @patch("reports.ai_client.urlopen", side_effect=URLError("down"))
     def test_endpoint_falls_back_when_openai_is_temporarily_unreachable(self, _mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -1059,7 +1085,7 @@ class MansourAssistantTests(TestCase):
         self.assertTrue(payload["ok"])
         self.assertIn("التسجيل", payload["answer"])
 
-    @patch("reports.mansour_assistant.urlopen", side_effect=_spend_limit_error())
+    @patch("reports.ai_client.urlopen", side_effect=_spend_limit_error())
     def test_spend_limit_returns_clear_service_paused_message(self, _mocked_urlopen):
         response = self.client.post(
             reverse("reports:mansour_assistant_reply"),
@@ -1143,3 +1169,147 @@ class MansourDailyBudgetTests(TestCase):
         with patch("reports.views.mansour.limits_cache", return_value=broken_cache):
             for _ in range(3):
                 self.assertEqual(self._ask().status_code, 200)
+
+
+class PromptCacheStructureTests(TestCase):
+    """بنية الطلب التي يقوم عليها خصم تخزين البادئة.
+
+    تطابق المخزَّن يشترط تطابق البادئة **كاملةً**. فمتى تسلّل حرفٌ متغيّر إلى
+    الكتلة الثابتة — اسم صفحة، أو فئة، أو معرفة مسترجَعة — سقط التطابق في كل
+    طلب، وعاد الإدخال إلى سعره الكامل بلا أي خطأ ظاهر. هذه الاختبارات هي ما
+    يجعل ذلك الانهيار الصامت مسموعاً.
+    """
+
+    def test_the_static_prefix_never_varies_with_the_request(self):
+        from reports.mansour_assistant import _cacheable_input, _dynamic_context
+
+        def first_block(audience: str, page: str, question: str) -> dict:
+            selected = select_knowledge(question, audience=audience)
+            context = _dynamic_context(
+                selected,
+                [{"name": "باقة", "price": 650, "max_teachers": 50}],
+                audience=audience,
+                page_context=page,
+                question=question,
+            )
+            return _cacheable_input(context, [{"role": "user", "content": question}])[0]
+
+        manager = first_block("manager", "لوحة المدير", "كيف أرسل تعميمًا؟")
+        teacher = first_block("teacher", "تقاريري", "كيف أكتب تقريرًا؟")
+
+        self.assertEqual(manager, teacher)
+
+    def test_the_static_block_carries_the_explicit_breakpoint(self):
+        from reports.mansour_assistant import _cacheable_input, _static_instructions
+
+        payload = _cacheable_input("سياق متغيّر", [{"role": "user", "content": "س"}])
+        block = payload[0]["content"][0]
+
+        self.assertEqual(payload[0]["role"], "developer")
+        self.assertEqual(block["type"], "input_text")
+        self.assertEqual(block["text"], _static_instructions())
+        self.assertEqual(block["prompt_cache_breakpoint"], {"mode": "explicit"})
+
+    def test_the_variable_context_comes_after_the_breakpoint(self):
+        """سطرٌ متغيّر واحد قبل نقطة الفصل يُبطل الخصم كلّه."""
+        from reports.mansour_assistant import _cacheable_input
+
+        payload = _cacheable_input("سياق متغيّر", [{"role": "user", "content": "سؤال"}])
+
+        self.assertNotIn("سياق متغيّر", payload[0]["content"][0]["text"])
+        self.assertEqual(payload[1], {"role": "developer", "content": "سياق متغيّر"})
+        self.assertEqual(payload[-1], {"role": "user", "content": "سؤال"})
+
+    def test_the_prefix_clears_the_minimum_cacheable_length(self):
+        """دون 1024 رمزاً لا يقع تخزين أصلاً، والقياس وقت الكتابة: 1126 رمزاً.
+
+        الحدّ هنا بالمحارف لا بالرموز حتى لا يُدخل الاختبار اعتماد ``tiktoken``
+        على المشروع. النسبة المقيسة على هذا النصّ العربي ~2.96 محرف/رمز، وهامش
+        الأمان ضيّق (‏102 رمزاً فقط)، فحذف فقرة من البادئة يُسقط التخزين صمتاً.
+        """
+        from reports.mansour_assistant import _static_instructions
+
+        self.assertGreaterEqual(len(_static_instructions()), 3300)
+
+    @override_settings(
+        ALLOWED_HOSTS=["testserver"],
+        OPENAI_API_KEY="test-secret-key",
+        MANSOUR_ASSISTANT_ENABLED=True,
+        MANSOUR_ASSISTANT_MODEL="gpt-5.6-luna",
+        RATELIMIT_ENABLE=False,
+    )
+    @patch("reports.ai_client.urlopen", return_value=_FakeOpenAIResponse())
+    def test_the_request_asks_for_explicit_caching_and_drops_top_level_instructions(
+        self, mocked_urlopen
+    ):
+        cache.clear()
+        response = self.client.post(
+            reverse("reports:mansour_assistant_reply"),
+            data=json.dumps({"question": "هل توجد تجربة مجانية؟"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        body = json.loads(mocked_urlopen.call_args.args[0].data.decode("utf-8"))
+
+        # إبقاء ``instructions`` مع الكتلة الثابتة يعني إرسال التعليمات مرتين.
+        self.assertNotIn("instructions", body)
+        self.assertEqual(body["prompt_cache_options"], {"mode": "explicit"})
+        self.assertTrue(body["prompt_cache_key"].startswith("mansour-"))
+
+    def test_no_cache_options_are_sent_to_a_model_that_lacks_them(self):
+        """المعاملات خاصة بجيل 5.6؛ إرسالها لغيره يخاطر برفض الطلب."""
+        from reports.mansour_assistant import _prompt_cache_options
+
+        self.assertEqual(_prompt_cache_options("gpt-4.1", audience="general"), {})
+        self.assertNotEqual(
+            _prompt_cache_options("gpt-5.6-terra", audience="general"), {}
+        )
+
+    def test_the_cache_key_follows_the_prefix_text(self):
+        """تعديل البادئة يجب أن يغيّر المفتاح، فلا تختلط صياغتان على مخزَن واحد."""
+        from reports.mansour_assistant import (
+            _STATIC_INSTRUCTIONS_VERSION,
+            _static_instructions,
+        )
+        import hashlib
+
+        expected = hashlib.sha256(
+            _static_instructions().encode("utf-8")
+        ).hexdigest()[:12]
+        self.assertEqual(_STATIC_INSTRUCTIONS_VERSION, expected)
+
+    @override_settings(
+        ALLOWED_HOSTS=["testserver"],
+        OPENAI_API_KEY="test-secret-key",
+        MANSOUR_ASSISTANT_ENABLED=True,
+        MANSOUR_ASSISTANT_MODEL="gpt-5.6-luna",
+        RATELIMIT_ENABLE=False,
+    )
+    @patch("reports.ai_client.urlopen")
+    def test_an_answer_cut_off_at_the_token_ceiling_never_reaches_the_customer(
+        self, mocked_urlopen
+    ):
+        """الردّ المقطوع يسقط إلى الردّ الاحتياطي المحلي، لا إلى شاشة العميل.
+
+        ``max_output_tokens`` يحدّ التفكير والإخراج معاً، فقد يعود الردّ مبتوراً
+        في منتصف جملة بحقل نصّ سليم الشكل. وجملةٌ ناقصة من «مساعد المنصة» أسوأ
+        على الانطباع من إجابة احتياطية مكتملة.
+        """
+        cache.clear()
+        cut_off = "تقدر تبدأ بفتح صفحة الباقات ثم تختار الباقة التي تناسب عدد"
+        mocked_urlopen.side_effect = [
+            _FakeTextOpenAIResponse(cut_off, status="incomplete", reason="max_output_tokens"),
+            _FakeTextOpenAIResponse(cut_off, status="incomplete", reason="max_output_tokens"),
+        ]
+
+        response = self.client.post(
+            reverse("reports:mansour_assistant_reply"),
+            data=json.dumps({"question": "ما الباقة المناسبة لمدرستي؟"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        answer = response.json()["answer"]
+        self.assertNotIn(cut_off, answer)
+        self.assertTrue(answer.strip())
