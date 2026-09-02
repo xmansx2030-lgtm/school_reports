@@ -1,12 +1,43 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_client.dart';
 import 'models.dart';
 import 'notifications.dart';
 
 final apiProvider = Provider<OperationsApi>((ref) => OperationsApi());
+
+/// Persisted light/dark/system preference for the whole app.
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  ThemeModeController() : super(ThemeMode.system) {
+    _restore();
+  }
+
+  static const _storage = FlutterSecureStorage(aOptions: AndroidOptions());
+  static const _key = 'operations_theme_mode';
+
+  Future<void> _restore() async {
+    final stored = await _storage.read(key: _key);
+    state = switch (stored) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+  }
+
+  Future<void> setMode(ThemeMode mode) async {
+    state = mode;
+    await _storage.write(key: _key, value: mode.name);
+  }
+}
+
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
+      return ThemeModeController();
+    });
 
 enum SessionStatus { loading, signedOut, signedIn }
 
@@ -25,10 +56,8 @@ class SessionController extends StateNotifier<SessionState> {
 
   Future<void> _restore() async {
     if (!await _api.restoreSession()) {
-      state = const SessionState(
-        status: SessionStatus.signedOut,
-        error: 'هذه النسخة غير مهيأة برمز الجهاز.',
-      );
+      // No stored/provisioned token yet — surface the sign-in screen.
+      state = const SessionState(status: SessionStatus.signedOut);
       return;
     }
     try {
@@ -38,6 +67,8 @@ class SessionController extends StateNotifier<SessionState> {
       if (error is ApiException &&
           (error.statusCode == 401 || error.statusCode == 403)) {
         await _api.clearSession();
+        state = const SessionState(status: SessionStatus.signedOut);
+        return;
       }
       state = SessionState(
         status: SessionStatus.signedOut,
@@ -46,6 +77,29 @@ class SessionController extends StateNotifier<SessionState> {
             : 'تعذر الاتصال بمركز العمليات.',
       );
     }
+  }
+
+  /// Signs in with credentials issued by the operations centre.
+  Future<void> signIn({
+    required String phone,
+    required String password,
+    String otp = '',
+    required String deviceName,
+  }) async {
+    await _api.login(
+      phone: phone,
+      password: password,
+      deviceName: deviceName,
+      otp: otp,
+    );
+    // Verify the token actually works before entering the app.
+    await _api.dashboard();
+    state = const SessionState(status: SessionStatus.signedIn);
+  }
+
+  Future<void> signOut() async {
+    await _api.logout();
+    state = const SessionState(status: SessionStatus.signedOut);
   }
 
   Future<void> retry() async {
@@ -57,7 +111,7 @@ class SessionController extends StateNotifier<SessionState> {
     await _api.clearSession();
     state = const SessionState(
       status: SessionStatus.signedOut,
-      error: 'انتهت صلاحية رمز الجهاز. أعد تثبيت النسخة الشخصية.',
+      error: 'انتهت صلاحية الجلسة. سجّل الدخول من جديد.',
     );
   }
 }

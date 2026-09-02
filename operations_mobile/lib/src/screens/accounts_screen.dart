@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client.dart';
+import '../design_system.dart';
 import '../models.dart';
 import '../state.dart';
 
@@ -45,9 +46,9 @@ class AccountsScreen extends ConsumerWidget {
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 3),
-                  const Text(
+                  Text(
                     'صلاحيات مستقلة عن حسابات المشروع الرئيسي.',
-                    style: TextStyle(color: Color(0xFF677381)),
+                    style: TextStyle(color: context.ops.slate),
                   ),
                   const SizedBox(height: 14),
                   FilledButton.icon(
@@ -269,9 +270,7 @@ class _AccountTile extends ConsumerWidget {
     child: ListTile(
       leading: Icon(
         account.isActive ? Icons.verified_user_outlined : Icons.block,
-        color: account.isActive
-            ? const Color(0xFF138A4B)
-            : const Color(0xFFC5362F),
+        color: account.isActive ? context.ops.healthy : context.ops.danger,
       ),
       title: Text(
         account.name,
@@ -286,9 +285,9 @@ class _AccountTile extends ConsumerWidget {
         ].join(' · '),
       ),
       trailing: account.role == 'owner'
-          ? const Icon(
+          ? Icon(
               Icons.workspace_premium_outlined,
-              color: Color(0xFF9A7410),
+              color: context.ops.gold,
             )
           : PopupMenuButton<String>(
               tooltip: 'إجراءات الحساب',
@@ -350,29 +349,36 @@ class _TeamAccessDenied extends StatelessWidget {
   const _TeamAccessDenied();
 
   @override
-  Widget build(BuildContext context) => const Center(
-    child: Padding(
-      padding: EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.lock_outline, size: 52, color: Color(0xFF7C8793)),
-          SizedBox(height: 14),
-          Text(
-            'إدارة الفريق مخصصة لمدير العمليات',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 6),
-          Text(
-            'يمكنك متابعة الخوادم حسب الصلاحيات الممنوحة لحسابك.',
-            style: TextStyle(color: Color(0xFF677381)),
-            textAlign: TextAlign.center,
-          ),
-        ],
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 52, color: ops.muted),
+            const SizedBox(height: 14),
+            Text(
+              'إدارة الفريق مخصصة لمدير العمليات',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: ops.ink,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'يمكنك متابعة الخوادم حسب الصلاحيات الممنوحة لحسابك.',
+              style: TextStyle(color: ops.slate),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _AccountError extends StatelessWidget {
@@ -387,10 +393,10 @@ class _AccountError extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.manage_accounts_outlined,
             size: 54,
-            color: Color(0xFFC5362F),
+            color: context.ops.danger,
           ),
           const SizedBox(height: 14),
           Text(message, textAlign: TextAlign.center),

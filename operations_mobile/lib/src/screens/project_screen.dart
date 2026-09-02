@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../api_client.dart';
+import '../design_system.dart';
 import '../models.dart';
 import '../state.dart';
 import '../widgets/status_widgets.dart';
@@ -83,20 +84,20 @@ class ProjectScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'نسخة احتياطية فورية',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                     ),
                                   ),
-                                  SizedBox(height: 4),
+                                  const SizedBox(height: 4),
                                   Text(
                                     'ينشئ نسخة مدققة من بيانات المشروع عبر وكيل العمليات.',
-                                    style: TextStyle(color: Color(0xFF677381)),
+                                    style: TextStyle(color: context.ops.slate),
                                   ),
                                 ],
                               ),
@@ -262,15 +263,12 @@ class _ProjectHeader extends StatelessWidget {
                       : project.baseUrl,
                   textDirection: TextDirection.ltr,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(color: Color(0xFF596674)),
+                  style: TextStyle(color: context.ops.slate),
                 ),
                 if (project.lastCheckedAt != null)
                   Text(
                     'آخر فحص ${DateFormat('yyyy/MM/dd HH:mm').format(project.lastCheckedAt!)}',
-                    style: const TextStyle(
-                      color: Color(0xFF7C8793),
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: context.ops.muted, fontSize: 12),
                   ),
               ],
             ),
@@ -307,9 +305,9 @@ class _MetricChart extends StatelessWidget {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 5),
-            const Text(
+            Text(
               'CPU وRAM نسبةً إلى إجمالي قدرة الخادم، مع حركة الشبكة وكتابة القرص الخاصة بحاويات المشروع.',
-              style: TextStyle(color: Color(0xFF677381)),
+              style: TextStyle(color: context.ops.slate),
             ),
             const SizedBox(height: 18),
             if (ordered.isEmpty)
@@ -429,19 +427,26 @@ class _UsageChip extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF2F7F4),
-      border: Border.all(color: const Color(0xFFD8E4DC)),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text(
-      '$label: $value',
-      textDirection: TextDirection.rtl,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: ops.surfaceAlt,
+        border: Border.all(color: ops.lineSoft),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$label: $value',
+        textDirection: TextDirection.rtl,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: ops.ink,
+        ),
+      ),
+    );
+  }
 }
 
 class _Legend extends StatelessWidget {
@@ -497,10 +502,10 @@ class _ServicesPanel extends StatelessWidget {
                       onPressed: () => onRestart(service),
                       icon: const Icon(Icons.restart_alt),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.lock_outline,
                       size: 20,
-                      color: Color(0xFF7C8793),
+                      color: context.ops.muted,
                     ),
             ),
           ),
@@ -539,9 +544,7 @@ class _ChecksPanel extends StatelessWidget {
                   dense: true,
                   leading: Icon(
                     check.ok ? Icons.check_circle : Icons.cancel,
-                    color: check.ok
-                        ? const Color(0xFF138A4B)
-                        : const Color(0xFFC5362F),
+                    color: check.ok ? context.ops.healthy : context.ops.danger,
                   ),
                   title: Text(
                     check.ok ? 'استجابة سليمة' : 'فشل الفحص',

@@ -11,22 +11,38 @@ import 'accounts_screen.dart';
 import 'change_password_screen.dart';
 import 'project_screen.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  int _index = 0;
+
+  static const _titles = ['نظرة عامة', 'الخوادم', 'التنبيهات', 'الحساب'];
+  static const _subtitles = [
+    'بيئة الإنتاج · اتصال مباشر',
+    'الخوادم والمشاريع المُراقَبة',
+    'الحالات التي تحتاج إلى متابعة',
+    'حسابك وإعدادات الفريق',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     final dashboard = ref.watch(dashboardProvider);
-    final currentUser = dashboard.asData?.value.currentUser;
+    final data = dashboard.asData?.value;
+    final openIncidents = data?.openIncidentCount ?? 0;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'مركز العمليات',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 21),
+            Text(
+              _titles[_index],
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 21),
             ),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -40,9 +56,12 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text(
-                  'بيئة الإنتاج · اتصال مباشر',
-                  style: TextStyle(fontSize: 11, color: Color(0xFFB9CAC2)),
+                Text(
+                  _subtitles[_index],
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFB9CAC2),
+                  ),
                 ),
               ],
             ),
@@ -53,30 +72,6 @@ class DashboardScreen extends ConsumerWidget {
             tooltip: 'تحديث الحالة',
             onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
             icon: const Icon(Icons.sync_rounded),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'خيارات الحساب',
-            icon: const Icon(Icons.account_circle_outlined),
-            onSelected: (value) => _handleMenu(context, value, currentUser),
-            itemBuilder: (_) => [
-              if (currentUser?.can('manage_team') == true)
-                const PopupMenuItem(
-                  value: 'accounts',
-                  child: ListTile(
-                    leading: Icon(Icons.groups_2_outlined),
-                    title: Text('فريق العمليات'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              const PopupMenuItem(
-                value: 'password',
-                child: ListTile(
-                  leading: Icon(Icons.password_outlined),
-                  title: Text('تغيير كلمة المرور'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
           ),
           const SizedBox(width: 6),
         ],
@@ -89,81 +84,303 @@ class DashboardScreen extends ConsumerWidget {
               : 'تعذر تحميل حالة الخادم.',
           onRetry: () => ref.read(dashboardProvider.notifier).refresh(),
         ),
-        data: (data) => RefreshIndicator(
-          onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 900;
-              final content = <Widget>[
-                _Overview(data: data),
-                const SizedBox(height: 16),
-                _DeploymentPanel(
-                  canRunActions: data.currentUser.can('run_actions'),
-                ),
-                const SizedBox(height: 16),
-                if (data.servers.isEmpty)
-                  const Card(
-                    child: EmptyState(
-                      icon: Icons.dns_outlined,
-                      title: 'لا يوجد خادم مسجل',
-                      message: 'أضف جرد الخادم من لوحة Django.',
-                    ),
-                  )
-                else
-                  ...data.servers.map(
-                    (server) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _ServerPanel(server: server),
-                    ),
-                  ),
-              ];
-              final incidents = _IncidentsPanel(data: data);
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.all(wide ? 24 : 16),
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1380),
-                    child: wide
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 7,
-                                child: Column(children: content),
-                              ),
-                              const SizedBox(width: 18),
-                              Expanded(flex: 3, child: incidents),
-                            ],
-                          )
-                        : Column(children: [...content, incidents]),
-                  ),
-                ],
-              );
-            },
+        data: _tabBody,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (value) => setState(() => _index = value),
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard_rounded),
+            label: 'نظرة عامة',
           ),
-        ),
+          const NavigationDestination(
+            icon: Icon(Icons.dns_outlined),
+            selectedIcon: Icon(Icons.dns_rounded),
+            label: 'الخوادم',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: openIncidents > 0,
+              label: Text('$openIncidents'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: openIncidents > 0,
+              label: Text('$openIncidents'),
+              child: const Icon(Icons.notifications_rounded),
+            ),
+            label: 'التنبيهات',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'الحساب',
+          ),
+        ],
       ),
     );
   }
 
-  void _handleMenu(
-    BuildContext context,
-    String value,
-    OperationsAccount? currentUser,
-  ) {
-    if (value == 'accounts' && currentUser?.can('manage_team') == true) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              AccountsScreen(canManage: currentUser!.can('manage_team')),
+  Widget _tabBody(DashboardData data) {
+    final body = switch (_index) {
+      1 => _serversTab(data),
+      2 => [_IncidentsPanel(data: data)],
+      3 => [_AccountTab(user: data.currentUser)],
+      _ => _overviewTab(data),
+    };
+    return RefreshIndicator(
+      onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: body,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _overviewTab(DashboardData data) => [
+    _Overview(data: data),
+    const SizedBox(height: 16),
+    _DeploymentPanel(canRunActions: data.currentUser.can('run_actions')),
+  ];
+
+  List<Widget> _serversTab(DashboardData data) {
+    if (data.servers.isEmpty) {
+      return const [
+        Card(
+          child: EmptyState(
+            icon: Icons.dns_outlined,
+            title: 'لا يوجد خادم مسجل',
+            message: 'أضف جرد الخادم من لوحة Django.',
+          ),
         ),
-      );
-    } else if (value == 'password') {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
+      ];
     }
+    return data.servers
+        .map(
+          (server) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _ServerPanel(server: server),
+          ),
+        )
+        .toList();
+  }
+}
+
+class _AccountTab extends ConsumerWidget {
+  const _AccountTab({required this.user});
+  final OperationsAccount user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = user.name.isEmpty ? 'مستخدم مركز العمليات' : user.name;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PremiumPanel(
+          gradient: const LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [OpsColors.ink, OpsColors.forest],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      user.roleLabel,
+                      style: const TextStyle(color: Color(0xFFC7D8D0)),
+                    ),
+                    if (user.phone.isNotEmpty)
+                      Text(
+                        user.phone,
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(
+                          color: Color(0xFFC7D8D0),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Column(
+            children: [
+              if (user.can('manage_team'))
+                ListTile(
+                  leading: Icon(
+                    Icons.groups_2_outlined,
+                    color: context.ops.forest,
+                  ),
+                  title: const Text('فريق العمليات'),
+                  subtitle: const Text('إدارة الحسابات والصلاحيات'),
+                  trailing: const Icon(Icons.chevron_left_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AccountsScreen(
+                        canManage: user.can('manage_team'),
+                      ),
+                    ),
+                  ),
+                ),
+              if (user.can('manage_team')) const Divider(height: 1),
+              ListTile(
+                leading: Icon(
+                  Icons.password_outlined,
+                  color: context.ops.forest,
+                ),
+                title: const Text('تغيير كلمة المرور'),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ChangePasswordScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _ThemeSelector(
+          mode: ref.watch(themeModeProvider),
+          onChanged: (mode) =>
+              ref.read(themeModeProvider.notifier).setMode(mode),
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: context.ops.danger,
+            side: BorderSide(color: context.ops.danger),
+            minimumSize: const Size(48, 52),
+          ),
+          onPressed: () => _confirmLogout(context, ref),
+          icon: const Icon(Icons.logout_rounded),
+          label: const Text('تسجيل الخروج'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تسجيل الخروج'),
+        content: const Text('هل تريد تسجيل الخروج من مركز العمليات؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: OpsColors.danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('خروج'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(sessionProvider.notifier).signOut();
+    }
+  }
+}
+
+class _ThemeSelector extends StatelessWidget {
+  const _ThemeSelector({required this.mode, required this.onChanged});
+  final ThemeMode mode;
+  final ValueChanged<ThemeMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.palette_outlined, color: ops.forest, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  'مظهر التطبيق',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: ops.ink,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.system,
+                  label: Text('النظام'),
+                  icon: Icon(Icons.brightness_auto_outlined),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.light,
+                  label: Text('فاتح'),
+                  icon: Icon(Icons.light_mode_outlined),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.dark,
+                  label: Text('داكن'),
+                  icon: Icon(Icons.dark_mode_outlined),
+                ),
+              ],
+              selected: {mode},
+              showSelectedIcon: false,
+              onSelectionChanged: (selection) => onChanged(selection.first),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -239,7 +456,7 @@ class _Overview extends StatelessWidget {
                 label: 'المشاريع',
                 value: '${data.projectCount}',
                 icon: Icons.apps_outlined,
-                color: OpsColors.info,
+                color: context.ops.info,
               ),
             ),
             const SizedBox(width: 10),
@@ -248,7 +465,7 @@ class _Overview extends StatelessWidget {
                 label: 'السليمة',
                 value: '${data.healthyProjectCount}',
                 icon: Icons.health_and_safety_outlined,
-                color: OpsColors.emerald,
+                color: context.ops.emerald,
               ),
             ),
             const SizedBox(width: 10),
@@ -258,8 +475,8 @@ class _Overview extends StatelessWidget {
                 value: '${data.openIncidentCount}',
                 icon: Icons.notification_important_outlined,
                 color: data.openIncidentCount > 0
-                    ? OpsColors.danger
-                    : OpsColors.slate,
+                    ? context.ops.danger
+                    : context.ops.slate,
               ),
             ),
           ],
@@ -415,22 +632,28 @@ class _DeploymentRow extends StatelessWidget {
   final bool isDeploying;
   final VoidCallback? onDeploy;
 
+  Color _workflowColor(OpsPalette ops) {
+    if (info.workflowStatus == 'in_progress') return ops.info;
+    if (info.workflowConclusion == 'success') return ops.healthy;
+    if (info.workflowConclusion == 'failure') return ops.danger;
+    return ops.muted;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final ops = context.ops;
     final accent = info.repositoryAhead
-        ? const Color(0xFFA66B00)
+        ? ops.gold
         : info.upToDate
-        ? const Color(0xFF138A4B)
-        : const Color(0xFF596674);
+        ? ops.healthy
+        : ops.slate;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        border: Border.all(color: OpsColors.line),
+        border: Border.all(color: ops.line),
         borderRadius: BorderRadius.circular(18),
-        color: info.repositoryAhead
-            ? OpsColors.goldSoft
-            : const Color(0xFFF8FAF8),
+        color: info.repositoryAhead ? ops.goldSoft : ops.surfaceAlt,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -447,48 +670,30 @@ class _DeploymentRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   info.projectName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
+                    color: ops.ink,
                   ),
                 ),
               ),
-              if (!info.deploymentEnabled)
-                const Tooltip(
+              // Workflow state as a single compact badge instead of a chip row.
+              _WorkflowBadge(label: workflowLabel, color: _workflowColor(ops)),
+              if (!info.deploymentEnabled) ...[
+                const SizedBox(width: 8),
+                Tooltip(
                   message: 'النشر اليدوي من التطبيق غير مفعل لهذا المشروع',
-                  child: Icon(
-                    Icons.lock_outline,
-                    size: 19,
-                    color: Color(0xFF7C8793),
-                  ),
+                  child: Icon(Icons.lock_outline, size: 19, color: ops.muted),
                 ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _ReleaseChip(
-                label: 'GitHub',
-                value: info.latestShortSha.isEmpty
-                    ? 'غير معروف'
-                    : info.latestShortSha,
-                icon: Icons.commit,
-              ),
-              _ReleaseChip(
-                label: 'الخادم',
-                value: info.deployedShortSha.isEmpty
-                    ? 'غير معروف'
-                    : info.deployedShortSha,
-                icon: Icons.dns_outlined,
-              ),
-              _ReleaseChip(
-                label: 'Actions',
-                value: workflowLabel,
-                icon: Icons.playlist_play,
-              ),
-            ],
+          const SizedBox(height: 12),
+          // One compact line comparing server ↔ GitHub instead of three chips.
+          _ReleaseLine(
+            deployedSha: info.deployedShortSha,
+            latestSha: info.latestShortSha,
+            ahead: info.repositoryAhead,
           ),
           if (info.latestMessage.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -496,17 +701,11 @@ class _DeploymentRow extends StatelessWidget {
               info.latestMessage,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFF596674),
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: ops.slate, fontWeight: FontWeight.w700),
             ),
           ],
           const SizedBox(height: 9),
-          Text(
-            info.actionRequired,
-            style: const TextStyle(color: Color(0xFF596674)),
-          ),
+          Text(info.actionRequired, style: TextStyle(color: ops.slate)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -515,10 +714,7 @@ class _DeploymentRow extends StatelessWidget {
                   '${info.repository} · ${info.branch}',
                   textDirection: TextDirection.ltr,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF7C8793),
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: ops.muted, fontSize: 12),
                 ),
               ),
               ElevatedButton.icon(
@@ -544,41 +740,102 @@ class _DeploymentRow extends StatelessWidget {
   }
 }
 
-class _ReleaseChip extends StatelessWidget {
-  const _ReleaseChip({
-    required this.label,
-    required this.value,
-    required this.icon,
+/// Compact "server ↔ GitHub" release comparison replacing the old chip stack.
+class _ReleaseLine extends StatelessWidget {
+  const _ReleaseLine({
+    required this.deployedSha,
+    required this.latestSha,
+    required this.ahead,
   });
-  final String label;
-  final String value;
-  final IconData icon;
+  final String deployedSha;
+  final String latestSha;
+  final bool ahead;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-    decoration: BoxDecoration(
-      border: Border.all(color: const Color(0xFFD6DEE6)),
-      borderRadius: BorderRadius.circular(8),
-      color: const Color(0xFFF8FAFC),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 18, color: const Color(0xFF356AA0)),
-        const SizedBox(width: 7),
-        Text(
-          '$label: ',
-          style: const TextStyle(color: Color(0xFF677381), fontSize: 12),
-        ),
-        Text(
-          value,
-          textDirection: TextDirection.ltr,
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: ops.lineSoft),
+        borderRadius: BorderRadius.circular(12),
+        color: ops.surface,
+      ),
+      child: Row(
+        children: [
+          _sha(ops, Icons.dns_outlined, 'الخادم', deployedSha),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Icon(
+              ahead ? Icons.arrow_back_rounded : Icons.check_rounded,
+              size: 16,
+              color: ahead ? ops.gold : ops.healthy,
+            ),
+          ),
+          _sha(ops, Icons.commit, 'GitHub', latestSha),
+        ],
+      ),
+    );
+  }
+
+  Widget _sha(OpsPalette ops, IconData icon, String label, String sha) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: ops.accentBlue),
+          const SizedBox(width: 6),
+          Text(
+            '$label ',
+            style: TextStyle(color: ops.muted, fontSize: 12),
+          ),
+          Flexible(
+            child: Text(
+              sha.isEmpty ? '—' : sha,
+              textDirection: TextDirection.ltr,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.w900, color: ops.ink),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkflowBadge extends StatelessWidget {
+  const _WorkflowBadge({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SummaryItem extends StatelessWidget {
@@ -593,22 +850,29 @@ class _SummaryItem extends StatelessWidget {
   final IconData icon;
   final Color color;
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      child: Column(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
-          ),
-          Text(label, style: const TextStyle(color: Color(0xFF677381))),
-        ],
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        child: Column(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 7),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 23,
+                fontWeight: FontWeight.w900,
+                color: ops.ink,
+              ),
+            ),
+            Text(label, style: TextStyle(color: ops.slate)),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ServerPanel extends StatelessWidget {
@@ -646,7 +910,7 @@ class _ServerPanel extends StatelessWidget {
                       ].where((value) => value?.isNotEmpty == true).join(' · '),
                       textDirection: TextDirection.ltr,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(color: Color(0xFF677381)),
+                      style: TextStyle(color: context.ops.slate),
                     ),
                   ],
                 ),
@@ -728,17 +992,17 @@ class _ProjectRow extends StatelessWidget {
               children: [
                 Text(
                   project.name,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: context.ops.ink,
+                  ),
                 ),
                 Text(
                   project.baseUrl,
                   textDirection: TextDirection.ltr,
                   textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF677381),
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: context.ops.slate, fontSize: 12),
                 ),
                 if (project.latestMetric != null) ...[
                   const SizedBox(height: 5),
@@ -749,8 +1013,8 @@ class _ProjectRow extends StatelessWidget {
                     '${project.latestMetric!.containerCount} حاوية تعمل',
                     textDirection: TextDirection.ltr,
                     textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      color: Color(0xFF3E6B56),
+                    style: TextStyle(
+                      color: context.ops.emerald,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -763,13 +1027,13 @@ class _ProjectRow extends StatelessWidget {
             Text(
               '${project.latencyMs} ms',
               textDirection: TextDirection.ltr,
-              style: const TextStyle(
-                color: Color(0xFF596674),
+              style: TextStyle(
+                color: context.ops.slate,
                 fontWeight: FontWeight.w700,
               ),
             ),
           const SizedBox(width: 8),
-          const Icon(Icons.chevron_left, color: Color(0xFF7C8793)),
+          Icon(Icons.chevron_left, color: context.ops.muted),
         ],
       ),
     ),
@@ -787,18 +1051,22 @@ class _IncidentsPanel extends ConsumerWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Padding(
-          padding: EdgeInsets.all(16),
+        Padding(
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Icon(
                 Icons.notifications_active_outlined,
-                color: Color(0xFFC5362F),
+                color: context.ops.danger,
               ),
-              SizedBox(width: 9),
+              const SizedBox(width: 9),
               Text(
                 'التنبيهات المفتوحة',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: context.ops.ink,
+                ),
               ),
             ],
           ),
@@ -818,21 +1086,25 @@ class _IncidentsPanel extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: incident.severity == 'critical'
-                      ? const Color(0xFFFFECEA)
-                      : const Color(0xFFFFF5E0),
+                      ? context.ops.dangerSoft
+                      : context.ops.goldSoft,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: context.ops.lineSoft),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       incident.title,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: context.ops.ink,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       incident.message,
-                      style: const TextStyle(color: Color(0xFF596674)),
+                      style: TextStyle(color: context.ops.slate),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -887,16 +1159,20 @@ class _ErrorView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.cloud_off_outlined,
             size: 54,
-            color: Color(0xFFC5362F),
+            color: context.ops.danger,
           ),
           const SizedBox(height: 14),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: context.ops.ink,
+            ),
           ),
           const SizedBox(height: 18),
           ElevatedButton.icon(

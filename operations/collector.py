@@ -35,7 +35,30 @@ def _decimal(value, *, maximum: Decimal | None = None) -> Decimal | None:
     return min(parsed, maximum) if maximum is not None else parsed
 
 
+def _is_completed_job(container: dict) -> bool:
+    """A one-shot job (e.g. ``migrate``) that finished successfully.
+
+    Compose init jobs run once and exit 0 with ``restart: "no"``; the ``web``
+    service even waits for them via ``service_completed_successfully``. Such a
+    stopped container is the expected, healthy end state — not a crash — so it
+    must not drag the project into "degraded".
+    """
+    state = str(container.get("state") or "").lower()
+    if state != "exited":
+        return False
+    restart_policy = str(container.get("restart_policy") or "").strip().lower()
+    if restart_policy not in {"", "no"}:
+        return False
+    exit_code = container.get("exit_code")
+    try:
+        return int(exit_code) == 0
+    except (TypeError, ValueError):
+        return False
+
+
 def _status_for_container(container: dict) -> str:
+    if _is_completed_job(container):
+        return ManagedProject.Status.HEALTHY
     state = str(container.get("state") or "unknown").lower()
     health = str(container.get("health") or "").lower()
     if state == "running" and health != "unhealthy":
@@ -201,7 +224,13 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
         project.save(update_fields=update_fields)
         _sync_services(project, containers, captured_at=captured_at)
 
-        running_count = sum(str(item.get("state") or "").lower() == "running" for item in containers)
+        # One-shot jobs that finished successfully are not long-running services,
+        # so keep them out of the "X/Y running" ratio — otherwise a healthy stack
+        # reads as 8/9 the moment its migrate job exits.
+        service_containers = [item for item in containers if not _is_completed_job(item)]
+        running_count = sum(
+            str(item.get("state") or "").lower() == "running" for item in service_containers
+        )
         ProjectMetricSnapshot.objects.create(
             project=project,
             cpu_percent=_sum(containers, "cpu_percent", maximum=Decimal("100")),
@@ -212,7 +241,7 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
             network_tx_mb=_sum(containers, "network_tx_mb"),
             block_read_mb=_sum(containers, "block_read_mb"),
             block_write_mb=_sum(containers, "block_write_mb"),
-            container_count=len(containers),
+            container_count=len(service_containers),
             running_container_count=running_count,
             container_states=[
                 {
@@ -220,6 +249,7 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
                     "service": str(item.get("service") or "")[:120],
                     "state": str(item.get("state") or "unknown")[:24],
                     "health": str(item.get("health") or "")[:24],
+                    "completed_job": _is_completed_job(item),
                 }
                 for item in containers
             ],

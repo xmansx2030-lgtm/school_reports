@@ -210,6 +210,74 @@ class OperationsApiTests(TestCase):
         self.assertEqual(discovered.metric_snapshots.get().memory_percent, 1)
         self.assertEqual(result["projects"], 2)
 
+    def test_completed_migrate_job_does_not_degrade_project(self):
+        report = {
+            "server": {"slug": self.server.slug, "name": self.server.name},
+            "projects": [
+                {
+                    "compose_project": "tanal",
+                    "containers": [
+                        {
+                            "name": "tanal-web-1",
+                            "service": "web",
+                            "state": "running",
+                            "health": "healthy",
+                        },
+                        {
+                            "name": "tanal-migrate-1",
+                            "service": "migrate",
+                            "state": "exited",
+                            "exit_code": 0,
+                            "restart_policy": "no",
+                        },
+                    ],
+                }
+            ],
+        }
+
+        sync_inventory_report(report)
+
+        tanal = ManagedProject.objects.get(slug="xmansx")
+        # A finished one-shot job is the expected end state, not a crash.
+        self.assertEqual(tanal.runtime_status, ManagedProject.Status.HEALTHY)
+        metric = tanal.metric_snapshots.latest("captured_at")
+        self.assertEqual(metric.container_count, 1)
+        self.assertEqual(metric.running_container_count, 1)
+
+    def test_failed_migrate_job_still_marks_project_down(self):
+        report = {
+            "server": {"slug": self.server.slug, "name": self.server.name},
+            "projects": [
+                {
+                    "compose_project": "tanal",
+                    "containers": [
+                        {
+                            "name": "tanal-web-1",
+                            "service": "web",
+                            "state": "running",
+                            "health": "healthy",
+                        },
+                        {
+                            "name": "tanal-migrate-1",
+                            "service": "migrate",
+                            "state": "exited",
+                            "exit_code": 1,
+                            "restart_policy": "no",
+                        },
+                    ],
+                }
+            ],
+        }
+
+        sync_inventory_report(report)
+
+        tanal = ManagedProject.objects.get(slug="xmansx")
+        # A non-zero exit is a real failure and must surface as degraded/down.
+        self.assertEqual(tanal.runtime_status, ManagedProject.Status.DEGRADED)
+        metric = tanal.metric_snapshots.latest("captured_at")
+        self.assertEqual(metric.container_count, 2)
+        self.assertEqual(metric.running_container_count, 1)
+
     def test_device_registration_never_exposes_other_devices(self):
         token = self._login()
         response = self.client.post(

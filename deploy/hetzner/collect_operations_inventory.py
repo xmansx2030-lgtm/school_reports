@@ -182,6 +182,7 @@ def _docker_inventory(memory_total: float) -> list[dict]:
         name = str(item.get("Name") or "").lstrip("/")
         state_payload = item.get("State") or {}
         health = (state_payload.get("Health") or {}).get("Status") or ""
+        restart_policy = ((item.get("HostConfig") or {}).get("RestartPolicy") or {}).get("Name") or ""
         stats = stats_by_name.get(name, {})
         raw_cpu = _percent(stats.get("CPUPerc"))
         mem_used, _ = _io_pair(stats.get("MemUsage", ""))
@@ -194,6 +195,11 @@ def _docker_inventory(memory_total: float) -> list[dict]:
                 "service": str(labels.get("com.docker.compose.service") or name),
                 "state": str(state_payload.get("Status") or "unknown"),
                 "health": str(health),
+                # A one-shot job (e.g. migrate) exits 0 and is not restarted; its
+                # exit code and restart policy let the collector tell "finished its
+                # work" apart from "a service crashed".
+                "exit_code": state_payload.get("ExitCode"),
+                "restart_policy": str(restart_policy),
                 # Docker CPU% is per logical CPU. Normalize it to total host capacity.
                 "cpu_percent": round(raw_cpu / cpu_count, 1) if raw_cpu is not None else None,
                 "memory_host_percent": (

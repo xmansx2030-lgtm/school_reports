@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../design_system.dart';
 import '../models.dart';
 
 class StatusDot extends StatelessWidget {
@@ -62,17 +63,18 @@ class UsageBar extends StatelessWidget {
         : safe >= 70
         ? const Color(0xFFD59000)
         : const Color(0xFF138A4B);
+    final ops = context.ops;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: const Color(0xFF596674)),
+            Icon(icon, size: 18, color: ops.slate),
             const SizedBox(width: 7),
-            Expanded(child: Text(label)),
+            Expanded(child: Text(label, style: TextStyle(color: ops.ink))),
             Text(
               value == null ? '-' : '${safe.toStringAsFixed(1)}%',
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: TextStyle(fontWeight: FontWeight.w800, color: ops.ink),
             ),
           ],
         ),
@@ -82,7 +84,7 @@ class UsageBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: safe / 100,
             minHeight: 7,
-            backgroundColor: const Color(0xFFE6EAEE),
+            backgroundColor: ops.line,
             color: color,
           ),
         ),
@@ -102,25 +104,29 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String message;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 34, horizontal: 16),
-    child: Column(
-      children: [
-        Icon(icon, size: 42, color: const Color(0xFF7C8793)),
-        const SizedBox(height: 12),
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF677381)),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 34, horizontal: 16),
+      child: Column(
+        children: [
+          Icon(icon, size: 42, color: ops.muted),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: ops.ink,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: ops.slate),
+          ),
+        ],
+      ),
+    );
+  }
 }
