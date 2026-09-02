@@ -44,9 +44,12 @@ tawtheeq-ksa.com {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		# لا ميزة جهاز تحتاجها المنصة. المنع الصريح يقطعها عن أي إطار أو
-		# سكربت يعمل داخل الصفحة، لا عن الصفحة وحدها.
-		Permissions-Policy "accelerometer=(), ambient-light-sensor=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()"
+		# كل ميزة جهاز ممنوعة إلا الميكروفون: الإملاء الصوتي في نموذج التقرير
+		# يحتاجه. ‏``microphone=(self)`` يبقيه للصفحة نفسها ويقطعه عن أي إطار
+		# خارجي. ولا تعده إلى ``()`` — عندها يرفض المتصفّح ``getUserMedia``
+		# بـ ``NotAllowedError`` قبل أن يسأل المستخدم، فيظهر للمعلّم أن الإذن
+		# مرفوض بلا مكان يفعّله منه.
+		Permissions-Policy "accelerometer=(), ambient-light-sensor=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), midi=(), payment=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()"
 		# يمنع أصلاً آخر من تضمين موارد التطبيق (صور، مستندات، JSON) في صفحاته.
 		Cross-Origin-Resource-Policy "same-origin"
 	}

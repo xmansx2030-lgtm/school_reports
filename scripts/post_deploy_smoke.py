@@ -86,7 +86,7 @@ def check_headers(base: str) -> None:
         "x-frame-options": ("DENY",),
         "referrer-policy": ("strict-origin",),
         "cross-origin-opener-policy": ("same-origin",),
-        "permissions-policy": ("camera=()",),
+        "permissions-policy": ("camera=()", "microphone=(self)"),
         "cross-origin-resource-policy": ("same-origin",),
     }
     for name, needles in required.items():
