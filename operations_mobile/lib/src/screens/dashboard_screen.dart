@@ -740,6 +740,22 @@ class _ProjectRow extends StatelessWidget {
                     fontSize: 12,
                   ),
                 ),
+                if (project.latestMetric != null) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    'CPU ${_usage(project.latestMetric!.cpu)} · '
+                    'RAM ${_usage(project.latestMetric!.memory)} · '
+                    '${project.latestMetric!.runningContainerCount}/'
+                    '${project.latestMetric!.containerCount} حاوية تعمل',
+                    textDirection: TextDirection.ltr,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: Color(0xFF3E6B56),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -758,6 +774,9 @@ class _ProjectRow extends StatelessWidget {
       ),
     ),
   );
+
+  static String _usage(double? value) =>
+      value == null ? '—' : '${value.toStringAsFixed(1)}%';
 }
 
 class _IncidentsPanel extends ConsumerWidget {

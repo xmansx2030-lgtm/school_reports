@@ -1,13 +1,26 @@
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from reports.models import Teacher
 
-from .models import HealthCheck, Incident, ManagedProject, ManagedServer, MobileAccessToken, MobileDevice, OperationAction, OperationsMembership
+from .collector import sync_inventory_report
 from .deployments import DeploymentState
+from .models import (
+    HealthCheck,
+    Incident,
+    ManagedProject,
+    ManagedServer,
+    MobileAccessToken,
+    MobileDevice,
+    OperationAction,
+    OperationsMembership,
+    ProjectMetricSnapshot,
+    ServerMetricSnapshot,
+)
 from .services import capture_server_metrics
 
 
@@ -42,6 +55,7 @@ def deployment_state(**overrides):
 @override_settings(DEBUG=True)
 class OperationsApiTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.admin = Teacher.objects.create_superuser(phone="0500000001", name="Ops Admin", password="strong-test-password")
         self.regular = Teacher.objects.create_user(phone="0500000002", name="Regular", password="strong-test-password")
         OperationsMembership.objects.create(user=self.admin, role=OperationsMembership.Role.ADMIN)
@@ -90,10 +104,111 @@ class OperationsApiTests(TestCase):
 
     def test_dashboard_requires_ops_token_and_returns_inventory(self):
         self.assertEqual(self.client.get(reverse("operations:dashboard")).status_code, 401)
-        token = self._login()
+        _, token = MobileAccessToken.issue(user=self.admin, device_name="test")
         response = self.client.get(reverse("operations:dashboard"), HTTP_AUTHORIZATION=f"Ops-Token {token}")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["summary"]["projects"], 1)
+
+    def test_dashboard_returns_project_specific_latest_usage(self):
+        ProjectMetricSnapshot.objects.create(
+            project=self.project,
+            cpu_percent=12.5,
+            memory_percent=7.5,
+            memory_used_mb=384,
+            container_count=3,
+            running_container_count=3,
+        )
+        _, token = MobileAccessToken.issue(user=self.admin, device_name="test")
+
+        response = self.client.get(
+            reverse("operations:dashboard"),
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+
+        metric = response.json()["servers"][0]["projects"][0]["latest_metric"]
+        self.assertEqual(metric["cpu_percent"], "12.5")
+        self.assertEqual(metric["memory_used_mb"], "384.0")
+        self.assertEqual(metric["running_container_count"], 3)
+
+    def test_project_detail_does_not_present_server_usage_as_project_usage(self):
+        ServerMetricSnapshot.objects.create(
+            server=self.server,
+            cpu_percent=91,
+            memory_percent=82,
+            disk_percent=73,
+        )
+        ProjectMetricSnapshot.objects.create(
+            project=self.project,
+            cpu_percent=11,
+            memory_percent=12,
+            memory_used_mb=256,
+            container_count=2,
+            running_container_count=2,
+        )
+        token = self._login()
+
+        response = self.client.get(
+            reverse("operations:project-detail", args=[self.project.pk]),
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["metrics"][0]["cpu_percent"], "11.0")
+        self.assertNotIn("disk_percent", response.json()["metrics"][0])
+
+    def test_inventory_report_updates_known_repositories_and_discovers_projects(self):
+        report = {
+            "server": {
+                "slug": self.server.slug,
+                "name": self.server.name,
+                "cpu_percent": 40,
+                "memory_percent": 50,
+                "disk_percent": 60,
+            },
+            "projects": [
+                {
+                    "compose_project": "tanal",
+                    "deployed_sha": "c" * 40,
+                    "containers": [
+                        {
+                            "name": "tanal-web-1",
+                            "service": "web",
+                            "state": "running",
+                            "health": "healthy",
+                            "cpu_percent": 4.5,
+                            "memory_host_percent": 3.2,
+                            "memory_used_mb": 160,
+                        }
+                    ],
+                },
+                {
+                    "compose_project": "new_portal",
+                    "repository": "owner/new-portal",
+                    "containers": [
+                        {
+                            "name": "new-portal-api-1",
+                            "service": "api",
+                            "state": "running",
+                            "cpu_percent": 2,
+                            "memory_host_percent": 1,
+                        }
+                    ],
+                },
+            ],
+        }
+
+        result = sync_inventory_report(report)
+
+        tanal = ManagedProject.objects.get(slug="xmansx")
+        discovered = ManagedProject.objects.get(slug="new-portal")
+        self.assertEqual(tanal.repository, "xmansx2030-lgtm/tanal")
+        self.assertEqual(tanal.deploy_repository, "xmansx2030-lgtm/tanal")
+        self.assertEqual(tanal.deployed_sha, "c" * 40)
+        self.assertEqual(tanal.runtime_status, ManagedProject.Status.HEALTHY)
+        self.assertEqual(discovered.repository, "owner/new-portal")
+        self.assertEqual(discovered.base_url, "")
+        self.assertEqual(discovered.metric_snapshots.get().memory_percent, 1)
+        self.assertEqual(result["projects"], 2)
 
     def test_device_registration_never_exposes_other_devices(self):
         token = self._login()

@@ -257,7 +257,9 @@ class _ProjectHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  project.baseUrl,
+                  project.baseUrl.isEmpty
+                      ? 'مشروع مكتشف من Docker دون رابط فحص عام'
+                      : project.baseUrl,
                   textDirection: TextDirection.ltr,
                   textAlign: TextAlign.right,
                   style: const TextStyle(color: Color(0xFF596674)),
@@ -301,12 +303,12 @@ class _MetricChart extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'استهلاك موارد الخادم',
+              'استهلاك المشروع المستقل',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 5),
             const Text(
-              'آخر القياسات المحفوظة',
+              'CPU وRAM نسبةً إلى إجمالي قدرة الخادم، مع حركة الشبكة وكتابة القرص الخاصة بحاويات المشروع.',
               style: TextStyle(color: Color(0xFF677381)),
             ),
             const SizedBox(height: 18),
@@ -316,7 +318,9 @@ class _MetricChart extends StatelessWidget {
                 title: 'لا توجد قياسات بعد',
                 message: 'ستظهر بعد تشغيل دورة المراقبة الأولى.',
               )
-            else
+            else ...[
+              _CurrentUsage(metric: metrics.first),
+              const SizedBox(height: 18),
               SizedBox(
                 height: 210,
                 child: LineChart(
@@ -359,23 +363,17 @@ class _MetricChart extends StatelessWidget {
                         barWidth: 3,
                         dotData: const FlDotData(show: false),
                       ),
-                      LineChartBarData(
-                        spots: spots((m) => m.disk),
-                        color: const Color(0xFFD59000),
-                        barWidth: 3,
-                        dotData: const FlDotData(show: false),
-                      ),
                     ],
                   ),
                 ),
               ),
+            ],
             const SizedBox(height: 12),
             const Wrap(
               spacing: 18,
               children: [
                 _Legend(color: Color(0xFF356AA0), label: 'المعالج'),
                 _Legend(color: Color(0xFF138A4B), label: 'الذاكرة'),
-                _Legend(color: Color(0xFFD59000), label: 'القرص'),
               ],
             ),
           ],
@@ -383,6 +381,67 @@ class _MetricChart extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CurrentUsage extends StatelessWidget {
+  const _CurrentUsage({required this.metric});
+  final MetricPoint metric;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 10,
+    runSpacing: 10,
+    children: [
+      _UsageChip(label: 'CPU', value: _percent(metric.cpu)),
+      _UsageChip(label: 'RAM', value: _memory(metric)),
+      _UsageChip(
+        label: 'الحاويات',
+        value: '${metric.runningContainerCount}/${metric.containerCount}',
+      ),
+      _UsageChip(
+        label: 'الشبكة',
+        value: '↓ ${_mb(metric.networkRxMb)}  ↑ ${_mb(metric.networkTxMb)}',
+      ),
+      _UsageChip(
+        label: 'القرص I/O',
+        value:
+            'قراءة ${_mb(metric.blockReadMb)} · كتابة ${_mb(metric.blockWriteMb)}',
+      ),
+    ],
+  );
+
+  static String _percent(double? value) =>
+      value == null ? 'غير متاح' : '${value.toStringAsFixed(1)}%';
+
+  static String _mb(double? value) =>
+      value == null ? '—' : '${value.toStringAsFixed(1)} MB';
+
+  static String _memory(MetricPoint metric) {
+    final used = _mb(metric.memoryUsedMb);
+    final percent = _percent(metric.memory);
+    return '$used · $percent';
+  }
+}
+
+class _UsageChip extends StatelessWidget {
+  const _UsageChip({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF2F7F4),
+      border: Border.all(color: const Color(0xFFD8E4DC)),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Text(
+      '$label: $value',
+      textDirection: TextDirection.rtl,
+      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 class _Legend extends StatelessWidget {

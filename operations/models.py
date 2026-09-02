@@ -58,8 +58,9 @@ class ManagedProject(models.Model):
     server = models.ForeignKey(ManagedServer, on_delete=models.PROTECT, related_name="projects")
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=80, unique=True)
-    base_url = models.URLField(max_length=300)
+    base_url = models.URLField(max_length=300, blank=True, default="")
     health_path = models.CharField(max_length=160, default="/healthz/")
+    compose_project = models.CharField(max_length=120, blank=True, default="", db_index=True)
     expected_status = models.PositiveSmallIntegerField(default=200)
     repository = models.CharField(max_length=160, blank=True, default="")
     deploy_branch = models.CharField(max_length=80, blank=True, default="main")
@@ -71,8 +72,15 @@ class ManagedProject(models.Model):
     deployed_image = models.CharField(max_length=300, blank=True, default="")
     deployment_enabled = models.BooleanField(default=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.UNKNOWN, db_index=True)
+    runtime_status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.UNKNOWN,
+        db_index=True,
+    )
     last_latency_ms = models.PositiveIntegerField(null=True, blank=True)
     last_checked_at = models.DateTimeField(null=True, blank=True)
+    last_runtime_checked_at = models.DateTimeField(null=True, blank=True)
     consecutive_failures = models.PositiveSmallIntegerField(default=0)
     alerts_enabled = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
@@ -85,7 +93,21 @@ class ManagedProject(models.Model):
 
     @property
     def health_url(self) -> str:
+        if not self.base_url:
+            return ""
         return f"{self.base_url.rstrip('/')}/{self.health_path.lstrip('/')}"
+
+    @property
+    def effective_status(self) -> str:
+        """Return the worst of the public health probe and Docker runtime state."""
+        priority = {
+            self.Status.UNKNOWN: 0,
+            self.Status.HEALTHY: 1,
+            self.Status.MAINTENANCE: 2,
+            self.Status.DEGRADED: 3,
+            self.Status.DOWN: 4,
+        }
+        return max((self.status, self.runtime_status), key=lambda value: priority.get(value, 0))
 
     def __str__(self) -> str:
         return self.name
@@ -150,6 +172,28 @@ class ServerMetricSnapshot(models.Model):
     class Meta:
         ordering = ("-captured_at", "-id")
         indexes = [models.Index(fields=("server", "-captured_at"))]
+
+
+class ProjectMetricSnapshot(models.Model):
+    """A project-only resource sample aggregated from its Docker containers."""
+
+    project = models.ForeignKey(ManagedProject, on_delete=models.CASCADE, related_name="metric_snapshots")
+    cpu_percent = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
+    memory_percent = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    memory_used_mb = models.DecimalField(max_digits=12, decimal_places=1, null=True, blank=True)
+    memory_limit_mb = models.DecimalField(max_digits=12, decimal_places=1, null=True, blank=True)
+    network_rx_mb = models.DecimalField(max_digits=14, decimal_places=1, null=True, blank=True)
+    network_tx_mb = models.DecimalField(max_digits=14, decimal_places=1, null=True, blank=True)
+    block_read_mb = models.DecimalField(max_digits=14, decimal_places=1, null=True, blank=True)
+    block_write_mb = models.DecimalField(max_digits=14, decimal_places=1, null=True, blank=True)
+    container_count = models.PositiveSmallIntegerField(default=0)
+    running_container_count = models.PositiveSmallIntegerField(default=0)
+    container_states = models.JSONField(default=list, blank=True)
+    captured_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ("-captured_at", "-id")
+        indexes = [models.Index(fields=("project", "-captured_at"))]
 
 
 class Incident(models.Model):

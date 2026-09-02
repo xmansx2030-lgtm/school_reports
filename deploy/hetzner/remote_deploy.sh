@@ -167,6 +167,28 @@ case "$RELEASE_SHA" in
     ;;
 esac
 
+# Keep the operations app aligned with every Docker Compose project on this
+# host. The collector uses read-only Docker commands and writes through a
+# management command inside the already-running web container; no Docker socket
+# is exposed to the public web process.
+log "synchronizing operations project inventory"
+bash deploy/hetzner/run_operations_collector.sh
+
+if command -v crontab >/dev/null 2>&1; then
+  COLLECTOR_MARKER="# tawtheeq-operations-inventory"
+  COLLECTOR_CRON="*/5 * * * * DEPLOY_PATH=$DEPLOY_PATH /usr/bin/env bash $DEPLOY_PATH/deploy/hetzner/run_operations_collector.sh >> $DEPLOY_PATH/deploy/hetzner/operations-collector.log 2>&1 $COLLECTOR_MARKER"
+  {
+    crontab -l 2>/dev/null \
+      | grep -vF "$COLLECTOR_MARKER" \
+      | grep -vF "deploy/hetzner/run_operations_collector.sh" \
+      || true
+    printf '%s\n' "$COLLECTOR_CRON"
+  } | crontab -
+  log "installed five-minute operations inventory collector"
+else
+  log "warning: crontab is unavailable; inventory was collected once but automatic refresh was not installed"
+fi
+
 docker image prune --force --filter "until=168h" >/dev/null 2>&1 || true
 
 log "deployed $APP_IMAGE successfully"

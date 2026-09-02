@@ -15,7 +15,13 @@ from reports.totp import decrypt_secret, verify_code
 from .authentication import OperationsTokenAuthentication, has_operations_access
 from .deployments import DeploymentIntegrationError, GitHubDeploymentClient, all_deployment_states
 from .models import Incident, ManagedProject, ManagedServer, MobileAccessToken, MobileDevice, OperationAction, OperationsMembership
-from .serializers import IncidentSerializer, ManagedProjectSerializer, ManagedServerSerializer, MetricSerializer, OperationActionSerializer
+from .serializers import (
+    IncidentSerializer,
+    ManagedProjectSerializer,
+    ManagedServerSerializer,
+    OperationActionSerializer,
+    ProjectMetricSerializer,
+)
 from .services import probe_project
 
 
@@ -206,13 +212,16 @@ def account_detail(request, user_id: int):
 @authentication_classes([OperationsTokenAuthentication])
 def dashboard(request):
     servers = ManagedServer.objects.filter(is_active=True).prefetch_related("projects__services")
+    projects = list(ManagedProject.objects.filter(is_active=True))
     incidents = Incident.objects.filter(status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED)).select_related("project")[:20]
     return Response({
         "generated_at": timezone.now(),
         "summary": {
             "servers": servers.count(),
-            "projects": ManagedProject.objects.filter(is_active=True).count(),
-            "healthy_projects": ManagedProject.objects.filter(is_active=True, status=ManagedProject.Status.HEALTHY).count(),
+            "projects": len(projects),
+            "healthy_projects": sum(
+                project.effective_status == ManagedProject.Status.HEALTHY for project in projects
+            ),
             "open_incidents": Incident.objects.filter(status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED)).count(),
             "team_members": OperationsMembership.objects.filter(is_active=True, user__is_active=True).count(),
         },
@@ -277,17 +286,22 @@ def trigger_deployment(request):
 @api_view(["GET"])
 @authentication_classes([OperationsTokenAuthentication])
 def project_detail(request, project_id: int):
-    project = ManagedProject.objects.select_related("server").prefetch_related("services").filter(pk=project_id, is_active=True).first()
+    project = (
+        ManagedProject.objects.select_related("server")
+        .prefetch_related("services")
+        .filter(pk=project_id, is_active=True)
+        .first()
+    )
     if project is None:
         return Response({"detail": "المشروع غير موجود."}, status=404)
     checks = project.health_checks.all()[:48]
     actions = project.actions.select_related("requested_by")[:30]
-    metrics = project.server.metric_snapshots.all()[:48]
+    metrics = project.metric_snapshots.all()[:48]
     payload = ManagedProjectSerializer(project).data
     payload.update({
         "server": ManagedServerSerializer(project.server).data,
         "checks": [{"ok": row.ok, "status_code": row.status_code, "latency_ms": row.latency_ms, "error_code": row.error_code, "checked_at": row.checked_at} for row in checks],
-        "metrics": MetricSerializer(metrics, many=True).data,
+        "metrics": ProjectMetricSerializer(metrics, many=True).data,
         "actions": OperationActionSerializer(actions, many=True).data,
     })
     return Response(payload)

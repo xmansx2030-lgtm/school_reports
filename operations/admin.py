@@ -1,6 +1,18 @@
 from django.contrib import admin
 
-from .models import HealthCheck, Incident, ManagedProject, ManagedServer, ManagedService, MobileAccessToken, MobileDevice, OperationAction, OperationsMembership, ServerMetricSnapshot
+from .models import (
+    HealthCheck,
+    Incident,
+    ManagedProject,
+    ManagedServer,
+    ManagedService,
+    MobileAccessToken,
+    MobileDevice,
+    OperationAction,
+    OperationsMembership,
+    ProjectMetricSnapshot,
+    ServerMetricSnapshot,
+)
 
 
 @admin.register(ManagedServer)
@@ -12,9 +24,12 @@ class ManagedServerAdmin(admin.ModelAdmin):
 
 @admin.register(ManagedProject)
 class ManagedProjectAdmin(admin.ModelAdmin):
-    list_display = ("name", "server", "base_url", "status", "last_latency_ms", "last_checked_at", "is_active")
-    list_filter = ("status", "alerts_enabled", "is_active", "server")
-    search_fields = ("name", "slug", "base_url")
+    list_display = (
+        "name", "server", "compose_project", "base_url", "status", "runtime_status",
+        "last_latency_ms", "last_runtime_checked_at", "is_active",
+    )
+    list_filter = ("status", "runtime_status", "alerts_enabled", "is_active", "server")
+    search_fields = ("name", "slug", "compose_project", "base_url", "repository")
 
 
 @admin.register(ManagedService)
@@ -32,6 +47,7 @@ class IncidentAdmin(admin.ModelAdmin):
 
 admin.site.register(HealthCheck)
 admin.site.register(ServerMetricSnapshot)
+admin.site.register(ProjectMetricSnapshot)
 admin.site.register(OperationAction)
 admin.site.register(MobileDevice)
 

@@ -54,6 +54,8 @@ class ProjectInfo {
     required this.services,
     this.latencyMs,
     this.lastCheckedAt,
+    this.lastRuntimeCheckedAt,
+    this.latestMetric,
   });
   final int id;
   final String name;
@@ -64,6 +66,8 @@ class ProjectInfo {
   final int failures;
   final bool alertsEnabled;
   final DateTime? lastCheckedAt;
+  final DateTime? lastRuntimeCheckedAt;
+  final MetricPoint? latestMetric;
   final List<ServiceInfo> services;
 
   factory ProjectInfo.fromJson(Map<String, dynamic> json) => ProjectInfo(
@@ -76,6 +80,12 @@ class ProjectInfo {
     failures: (json['consecutive_failures'] as num?)?.toInt() ?? 0,
     alertsEnabled: json['alerts_enabled'] == true,
     lastCheckedAt: _date(json['last_checked_at']),
+    lastRuntimeCheckedAt: _date(json['last_runtime_checked_at']),
+    latestMetric: json['latest_metric'] is Map
+        ? MetricPoint.fromJson(
+            Map<String, dynamic>.from(json['latest_metric'] as Map),
+          )
+        : null,
     services: (json['services'] as List? ?? const [])
         .map(
           (item) =>
@@ -271,31 +281,30 @@ class DeploymentInfo {
   final bool canDeploy;
   final int? workflowRunId;
 
-  factory DeploymentInfo.fromJson(Map<String, dynamic> json) =>
-      DeploymentInfo(
-        projectId: (json['project_id'] as num?)?.toInt() ?? 0,
-        projectSlug: '${json['project_slug'] ?? ''}',
-        projectName: '${json['project_name'] ?? ''}',
-        repository: '${json['repository'] ?? ''}',
-        branch: '${json['branch'] ?? ''}',
-        workflow: '${json['workflow'] ?? ''}',
-        configured: json['configured'] == true,
-        deploymentEnabled: json['deployment_enabled'] == true,
-        latestSha: '${json['latest_sha'] ?? ''}',
-        latestShortSha: '${json['latest_short_sha'] ?? ''}',
-        latestMessage: '${json['latest_message'] ?? ''}',
-        deployedSha: '${json['deployed_sha'] ?? ''}',
-        deployedShortSha: '${json['deployed_short_sha'] ?? ''}',
-        deployedImage: '${json['deployed_image'] ?? ''}',
-        upToDate: json['up_to_date'] == true,
-        repositoryAhead: json['repository_ahead'] == true,
-        workflowStatus: '${json['workflow_status'] ?? ''}',
-        workflowConclusion: '${json['workflow_conclusion'] ?? ''}',
-        workflowUrl: '${json['workflow_url'] ?? ''}',
-        actionRequired: '${json['action_required'] ?? ''}',
-        canDeploy: json['can_deploy'] == true,
-        workflowRunId: (json['workflow_run_id'] as num?)?.toInt(),
-      );
+  factory DeploymentInfo.fromJson(Map<String, dynamic> json) => DeploymentInfo(
+    projectId: (json['project_id'] as num?)?.toInt() ?? 0,
+    projectSlug: '${json['project_slug'] ?? ''}',
+    projectName: '${json['project_name'] ?? ''}',
+    repository: '${json['repository'] ?? ''}',
+    branch: '${json['branch'] ?? ''}',
+    workflow: '${json['workflow'] ?? ''}',
+    configured: json['configured'] == true,
+    deploymentEnabled: json['deployment_enabled'] == true,
+    latestSha: '${json['latest_sha'] ?? ''}',
+    latestShortSha: '${json['latest_short_sha'] ?? ''}',
+    latestMessage: '${json['latest_message'] ?? ''}',
+    deployedSha: '${json['deployed_sha'] ?? ''}',
+    deployedShortSha: '${json['deployed_short_sha'] ?? ''}',
+    deployedImage: '${json['deployed_image'] ?? ''}',
+    upToDate: json['up_to_date'] == true,
+    repositoryAhead: json['repository_ahead'] == true,
+    workflowStatus: '${json['workflow_status'] ?? ''}',
+    workflowConclusion: '${json['workflow_conclusion'] ?? ''}',
+    workflowUrl: '${json['workflow_url'] ?? ''}',
+    actionRequired: '${json['action_required'] ?? ''}',
+    canDeploy: json['can_deploy'] == true,
+    workflowRunId: (json['workflow_run_id'] as num?)?.toInt(),
+  );
 }
 
 class DeploymentOverview {
@@ -325,15 +334,42 @@ class DeploymentOverview {
 }
 
 class MetricPoint {
-  const MetricPoint({this.cpu, this.memory, this.disk, this.capturedAt});
+  const MetricPoint({
+    this.cpu,
+    this.memory,
+    this.memoryUsedMb,
+    this.memoryLimitMb,
+    this.networkRxMb,
+    this.networkTxMb,
+    this.blockReadMb,
+    this.blockWriteMb,
+    this.containerCount = 0,
+    this.runningContainerCount = 0,
+    this.capturedAt,
+  });
   final double? cpu;
   final double? memory;
-  final double? disk;
+  final double? memoryUsedMb;
+  final double? memoryLimitMb;
+  final double? networkRxMb;
+  final double? networkTxMb;
+  final double? blockReadMb;
+  final double? blockWriteMb;
+  final int containerCount;
+  final int runningContainerCount;
   final DateTime? capturedAt;
   factory MetricPoint.fromJson(Map<String, dynamic> json) => MetricPoint(
     cpu: _double(json['cpu_percent']),
     memory: _double(json['memory_percent']),
-    disk: _double(json['disk_percent']),
+    memoryUsedMb: _double(json['memory_used_mb']),
+    memoryLimitMb: _double(json['memory_limit_mb']),
+    networkRxMb: _double(json['network_rx_mb']),
+    networkTxMb: _double(json['network_tx_mb']),
+    blockReadMb: _double(json['block_read_mb']),
+    blockWriteMb: _double(json['block_write_mb']),
+    containerCount: (json['container_count'] as num?)?.toInt() ?? 0,
+    runningContainerCount:
+        (json['running_container_count'] as num?)?.toInt() ?? 0,
     capturedAt: _date(json['captured_at']),
   );
 }

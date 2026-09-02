@@ -4,7 +4,15 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 from .deployments import all_deployment_states
-from .models import HealthCheck, Incident, ManagedProject, ManagedServer, OperationAction, ServerMetricSnapshot
+from .models import (
+    HealthCheck,
+    Incident,
+    ManagedProject,
+    ManagedServer,
+    OperationAction,
+    ProjectMetricSnapshot,
+    ServerMetricSnapshot,
+)
 from .push import send_incident_push
 from .services import capture_server_metrics, probe_all_projects
 
@@ -86,5 +94,11 @@ def cleanup_operations_history_task() -> dict[str, int]:
     cutoff = timezone.now() - timedelta(days=retention_days)
     checks, _ = HealthCheck.objects.filter(checked_at__lt=cutoff).delete()
     metrics, _ = ServerMetricSnapshot.objects.filter(captured_at__lt=cutoff).delete()
+    project_metrics, _ = ProjectMetricSnapshot.objects.filter(captured_at__lt=cutoff).delete()
     actions, _ = OperationAction.objects.filter(requested_at__lt=cutoff).delete()
-    return {"health_checks": checks, "metrics": metrics, "actions": actions}
+    return {
+        "health_checks": checks,
+        "server_metrics": metrics,
+        "project_metrics": project_metrics,
+        "actions": actions,
+    }

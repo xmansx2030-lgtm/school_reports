@@ -252,7 +252,12 @@ def probe_project(project: ManagedProject) -> HealthCheck:
 
 
 def probe_all_projects() -> list[HealthCheck]:
-    return [probe_project(project) for project in ManagedProject.objects.filter(is_active=True).select_related("server")]
+    projects = ManagedProject.objects.filter(
+        is_active=True,
+    ).exclude(
+        base_url="",
+    ).select_related("server")
+    return [probe_project(project) for project in projects]
 
 
 def capture_server_metrics(server: ManagedServer, report: dict) -> ServerMetricSnapshot:
