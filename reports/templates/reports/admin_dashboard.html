@@ -395,6 +395,150 @@
     gap: 26px;
     align-items: start;
   }
+  /* درج مساحات العمل يرث شكل درج الموارد، ويزيد عليه أن شبكته تتنفّس
+     داخله بلا حشوة القسم التي فقدها. */
+  .manager-workspaces-drawer .manager-workspaces { margin-top: 4px; }
+
+  /* ── ما يحتاجك الآن ──────────────────────────────────────────────────
+     صندوقٌ واحد بدل ثلاثة. والسطر يحمل ثلاث معلومات فقط: ما هو، ومتى،
+     وكم — فما زاد عنها يُقرأ ضجيجاً لا سياقاً. */
+  .manager-now__alarm {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: var(--id-pill);
+    color: var(--mg-danger);
+    background: rgba(239, 68, 68, .10);
+    font-size: .8rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .manager-now__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .now-row a {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    padding: 12px 15px;
+    border: 1px solid var(--id-line);
+    border-inline-start: 3px solid var(--id-line);
+    border-radius: var(--id-r2);
+    color: inherit;
+    background: var(--id-surface);
+    text-decoration: none;
+    transition: transform var(--id-fast) var(--id-ease), background var(--id-fast) var(--id-ease);
+  }
+  .now-row a:hover { transform: translateX(-2px); background: var(--id-surface-2); }
+  .now-row--decision a { border-inline-start-color: var(--id-accent); }
+  .now-row--overdue a { border-inline-start-color: var(--mg-danger); }
+  /* التفصيل تابعٌ لبندٍ فوقه، فيُزاح ويخفت — لا يُعدّ بنداً ثانياً. */
+  .now-row.is-subset a { border-style: dashed; background: transparent; }
+
+  .now-row__icon,
+  .now-row__count {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    border-radius: var(--id-r1);
+    font-weight: 950;
+  }
+  .now-row__icon { color: var(--mg-green); background: var(--id-accent-wash); font-size: .9rem; }
+  .now-row__count {
+    color: var(--id-accent-ink);
+    background: var(--id-accent);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .now-row--overdue .now-row__icon { color: var(--mg-danger); background: rgba(239, 68, 68, .10); }
+  .now-row.is-subset .now-row__count { color: var(--mg-green); background: var(--id-accent-wash); }
+
+  .now-row__body { display: grid; gap: 3px; min-width: 0; }
+  .now-row__title {
+    overflow: hidden;
+    color: var(--mg-ink);
+    font-size: .92rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .now-row__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--mg-muted);
+    font-size: .76rem;
+    font-weight: 700;
+  }
+  .now-row__kind {
+    padding: 1px 8px;
+    border-radius: var(--id-pill);
+    background: var(--id-surface-2);
+    font-weight: 800;
+  }
+  .now-row__when {
+    flex: 0 0 auto;
+    color: var(--mg-muted);
+    font-size: .79rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .now-row--overdue .now-row__when { color: var(--mg-danger); }
+
+  .manager-now__clear {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 22px 18px;
+    border: 1px dashed var(--id-line);
+    border-radius: var(--id-r2);
+  }
+  .manager-now__clear i { color: var(--id-green-600); font-size: 1.4rem; }
+  .manager-now__clear span { display: grid; gap: 3px; }
+  .manager-now__clear strong { font-size: .95rem; font-weight: 900; }
+  .manager-now__clear small { color: var(--mg-muted); font-size: .82rem; font-weight: 700; }
+
+  /* الأرقام التي لا تنتظر قراراً: سطرٌ واحد لا أربع بطاقات. */
+  .manager-now__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--id-line);
+  }
+  .manager-now__stats a {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .manager-now__stats a:hover .now-stat-value { color: var(--mg-green); }
+  .manager-now__stats strong {
+    color: var(--mg-ink);
+    font-size: 1.35rem;
+    font-weight: 950;
+    font-variant-numeric: tabular-nums;
+  }
+  .manager-now__stats span { color: var(--mg-muted); font-size: .8rem; font-weight: 800; }
+  .manager-now__stats em {
+    padding: 1px 7px;
+    border-radius: var(--id-pill);
+    background: var(--id-accent-wash);
+    font-size: .68rem;
+    font-style: normal;
+    font-weight: 800;
+  }
+  @media (max-width: 640px) {
+    .now-row a { grid-template-columns: auto minmax(0, 1fr); }
+    .now-row__when { grid-column: 2; }
+  }
+
   /* ── المواعيد ─────────────────────────────────────────────────────────
      أربع وحداتٍ لكلٍّ تواريخها، تُقرأ هنا على خطٍّ واحد. والمتأخّر يُميَّز
      بالحدّ الجانبي واللون والكلمة معاً — لا باللون وحده. */
@@ -1236,7 +1380,7 @@
   }
   .manager-jumpbar a:hover { color: var(--mg-green); background: var(--id-accent-wash); transform: translateY(-1px); }
   .manager-jumpbar a.is-current { color: var(--id-accent-ink); background: var(--id-accent); box-shadow: var(--id-e1); }
-  #managerToday, #managerActions, #managerWorkspaces, #managerPerformance, #managerResources { scroll-margin-top: 132px; }
+  #managerToday, #managerCoverage, #managerWorkspaces, #managerPerformance, #managerResources { scroll-margin-top: 132px; }
 
   .manager-command-grid {
     display: grid;
@@ -1380,8 +1524,8 @@
     .manager-jumpbar,
     .manager-periods,
     .manager-refresh { display: none; }
-    .manager-kpi,
-    .manager-focus,
+    .manager-now,
+    .now-row,
     .manager-workspace,
     .manager-analytics,
     .manager-setup { box-shadow: none; break-inside: avoid; }
@@ -1399,7 +1543,6 @@
     .manager-print-head strong { display: block; font-size: 1.3rem; }
     .manager-print-head span { font-size: .85rem; }
 
-    #managerActions,
     #managerWorkspaces,
     #managerResources,
     .manager-alert-stack,
@@ -1414,9 +1557,8 @@
        فتبقى «متابعة اليوم» خضراءَ داكنة وحبرُها أبيضُ على ورقٍ أبيض. */
     .manager-hero,
     .manager-hero__summary,
-    .manager-focus,
-    .manager-focus__item,
-    .manager-kpi,
+    .manager-now,
+    .now-row a,
     .manager-coverage,
     .manager-insight {
       background-image: none !important;
@@ -1425,8 +1567,8 @@
       border: 1px solid #c9d3cd !important;
     }
     .manager-hero *,
-    .manager-focus * { color: #10251f !important; }
-    .manager-focus__count,
+    .manager-now * { color: #10251f !important; }
+    .now-row__count,
     .manager-hero__summary-value { color: #04321f !important; }
 
     .manager-coverage,
@@ -1620,90 +1762,133 @@
 
   {% if active_school %}
     <nav class="manager-jumpbar" aria-label="التنقل داخل لوحة المدرسة">
-      <a href="#managerToday" data-manager-jump="managerToday" class="is-current"><i class="fa-solid fa-bolt" aria-hidden="true"></i> متابعة اليوم</a>
-      <a href="#managerActions" data-manager-jump="managerActions"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> ابدأ مهمة</a>
+      <a href="#managerToday" data-manager-jump="managerToday" class="is-current"><i class="fa-solid fa-bolt" aria-hidden="true"></i> ما يحتاجك الآن</a>
+      <a href="#managerCoverage" data-manager-jump="managerCoverage"><i class="fa-solid fa-user-check" aria-hidden="true"></i> التغطية</a>
       <a href="#managerWorkspaces" data-manager-jump="managerWorkspaces"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i> مساحات العمل</a>
       <a href="#managerPerformance" data-manager-jump="managerPerformance"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> الأداء</a>
       <a href="#managerResources" data-manager-jump="managerResources"><i class="fa-solid fa-server" aria-hidden="true"></i> الموارد</a>
     </nav>
 
-    <div class="manager-command-grid" id="managerToday">
-    <section class="manager-section" aria-labelledby="overviewTitle">
+    {% comment %}
+      ما يحتاجك الآن.
+
+      كانت اللوحة تجيب سؤال «ماذا ينتظرني؟» ثلاث مرات: «نظرة سريعة» بأربعة
+      أرقام، و«متابعة اليوم» بنفس العناصر قائمةً بجوارها في الشبكة ذاتها، ثم
+      «المواعيد» في قسمٍ ثالث. والرقم والقائمة والموعد كلّها جوابٌ واحد
+      مفرَّق، فيقرأ المدير ثلاث مرات ليعرف شيئاً واحداً.
+
+      فصارت صندوقاً واحداً مرتّباً بالإلحاح: ما فات موعده أولاً، ثم ما ينتظر
+      قراراً، ثم ما هو قادم. والأرقام لم تُحذف — صارت شاراتٍ داخل السطور بدل
+      بطاقاتٍ تسبقها.
+
+      و«الفترة» ليست هنا: هذا الصندوق حالةٌ قائمة الآن لا حصيلةَ نافذة،
+      ومبدّلها في قسم الأداء حيث تُقاس الحصيلة.
+    {% endcomment %}
+    <section class="manager-section manager-now" id="managerToday" aria-labelledby="nowTitle">
       <div class="manager-section__head">
         <div>
-          <h2 id="overviewTitle">نظرة سريعة</h2>
-          <p>المؤشرات التالية تقودك مباشرة إلى التفاصيل.</p>
-          <span class="manager-period-context">
-            <i class="fa-regular fa-calendar" aria-hidden="true"></i>
-            الفترة المختارة: <span id="managerPeriodLabel">{{ selected_period_label }}</span> — وكل مؤشّر يقول نطاقه أسفله.
+          <h2 id="nowTitle">ما يحتاجك الآن</h2>
+          <p>مرتّبٌ بالإلحاح: ما فات موعده، ثم ما ينتظر قرارك، ثم ما هو قادم.</p>
+        </div>
+        {% if agenda.overdue %}
+          <span class="manager-now__alarm">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            {{ agenda.overdue|arabic_count:"موعد فات,موعدان فاتا,مواعيد فاتت,موعداً فات" }}
+          </span>
+        {% endif %}
+      </div>
+
+      {% if agenda.overdue or focus_items or agenda.upcoming %}
+        <ol class="manager-now__list">
+
+          {% comment %} ١) ما فات موعده — يتصدّر مهما بَعُد. {% endcomment %}
+          {% for item in agenda.items %}
+            {% if item.is_overdue %}
+              <li class="now-row now-row--overdue">
+                <a href="{{ item.url }}">
+                  <span class="now-row__icon" aria-hidden="true"><i class="fa-solid {{ item.icon }}"></i></span>
+                  <span class="now-row__body">
+                    <span class="now-row__title"><bdi>{{ item.title }}</bdi></span>
+                    <span class="now-row__meta">
+                      <span class="now-row__kind">{{ item.label }}</span>
+                      <span aria-hidden="true">·</span>
+                      <time datetime="{{ item.at|date:'c' }}">{{ item.hijri }} هـ</time>
+                    </span>
+                  </span>
+                  <span class="now-row__when">متأخّر {{ item.days|arabic_count:"يوم,يومين,أيام,يوماً" }}</span>
+                </a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} ٢) ما ينتظر قراراً — العدد شارةٌ في السطر لا بطاقةٌ فوقه. {% endcomment %}
+          {% for item in focus_items %}
+            <li class="now-row now-row--decision{% if item.subset %} is-subset{% endif %}">
+              <a href="{{ item.url }}">
+                <span class="now-row__count">{{ item.count|intcomma }}</span>
+                <span class="now-row__body">
+                  <span class="now-row__title">{{ item.title }}</span>
+                  <span class="now-row__meta">{{ item.hint }}</span>
+                </span>
+                <span class="now-row__when">بانتظار قرارك</span>
+              </a>
+            </li>
+          {% endfor %}
+
+          {% comment %} ٣) القادم خلال أفق أسبوعين. {% endcomment %}
+          {% for item in agenda.items %}
+            {% if not item.is_overdue %}
+              <li class="now-row">
+                <a href="{{ item.url }}">
+                  <span class="now-row__icon" aria-hidden="true"><i class="fa-solid {{ item.icon }}"></i></span>
+                  <span class="now-row__body">
+                    <span class="now-row__title"><bdi>{{ item.title }}</bdi></span>
+                    <span class="now-row__meta">
+                      <span class="now-row__kind">{{ item.label }}</span>
+                      <span aria-hidden="true">·</span>
+                      <time datetime="{{ item.at|date:'c' }}">{{ item.hijri }} هـ — {{ item.time }}</time>
+                    </span>
+                  </span>
+                  <span class="now-row__when">
+                    {% if item.days == 0 %}اليوم{% else %}بعد {{ item.days|arabic_count:"يوم,يومين,أيام,يوماً" }}{% endif %}
+                  </span>
+                </a>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+      {% else %}
+        <div class="manager-now__clear">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          <span>
+            <strong>لا شيء ينتظرك الآن</strong>
+            <small>لا مواعيد فاتت، ولا قرارات معلّقة، ولا مستحقّ خلال {{ agenda.horizon_days }} يوماً القادمة.</small>
           </span>
         </div>
-      </div>
-      <div class="manager-kpis">
-        <a class="manager-kpi{% if tickets_open %} manager-kpi--attention{% endif %}" href="{% url 'reports:manager_school_tickets' %}?status=attention">
-          <span class="manager-kpi__top">
-            <span class="manager-kpi__icon"><i class="fa-solid fa-inbox" aria-hidden="true"></i></span>
-            <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
-          </span>
-          <strong class="manager-kpi__value" id="schoolTicketsOpen">{{ tickets_open|intcomma }}</strong>
-          <span class="manager-kpi__label">طلبات مدرسة قيد المتابعة <em class="manager-kpi__scope manager-kpi__scope--now">حالياً</em></span>
-        </a>
-        <a class="manager-kpi{% if pending_achievement_files %} manager-kpi--attention{% endif %}" href="{% url 'reports:achievement_school_files' %}?status=submitted">
-          <span class="manager-kpi__top">
-            <span class="manager-kpi__icon"><i class="fa-solid fa-award" aria-hidden="true"></i></span>
-            <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
-          </span>
-          <strong class="manager-kpi__value">{{ pending_achievement_files|intcomma }}</strong>
-          <span class="manager-kpi__label">ملفات إنجاز بانتظار الاعتماد <em class="manager-kpi__scope manager-kpi__scope--now">حالياً</em></span>
-        </a>
-        <a class="manager-kpi" href="{% url 'reports:admin_reports' %}">
-          <span class="manager-kpi__top">
-            <span class="manager-kpi__icon"><i class="fa-solid fa-file-lines" aria-hidden="true"></i></span>
-            <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
-          </span>
-          <strong class="manager-kpi__value" id="schoolReportsCount">{{ reports_count|intcomma }}</strong>
-          <span class="manager-kpi__label">
-            {{ reports_count|arabic_plural:"تقرير,تقريران,تقارير,تقريراً" }}
-            <em class="manager-kpi__scope"><span id="managerReportsScope">{{ selected_period_label }}</span></em>
-          </span>
+      {% endif %}
+
+      {% comment %}
+        الأرقام التي لا تنتظر قراراً — سطرٌ واحد أسفل الصندوق لا أربع بطاقات
+        فوقه. فهي سياقٌ يُطالَع لا عملٌ يُنجَز.
+      {% endcomment %}
+      <div class="manager-now__stats">
+        <a href="{% url 'reports:admin_reports' %}">
+          <strong id="schoolReportsCount">{{ reports_count|intcomma }}</strong>
+          <span>{{ reports_count|arabic_plural:"تقرير,تقريران,تقارير,تقريراً" }}
+            <em id="managerReportsScope">{{ selected_period_label }}</em></span>
           {% include "reports/partials/kpi_trend.html" with trend=trends.reports_count dom_id="reportsTrend" %}
         </a>
-        <a class="manager-kpi" href="{% url 'reports:manage_teachers' %}">
-          <span class="manager-kpi__top">
-            <span class="manager-kpi__icon"><i class="fa-solid fa-people-group" aria-hidden="true"></i></span>
-            <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
-          </span>
-          <strong class="manager-kpi__value" id="schoolTeachersCount">{{ teachers_count|intcomma }}</strong>
-          <span class="manager-kpi__label">حسابات فريق المدرسة النشطة <em class="manager-kpi__scope manager-kpi__scope--now">حالياً</em></span>
+        <a href="{% url 'reports:manage_teachers' %}">
+          <strong id="schoolTeachersCount">{{ teachers_count|intcomma }}</strong>
+          <span>{{ teachers_count|arabic_plural:"منسوب نشط,منسوبان نشطان,منسوبين نشطين,منسوباً نشطاً" }}</span>
+        </a>
+        <a href="{% url 'reports:manager_school_tickets' %}?status=attention">
+          <strong id="schoolTicketsOpen">{{ tickets_open|intcomma }}</strong>
+          <span>{{ tickets_open|arabic_plural:"طلب مفتوح,طلبان مفتوحان,طلبات مفتوحة,طلباً مفتوحاً" }}</span>
         </a>
       </div>
     </section>
 
-    <section class="manager-section manager-focus" aria-labelledby="todayFocusTitle">
-      <div class="manager-focus__intro">
-        <h2 id="todayFocusTitle">متابعة اليوم</h2>
-        <p>ابدأ بالعناصر التي تنتظر منك قراءة أو قرارًا، ثم انتقل إلى بقية الأعمال.</p>
-      </div>
-      <div class="manager-focus__items">
-        {% if focus_items %}
-          {% for item in focus_items %}
-            <a class="manager-focus__item {% if item.subset %}is-subset{% endif %}" href="{{ item.url }}">
-              <span class="manager-focus__count">{{ item.count|intcomma }}</span>
-              <span><strong>{{ item.title }}</strong><small>{{ item.hint }}</small></span>
-            </a>
-          {% endfor %}
-        {% else %}
-          <div class="manager-focus__clear">
-            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-            <span>
-              <strong>لا توجد عناصر معلّقة الآن</strong>
-              <small>جميع الطلبات والاعتمادات والإشعارات الحالية تمت متابعتها.</small>
-            </span>
-          </div>
-        {% endif %}
-      </div>
-    </section>
-    </div>
 
     {% if setup_percent < 100 %}
     <section class="manager-section manager-setup" aria-labelledby="setupTitle">
@@ -1738,68 +1923,7 @@
     </section>
     {% endif %}
 
-    {% if agenda.items %}
-      <section class="manager-section manager-agenda" aria-labelledby="agendaTitle">
-        {% comment %}
-          المواعيد القادمة من مصادرها الأربعة على خطٍّ واحد.
-
-          الاجتماعات في وحدة، والتكليفات في أخرى، والخطط في ثالثة، وتواقيع
-          التعاميم في رابعة. ومدير المدرسة يعمل بتقويمٍ لا بأربع قوائم؛ فما لم
-          تُجمع بقي الموعد معروفاً لمن يفتح صفحته ومنسيّاً عند من لا يفتحها.
-
-          والمتأخّر يتصدّر مهما بَعُد: إخفاؤه بعد أسبوعٍ من فواته يجعل اللوحة
-          أهدأ ممّا ينبغي، والصمت هنا فقدُ أثر لا طمأنينة.
-        {% endcomment %}
-        <div class="manager-section__head">
-          <div>
-            <h2 id="agendaTitle">المواعيد</h2>
-            <p>
-              {% if agenda.overdue %}
-                <strong class="manager-agenda__alarm">{{ agenda.overdue|arabic_count:"موعد فات,موعدان فاتا,مواعيد فاتت,موعداً فات" }}</strong>
-                <span aria-hidden="true">·</span>
-              {% endif %}
-              {{ agenda.upcoming|arabic_count:"موعد خلال,موعدان خلال,مواعيد خلال,موعداً خلال" }}
-              {{ agenda.horizon_days }} يوماً القادمة.
-            </p>
-          </div>
-        </div>
-
-        <ol class="manager-agenda__list">
-          {% for item in agenda.items %}
-            <li class="agenda-item{% if item.is_overdue %} is-overdue{% endif %}">
-              <a href="{{ item.url }}">
-                <span class="agenda-item__icon" aria-hidden="true"><i class="fa-solid {{ item.icon }}"></i></span>
-                <span class="agenda-item__body">
-                  <span class="agenda-item__title"><bdi>{{ item.title }}</bdi></span>
-                  <span class="agenda-item__meta">
-                    <span class="agenda-item__kind">{{ item.label }}</span>
-                    <span aria-hidden="true">·</span>
-                    <time datetime="{{ item.at|date:'c' }}">{{ item.hijri }} هـ — {{ item.time }}</time>
-                  </span>
-                </span>
-                {% comment %}
-                  المثنّى هنا مجرورٌ لا مرفوع: «بعد يومين» و«متأخّر يومين»،
-                  لا «بعد يومان». وإعراب المثنّى يتبع موقعه من الجملة، ولذلك
-                  تُمرَّر الصيغ إلى المرشِّح ولا تُشتقّ داخله — فهو لا يعلم
-                  أين ستقع كلمته، والقالب وحده يعلم.
-                {% endcomment %}
-                <span class="agenda-item__when">
-                  {% if item.is_overdue %}
-                    متأخّر {{ item.days|arabic_count:"يوم,يومين,أيام,يوماً" }}
-                  {% elif item.days == 0 %}
-                    اليوم
-                  {% else %}
-                    بعد {{ item.days|arabic_count:"يوم,يومين,أيام,يوماً" }}
-                  {% endif %}
-                </span>
-              </a>
-            </li>
-          {% endfor %}
-        </ol>
-      </section>
-    {% endif %}
-
-    <section class="manager-section manager-coverage" aria-labelledby="coverageTitle">
+    <section class="manager-section manager-coverage" id="managerCoverage" aria-labelledby="coverageTitle">
       {% comment %}
         تغطية التوثيق.
 
@@ -1915,54 +2039,24 @@
       </div>
     </section>
 
-    <section class="manager-section" id="managerActions" aria-labelledby="quickActionsTitle">
-      <div class="manager-section__head">
-        <div>
-          <h2 id="quickActionsTitle">ابدأ مهمة</h2>
-          <p>الإجراءات الأكثر استخدامًا في عمل {{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}.</p>
-        </div>
-      </div>
-      <div class="manager-primary-actions">
-        <a class="manager-primary-action" href="{% url 'reports:add_report' %}">
-          <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
-          <strong>إنشاء تقرير</strong>
-          <small>وثّق عملك واستخدمه لاحقًا في ملف الأداء القيادي.</small>
-        </a>
-        <a class="manager-primary-action" href="{% url 'reports:admin_reports' %}">
-          <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
-          <strong>مراجعة التقارير</strong>
-          <small>عرض تقارير المدرسة والبحث فيها.</small>
-        </a>
-        <a class="manager-primary-action" href="{% url 'reports:bulk_import_teachers' %}">
-          <i class="fa-solid fa-users-viewfinder" aria-hidden="true"></i>
-          <strong>إضافة منسوبي المدرسة</strong>
-          <small>إضافة سريعة أو Excel مع مراجعة قبل الحفظ.</small>
-        </a>
-        <a class="manager-primary-action" href="{% url 'reports:notifications_create' %}">
-          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-          <strong>إرسال إشعار</strong>
-          <small>رسالة سريعة {{ SCHOOL_TEACHER_INDEFINITE_DATIVE_LABEL|default:"لمعلم" }} أو قسم.</small>
-        </a>
-        <a class="manager-primary-action" href="{% url 'reports:circulars_create' %}">
-          <i class="fa-solid fa-file-signature" aria-hidden="true"></i>
-          <strong>إصدار تعميم</strong>
-          <small>تعميم رسمي يتطلب الاطلاع والتوقيع.</small>
-        </a>
-        <a class="manager-primary-action" href="{% url 'reports:manager_school_tickets' %}">
-          <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-          <strong>متابعة طلبات المدرسة</strong>
-          <small>الطلبات الداخلية وحالات معالجتها.</small>
-        </a>
-      </div>
-    </section>
+    {% comment %}
+      مساحات العمل — مطويّة.
 
-    <section class="manager-section" id="managerWorkspaces" aria-labelledby="workspacesTitle">
-      <div class="manager-section__head">
-        <div>
-          <h2 id="workspacesTitle">مساحات العمل</h2>
-          <p>جميع أدوات الإدارة مرتبة حسب المهمة، وليست قائمة واحدة طويلة.</p>
-        </div>
-      </div>
+      عشرون رابطاً مفتوحاً دائماً تُقرأ مرةً واحدة ثم تُتجاهَل، وتُزاحم ما
+      يحتاج قراراً بثلث الشاشة. وهي دليلٌ لا عمل: يُفتح عند البحث عن أداة
+      لا في كل صباح. فتأخذ شكل «الموارد» — سطرٌ يُفتح عند الحاجة.
+
+      والشريط العلوي يحمل الوجهات نفسها في خمس قوائم، فلا يُفقد شيء بطيّها.
+    {% endcomment %}
+    <details class="manager-resource-drawer manager-workspaces-drawer" id="managerWorkspaces">
+      <summary>
+        <span class="manager-resource-drawer__icon"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></span>
+        <span class="manager-resource-drawer__copy">
+          <strong>مساحات العمل</strong>
+          <small>جميع أدوات الإدارة مرتبة حسب المهمة — افتحها عند البحث عن أداة.</small>
+        </span>
+        <i class="fa-solid fa-chevron-down manager-resource-drawer__caret" aria-hidden="true"></i>
+      </summary>
       <div class="manager-workspaces">
         <article class="manager-workspace">
           <header class="manager-workspace__head">
@@ -2032,7 +2126,7 @@
           </div>
         </article>
       </div>
-    </section>
+    </details>
 
     <details class="manager-resource-drawer" id="managerResources" {% if storage_pressure.needs_attention %}open{% endif %}>
       <summary>
@@ -2585,7 +2679,7 @@
 
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const revealItems = root.querySelectorAll(
-        ".manager-alert-stack, .manager-command-grid, .manager-agenda, .manager-coverage, .manager-setup, #managerActions, #managerWorkspaces, #managerResources, #managerPerformance"
+        ".manager-alert-stack, .manager-now, .manager-coverage, .manager-setup, #managerWorkspaces, #managerResources, #managerPerformance"
       );
       revealItems.forEach(function (item) { item.setAttribute("data-manager-reveal", ""); });
 
@@ -2621,7 +2715,7 @@
             link.classList.toggle("is-current", link.dataset.managerJump === visible.target.id);
           });
         }, {rootMargin: "-24% 0px -62% 0px", threshold: [0, .1, .35]});
-        ["managerToday", "managerActions", "managerWorkspaces", "managerPerformance", "managerResources"].forEach(function (id) {
+        ["managerToday", "managerCoverage", "managerWorkspaces", "managerPerformance", "managerResources"].forEach(function (id) {
           const section = document.getElementById(id);
           if (section) jumpObserver.observe(section);
         });

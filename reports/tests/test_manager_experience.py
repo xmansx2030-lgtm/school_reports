@@ -363,11 +363,14 @@ class ManagerExperienceTests(TestCase):
         response = self.client.get(reverse("reports:admin_dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "متابعة اليوم")
-        self.assertContains(response, "ابدأ مهمة")
+        # اللوحة كانت تجيب «ماذا ينتظرني؟» ثلاث مرات — بطاقات أرقام، وقائمة
+        # بجوارها، ومواعيد تحتها — فدُمجت في «ما يحتاجك الآن». والمعنى الذي
+        # يحرسه هذا الاختبار لم يتغيّر: العمل القابل للتنفيذ يظهر، ووجهته
+        # قابلة للفتح. وتغيّر موضعُه فقط، فتغيّر ما يُقاس به.
+        self.assertContains(response, "ما يحتاجك الآن")
         self.assertContains(response, "مساحات العمل")
-        self.assertContains(response, "طلبات مدرسة قيد المتابعة")
-        self.assertContains(response, "ملفات إنجاز بانتظار الاعتماد")
+        self.assertContains(response, "طلبات المدرسة المفتوحة")
+        self.assertContains(response, "اعتمادات الإنجاز")
         self.assertContains(response, "إدارة طلبات المدرسة", count=0)
         self.assertNotContains(response, "Premium 2026")
         self.assertNotContains(response, "إحصائية الطلبات")

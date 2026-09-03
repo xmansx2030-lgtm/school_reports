@@ -823,7 +823,9 @@ class VisitSnapshotTests(SimpleTestCase):
     def test_buttons_are_dropped_and_evidence_is_kept(self):
         source = _source("reports/templates/reports/admin_dashboard.html")
         print_block = source[source.index("@media print {"):]
-        for hidden in ("#managerActions", "#managerWorkspaces", ".manager-coverage__actions"):
+        # ‎#managerActions‎ لم يعد موجوداً: ستّ بطاقاته كانت تكرّر الشريط
+        # العلوي حرفاً بحرف، فحُذفت بدل أن تُخفى في الطباعة وحدها.
+        for hidden in ("#managerWorkspaces", "#managerResources", ".manager-coverage__actions"):
             with self.subTest(hidden=hidden):
                 self.assertIn(hidden, print_block)
         # الرسوم حجّةٌ على الورق لا زينة — تُقصّ ولا تُحذف.
@@ -901,7 +903,7 @@ class PrintFromDarkModeTests(SimpleTestCase):
         source = _source("reports/templates/reports/admin_dashboard.html")
         print_block = source[source.index("@media print {"):]
         self.assertIn("background-image: none !important", print_block)
-        self.assertIn(".manager-focus,", print_block)
+        self.assertIn(".manager-now,", print_block)
 
 
 class SchoolAgendaTests(TestCase):

@@ -348,8 +348,16 @@ class ManagerDashboardAuditTests(TestCase):
         self.assertTrue(subset_items, "المهام المعيّنة يجب أن تظهر كتفصيل لا كبند مستقل")
 
     def _attention_card_count(self) -> int:
+        """Rows that claim a decision is waiting.
+
+        The dashboard used to answer "what needs me?" three times — a KPI card,
+        a focus list beside it, and an agenda below. They merged into one
+        "ما يحتاجك الآن" list, so the marker moved from ``manager-kpi--attention``
+        to ``now-row--decision``. The meaning this test guards is unchanged:
+        emphasis is spent only on work that is actually pending.
+        """
         html = self.client.get(reverse("reports:admin_dashboard")).content.decode("utf-8")
-        return len(re.findall(r'class="manager-kpi manager-kpi--attention"', html))
+        return len(re.findall(r'class="now-row now-row--decision', html))
 
     def test_attention_styling_is_reserved_for_real_pending_work(self):
         """A school with nothing pending must not render amber alert cards."""
@@ -358,7 +366,7 @@ class ManagerDashboardAuditTests(TestCase):
         self.assertEqual(self._attention_card_count(), 0)
         self.assertContains(
             self.client.get(reverse("reports:admin_dashboard")),
-            "لا توجد عناصر معلّقة الآن",
+            "لا شيء ينتظرك الآن",
         )
 
         # TestCase keeps the test inside an outer transaction. Execute the
