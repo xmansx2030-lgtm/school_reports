@@ -268,3 +268,17 @@ html[data-theme="dark"] .rc-cancel:hover{ background:#173a2f; }
 @media (max-width: 1023px) {
   .gsearch { display: none; }
 }
+
+/* صدى التاريخ الهجري تحت حقلٍ ميلادي — يركّبه js/hijri-date.js تلقائياً لكل
+   ‎<input type="date" data-hijri-echo>‎. تنسيقٌ واحد لكل الشاشات، فالمدير
+   يقرأ الجسر نفسه في «إضافة تقرير» وفي فلتر التقارير وفيما يُضاف بعدهما. */
+.hijri-echo {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: .74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+.hijri-echo:empty { display: none; }

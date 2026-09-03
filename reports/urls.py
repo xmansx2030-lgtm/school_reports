@@ -84,6 +84,7 @@ urlpatterns = [
     path("reports/add/", views.add_report, name="add_report"),
     path("reports/ai/improve/", views.improve_report_text, name="improve_report_text"),
     path("reports/ai/voice/", views.transcribe_report_voice, name="transcribe_report_voice"),
+    path("reports/ai/review/", views.review_report_readiness, name="review_report_readiness"),
     path("reports/my/", views.my_reports, name="my_reports"),
     path("reports/<int:pk>/edit/", views.edit_my_report, name="edit_my_report"),
     path("reports/<int:pk>/delete/", views.delete_my_report, name="delete_my_report"),

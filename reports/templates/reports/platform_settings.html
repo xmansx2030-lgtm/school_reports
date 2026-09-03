@@ -560,6 +560,23 @@
             </label>
             {% for e in form.voice_report_enabled.errors %}<div class="error">{{ e }}</div>{% endfor %}
           </article>
+
+          <article class="ai-feature-card {% if form.report_review_enabled.value %}is-on{% endif %}" data-ai-feature-card>
+            <div class="ai-feature-top">
+              <span class="ai-feature-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+              <span class="ai-feature-state" data-ai-state><i class="fa-solid {% if form.report_review_enabled.value %}fa-eye{% else %}fa-eye-slash{% endif %}" aria-hidden="true"></i><span>{% if form.report_review_enabled.value %}ظاهر{% else %}مخفي{% endif %}</span></span>
+            </div>
+            <div class="ai-feature-copy">
+              <h3>فحص جاهزية التقرير</h3>
+              <p>لوحة تُنبّه المعلم لما قد يُعيد تقريره قبل حفظه. الفحص البنيوي بلا رصيد ولا نداء، والفحص الذكي بخمس محاولات يوميًا وإعادةُ فحص نصٍّ لم يتغيّر لا تُحتسب.</p>
+            </div>
+            <label class="archive-switch" for="{{ form.report_review_enabled.id_for_label }}">
+              {{ form.report_review_enabled }}
+              <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              <span class="switch-text" data-ai-switch-text>{% if form.report_review_enabled.value %}مفعّل{% else %}معطّل{% endif %}</span>
+            </label>
+            {% for e in form.report_review_enabled.errors %}<div class="error">{{ e }}</div>{% endfor %}
+          </article>
         </div>
       </section>
 

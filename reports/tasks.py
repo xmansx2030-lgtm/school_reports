@@ -195,6 +195,48 @@ def cleanup_audit_logs_task(self, days: int | None = None, chunk_size: int = 200
     return deleted_total
 
 
+@shared_task(bind=True, ignore_result=True, autoretry_for=(Exception,), retry_backoff=True, retry_jitter=True, retry_kwargs={"max_retries": 3})
+def cleanup_ai_usage_task(self, days: int | None = None, chunk_size: int = 2000) -> int:
+    """يقلّم وقائع استهلاك الذكاء الاصطناعي الأقدم من N يوماً.
+
+    الجدول يكبر بصفٍّ لكل نداء، وسقف منصور وحده ألفا نداء يومياً. والوقائع
+    القديمة لا تُحتَجّ بها كما يُحتَجّ بسجل الإجراءات — قيمتها في الاتجاه لا في
+    الواقعة — فحذفها مباشر بلا أرشفة، خلافاً لـ``cleanup_audit_logs_task``.
+    """
+    AiUsageEvent = apps.get_model("reports", "AiUsageEvent")
+    task_id, retries, trace_id = _task_ctx(self)
+    logger.info(
+        "Task start name=cleanup_ai_usage_task task_id=%s trace_id=%s retries=%s",
+        task_id,
+        trace_id,
+        retries,
+    )
+
+    retention_days = int(days) if days is not None else int(getattr(settings, "AI_USAGE_RETENTION_DAYS", 180))
+    retention_days = max(retention_days, 0)
+    chunk_size = max(int(chunk_size), 100)
+    cutoff = timezone.now() - timedelta(days=retention_days)
+
+    qs = AiUsageEvent.objects.filter(created_at__lt=cutoff).order_by("pk")
+    deleted_total = 0
+    while True:
+        batch_pks = list(qs.values_list("pk", flat=True)[:chunk_size])
+        if not batch_pks:
+            break
+        deleted, _ = AiUsageEvent.objects.filter(pk__in=batch_pks).delete()
+        deleted_total += int(deleted)
+
+    logger.info(
+        "Task success name=cleanup_ai_usage_task task_id=%s trace_id=%s deleted=%s retention_days=%s",
+        task_id,
+        trace_id,
+        deleted_total,
+        retention_days,
+    )
+    opmetrics.increment("celery.task.success.cleanup_ai_usage_task")
+    return deleted_total
+
+
 @shared_task(bind=True, ignore_result=True)
 def monitor_infrastructure_capacity_task(self) -> dict:
     """Warn before Redis or the session table runs the platform into trouble.

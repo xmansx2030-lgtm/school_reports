@@ -32,14 +32,19 @@
 .ree-preview { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #eef3f0; }
 .ree-preview [hidden] { display: none !important; }
 .ree-preview img { width: 100%; height: 100%; display: block; object-fit: contain; background: #f4f7f5; }
-.ree-placeholder { width: 100%; height: 100%; display: grid; place-content: center; gap: 8px; text-align: center; color: #87948e; }
+/* ‎#87948e‎ على ‎#eef3f0‎ يعطي 2.81:1 — نصٌّ باهت في الوضع الفاتح، وقد عولج
+   نظيره الداكن وحده من قبل. هذه الدرجة تعطي 4.63:1. */
+.ree-placeholder { width: 100%; height: 100%; display: grid; place-content: center; gap: 8px; text-align: center; color: #5f6d67; }
 .ree-placeholder i { font-size: 1.6rem; }
 .ree-ratio { position: absolute; left: 8px; bottom: 8px; min-height: 22px; padding: 3px 7px; border-radius: 5px; background: rgba(7, 61, 43, .86); color: #fff; direction: ltr; font: 700 .68rem Arial, sans-serif; }
 .ree-ratio:empty { display: none; }
 .ree-fields { display: grid; gap: 11px; padding: 12px; }
 .ree-fields input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; clip-path: inset(50%); }
 .ree-file-label { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px dashed #8aa99a; border-radius: 7px; background: #f4faf6; color: var(--ree-green); font-size: .82rem; font-weight: 900; cursor: pointer; }
-.ree-options { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+/* عمودان في بطاقةِ معرضٍ عرضها ‎230px‎ يتركان لكل قائمة ‎~100px‎، فتُقتطع
+   «احتواء الصورة كاملة» إلى «احتواء الد». والانطواء عند الضيق أولى من
+   خيارٍ لا يُقرأ اسمه. */
+.ree-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; }
 .ree-switches { display: flex; flex-wrap: wrap; gap: 14px; }
 .ree-switches label { display: inline-flex; align-items: center; gap: 7px; color: var(--ree-ink); font-size: .78rem; font-weight: 800; cursor: pointer; }
 .ree-delete { color: #a12a2a !important; }
@@ -52,3 +57,149 @@
   .ree-page-mode { min-width: 0; }
   .ree-list { grid-template-columns: 1fr; }
 }
+
+
+/* ── إضافة شاهد وإزالته ─────────────────────────────────────────────────
+   البطاقة الفارغة تُرسم مرّة واحدة، وما بعدها بطلب المستخدم. وزرّ الإضافة
+   هدفُ لمسٍ كامل الارتفاع، وزرّ الإزالة داخل شريط البطاقة لا صندوقُ اختيارٍ
+   ارتفاعه ‎24px‎. */
+/* بلاطةُ الإضافة عنصرٌ في الشبكة بجوار البطاقات، فتقرأ الصفُّ معرضَ صورٍ
+   فيه مكانٌ شاغر بدل فجوةٍ تبدو خللاً في التخطيط. */
+.ree-add {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px;
+  border: 1.5px dashed #8aa99a;
+  border-radius: 8px;
+  background: #f4faf6;
+  color: var(--ree-green);
+  font: 900 .84rem/1.4 "Cairo", sans-serif;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.ree-add-plus {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0, 108, 53, .1);
+  font-size: 1rem;
+}
+
+.ree-add:hover:not(:disabled) { background: #e8f3ed; border-color: var(--ree-green); }
+.ree-add:disabled { cursor: default; opacity: .5; }
+.ree-add[hidden] { display: none !important; }
+.ree-add:focus-visible { outline: 2px solid var(--focus-ring, #b9975b); outline-offset: 2px; }
+
+.ree-count { margin: 10px 0 0; color: var(--ree-muted); font-size: .76rem; font-weight: 700; }
+
+/* في العمود الرئيسي تُعرض الشواهد معرضاً يملأ عرض البطاقة. */
+.ar-col-main .ree-list { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.ree-optional { color: var(--ree-muted); font-size: .72rem; font-weight: 800; }
+
+.ree-remove {
+  color: #a12a2a !important;
+}
+.ree-remove:hover { background: #fdecec !important; color: #8c1f1f !important; }
+.ree-card[hidden] { display: none !important; }
+
+/* ── خيارات الطباعة المطوية ─────────────────────────────────────────── */
+.ree-advanced {
+  border: 1px solid var(--ree-line);
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+
+.ree-advanced > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--ree-muted);
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ree-advanced > summary::-webkit-details-marker { display: none; }
+.ree-advanced > summary::after {
+  content: "078";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  margin-inline-start: auto;
+  font-size: .66rem;
+  transition: transform .18s ease;
+}
+.ree-advanced[open] > summary::after { transform: rotate(180deg); }
+.ree-advanced[open] > summary { border-bottom: 1px solid var(--ree-line); color: var(--ree-ink); }
+.ree-advanced-body { display: grid; gap: 11px; padding: 12px; }
+
+.ree-switch {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ree-ink);
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ree-switch input[type="checkbox"] { width: 18px; height: 18px; flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ree-advanced > summary::after { transition: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   الوضع الداكن — لم يكن لهذا الملف نظيرٌ داكنٌ إطلاقاً، وهو محرّر الشواهد
+   في «إضافة تقرير» و«تعديل تقرير»، أي في أكثر شاشةٍ يفتحها المدير.
+
+   ثلاثة عيوبٍ قيست عليه: مربّع المعاينة يبقى ‎#eef3f0‎ — رقعةٌ بيضاء وسط
+   صفحةٍ داكنة — ونصّ «اختر صورة للشاهد» فوقها بتباين ‎2.81‎، والوصف الثانوي
+   ‎3.27‎. والعلّة أن الرموز ‎--ree-*‎ معرّفةٌ على الغلاف نفسه فلا تصلها الطبقة
+   العامة؛ فتُعاد تعريفتها هنا حيث عُرّفت.
+   ───────────────────────────────────────────────────────────────────────── */
+html[data-theme="dark"] .report-evidence-editor {
+  --ree-green: #42ca88;
+  --ree-ink: #edf6f1;
+  --ree-muted: #abc0b6;              /* 8.5 بدل 3.27 */
+  --ree-line: rgba(205, 225, 216, .18);
+}
+html[data-theme="dark"] .ree-card { background: #0d241d; box-shadow: 0 10px 28px rgba(0, 0, 0, .3); }
+html[data-theme="dark"] .ree-card-bar { background: #102920; }
+html[data-theme="dark"] .ree-preview { background: #0b211c; }
+html[data-theme="dark"] .ree-preview img { background: #091c16; }
+html[data-theme="dark"] .ree-placeholder { color: #abc0b6; }   /* 8.05 بدل 2.81 */
+html[data-theme="dark"] .ree-page-mode {
+  border-color: rgba(66, 202, 136, .24);
+  background: linear-gradient(135deg, rgba(16, 56, 44, .92), rgba(53, 45, 30, .6));
+}
+html[data-theme="dark"] .ree-page-mode__label i { color: #e5cc91; }
+html[data-theme="dark"] .ree-page-mode select,
+html[data-theme="dark"] .ree-fields input[type="text"],
+html[data-theme="dark"] .ree-options select { background: #102920; color: #edf6f1; }
+html[data-theme="dark"] .ree-file-label { border-color: rgba(66, 202, 136, .42); background: #113328; }
+html[data-theme="dark"] .ree-file-label--secondary {
+  border-color: rgba(205, 225, 216, .18) !important;
+  background: #102920 !important;
+  color: #edf6f1 !important;
+}
+html[data-theme="dark"] .ree-order-actions button:hover { background: #14382c; color: #42ca88; }
+html[data-theme="dark"] .ree-number { color: #06231a; }        /* 7.95 على الأخضر الفاتح */
+html[data-theme="dark"] .ree-delete { color: #ff8c91 !important; }  /* 7.31 بدل 3.1 */
+
+html[data-theme="dark"] .ree-add { border-color: rgba(66, 202, 136, .42); background: #113328; }
+html[data-theme="dark"] .ree-add-plus { background: rgba(66, 202, 136, .16); }
+html[data-theme="dark"] .ree-add:hover:not(:disabled) { background: #14382c; }
+html[data-theme="dark"] .ree-advanced { border-color: rgba(205, 225, 216, .18); background: #0f2620; }
+html[data-theme="dark"] .ree-advanced[open] > summary { color: #edf6f1; }
+html[data-theme="dark"] .ree-remove { color: #ff8c91 !important; }
+html[data-theme="dark"] .ree-remove:hover { background: #3c1a1a !important; color: #ffb3b6 !important; }

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load arabic_tags %}
 {% load hijri_tags %}
 
 {% block title %}أرشيف أعمالي | منصة توثيق{% endblock %}
@@ -114,7 +115,7 @@
               <a href="{% url 'reports:assignment_detail' item.pk %}">{{ item.assignment.title }}</a>
             </div>
             <div class="wa-line__sub">
-              اعتُمد {{ item.decided_at|date:"Y-m-d" }} · {{ item.evidence_count }} شاهد
+              اعتُمد {{ item.decided_at|hijri }} هـ · {{ item.evidence_count|arabic_count:"شاهد,شاهدان,شواهد,شاهداً" }}
             </div>
           </div>
           <span class="asg-tag asg-tag--done">معتمد</span>
@@ -172,7 +173,7 @@
           <span class="wa-icon" aria-hidden="true"><i class="fa-solid fa-lightbulb"></i></span>
           <div class="wa-line__main">
             <div class="wa-line__title">{{ item.title }}</div>
-            <div class="wa-line__sub">{{ item.created_at|date:"Y-m-d" }}</div>
+            <div class="wa-line__sub">{{ item.created_at|hijri }} هـ</div>
           </div>
           <span class="asg-tag {% if item.is_shared %}asg-tag--done{% endif %}">
             {% if item.is_shared %}مشاركة مع المجموعة{% else %}{{ item.get_approval_state_display }}{% endif %}

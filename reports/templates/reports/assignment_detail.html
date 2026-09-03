@@ -109,7 +109,7 @@
             <div class="dtl-meta__l">موعد التسليم</div>
             <div class="dtl-meta__v">
               {{ assignment.due_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ assignment.due_at|date:'c' }}">({{ assignment.due_at|date:"Y-m-d H:i" }})</time>
+              <time dir="ltr" datetime="{{ assignment.due_at|date:'c' }}">{{ assignment.due_at|date:"Y-m-d H:i" }} م</time>
             </div>
           </div>
           <div>
@@ -125,7 +125,7 @@
             <div class="dtl-meta__v">
               {% if target.accepted_at %}
                 {{ target.accepted_at|hijri }} هـ
-                <time dir="ltr" datetime="{{ target.accepted_at|date:'c' }}">({{ target.accepted_at|date:"Y-m-d" }})</time>
+                <time dir="ltr" datetime="{{ target.accepted_at|date:'c' }}">{{ target.accepted_at|date:"Y-m-d" }} م</time>
               {% elif assignment.is_cancelled %}لم يُقبل قبل الإلغاء
               {% else %}لم يُقبل بعد{% endif %}
             </div>
@@ -138,7 +138,7 @@
             لا يتطلب منك أي إجراء، وقد أوقفت جميع أدوات التنفيذ والإرسال.
             {% if assignment.cancelled_at %}
               أُلغي في {{ assignment.cancelled_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ assignment.cancelled_at|date:'c' }}">({{ assignment.cancelled_at|date:"Y-m-d H:i" }})</time>.
+              <time dir="ltr" datetime="{{ assignment.cancelled_at|date:'c' }}">{{ assignment.cancelled_at|date:"Y-m-d H:i" }} م</time>.
             {% endif %}
             {% if assignment.cancel_reason %}<br>السبب: {{ assignment.cancel_reason }}{% endif %}
           </div>
@@ -268,7 +268,7 @@
                 <div class="dtl-step__who">
                   {{ step.actor_display }}{% if step.actor_role %} · {{ step.actor_role }}{% endif %}
                   · {{ step.created_at|hijri }} هـ
-                  <time dir="ltr" datetime="{{ step.created_at|date:'c' }}">({{ step.created_at|date:"Y-m-d H:i" }})</time>
+                  <time dir="ltr" datetime="{{ step.created_at|date:'c' }}">{{ step.created_at|date:"Y-m-d H:i" }} م</time>
                 </div>
                 {% if step.note %}<div class="dtl-step__note">{{ step.note }}</div>{% endif %}
               </li>

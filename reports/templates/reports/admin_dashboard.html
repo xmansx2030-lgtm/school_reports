@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load humanize static %}
+{% load arabic_tags %}
 
 {% block title %}لوحة إدارة المدرسة | منصة توثيق{% endblock %}
 
@@ -64,8 +65,12 @@
     margin-inline-start: auto;
     padding: 9px 16px;
     border-radius: var(--id-pill);
+    /* ‎--id-accent-ink‎ هو حبر ‎--id-accent‎، لا حبرُ ‎--id-green-700‎. وكان
+       مقروناً بالثاني، فبقيت الخلفية خضراءَ داكنة في الليل بينما انقلب الحبر
+       داكناً معها — تباين ‎2.26‎. والقرن الصحيح يُصلحه بلا تغيير الوضع الفاتح:
+       ‎--id-accent‎ هناك هو ‎--id-green-700‎ نفسه. */
     color: var(--id-accent-ink);
-    background: var(--id-green-700);
+    background: var(--id-accent);
     font-size: .84rem;
     font-weight: 900;
     text-decoration: none;
@@ -349,11 +354,275 @@
     line-height: 1.7;
   }
   .manager-kpi__scope {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: var(--id-pill);
+    color: var(--mg-muted);
+    background: var(--id-accent-wash);
+    font-size: .68rem;
+    font-style: normal;
+    font-weight: 800;
+  }
+  /* «حالياً» ليس اعتذاراً بل تصنيف: هذا المؤشّر لا يتبع الفترة عمداً، لأن
+     الطلبات المفتوحة يجب ألا تختفي لأن المدير بدّل نافذة التحليل. */
+  .manager-kpi__scope--now { background: transparent; border: 1px dashed var(--id-line); }
+
+  /* ── شارة الاتجاه ─────────────────────────────────────────────────────
+     الرقم الذي لا يُقارَن لا معنى له. والشارة تعتمد على اللون والسهم والنص
+     معاً، فلا تسقط الرسالة على من لا يفرّق بين الأحمر والأخضر. */
+  .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: start;
+    margin-top: 6px;
+    padding: 3px 9px;
+    border-radius: var(--id-pill);
+    font-size: .71rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .kpi-trend__baseline { color: var(--mg-muted); font-weight: 700; }
+  .kpi-trend--up { color: var(--id-green-800); background: var(--id-green-050); }
+  .kpi-trend--down { color: var(--mg-danger); background: rgba(239, 68, 68, .10); }
+  .kpi-trend--flat { color: var(--mg-muted); background: var(--id-surface-2); }
+
+  /* ── تغطية التوثيق ──────────────────────────────────────────────────── */
+  .manager-coverage__body {
+    display: grid;
+    grid-template-columns: minmax(0, 240px) minmax(0, 1fr) minmax(0, 340px);
+    gap: 26px;
+    align-items: start;
+  }
+  /* ── المواعيد ─────────────────────────────────────────────────────────
+     أربع وحداتٍ لكلٍّ تواريخها، تُقرأ هنا على خطٍّ واحد. والمتأخّر يُميَّز
+     بالحدّ الجانبي واللون والكلمة معاً — لا باللون وحده. */
+  .manager-agenda__alarm { color: var(--mg-danger); font-weight: 950; }
+  .manager-agenda__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .agenda-item a {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border: 1px solid var(--id-line);
+    border-inline-start: 3px solid var(--id-accent);
+    border-radius: var(--id-r2);
+    color: inherit;
+    background: var(--id-surface);
+    text-decoration: none;
+    transition: transform var(--id-fast) var(--id-ease), background var(--id-fast) var(--id-ease);
+  }
+  .agenda-item a:hover { transform: translateX(-2px); background: var(--id-surface-2); }
+  .agenda-item.is-overdue a { border-inline-start-color: var(--mg-danger); }
+  .agenda-item__icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: var(--id-r1);
+    color: var(--mg-green);
+    background: var(--id-accent-wash);
+    font-size: .88rem;
+  }
+  .agenda-item.is-overdue .agenda-item__icon { color: var(--mg-danger); background: rgba(239, 68, 68, .10); }
+  .agenda-item__body { display: grid; gap: 3px; min-width: 0; }
+  .agenda-item__title {
+    overflow: hidden;
+    color: var(--mg-ink);
+    font-size: .89rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .agenda-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--mg-muted);
+    font-size: .74rem;
+    font-weight: 700;
+  }
+  .agenda-item__kind {
+    padding: 1px 8px;
+    border-radius: var(--id-pill);
+    background: var(--id-surface-2);
+    font-weight: 800;
+  }
+  .agenda-item__when {
+    flex: 0 0 auto;
+    color: var(--mg-muted);
+    font-size: .78rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .agenda-item.is-overdue .agenda-item__when { color: var(--mg-danger); }
+  @media (max-width: 640px) {
+    .agenda-item a { grid-template-columns: auto minmax(0, 1fr); }
+    .agenda-item__when { grid-column: 2; }
+  }
+
+  /* ── الاستجابة تحت نسبة الإنجاز ──────────────────────────────────── */
+  .manager-response {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+    gap: 10px;
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--id-line);
+  }
+  .manager-response dt { color: var(--mg-muted); font-size: .72rem; font-weight: 800; }
+  .manager-response dd { margin: 3px 0 0; font-size: .88rem; font-weight: 900; }
+  .manager-response dd a { color: inherit; text-decoration: none; }
+  .manager-response dd a:hover { text-decoration: underline; }
+  .manager-response dd small {
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
     color: var(--mg-muted);
     font-size: .72rem;
-    font-style: normal;
     font-weight: 700;
-    opacity: .85;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* أسبوعان حدُّ الشيخوخة: قبله تأخّرٌ محتمَل، وبعده طلبٌ نُسي. */
+  .manager-response__aged.is-stale dd { color: var(--mg-danger); }
+
+  .manager-coverage__departments h3 {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: .95rem;
+    font-weight: 900;
+  }
+  .manager-coverage__departments h3 span {
+    color: var(--mg-muted);
+    font-size: .72rem;
+    font-weight: 700;
+  }
+  .manager-coverage__departments ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .dept-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 78px auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .dept-row__name {
+    overflow: hidden;
+    color: var(--mg-ink);
+    font-size: .82rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dept-row__bar {
+    height: 7px;
+    border-radius: var(--id-pill);
+    background: var(--id-surface-2);
+    overflow: hidden;
+  }
+  .dept-row__bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--id-green-600);
+  }
+  .dept-row__value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--mg-ink);
+    font-size: .8rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .dept-row__value small { color: var(--mg-muted); font-size: .72rem; font-weight: 700; }
+  /* قسمٌ لم يوثّق منه أحد: يُعلَّم بالذهبي لا بالأحمر — هذه دعوةٌ للمتابعة
+     لا إعلانُ عطل، والأحمر هنا يُنفق انتباهاً لا يستحقه بعدُ. */
+  .dept-row.is-idle .dept-row__bar { background: var(--id-gold-100, rgba(185, 151, 91, .22)); }
+  .dept-row.is-idle .dept-row__value { color: var(--id-gold-700, #8d6b2f); }
+  @media (max-width: 1100px) {
+    .manager-coverage__body { grid-template-columns: minmax(0, 240px) minmax(0, 1fr); }
+    .manager-coverage__departments { grid-column: 1 / -1; }
+  }
+  .manager-coverage__gauge { display: grid; gap: 6px; }
+  .manager-coverage__gauge strong {
+    color: var(--mg-green);
+    font-size: 2.4rem;
+    font-weight: 950;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .manager-coverage__gauge > span { color: var(--mg-muted); font-size: .86rem; font-weight: 700; }
+  .manager-coverage__bar {
+    height: 9px;
+    margin-top: 4px;
+    border-radius: var(--id-pill);
+    background: var(--id-surface-2);
+    overflow: hidden;
+  }
+  .manager-coverage__bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--id-green-600), var(--id-gold-400));
+    transition: width var(--id-slow) var(--id-ease);
+  }
+  .manager-coverage__pending h3 { margin: 0 0 10px; font-size: .95rem; font-weight: 900; }
+  .manager-coverage__names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+  }
+  .manager-coverage__names li {
+    padding: 5px 11px;
+    border: 1px solid var(--id-line);
+    border-radius: var(--id-pill);
+    color: var(--mg-ink);
+    background: var(--id-surface-2);
+    font-size: .79rem;
+    font-weight: 700;
+  }
+  .manager-coverage__actions { display: flex; flex-wrap: wrap; gap: 9px; }
+  .manager-coverage__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 15px;
+    border: 1px solid var(--id-line);
+    border-radius: var(--id-pill);
+    color: var(--mg-ink);
+    font-size: .82rem;
+    font-weight: 900;
+    text-decoration: none;
+  }
+  .manager-coverage__link--primary {
+    color: var(--id-accent-ink);
+    background: var(--id-accent);
+    border-color: var(--id-accent);
+  }
+  .manager-coverage__empty { display: grid; gap: 8px; justify-items: start; }
+  .manager-coverage__empty h3 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: .95rem; font-weight: 900; }
+  .manager-coverage__empty h3 i { color: var(--id-gold-500, #b9975b); }
+  .manager-coverage__empty p { margin: 0; color: var(--mg-muted); font-size: .83rem; font-weight: 700; line-height: 1.75; }
+  .manager-coverage__empty[hidden] { display: none; }
+  .manager-coverage__done { display: flex; align-items: center; gap: 9px; color: var(--id-green-700); }
+  /* ‎display:flex‎ على صنفٍ يهزم ‎display:none‎ الضمني لسمة ‎[hidden]‎ —
+     فتظهر «لم يوثّق بعد» و«وثّق الجميع» معاً. يُقال الإخفاء حيث يُعطى العرض. */
+  .manager-coverage__done[hidden],
+  .manager-coverage__pending > div[hidden] { display: none; }
+  html[data-theme="dark"] .manager-coverage__done { color: var(--id-accent); }
+  @media (max-width: 760px) {
+    .manager-coverage__body { grid-template-columns: 1fr; }
+    .dept-row { grid-template-columns: minmax(0, 1fr) 56px auto; }
   }
   /* التمييز مقصورٌ على ما ينتظر إجراءً فعلاً — وسمٌ يُمنح لكل شيء لا يُنبّه على شيء. */
   .manager-kpi--attention {
@@ -909,8 +1178,22 @@
   }
   .manager-hero__pulse a:hover { transform: translateY(-2px); background: rgba(255, 255, 255, .13); }
   .manager-hero__pulse strong { color: var(--id-gold-300); font-size: 1.05rem; font-weight: 950; }
-  /* عنوان المؤشّر السريع: ‎.68rem‎ = ‎10.9px‎ على الجوال، وهو الرقم الذي يشرحه. */
-  .manager-hero__pulse span { overflow: hidden; color: var(--id-hero-ink-soft); font-size: .72rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+  /* عنوان المؤشّر السريع: ‎.68rem‎ = ‎10.9px‎ على الجوال، وهو الرقم الذي يشرحه.
+
+     كان ‎nowrap‎ مع ‎ellipsis‎ يبتر «ملفات اعتماد» إلى «ملفات ا…» — العرض
+     المتاح ‎50px‎ والنص يطلب ‎70px‎. والبتر هنا أسوأ من السطرين، لأن المؤشّر
+     كلّه كلمتان: إن ضاعت إحداهما لم يبقَ ما يُقرأ. فليلتفّ في سطرين.
+
+     ولا يُقصّ الارتفاع بـ‎line-clamp‎: صندوق السطر العربي يخرج أطول من
+     ‎line-height‎ المحسوب، فيقتطع الحدُّ ثلاث بكسلاتٍ من ذيل السطر الثاني.
+     البطاقات الثلاث في شبكةٍ واحدة، فأطولُها يضبط ارتفاع الصف ويبقى الصف مستوياً. */
+  .manager-hero__pulse span {
+    color: var(--id-hero-ink-soft);
+    font-size: .72rem;
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
 
   .manager-alert-stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 10px; margin-bottom: 14px; }
   .manager-alert-stack .manager-subscription-alert { margin: 0; padding: 11px 14px; box-shadow: var(--id-e1); }
@@ -1052,7 +1335,8 @@
     .manager-hero h1 { font-size: clamp(1.65rem, 9vw, 2.15rem); }
     .manager-hero__pulse { grid-template-columns: 1fr; }
     .manager-hero__pulse a { grid-template-columns: auto 1fr; align-items: baseline; gap: 10px; }
-    .manager-hero__pulse span { white-space: normal; }
+    /* على الجوال يصير المؤشّر سطراً واحداً عريضاً، فلا حاجة لحدّ السطرين. */
+    .manager-hero__pulse span { display: block; overflow: visible; }
     .manager-primary-actions { grid-template-columns: 1fr; }
     .manager-primary-action { min-height: 138px; }
     .manager-command-grid .manager-kpis { grid-template-columns: 1fr; }
@@ -1075,6 +1359,9 @@
   }
 
   /* الورق: بلا تدرّجات ولا ظلال، والنص الذهبي يعود حبراً أسود. */
+  /* رأس اللقطة لا يُرى إلا على الورق. */
+  .manager-print-head { display: none; }
+
   @media print {
     .manager-page { padding: 0; }
     .manager-hero {
@@ -1098,6 +1385,55 @@
     .manager-workspace,
     .manager-analytics,
     .manager-setup { box-shadow: none; break-inside: avoid; }
+
+    /* ── لقطة الزيارة الإشرافية ────────────────────────────────────────
+       الورقة تحمل ما يُسأل عنه المدير: هويةَ المدرسة، والتغطية، والأقسام،
+       والاستجابة. ويسقط منها ما لا يُقرأ على ورق: التنقّل والبحث والمساعد
+       وبطاقات الإجراءات — فهي أزرارٌ لا معلومات. */
+    .manager-print-head {
+      display: block;
+      margin: 0 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #000;
+    }
+    .manager-print-head strong { display: block; font-size: 1.3rem; }
+    .manager-print-head span { font-size: .85rem; }
+
+    #managerActions,
+    #managerWorkspaces,
+    #managerResources,
+    .manager-alert-stack,
+    .manager-setup,
+    .manager-coverage__actions { display: none !important; }
+
+    /* الرسوم تبقى: صورة النشاط الأسبوعي حجّةٌ على الورق لا زينة. لكنها
+       تُقصّ ارتفاعاً حتى لا تبتلع صفحةً كاملة. */
+    .manager-chart__canvas { max-height: 200px; }
+
+    /* التدرّجات الزخرفية تنجو من ‎background-color‎ لأنها ‎background-image‎،
+       فتبقى «متابعة اليوم» خضراءَ داكنة وحبرُها أبيضُ على ورقٍ أبيض. */
+    .manager-hero,
+    .manager-hero__summary,
+    .manager-focus,
+    .manager-focus__item,
+    .manager-kpi,
+    .manager-coverage,
+    .manager-insight {
+      background-image: none !important;
+      background-color: #fff !important;
+      color: #10251f !important;
+      border: 1px solid #c9d3cd !important;
+    }
+    .manager-hero *,
+    .manager-focus * { color: #10251f !important; }
+    .manager-focus__count,
+    .manager-hero__summary-value { color: #04321f !important; }
+
+    .manager-coverage,
+    .manager-insight { break-inside: avoid; }
+    .manager-coverage__body { grid-template-columns: 1fr 1fr; }
+    .dept-row__bar { border: 1px solid #999; }
+    .dept-row__bar > span { background: #555; }
   }
 </style>
 {% endblock %}
@@ -1105,6 +1441,23 @@
 {% block content %}
 <main class="manager-page id-root" id="managerDashboard">
   {% if active_school %}
+    {% comment %}
+      رأس اللقطة المطبوعة.
+
+      الزائر من الإدارة التعليمية يحتاج ورقةً تقول: أيّ مدرسة، وأيّ سنة، وأيّ نافذةٍ زمنية،
+      ومتى طُبعت. وبدون هذه الأربعة تصير الورقة أرقاماً بلا إسناد — والرقم
+      الذي لا يُعرف مداه لا يُحتجّ به.
+
+      لا يظهر على الشاشة إطلاقاً: مكانه ‎@media print‎ وحده.
+    {% endcomment %}
+    <div class="manager-print-head" aria-hidden="true">
+      <strong>{{ active_school.name }}</strong>
+      <span>
+        السنة الدراسية {{ active_school.current_academic_year|default:"—" }}
+        · الفترة: {{ selected_period_label }}
+        · طُبعت في {{ today_hijri }} هـ
+      </span>
+    </div>
     <section class="manager-hero" aria-labelledby="managerDashboardTitle">
       <div>
         <div class="manager-eyebrow">
@@ -1154,7 +1507,9 @@
         </div>
         <div class="manager-hero__attention">
           <strong class="manager-hero__summary-value" id="managerAttentionTotal">{{ attention_total|intcomma }}</strong>
-          <span>عنصر يحتاج متابعة</span>
+          {# الصيغة تتبع العدد: «عنصران يحتاجان» لا «2 عنصر يحتاج». #}
+          <span id="managerAttentionLabel"
+                data-count-forms="عنصر يحتاج متابعة,عنصران يحتاجان متابعة,عناصر تحتاج متابعة,عنصراً يحتاج متابعة">{{ attention_total|arabic_plural:"عنصر يحتاج متابعة,عنصران يحتاجان متابعة,عناصر تحتاج متابعة,عنصراً يحتاج متابعة" }}</span>
         </div>
         <div class="manager-hero__pulse" aria-label="مؤشرات سريعة">
           <a href="{% url 'reports:manager_school_tickets' %}?status=attention">
@@ -1180,8 +1535,31 @@
     </section>
   {% endif %}
 
-  {% if subscription_warning or storage_pressure.needs_attention or academic_year_unset %}
+  {% if subscription_warning or storage_pressure.needs_attention or academic_year_unset or consumption.seats.needs_attention %}
     <div class="manager-alert-stack" aria-label="تنبيهات المدرسة">
+      {% comment %}
+        المقاعد كانت مدفونةً داخل أكورديون «الموارد» المطوي، فيبلغ المدير حدَّه
+        دون أن يمرّ به. والحساب قائمٌ أصلاً في school_consumption_summary
+        بالمستويات نفسها — الناقص كان مكانَ العرض لا الرقم.
+
+        و{# #} لا يمتدّ على أكثر من سطر في جانغو، فيُطبع ما بعده نصاً ظاهراً.
+      {% endcomment %}
+      {% if consumption.seats.needs_attention %}
+        <div class="manager-subscription-alert {% if consumption.seats.warning_level == 'full' %}is-expired{% elif consumption.seats.warning_level == 'critical' %}is-critical{% endif %}" role="status">
+          <i class="fa-solid {% if consumption.seats.warning_level == 'full' %}fa-circle-xmark{% else %}fa-users{% endif %}" aria-hidden="true"></i>
+          <div class="manager-subscription-alert__content">
+            {% if consumption.seats.warning_level == "full" %}
+              <strong>لا مقاعد متبقية لإضافة منسوبين</strong>
+              <span>الباقة تسع {{ consumption.seats.limit }} مقعداً وكلّها مشغولة — أضِف مقاعد قبل محاولة الإضافة.</span>
+            {% else %}
+              <strong>مقاعد المدرسة شارفت على الامتلاء ({{ consumption.seats.usage_percent }}%)</strong>
+              <span>المتبقي {{ consumption.seats.remaining|arabic_count:"مقعد,مقعدان,مقاعد,مقعداً" }} من {{ consumption.seats.limit }}.</span>
+            {% endif %}
+          </div>
+          <a href="{% url 'reports:my_subscription' %}">إدارة المقاعد</a>
+        </div>
+      {% endif %}
+
       {% if subscription_warning %}
         <div class="manager-subscription-alert {% if subscription_warning == 'critical' %}is-critical{% elif subscription_warning == 'expired' %}is-expired{% endif %}" role="status">
           <i class="fa-solid {% if subscription_warning == 'expired' %}fa-circle-xmark{% else %}fa-triangle-exclamation{% endif %}" aria-hidden="true"></i>
@@ -1257,7 +1635,7 @@
           <p>المؤشرات التالية تقودك مباشرة إلى التفاصيل.</p>
           <span class="manager-period-context">
             <i class="fa-regular fa-calendar" aria-hidden="true"></i>
-            عدد التقارير يتبع الفترة المختارة (<span id="managerPeriodLabel">{{ selected_period_label }}</span>)، وبقية المؤشرات تشمل كل الفترات.
+            الفترة المختارة: <span id="managerPeriodLabel">{{ selected_period_label }}</span> — وكل مؤشّر يقول نطاقه أسفله.
           </span>
         </div>
       </div>
@@ -1268,7 +1646,7 @@
             <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
           </span>
           <strong class="manager-kpi__value" id="schoolTicketsOpen">{{ tickets_open|intcomma }}</strong>
-          <span class="manager-kpi__label">طلبات مدرسة قيد المتابعة <em class="manager-kpi__scope">(كل الفترات)</em></span>
+          <span class="manager-kpi__label">طلبات مدرسة قيد المتابعة <em class="manager-kpi__scope manager-kpi__scope--now">حالياً</em></span>
         </a>
         <a class="manager-kpi{% if pending_achievement_files %} manager-kpi--attention{% endif %}" href="{% url 'reports:achievement_school_files' %}?status=submitted">
           <span class="manager-kpi__top">
@@ -1276,7 +1654,7 @@
             <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
           </span>
           <strong class="manager-kpi__value">{{ pending_achievement_files|intcomma }}</strong>
-          <span class="manager-kpi__label">ملفات إنجاز بانتظار الاعتماد <em class="manager-kpi__scope">(كل الفترات)</em></span>
+          <span class="manager-kpi__label">ملفات إنجاز بانتظار الاعتماد <em class="manager-kpi__scope manager-kpi__scope--now">حالياً</em></span>
         </a>
         <a class="manager-kpi" href="{% url 'reports:admin_reports' %}">
           <span class="manager-kpi__top">
@@ -1284,7 +1662,11 @@
             <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
           </span>
           <strong class="manager-kpi__value" id="schoolReportsCount">{{ reports_count|intcomma }}</strong>
-          <span class="manager-kpi__label">تقريرًا <em class="manager-kpi__scope">(<span id="managerReportsScope">{{ selected_period_label }}</span>)</em></span>
+          <span class="manager-kpi__label">
+            {{ reports_count|arabic_plural:"تقرير,تقريران,تقارير,تقريراً" }}
+            <em class="manager-kpi__scope"><span id="managerReportsScope">{{ selected_period_label }}</span></em>
+          </span>
+          {% include "reports/partials/kpi_trend.html" with trend=trends.reports_count dom_id="reportsTrend" %}
         </a>
         <a class="manager-kpi" href="{% url 'reports:manage_teachers' %}">
           <span class="manager-kpi__top">
@@ -1292,7 +1674,7 @@
             <i class="fa-solid fa-arrow-left manager-kpi__arrow" aria-hidden="true"></i>
           </span>
           <strong class="manager-kpi__value" id="schoolTeachersCount">{{ teachers_count|intcomma }}</strong>
-          <span class="manager-kpi__label">حسابات فريق المدرسة النشطة <em class="manager-kpi__scope">(كل الفترات)</em></span>
+          <span class="manager-kpi__label">حسابات فريق المدرسة النشطة <em class="manager-kpi__scope manager-kpi__scope--now">حالياً</em></span>
         </a>
       </div>
     </section>
@@ -1355,6 +1737,183 @@
       </div>
     </section>
     {% endif %}
+
+    {% if agenda.items %}
+      <section class="manager-section manager-agenda" aria-labelledby="agendaTitle">
+        {% comment %}
+          المواعيد القادمة من مصادرها الأربعة على خطٍّ واحد.
+
+          الاجتماعات في وحدة، والتكليفات في أخرى، والخطط في ثالثة، وتواقيع
+          التعاميم في رابعة. ومدير المدرسة يعمل بتقويمٍ لا بأربع قوائم؛ فما لم
+          تُجمع بقي الموعد معروفاً لمن يفتح صفحته ومنسيّاً عند من لا يفتحها.
+
+          والمتأخّر يتصدّر مهما بَعُد: إخفاؤه بعد أسبوعٍ من فواته يجعل اللوحة
+          أهدأ ممّا ينبغي، والصمت هنا فقدُ أثر لا طمأنينة.
+        {% endcomment %}
+        <div class="manager-section__head">
+          <div>
+            <h2 id="agendaTitle">المواعيد</h2>
+            <p>
+              {% if agenda.overdue %}
+                <strong class="manager-agenda__alarm">{{ agenda.overdue|arabic_count:"موعد فات,موعدان فاتا,مواعيد فاتت,موعداً فات" }}</strong>
+                <span aria-hidden="true">·</span>
+              {% endif %}
+              {{ agenda.upcoming|arabic_count:"موعد خلال,موعدان خلال,مواعيد خلال,موعداً خلال" }}
+              {{ agenda.horizon_days }} يوماً القادمة.
+            </p>
+          </div>
+        </div>
+
+        <ol class="manager-agenda__list">
+          {% for item in agenda.items %}
+            <li class="agenda-item{% if item.is_overdue %} is-overdue{% endif %}">
+              <a href="{{ item.url }}">
+                <span class="agenda-item__icon" aria-hidden="true"><i class="fa-solid {{ item.icon }}"></i></span>
+                <span class="agenda-item__body">
+                  <span class="agenda-item__title"><bdi>{{ item.title }}</bdi></span>
+                  <span class="agenda-item__meta">
+                    <span class="agenda-item__kind">{{ item.label }}</span>
+                    <span aria-hidden="true">·</span>
+                    <time datetime="{{ item.at|date:'c' }}">{{ item.hijri }} هـ — {{ item.time }}</time>
+                  </span>
+                </span>
+                {% comment %}
+                  المثنّى هنا مجرورٌ لا مرفوع: «بعد يومين» و«متأخّر يومين»،
+                  لا «بعد يومان». وإعراب المثنّى يتبع موقعه من الجملة، ولذلك
+                  تُمرَّر الصيغ إلى المرشِّح ولا تُشتقّ داخله — فهو لا يعلم
+                  أين ستقع كلمته، والقالب وحده يعلم.
+                {% endcomment %}
+                <span class="agenda-item__when">
+                  {% if item.is_overdue %}
+                    متأخّر {{ item.days|arabic_count:"يوم,يومين,أيام,يوماً" }}
+                  {% elif item.days == 0 %}
+                    اليوم
+                  {% else %}
+                    بعد {{ item.days|arabic_count:"يوم,يومين,أيام,يوماً" }}
+                  {% endif %}
+                </span>
+              </a>
+            </li>
+          {% endfor %}
+        </ol>
+      </section>
+    {% endif %}
+
+    <section class="manager-section manager-coverage" aria-labelledby="coverageTitle">
+      {% comment %}
+        تغطية التوثيق.
+
+        كانت اللوحة تعرف طرفَي المسألة ولا تعرف ما بينهما: «44 معلماً» في بطاقة
+        و«2 تقرير» في أخرى، ولا شيء يقول أيُّ اثنين وثّقا. ووظيفة المدير ليست
+        معرفة العدد بل معرفة الاسم — فهذه البطاقة هي الوصلة المفقودة بينهما.
+
+        والقياس على الفترة المختارة عمداً: من وثّق العام الماضي ولم يوثّق هذا
+        الشهر متأخّرٌ اليوم لا مغطّى.
+      {% endcomment %}
+      <div class="manager-section__head">
+        <div>
+          <h2 id="coverageTitle">تغطية التوثيق</h2>
+          <p>من وثّق ومن لم يوثّق خلال <strong>{{ selected_period_label }}</strong>.</p>
+        </div>
+        {% include "reports/partials/kpi_trend.html" with trend=trends.coverage_covered dom_id="coverageTrend" %}
+      </div>
+
+      <div class="manager-coverage__body">
+        <div class="manager-coverage__gauge">
+          <strong id="coveragePercent">{{ coverage.percent }}%</strong>
+          <span>
+            <span id="coverageCovered">{{ coverage.covered }}</span>
+            من
+            <span id="coverageTotal">{{ coverage.total }}</span>
+            وثّقوا
+          </span>
+          <div class="manager-coverage__bar"
+               role="img"
+               aria-label="تغطية التوثيق {{ coverage.percent }} بالمئة">
+            <span id="coverageBar" data-progress="{{ coverage.percent }}"></span>
+          </div>
+        </div>
+
+        <div class="manager-coverage__pending">
+          {% comment %}
+            الحالتان مرسومتان معاً ويتبادلان الإخفاء، فيبدّلهما التحديث الحيّ
+            بلا إعادة بناء الترميز عند كل تغيير فترة.
+          {% endcomment %}
+          <div id="coveragePendingBox"{% if not coverage.pending %} hidden{% endif %}>
+            <h3>
+              لم يوثّق بعد:
+              <span id="coveragePending">{{ coverage.pending }}</span>
+              <span id="coveragePendingWord"
+                    data-count-forms="منسوب,منسوبان,منسوبين,منسوباً">{{ coverage.pending|arabic_plural:"منسوب,منسوبان,منسوبين,منسوباً" }}</span>
+            </h3>
+            <ul class="manager-coverage__names" id="coverageNames">
+              {% for person in coverage.pending_preview %}
+                <li><bdi>{{ person.name }}</bdi></li>
+              {% endfor %}
+            </ul>
+            <div class="manager-coverage__actions">
+              <a class="manager-coverage__link" href="{% url 'reports:manage_teachers' %}">عرض فريق المدرسة</a>
+              {% comment %}
+                ‎remind=coverage‎ سببٌ لا قائمة: الخادم يُعيد الحساب على المدرسة
+                النشطة، فلا يُستهدَف أحدٌ بتحرير الرابط.
+              {% endcomment %}
+              <a class="manager-coverage__link manager-coverage__link--primary"
+                 href="{% url 'reports:notifications_create' %}?remind=coverage">تذكير بالتوثيق</a>
+            </div>
+          </div>
+          <h3 class="manager-coverage__done" id="coverageDoneBox"{% if coverage.pending or not coverage.has_staff %} hidden{% endif %}>
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            وثّق الجميع خلال <span id="coverageDonePeriod">{{ selected_period_label }}</span>.
+          </h3>
+
+          {% comment %}
+            الحالة الفارغة الموجَّهة.
+
+            مدرسةٌ بلا منسوبين كانت تقرأ «وثّق الجميع» — صفرٌ من صفر يُقرأ
+            نجاحاً وهو غياب فريق. والمدير الجديد يفتح لوحته أول يوم فتُهنّئه
+            على ما لم يفعله، ثم لا تقول له ما يفعل.
+
+            فيُقال له بدلها: أضف الفريق أولاً، وهذا هو الزرّ.
+          {% endcomment %}
+          <div class="manager-coverage__empty" id="coverageEmptyBox"{% if coverage.has_staff %} hidden{% endif %}>
+            <h3>
+              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+              لا منسوبين بعد
+            </h3>
+            <p>التغطية تُقاس على فريق المدرسة، والفريق لم يُضف بعد. ابدأ بإضافته لتبدأ القراءة.</p>
+            <a class="manager-coverage__link manager-coverage__link--primary"
+               href="{% url 'reports:bulk_import_teachers' %}">إضافة منسوبي المدرسة</a>
+          </div>
+        </div>
+
+        {% if departments %}
+          {% comment %}
+            مقارنة الأقسام — مرتّبة بالأضعف أولاً.
+
+            القائمة تُقرأ من أعلاها، والمدير يتصرّف مع المتأخّر لا مع المتقدّم؛
+            فترتيبُها بالأعلى تغطيةً يضع ما لا يحتاج عملاً في مقدمة النظر.
+
+            والتقرير يُنسب هنا إلى كاتبه لا إلى نوعه: نوعٌ مشتركٌ بين قسمين
+            يُحتسب مرتين، فيبدو القسمان أنشطَ مما هما.
+          {% endcomment %}
+          <div class="manager-coverage__departments">
+            <h3>الأقسام <span>الأضعف أولاً</span></h3>
+            <ul id="coverageDepartments">
+              {% for dept in departments %}
+                <li class="dept-row{% if dept.percent == 0 %} is-idle{% endif %}">
+                  <span class="dept-row__name"><bdi>{{ dept.name }}</bdi></span>
+                  <span class="dept-row__bar" aria-hidden="true"><span data-progress="{{ dept.percent }}"></span></span>
+                  <span class="dept-row__value">
+                    {{ dept.percent }}%
+                    <small>{{ dept.documented }}/{{ dept.members }}</small>
+                  </span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </section>
 
     <section class="manager-section" id="managerActions" aria-labelledby="quickActionsTitle">
       <div class="manager-section__head">
@@ -1518,6 +2077,11 @@
             <i class="fa-solid fa-rotate" aria-hidden="true"></i>
             تحديث
           </button>
+          {# اللقطة تتبع الفترة، فزرّها بجوار مبدّلها لا في ترويسة الصفحة. #}
+          <button class="manager-refresh manager-snapshot" id="printDashboardSnapshot" type="button">
+            <i class="fa-solid fa-print" aria-hidden="true"></i>
+            لقطة للطباعة
+          </button>
         </div>
       </div>
 
@@ -1533,7 +2097,40 @@
             <h3>إنجاز طلبات المدرسة</h3>
             <strong class="manager-insight__number" id="ticketCompletionRate">{{ ticket_completion_rate }}%</strong>
             <div class="manager-progress" aria-hidden="true"><span id="ticketCompletionProgress" data-progress="{{ ticket_completion_rate }}"></span></div>
-            <p><span id="schoolTicketsDone">{{ tickets_done|intcomma }}</span> طلبات مكتملة من أصل <span id="schoolTicketsTotal">{{ tickets_total|intcomma }}</span>.</p>
+            {# العدد داخل الصيغة لا قبلها: العربية تقول «طلبان» لا «2 طلبان». #}
+            <p><span id="schoolTicketsDone"
+                     data-count-forms="طلب مكتمل,طلبان مكتملان,طلبات مكتملة,طلباً مكتملاً"
+                     data-count-mode="full">{{ tickets_done|arabic_count:"طلب مكتمل,طلبان مكتملان,طلبات مكتملة,طلباً مكتملاً" }}</span>
+              من أصل <span id="schoolTicketsTotal">{{ tickets_total|intcomma }}</span>.</p>
+
+            {% comment %}
+              النسبة وحدها تُخفي ما ينبغي أن تكشفه: طلبٌ بقي مفتوحاً ثلاثة
+              أسابيع وطلبٌ أُغلق في ساعة كلاهما «مكتمل»، وهي تساويهما.
+
+              فيُذكر تحتها أمران: كم تستغرق الاستجابة، وأيُّ طلبٍ شاخ. والثاني
+              أهمّ لأنه وحده يشير إلى شيءٍ قائمٍ يُفعل به شيء — ولذلك يُربَط.
+            {% endcomment %}
+            {% if responsiveness.has_signal %}
+              <dl class="manager-response" id="ticketResponsiveness">
+                {% if responsiveness.avg_close_label %}
+                  <div>
+                    <dt>متوسط زمن الإغلاق</dt>
+                    <dd id="avgCloseLabel">{{ responsiveness.avg_close_label }}</dd>
+                  </div>
+                {% endif %}
+                {% if responsiveness.oldest_open_id %}
+                  <div class="manager-response__aged{% if responsiveness.oldest_open_days >= 14 %} is-stale{% endif %}">
+                    <dt>أقدم طلب مفتوح</dt>
+                    <dd>
+                      <a href="{% url 'reports:ticket_detail' responsiveness.oldest_open_id %}">
+                        {{ responsiveness.oldest_open_days|arabic_count:"يوم,يومان,أيام,يوماً" }}
+                        <small><bdi>{{ responsiveness.oldest_open_title }}</bdi></small>
+                      </a>
+                    </dd>
+                  </div>
+                {% endif %}
+              </dl>
+            {% endif %}
           </article>
           <article class="manager-insight">
             <h3>توزيع التقارير حسب النوع</h3>
@@ -1583,6 +2180,8 @@
 
 {% block scripts %}
 {% if active_school %}
+{# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqArabic وقت التحليل. #}
+<script src="{% static 'js/arabic-count.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function () {
     "use strict";
@@ -1622,6 +2221,147 @@
     function setText(id, value) {
       const element = document.getElementById(id);
       if (element) element.textContent = value;
+    }
+
+    /* يُعيد صياغة معدودٍ ليطابق عدده الجديد. القاعدة في js/arabic-count.js —
+       ونظيرها على الخادم في reports/templatetags/arabic_tags.py. */
+    function paintCount(id, value) {
+      if (!window.TawtheeqArabic) return;
+      window.TawtheeqArabic.paint(document.getElementById(id), value);
+    }
+
+    /* شارة الاتجاه: تُخفى كلياً حين لا مقارنة (فترة «الكل»)، لأن شارةً فارغة
+       تشغل مكاناً وتوحي بعطل. والنسخة الأولى يرسمها الخادم؛ هذه تُبقيها
+       صادقة بعد تبديل الفترة. */
+    function paintTrend(id, trend) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!trend) { el.hidden = true; return; }
+
+      el.hidden = false;
+      el.className = "kpi-trend kpi-trend--" + trend.direction;
+      el.title = "مقارنةً بالفترة السابقة نفسِها (" + trend.previous + ")";
+
+      const icon = { up: "fa-arrow-trend-up", down: "fa-arrow-trend-down", flat: "fa-minus" }[trend.direction];
+      const reading = { up: "ارتفاع", down: "انخفاض", flat: "بلا تغيّر" }[trend.direction];
+      let value = "ثابت";
+      if (trend.direction !== "flat") {
+        const sign = trend.delta > 0 ? "+" : "";
+        value = sign + trend.delta;
+        if (trend.percent !== null && trend.percent !== undefined) {
+          value += " (" + (trend.percent > 0 ? "+" : "") + trend.percent + "%)";
+        }
+      }
+
+      el.replaceChildren();
+      const i = document.createElement("i");
+      i.className = "fa-solid " + icon;
+      i.setAttribute("aria-hidden", "true");
+      const sr = document.createElement("span");
+      sr.className = "sr-only";
+      sr.textContent = reading;
+      const val = document.createElement("span");
+      val.className = "kpi-trend__value";
+      val.textContent = value;
+      const base = document.createElement("span");
+      base.className = "kpi-trend__baseline";
+      base.textContent = "عن السابقة";
+      el.append(i, sr, val, base);
+    }
+
+    /* الأقسام تتبع الفترة كما تتبعها التغطية — الترتيب بالأضعف أولاً يأتي
+       من الخادم، فلا يُعاد فرزه هنا حتى لا يختلف المصدران. */
+    function paintDepartments(departments) {
+      const list = document.getElementById("coverageDepartments");
+      if (!list) return;
+      const rows = departments || [];
+      list.replaceChildren();
+      rows.forEach(function (dept) {
+        const li = document.createElement("li");
+        li.className = "dept-row" + (dept.percent === 0 ? " is-idle" : "");
+
+        const name = document.createElement("span");
+        name.className = "dept-row__name";
+        const bdi = document.createElement("bdi");
+        bdi.textContent = dept.name;
+        name.appendChild(bdi);
+
+        const bar = document.createElement("span");
+        bar.className = "dept-row__bar";
+        bar.setAttribute("aria-hidden", "true");
+        const fill = document.createElement("span");
+        fill.setAttribute("data-progress", dept.percent);
+        bar.appendChild(fill);
+
+        const value = document.createElement("span");
+        value.className = "dept-row__value";
+        value.append(dept.percent + "%");
+        const ratio = document.createElement("small");
+        ratio.textContent = dept.documented + "/" + dept.members;
+        value.appendChild(ratio);
+
+        li.append(name, bar, value);
+        list.appendChild(li);
+      });
+      if (window.applyProgressBars) window.applyProgressBars(list);
+      const box = list.closest(".manager-coverage__departments");
+      if (box) box.hidden = rows.length === 0;
+    }
+
+    /* متوسط الإغلاق يتبع الفترة؛ وأقدم مفتوح لا يتبعها — فهو حالةٌ قائمة الآن
+       لا حصيلةَ نافذة. والخادم يحسبهما معاً فيكفي رسمهما. */
+    function paintResponsiveness(data) {
+      const box = document.getElementById("ticketResponsiveness");
+      if (!box) return;
+      if (!data || !data.has_signal) { box.hidden = true; return; }
+      box.hidden = false;
+      setText("avgCloseLabel", data.avg_close_label || "—");
+    }
+
+    /* التغطية تتبع الفترة: من وثّق العام الماضي ولم يوثّق هذا الشهر متأخّرٌ
+       اليوم. فلو بقيت ثابتة بعد تبديل الفترة لكذبت على من بدّلها. */
+    function paintCoverage(coverage, periodLabel) {
+      if (!coverage) return;
+      setText("coveragePercent", coverage.percent + "%");
+      setText("coverageCovered", formatNumber(coverage.covered));
+      setText("coverageTotal", formatNumber(coverage.total));
+      setText("coveragePending", formatNumber(coverage.pending));
+      paintCount("coveragePendingWord", coverage.pending);
+
+      // ‎element.style‎ من الجافاسكربت لا يحكمه ‎style-src‎ — بخلاف سمة
+      // ‎style‎ في القالب. فالضبط هنا مسموح، ويمرّ عبر المُساعد نفسه ليبقى
+      // القصّ إلى ‎[0,100]‎ في مكانٍ واحد.
+      const bar = document.getElementById("coverageBar");
+      if (bar) {
+        bar.setAttribute("data-progress", coverage.percent);
+        if (window.applyProgressBars) window.applyProgressBars(bar.parentElement);
+      }
+
+      const list = document.getElementById("coverageNames");
+      if (list) {
+        list.replaceChildren();
+        (coverage.pending_preview || []).forEach(function (person) {
+          const li = document.createElement("li");
+          const bdi = document.createElement("bdi");
+          bdi.textContent = person.name;
+          li.appendChild(bdi);
+          list.appendChild(li);
+        });
+      }
+
+      /* ثلاث حالات لا اثنتان: «لم يوثّق بعد» و«وثّق الجميع» و«لا منسوبين».
+         والثالثة ليست حالةً فارغة من الأولى — صفرٌ من صفر غيابُ فريق لا
+         نجاحٌ، ولو خُلط بها لهنّأت اللوحةُ مدرسةً على ما لم تفعله. */
+      const hasStaff = coverage.has_staff !== false;
+      const pendingBox = document.getElementById("coveragePendingBox");
+      const doneBox = document.getElementById("coverageDoneBox");
+      const emptyBox = document.getElementById("coverageEmptyBox");
+      if (pendingBox) pendingBox.hidden = !hasStaff || coverage.pending === 0;
+      if (doneBox) {
+        doneBox.hidden = !hasStaff || coverage.pending !== 0;
+        setText("coverageDonePeriod", periodLabel || "الفترة المختارة");
+      }
+      if (emptyBox) emptyBox.hidden = hasStaff;
     }
 
     function showChartFallback(boxId, text) {
@@ -1728,16 +2468,23 @@
       setText("schoolTeachersCount", formatNumber(kpis.teachers_count));
       setText("schoolTicketsOpen", formatNumber(kpis.tickets_open));
       setText("heroTicketsOpen", formatNumber(kpis.tickets_open));
-      setText("schoolTicketsDone", formatNumber(kpis.tickets_done));
       setText("schoolTicketsTotal", formatNumber(kpis.tickets_total));
+      // العدد ومعدوده يُكتبان معاً، وإلا عادت «1 طلبات» بعد أول تحديثٍ حيّ.
+      paintCount("schoolTicketsDone", kpis.tickets_done);
       setText("managerPeriodLabel", nextPayload.period_label || "الكل");
       setText("managerReportsScope", nextPayload.period_label || "الكل");
+      paintCoverage(nextPayload.coverage, nextPayload.period_label);
+      paintDepartments(nextPayload.departments);
+      paintResponsiveness(nextPayload.responsiveness);
+      paintTrend("reportsTrend", (nextPayload.trends || {}).reports_count);
+      paintTrend("coverageTrend", (nextPayload.trends || {}).coverage_covered);
 
       // Open tickets are the only follow-up counter this endpoint can change, so
       // the hero total is re-derived instead of drifting from the KPI below it.
       if (kpis.tickets_open !== undefined) {
-        const nextTotal = baselineAttentionTotal - baselineTicketsOpen + Number(kpis.tickets_open || 0);
-        setText("managerAttentionTotal", formatNumber(Math.max(0, nextTotal)));
+        const nextTotal = Math.max(0, baselineAttentionTotal - baselineTicketsOpen + Number(kpis.tickets_open || 0));
+        setText("managerAttentionTotal", formatNumber(nextTotal));
+        paintCount("managerAttentionLabel", nextTotal);
       }
 
       const total = Number(kpis.tickets_total || 0);
@@ -1813,6 +2560,15 @@
       });
     }
 
+    /* لقطة الزيارة الإشرافية: الطباعة تعرض ما على الشاشة، فتُطبع الفترة
+       المعروضة الآن — ولذلك يقع الزرّ بجوار مبدّل الفترة لا بعيداً عنه. */
+    const snapshotButton = document.getElementById("printDashboardSnapshot");
+    if (snapshotButton) {
+      snapshotButton.addEventListener("click", function () {
+        window.print();
+      });
+    }
+
     function initialiseManagerExperience() {
       const todayLabel = document.getElementById("managerTodayLabel");
       if (todayLabel) {
@@ -1829,7 +2585,7 @@
 
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const revealItems = root.querySelectorAll(
-        ".manager-alert-stack, .manager-command-grid, .manager-setup, #managerActions, #managerWorkspaces, #managerResources, #managerPerformance"
+        ".manager-alert-stack, .manager-command-grid, .manager-agenda, .manager-coverage, .manager-setup, #managerActions, #managerWorkspaces, #managerResources, #managerPerformance"
       );
       revealItems.forEach(function (item) { item.setAttribute("data-manager-reveal", ""); });
 

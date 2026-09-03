@@ -674,7 +674,7 @@ ReportEvidenceFormSet = forms.inlineformset_factory(
     form=ReportEvidenceForm,
     formset=BaseReportEvidenceFormSet,
     fields=("image", "order", "description", "display_size", "fit_mode", "show_in_print"),
-    extra=4,
+    extra=1,
     can_delete=True,
     max_num=8,
     validate_max=True,
@@ -2979,6 +2979,7 @@ class PlatformSettingsForm(forms.ModelForm):
             "report_ai_enabled",
             "internal_ai_help_enabled",
             "voice_report_enabled",
+            "report_review_enabled",
             "archive_addon_annual_price",
             "archive_included_storage_gb",
             "storage_mb_per_teacher",
@@ -2990,6 +2991,7 @@ class PlatformSettingsForm(forms.ModelForm):
             "report_ai_enabled": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "internal_ai_help_enabled": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "voice_report_enabled": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "report_review_enabled": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "maintenance_message": forms.Textarea(
                 attrs={
                     "class": "form-control",
@@ -3009,6 +3011,7 @@ class PlatformSettingsForm(forms.ModelForm):
             "report_ai_enabled": "تحسين التقارير ومحاضر الاجتماعات",
             "internal_ai_help_enabled": "المساعدة داخل النظام",
             "voice_report_enabled": "الكتابة بالصوت للتقارير والمحاضر",
+            "report_review_enabled": "فحص جاهزية التقرير",
             "archive_addon_annual_price": "سعر الأرشفة السنوي",
             "archive_included_storage_gb": "المساحة المضمنة مع الأرشفة (GB)",
             "storage_mb_per_teacher": "مساحة عمل المدرسة لكل معلم (ميجابايت)",

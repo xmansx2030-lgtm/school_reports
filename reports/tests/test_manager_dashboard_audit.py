@@ -87,8 +87,20 @@ class ManagerDashboardAuditTests(TestCase):
         session.save()
 
     def _dashboard_url_names(self) -> list[str]:
+        """أسماء الروابط التي تُعكَس بلا وسائط.
+
+        هذا المشي يفتح كل رابطٍ في اللوحة ويتأكّد أنه يعطي ‎200‎. ورابطٌ يأخذ
+        مُعرّفاً — مثل ‎{% url 'reports:ticket_detail' oldest_open_id %}‎ — لا
+        يُعكَس بلا ذلك المُعرّف، فيسقط المشي كلّه على ‎NoReverseMatch‎ قبل أن
+        يفحص شيئاً. وذلك أسوأ من تخطّيه: خطأٌ في الأداة يُقرأ خطأً في اللوحة.
+
+        فتُقتصَر القائمة على الوسم الذي ينتهي بعد اسمه مباشرة. والروابط ذات
+        المُعرّفات تُغطّيها اختبارات وجهاتها — لا مشيٌ أعمى لا يملك مُعرّفاً
+        صالحاً يمرّره.
+        """
         source = open(DASHBOARD_TEMPLATE, encoding="utf-8").read()
-        return sorted(set(re.findall(r"{%\s*url\s*'([^']+)'", source)))
+        argument_free = re.findall(r"{%\s*url\s*'([^']+)'\s*%}", source)
+        return sorted(set(argument_free))
 
     def test_every_dashboard_link_is_reachable_for_a_manager(self):
         self._login()

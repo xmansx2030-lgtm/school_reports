@@ -30,6 +30,13 @@ from ..report_limits import (
     REPORT_DETAILS_MAX_LENGTH,
     REPORT_DETAILS_RECOMMENDED_LENGTH,
 )
+from ..ai_usage import ai_usage_context
+from ..report_review import (
+    is_semantic_enabled as report_review_semantic_enabled,
+    review_daily_limit,
+    review_daily_remaining,
+    review_report_draft,
+)
 from ..voice_report import (
     VoiceReportError,
     VoiceReportUnavailable,
@@ -95,6 +102,7 @@ from ..utils import _resolve_department_for_category, _build_head_decision
 from core import opmetrics
 from ..ai_features import (
     FEATURE_REPORT_IMPROVEMENT,
+    FEATURE_REPORT_REVIEW,
     FEATURE_VOICE_REPORT,
     platform_ai_toggle_enabled,
 )
@@ -148,6 +156,26 @@ def _report_ai_template_context(user) -> dict[str, int | bool]:
         "report_details_recommended_length": REPORT_DETAILS_RECOMMENDED_LENGTH,
         "report_details_max_length": REPORT_DETAILS_MAX_LENGTH,
         **_voice_report_template_context(user),
+        **_report_review_template_context(user),
+    }
+
+
+def _report_review_feature_enabled() -> bool:
+    """اللوحة تظهر ما دام مديرُ المنصة يريدها.
+
+    ولا تُشترط مفاتيح المزوّد هنا: الفحص البنيوي وحده يستحق العرض، ويعمل بلا
+    نداء ولا رصيد. واشتراطُ المفتاح كان سيُخفي أنفعَ نصفٍ في الأداة لأن نصفها
+    الآخر معطَّل.
+    """
+    return bool(platform_ai_toggle_enabled(FEATURE_REPORT_REVIEW))
+
+
+def _report_review_template_context(user) -> dict[str, object]:
+    return {
+        "report_review_enabled": _report_review_feature_enabled(),
+        "report_review_semantic_enabled": report_review_semantic_enabled(),
+        "report_review_daily_limit": review_daily_limit(),
+        "report_review_daily_remaining": review_daily_remaining(user.pk),
     }
 
 
@@ -460,7 +488,8 @@ def improve_report_text(request: HttpRequest) -> JsonResponse:
         return response
 
     try:
-        improved_text = improve_report_text_with_ai(original_text)
+        with ai_usage_context(school=_get_active_school(request), teacher=request.user):
+            improved_text = improve_report_text_with_ai(original_text)
     except ReportAIUnavailable as exc:
         release_report_ai_daily_slot(request.user.pk)
         response = JsonResponse(
@@ -499,6 +528,61 @@ def improve_report_text(request: HttpRequest) -> JsonResponse:
         )
     response["Cache-Control"] = "no-store"
     return response
+
+@login_required(login_url="reports:login")
+@never_cache
+@ratelimit(key="user", rate="20/m", method="POST", block=True)
+@require_http_methods(["POST"])
+def review_report_readiness(request: HttpRequest) -> JsonResponse:
+    """يفحص مسودة تقرير لم تُحفظ بعد ولا يقرأ ولا يكتب أي سجل.
+
+    الحمولة كلها تأتي من النموذج المفتوح أمام المعلّم، تماماً كمسار تحسين
+    الصياغة. ولا يُرجع هذا المسار خطأً على تعثّر النموذج: ``review_report_draft``
+    يعيد الفحص البنيوي وحده مع ``semantic: false``، فتعرض الواجهة نصف نتيجة
+    مفيدة بدل رسالة عطل.
+    """
+    if not _report_review_feature_enabled():
+        return _review_json(
+            {"ok": False, "message": "فحص جاهزية التقرير غير متاح حاليًا."},
+            status=404,
+        )
+
+    if request.content_type != "application/json":
+        return _review_json({"ok": False, "message": "صيغة الطلب غير صحيحة."}, status=415)
+    if len(request.body) > 40000:
+        return _review_json({"ok": False, "message": "نص التقرير أطول من الحد المسموح."}, status=413)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        payload = None
+    if not isinstance(payload, dict):
+        return _review_json({"ok": False, "message": "تعذر قراءة بيانات التقرير."}, status=400)
+
+    active_school = _get_active_school(request)
+    labels = school_gender_labels(active_school)
+    try:
+        with ai_usage_context(school=active_school, teacher=request.user):
+            result = review_report_draft(
+                payload,
+                user_id=request.user.pk,
+                beneficiaries_label=str(labels.get("beneficiaries_object") or "المستفيدين"),
+            )
+    except Exception:
+        logger.exception("Report readiness review failed unexpectedly.")
+        return _review_json(
+            {"ok": False, "message": "تعذر إجراء الفحص الآن. حاول مرة أخرى بعد قليل."},
+            status=503,
+        )
+
+    return _review_json({"ok": True, **result})
+
+
+def _review_json(payload: dict, *, status: int = 200) -> JsonResponse:
+    response = JsonResponse(payload, status=status, json_dumps_params={"ensure_ascii": False})
+    response["Cache-Control"] = "no-store"
+    return response
+
 
 def _voice_json(payload: dict, *, status: int = 200) -> JsonResponse:
     response = JsonResponse(payload, status=status, json_dumps_params={"ensure_ascii": False})
@@ -565,8 +649,9 @@ def transcribe_report_voice(request: HttpRequest) -> JsonResponse:
         )
 
     try:
-        raw_text = transcribe_audio(audio_bytes, extension)
-        text = polish_dictation(raw_text)
+        with ai_usage_context(school=_get_active_school(request), teacher=request.user):
+            raw_text = transcribe_audio(audio_bytes, extension)
+            text = polish_dictation(raw_text)
     except VoiceReportUnavailable as exc:
         release_voice_report_daily_slot(request.user.pk)
         opmetrics.increment("report.voice.failure")

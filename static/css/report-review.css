@@ -1,0 +1,430 @@
+/* لوحة فحص جاهزية التقرير.
+   اللون هنا معنى لا زينة: الأخضر «أرسِل»، والذهبي «راجع»، والأحمر «أكمِل».
+   ولأن اللون وحده لا يبلغ من لا يميّزه، تحمل كل ملاحظة شارة شدّة مكتوبة. */
+
+.report-review {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(0, 108, 53, .18);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0, 108, 53, .05), rgba(185, 151, 91, .07));
+}
+
+/* عناصر كثيرة هنا لها display صريح، فتبقى سمة hidden صاحبة الكلمة الأخيرة. */
+.report-review [hidden] { display: none !important; }
+
+.rrv-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.rrv-head-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, #087443, #005c30);
+  box-shadow: 0 7px 16px rgba(0, 92, 48, .18);
+}
+
+.rrv-head-copy h3 {
+  margin: 0;
+  color: #183d2c;
+  font-size: .88rem;
+  font-weight: 900;
+}
+
+.rrv-head-copy p {
+  margin: 2px 0 0;
+  color: #64736c;
+  font-size: .73rem;
+  font-weight: 700;
+}
+
+.rrv-intro-text {
+  margin: 10px 0 0;
+  color: #66756e;
+  font-size: .76rem;
+  font-weight: 650;
+  line-height: 1.75;
+}
+
+/* ── النتيجة ───────────────────────────────────────────────────────── */
+.rrv-result { margin-top: 12px; }
+
+.rrv-score {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(185, 151, 91, .26);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .74);
+}
+
+.rrv-ring {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex: none;
+}
+
+.rrv-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.rrv-ring circle {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.rrv-ring-track { stroke: rgba(20, 60, 44, .12); }
+
+.rrv-ring-value {
+  stroke: #079455;
+  /* المحيط ‎2πr‎ مع ‎r=26‎. تُضبط الإزاحة من JS. */
+  stroke-dasharray: 163.363;
+  stroke-dashoffset: 163.363;
+  transition: stroke-dashoffset .7s cubic-bezier(.22, .8, .3, 1), stroke .3s ease;
+}
+
+.rrv-ring b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #10402c;
+  font-size: 1.02rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.rrv-score-copy strong,
+.rrv-score-copy span { display: block; }
+.rrv-score-copy strong { color: #183d2c; font-size: .85rem; font-weight: 900; }
+.rrv-score-copy span { margin-top: 3px; color: #68766f; font-size: .73rem; font-weight: 700; line-height: 1.6; }
+
+.report-review.is-almost .rrv-ring-value { stroke: #c58f2a; }
+.report-review.is-almost .rrv-score { border-color: rgba(197, 143, 42, .3); background: rgba(255, 250, 240, .8); }
+.report-review.is-needs-work .rrv-ring-value { stroke: #b42318; }
+.report-review.is-needs-work .rrv-score { border-color: rgba(180, 35, 24, .22); background: rgba(254, 243, 242, .82); }
+.report-review.is-ready .rrv-score { border-color: rgba(7, 148, 85, .28); background: rgba(240, 253, 246, .85); }
+
+/* ── التنبيه على قِدَم النتيجة ─────────────────────────────────────── */
+.rrv-stale,
+.rrv-clean,
+.rrv-degraded {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.rrv-stale { color: #8a6410; border: 1px dashed rgba(197, 143, 42, .45); background: rgba(255, 250, 235, .7); }
+.rrv-clean { color: #067647; border: 1px solid rgba(7, 148, 85, .22); background: rgba(240, 253, 246, .8); }
+.rrv-degraded { color: #7a5b12; border: 1px solid rgba(197, 143, 42, .3); background: rgba(255, 251, 240, .8); }
+
+/* ── نقاط القوة ────────────────────────────────────────────────────── */
+.rrv-strengths {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+
+.rrv-strengths li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: #2f6a4d;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.rrv-strengths li::before {
+  content: "\f00c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  flex: none;
+  margin-top: 1px;
+  color: #079455;
+  font-size: .68rem;
+}
+
+/* ── الملاحظات ─────────────────────────────────────────────────────── */
+/* اللوحة تعيش داخل بطاقة ‎position:sticky‎ فيها زر الحفظ. وبطاقةٌ لاصقة أطول من
+   الشاشة يبقى أسفلها — أي الزر — خارجها مهما مرّر المستخدم. فسقف الارتفاع هنا
+   ليس ذوقاً: بدونه تحجب لوحةُ الملاحظات زرَّ الحفظ. و‎340px‎ تسع أربع ملاحظات،
+   وهي الحالة الغالبة، فلا يظهر شريط التمرير إلا في المسودة كثيرة العيوب. */
+.rrv-issues {
+  margin: 10px 0 0;
+  padding: 2px;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+  max-height: 340px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.rrv-issue {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #e6ede9;
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.rrv-issue:hover {
+  border-color: rgba(0, 108, 53, .32);
+  box-shadow: 0 8px 18px rgba(0, 60, 33, .07);
+  transform: translateY(-1px);
+}
+
+.rrv-issue:focus-visible {
+  outline: 2px solid var(--focus-ring, #b9975b);
+  outline-offset: 2px;
+}
+
+.rrv-issue-mark {
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: #c58f2a;
+}
+
+.rrv-issue[data-severity="high"] .rrv-issue-mark { background: #b42318; box-shadow: 0 0 0 3px rgba(180, 35, 24, .12); }
+.rrv-issue[data-severity="medium"] .rrv-issue-mark { background: #c58f2a; box-shadow: 0 0 0 3px rgba(197, 143, 42, .12); }
+.rrv-issue[data-severity="low"] .rrv-issue-mark { background: #5b7d8f; box-shadow: 0 0 0 3px rgba(91, 125, 143, .12); }
+
+.rrv-issue-body { min-width: 0; }
+
+.rrv-issue-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.rrv-issue-field {
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #175c3c;
+  background: rgba(7, 148, 85, .1);
+  font-size: .68rem;
+  font-weight: 900;
+}
+
+.rrv-issue-severity {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: .64rem;
+  font-weight: 900;
+}
+
+.rrv-issue[data-severity="high"] .rrv-issue-severity { color: #b42318; background: rgba(180, 35, 24, .1); }
+.rrv-issue[data-severity="medium"] .rrv-issue-severity { color: #8a6410; background: rgba(197, 143, 42, .14); }
+.rrv-issue[data-severity="low"] .rrv-issue-severity { color: #3f5b69; background: rgba(91, 125, 143, .13); }
+
+.rrv-issue-message {
+  margin: 0;
+  color: #1a2c24;
+  font-size: .78rem;
+  font-weight: 750;
+  line-height: 1.7;
+}
+
+.rrv-issue-hint {
+  margin: 4px 0 0;
+  /* ‎#6c7b74‎ يعطي 4.45:1 على البطاقة البيضاء — تحت الحدّ بقليل، وقياسُ المتصفح
+     هو ما كشفه. وهذه الدرجة تعطي 4.99:1. */
+  color: #64736c;
+  font-size: .72rem;
+  font-weight: 650;
+  line-height: 1.65;
+}
+
+.rrv-issue-go {
+  margin: 5px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #087443;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.rrv-scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 7px 0 0;
+  color: #6a7972;
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+/* ── الزر والحالة ──────────────────────────────────────────────────── */
+.rrv-trigger {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #087443, #005c30);
+  box-shadow: 0 8px 18px rgba(0, 92, 48, .16);
+  font: 800 .86rem/1.4 "Cairo", sans-serif;
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+
+.rrv-trigger:hover:not(:disabled) { transform: translateY(-1px); }
+.rrv-trigger:disabled { cursor: default; opacity: .62; transform: none; box-shadow: none; }
+
+.report-review.is-checked .rrv-trigger {
+  color: #1d4d38;
+  border-color: rgba(0, 108, 53, .24);
+  background: #fff;
+  box-shadow: none;
+}
+
+.report-review.is-checked.is-stale .rrv-trigger {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #087443, #005c30);
+  box-shadow: 0 8px 18px rgba(0, 92, 48, .16);
+}
+
+.rrv-status,
+.rrv-quota {
+  margin: 8px 0 0;
+  color: #6b7a73;
+  font-size: .72rem;
+  font-weight: 650;
+  line-height: 1.7;
+}
+
+.rrv-status.is-error { color: #b42318; }
+.rrv-quota b { color: #087443; }
+.report-review.is-quota-out .rrv-quota b { color: #b42318; }
+
+/* ── إبراز الحقل المقصود عند النقر على ملاحظة ──────────────────────── */
+.is-review-target {
+  border-radius: 12px;
+  animation: rrv-target-pulse 1.9s ease-out 1;
+}
+
+@keyframes rrv-target-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(7, 148, 85, .42); }
+  22%  { box-shadow: 0 0 0 6px rgba(7, 148, 85, .16); }
+  100% { box-shadow: 0 0 0 0 rgba(7, 148, 85, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rrv-ring-value { transition: none; }
+  .rrv-issue:hover,
+  .rrv-trigger:hover:not(:disabled) { transform: none; }
+  .is-review-target { animation: none; outline: 2px solid #079455; outline-offset: 3px; }
+}
+
+/* ── الوضع الداكن ──────────────────────────────────────────────────── */
+html[data-theme="dark"] .report-review {
+  border-color: rgba(72, 187, 120, .24);
+  background: linear-gradient(135deg, rgba(16, 92, 57, .2), rgba(185, 151, 91, .1));
+}
+
+html[data-theme="dark"] .rrv-head-copy h3 { color: #e6f2eb; }
+html[data-theme="dark"] .rrv-head-copy p,
+html[data-theme="dark"] .rrv-intro-text,
+html[data-theme="dark"] .rrv-status,
+html[data-theme="dark"] .rrv-quota { color: #aebdb5; }
+
+html[data-theme="dark"] .rrv-score {
+  border-color: rgba(185, 151, 91, .24);
+  background: rgba(13, 34, 26, .6);
+}
+
+html[data-theme="dark"] .rrv-ring-track { stroke: rgba(205, 225, 216, .16); }
+html[data-theme="dark"] .rrv-ring-value { stroke: #42ca88; }
+html[data-theme="dark"] .rrv-ring b { color: #e7f1ec; }
+html[data-theme="dark"] .rrv-score-copy strong { color: #e6f2eb; }
+html[data-theme="dark"] .rrv-score-copy span { color: #aebdb5; }
+
+html[data-theme="dark"] .report-review.is-almost .rrv-ring-value { stroke: #e8c877; }
+html[data-theme="dark"] .report-review.is-almost .rrv-score { border-color: rgba(232, 200, 119, .3); background: rgba(52, 44, 25, .5); }
+html[data-theme="dark"] .report-review.is-needs-work .rrv-ring-value { stroke: #ff8c91; }
+html[data-theme="dark"] .report-review.is-needs-work .rrv-score { border-color: rgba(255, 140, 145, .28); background: rgba(60, 26, 26, .5); }
+html[data-theme="dark"] .report-review.is-ready .rrv-score { border-color: rgba(66, 202, 136, .3); background: rgba(16, 47, 37, .6); }
+
+html[data-theme="dark"] .rrv-issue {
+  border-color: #294238;
+  background: #13251e;
+}
+
+html[data-theme="dark"] .rrv-issue:hover { border-color: rgba(66, 202, 136, .38); box-shadow: none; }
+html[data-theme="dark"] .rrv-issue-message { color: #e7f1ec; }
+html[data-theme="dark"] .rrv-issue-hint { color: #a9bcb3; }
+html[data-theme="dark"] .rrv-issue-field { color: #c4f3d9; background: rgba(66, 202, 136, .16); }
+html[data-theme="dark"] .rrv-issue-go { color: #75dda8; }
+html[data-theme="dark"] .rrv-issue[data-severity="high"] .rrv-issue-severity { color: #ff9aa0; background: rgba(255, 140, 145, .16); }
+html[data-theme="dark"] .rrv-issue[data-severity="medium"] .rrv-issue-severity { color: #eccf83; background: rgba(232, 200, 119, .16); }
+html[data-theme="dark"] .rrv-issue[data-severity="low"] .rrv-issue-severity { color: #a9c7d6; background: rgba(140, 180, 200, .16); }
+
+html[data-theme="dark"] .rrv-strengths li { color: #9fe0bd; }
+html[data-theme="dark"] .rrv-strengths li::before { color: #42ca88; }
+
+html[data-theme="dark"] .rrv-stale { color: #eccf83; border-color: rgba(232, 200, 119, .4); background: rgba(52, 44, 25, .45); }
+html[data-theme="dark"] .rrv-clean { color: #9fe0bd; border-color: rgba(66, 202, 136, .26); background: rgba(16, 47, 37, .55); }
+html[data-theme="dark"] .rrv-degraded { color: #eccf83; border-color: rgba(232, 200, 119, .28); background: rgba(52, 44, 25, .42); }
+
+html[data-theme="dark"] .rrv-scroll-hint { color: #a9bcb3; }
+html[data-theme="dark"] .rrv-quota b { color: #75dda8; }
+html[data-theme="dark"] .report-review.is-quota-out .rrv-quota b { color: #ff9aa0; }
+
+html[data-theme="dark"] .report-review.is-checked .rrv-trigger {
+  color: #dcebe3;
+  border-color: rgba(66, 202, 136, .28);
+  background: #13251e;
+}
+
+html[data-theme="dark"] .report-review.is-checked.is-stale .rrv-trigger {
+  color: #04150f;
+  border-color: transparent;
+  background: linear-gradient(135deg, #42ca88, #2fa66d);
+}
+
+@media (max-width: 520px) {
+  .rrv-issue-top { gap: 5px; }
+}

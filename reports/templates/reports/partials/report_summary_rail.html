@@ -1,0 +1,33 @@
+{% comment %}
+ملخّص حيّ لما سيحتويه التقرير.
+
+البنود تُختار في أعلى النموذج، والحقول تظهر تحتها، فيغيب عن المعلّم في الشاشات
+الطويلة جوابُ سؤالٍ بسيط: **ماذا سيظهر في تقريري؟** هذا الشريط يجيبه دون
+تمرير، ويبقى ملتصقاً مع زر الحفظ وفحص الجاهزية.
+
+لا يقرأ هذا الشريط شيئاً من الخادم: كل قيمه من الحقول المفتوحة أمام المعلّم.
+{% endcomment %}
+<section class="report-rail-summary" data-report-summary aria-labelledby="report-summary-title">
+  <header class="rsm-head">
+    <span class="rsm-icon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>
+    <div>
+      <h3 id="report-summary-title">ملخّص التقرير</h3>
+      <p>ما سيظهر في النسخة النهائية.</p>
+    </div>
+  </header>
+
+  <dl class="rsm-facts">
+    <div class="rsm-fact">
+      <dt>التصنيف</dt>
+      <dd data-summary-category>—</dd>
+    </div>
+    <div class="rsm-fact">
+      <dt>التاريخ</dt>
+      <dd data-summary-date>—</dd>
+    </div>
+  </dl>
+
+  <ul class="rsm-sections" data-summary-sections></ul>
+
+  <p class="rsm-evidence" data-summary-evidence></p>
+</section>

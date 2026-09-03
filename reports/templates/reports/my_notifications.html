@@ -1,5 +1,6 @@
 {# templates/reports/my_notifications.html #}
 {% extends "base.html" %}
+{% load hijri_tags %}
 {% load static %}
 
 {% block title %}إشعاراتي{% endblock %}
@@ -1041,7 +1042,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
 
               <time class="n-time" datetime="{{ r.created_at|date:'c' }}">
                 <i class="fa-regular fa-clock" aria-hidden="true"></i>
-                {{ r.created_at|date:"Y-m-d H:i" }}
+                {{ r.created_at|hijri }} هـ · {{ r.created_at|time:"H:i" }}
               </time>
             </div>
 
@@ -1083,7 +1084,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
                   {% if r.read_at %}
                     <span class="chip muted">
                       <i class="fa-regular fa-clock" aria-hidden="true"></i>
-                      {{ r.read_at|date:"Y-m-d H:i" }}
+                      {{ r.read_at|hijri }} هـ · {{ r.read_at|time:"H:i" }}
                     </span>
                   {% endif %}
                 {% else %}

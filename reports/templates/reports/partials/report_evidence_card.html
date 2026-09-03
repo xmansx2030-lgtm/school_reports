@@ -1,0 +1,73 @@
+{% comment %}
+بطاقة شاهد واحدة.
+
+تُستعمل مرّتين: للنماذج القادمة من الخادم، ولقالب البطاقة الجديدة داخل
+``<template>``. ولذلك هي ملفٌّ واحد لا نسختان — نسختان تفترقان عند أول تعديل،
+فتصير البطاقة المضافة بالجافاسكربت مختلفة عن المحفوظة.
+
+السياق: ``evidence_form`` و``card_number``.
+{% endcomment %}
+<article class="ree-card{% if not evidence_form.instance.pk %} ree-card--new{% endif %}" data-evidence-card>
+  {{ evidence_form.id }}
+  {{ evidence_form.order }}
+
+  {# الحذف يبقى صندوقاً في النموذج — الخادم يحتاجه — ويُقاد من زرٍّ مفهوم. #}
+  <div class="ree-delete-control" data-evidence-delete hidden>{{ evidence_form.DELETE }}</div>
+
+  <div class="ree-card-bar">
+    <span class="ree-number" data-evidence-number>{{ card_number|default:"01" }}</span>
+    <div class="ree-order-actions">
+      <button type="button" data-move="up" title="تحريك لأعلى" aria-label="تحريك الشاهد لأعلى"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+      <button type="button" data-move="down" title="تحريك لأسفل" aria-label="تحريك الشاهد لأسفل"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+      <button type="button" class="ree-remove" data-evidence-remove title="إزالة الشاهد" aria-label="إزالة هذا الشاهد"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>
+  </div>
+
+  <div class="ree-preview" data-preview-wrap>
+    {% if evidence_form.instance.image %}
+      <img src="{{ evidence_form.instance.image.url }}" alt="{{ evidence_form.instance.description|default:'معاينة الشاهد' }}" data-preview-image>
+    {% else %}
+      <div class="ree-placeholder" data-preview-placeholder><i class="fa-regular fa-image" aria-hidden="true"></i><span>اختر صورة للشاهد</span></div>
+      <img alt="معاينة الشاهد" data-preview-image hidden>
+    {% endif %}
+    <span class="ree-ratio" data-image-ratio>{% if evidence_form.instance.aspect_ratio_label %}{{ evidence_form.instance.width_px }} × {{ evidence_form.instance.height_px }} · {{ evidence_form.instance.aspect_ratio_label }}{% endif %}</span>
+  </div>
+
+  <div class="ree-fields">
+    <div class="ree-source-actions" aria-label="مصدر الصورة">
+      <button type="button" class="ree-file-label" data-image-source="camera">
+        <i class="fa-solid fa-camera" aria-hidden="true"></i><span>التقاط صورة</span>
+      </button>
+      <label class="ree-file-label ree-file-label--secondary" data-image-source="gallery" for="{{ evidence_form.image.id_for_label }}">
+        <i class="fa-regular fa-images" aria-hidden="true"></i><span>{% if evidence_form.instance.pk %}استبدال من الصور{% else %}اختيار من الصور{% endif %}</span>
+      </label>
+    </div>
+    {{ evidence_form.image }}
+
+    <label class="ree-description">
+      <span>وصف الشاهد <small>اختياري</small></span>
+      {{ evidence_form.description }}
+    </label>
+
+    {% comment %} ضبطُ طباعةٍ لا يمسّه أكثر المعلّمين. إظهاره مفتوحاً في كل بطاقة كان
+       يضاعف ارتفاع المحرّر ويزاحم ما يهمّ فعلاً: الصورة ووصفها. {% endcomment %}
+    <details class="ree-advanced">
+      <summary>
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        <span>خيارات العرض في الطباعة</span>
+      </summary>
+      <div class="ree-advanced-body">
+        <div class="ree-options">
+          <label><span>حجم العرض</span>{{ evidence_form.display_size }}</label>
+          <label><span>ملاءمة الصورة</span>{{ evidence_form.fit_mode }}</label>
+        </div>
+        <label class="ree-switch">{{ evidence_form.show_in_print }}<span>إظهار هذا الشاهد في النسخة المطبوعة</span></label>
+      </div>
+    </details>
+
+    <div class="ree-file-note" data-file-note aria-live="polite"></div>
+    {% for field in evidence_form.visible_fields %}
+      {% if field.errors %}<div class="ree-error">{{ field.label }}: {{ field.errors.0 }}</div>{% endif %}
+    {% endfor %}
+  </div>
+</article>

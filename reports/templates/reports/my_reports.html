@@ -1631,23 +1631,23 @@ html[data-theme="dark"] .mr-page{
                     {% include "reports/partials/report_submit_btn.html" with report=report %}
 
                     {% if not report_approval_enabled or report.is_editable_by_owner %}
-                      <a href="{% url 'reports:edit_my_report' report.pk %}" class="mr-iconbtn" title="تعديل" aria-label="تعديل">
+                      <a href="{% url 'reports:edit_my_report' report.pk %}" class="mr-iconbtn" title="تعديل" aria-label="تعديل تقرير: {{ report.title|default:"بلا عنوان" }}">
                         <i class="fa-solid fa-pen"></i>
                       </a>
                     {% endif %}
 
-                    <a href="{% url 'reports:report_share_manage' report.pk %}" class="mr-iconbtn" title="مشاركة" aria-label="مشاركة">
+                    <a href="{% url 'reports:report_share_manage' report.pk %}" class="mr-iconbtn" title="مشاركة" aria-label="مشاركة تقرير: {{ report.title|default:"بلا عنوان" }}">
                       <i class="fa-solid fa-share-nodes"></i>
                     </a>
 
-                    <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="mr-iconbtn" title="عرض التقرير" aria-label="عرض التقرير">
+                    <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="mr-iconbtn" title="عرض التقرير" aria-label="عرض تقرير: {{ report.title|default:"بلا عنوان" }}">
                       <i class="fa-solid fa-eye"></i>
                     </a>
 
                     {% if not report_approval_enabled or report.is_editable_by_owner %}
                       <form action="{% url 'reports:delete_my_report' report.pk %}" method="post" class="mr-del-form" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكنك استعادته لاحقًا." data-confirm-type="warning">
                         {% csrf_token %}
-                        <button type="submit" class="mr-iconbtn danger" title="حذف" aria-label="حذف">
+                        <button type="submit" class="mr-iconbtn danger" title="حذف" aria-label="نقل إلى سلة المحذوفات: {{ report.title|default:"بلا عنوان" }}">
                           <i class="fa-solid fa-trash"></i>
                         </button>
                       </form>
@@ -1700,21 +1700,21 @@ html[data-theme="dark"] .mr-page{
                 {% include "reports/partials/report_submit_btn.html" with report=report %}
 
                 {% if not report_approval_enabled or report.is_editable_by_owner %}
-                  <a href="{% url 'reports:edit_my_report' report.pk %}" class="mr-iconbtn" title="تعديل" aria-label="تعديل">
+                  <a href="{% url 'reports:edit_my_report' report.pk %}" class="mr-iconbtn" title="تعديل" aria-label="تعديل تقرير: {{ report.title|default:"بلا عنوان" }}">
                     <i class="fa-solid fa-pen"></i>
                   </a>
                 {% endif %}
-                <a href="{% url 'reports:report_share_manage' report.pk %}" class="mr-iconbtn" title="مشاركة" aria-label="مشاركة">
+                <a href="{% url 'reports:report_share_manage' report.pk %}" class="mr-iconbtn" title="مشاركة" aria-label="مشاركة تقرير: {{ report.title|default:"بلا عنوان" }}">
                   <i class="fa-solid fa-share-nodes"></i>
                 </a>
-                <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="mr-iconbtn" title="عرض التقرير" aria-label="عرض التقرير">
+                <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="mr-iconbtn" title="عرض التقرير" aria-label="عرض تقرير: {{ report.title|default:"بلا عنوان" }}">
                   <i class="fa-solid fa-eye"></i>
                 </a>
 
                 {% if not report_approval_enabled or report.is_editable_by_owner %}
                   <form action="{% url 'reports:delete_my_report' report.pk %}" method="post" class="mr-del-form u-inline" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكنك استعادته لاحقًا." data-confirm-type="warning">
                     {% csrf_token %}
-                    <button type="submit" class="mr-iconbtn danger" title="حذف" aria-label="حذف">
+                    <button type="submit" class="mr-iconbtn danger" title="حذف" aria-label="نقل إلى سلة المحذوفات: {{ report.title|default:"بلا عنوان" }}">
                       <i class="fa-solid fa-trash"></i>
                     </button>
                   </form>

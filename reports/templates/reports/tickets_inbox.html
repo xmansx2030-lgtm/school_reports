@@ -1,5 +1,6 @@
 {# templates/reports/tickets_inbox.html #}
 {% extends "base.html" %}
+{% load hijri_tags %}
 {% block title %}{{ page_title|default:"صندوق الطلبات" }}{% endblock %}
 
 {% block head %}
@@ -281,6 +282,12 @@
     color:#7a5c1e;
     border-color:rgba(185,151,91,.35);
   }
+  /* الساعة تحت التاريخ الهجري: تفصيلٌ ثانوي لا ينافس التاريخ نفسه. */
+  .inbox-wrap .tk-time{
+    display:block; margin-top:2px;
+    font-size:.76rem; font-variant-numeric:tabular-nums;
+    color:var(--text-muted,#68766f);
+  }
 </style>
 {% endblock %}
 
@@ -335,7 +342,11 @@
           {% for t in tickets %}
             <tr>
               <td data-label="#"> {{ t.pk }} </td>
-              <td data-label="التاريخ"> {{ t.created_at|date:"Y-m-d H:i" }} </td>
+              {# التواريخ تُعرض هجرية في كل المنصة — والميلادي يبقى في السمة للآلة. #}
+              <td data-label="التاريخ">
+                <time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time>
+                <small class="tk-time">{{ t.created_at|time:"H:i" }}</small>
+              </td>
               <td data-label="المرسل"> {{ t.creator.name|default:"—" }} </td>
 
               <td data-label="القسم">

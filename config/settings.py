@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from ipaddress import ip_address
+import json
 import os
 import logging
 from urllib.parse import urlsplit, urlunsplit
@@ -397,6 +398,64 @@ try:
     )
 except (TypeError, ValueError):
     REPORT_AI_TIMEOUT_SECONDS = 25.0
+
+
+# ----------------- AI usage & cost measurement -----------------
+# واقعةٌ في ``AiUsageEvent`` لكل نداء. الكتابة داخل ``try/except`` فلا تُسقط
+# نداءً، والإطفاء هنا يوقف التسجيل ويُبقي بقية المنصة كما هي.
+AI_USAGE_TRACKING_ENABLED = _env_bool("AI_USAGE_TRACKING_ENABLED", True)
+
+# أسعار النماذج لكل مليون رمز بالدولار، JSON. **لا سعر افتراضي**: أسعار المزوّد
+# تتغيّر ولا تُخمَّن، وسعرٌ مفترض يُنتج فاتورةً تبدو دقيقة وهي ليست كذلك. وما دام
+# فارغاً تبقى ``estimated_cost`` فارغة والرموز محفوظة — ويُحسب منها لاحقاً.
+#   {"gpt-5.6-luna": {"input": 0.05, "cached_input": 0.005, "output": 0.40}}
+try:
+    AI_MODEL_PRICING = json.loads(os.getenv("AI_MODEL_PRICING") or "{}")
+    if not isinstance(AI_MODEL_PRICING, dict):
+        AI_MODEL_PRICING = {}
+except (TypeError, ValueError):
+    AI_MODEL_PRICING = {}
+
+try:
+    AI_USAGE_RETENTION_DAYS = max(0, int(os.getenv("AI_USAGE_RETENTION_DAYS", "180")))
+except (TypeError, ValueError):
+    AI_USAGE_RETENTION_DAYS = 180
+AI_USAGE_CLEANUP_ENABLED = _env_bool("AI_USAGE_CLEANUP_ENABLED", True)
+
+
+# ----------------- Report readiness review -----------------
+# فحصٌ يسبق الإرسال للاعتماد: بنيويٌّ في بايثون بلا كلفة، ودلاليٌّ بنداء واحد
+# بمخرج مهيكل. إطفاء المفتاح هنا لا يُعطّل الأداة بل يُبقي البنيويّ وحده.
+REPORT_REVIEW_ENABLED = _env_bool("REPORT_REVIEW_ENABLED", bool(OPENAI_API_KEY))
+REPORT_REVIEW_MODEL = _openai_text_model(
+    os.getenv("REPORT_REVIEW_MODEL") or REPORT_AI_MODEL
+)
+
+try:
+    # سقفٌ أوسع من نظيره في التحسين: المخرَج هنا JSON مهيكل، وبترُه يُفقد
+    # الفحص كلَّه لا آخرَ جملة فيه.
+    REPORT_REVIEW_MAX_OUTPUT_TOKENS = max(
+        300,
+        min(2000, int(os.getenv("REPORT_REVIEW_MAX_OUTPUT_TOKENS", "900"))),
+    )
+except (TypeError, ValueError):
+    REPORT_REVIEW_MAX_OUTPUT_TOKENS = 900
+
+try:
+    REPORT_REVIEW_TIMEOUT_SECONDS = max(
+        5.0,
+        min(35.0, float(os.getenv("REPORT_REVIEW_TIMEOUT_SECONDS", "25"))),
+    )
+except (TypeError, ValueError):
+    REPORT_REVIEW_TIMEOUT_SECONDS = 25.0
+
+try:
+    # أعلى من حصّة التحسين (٣) عن قصد: الفحص يُراد له أن يسبق كل إرسال، ونتيجةُ
+    # محتوىً لم يتغيّر تُقرأ من المخزَّن بلا استهلاك، فالسقف يحدّ المحاولات
+    # الجديدة وحدها.
+    REPORT_REVIEW_DAILY_LIMIT = max(0, min(30, int(os.getenv("REPORT_REVIEW_DAILY_LIMIT", "5"))))
+except (TypeError, ValueError):
+    REPORT_REVIEW_DAILY_LIMIT = 5
 
 
 # ----------------- Voice dictation for reports -----------------
@@ -1114,6 +1173,7 @@ CELERY_TASK_ROUTES = {
     "reports.tasks.reconcile_pending_gateway_payments_task": {"queue": "periodic"},
     "reports.tasks.remind_unsigned_circulars_task": {"queue": "periodic"},
     "reports.tasks.cleanup_audit_logs_task": {"queue": "periodic"},
+    "reports.tasks.cleanup_ai_usage_task": {"queue": "periodic"},
     "reports.tasks.cleanup_expired_sessions_task": {"queue": "periodic"},
     "reports.tasks.monitor_infrastructure_capacity_task": {"queue": "periodic"},
     "operations.tasks.run_operations_monitor_task": {"queue": "periodic"},
@@ -1361,6 +1421,13 @@ if crontab is not None:
             "task": "reports.tasks.cleanup_audit_logs_task",
             "schedule": crontab(minute=15, hour=3),
             "args": (AUDIT_LOG_RETENTION_DAYS,),
+        }
+
+    if AI_USAGE_CLEANUP_ENABLED:
+        CELERY_BEAT_SCHEDULE["cleanup-ai-usage-daily"] = {
+            "task": "reports.tasks.cleanup_ai_usage_task",
+            "schedule": crontab(minute=35, hour=3),
+            "args": (AI_USAGE_RETENTION_DAYS,),
         }
 
     if SESSION_CLEANUP_ENABLED:

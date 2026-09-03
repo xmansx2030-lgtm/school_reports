@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load hijri_tags %}
+{% load arabic_tags %}
 
 {% block title %}تكليفاتي | منصة توثيق{% endblock %}
 
@@ -63,7 +64,7 @@
             <div class="asg-item__sub">
               من {{ t.assignment.issuer_name|default:"—" }}
               · يستحق {{ t.assignment.due_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ t.assignment.due_at|date:'c' }}">({{ t.assignment.due_at|date:"Y-m-d H:i" }})</time>
+              <time dir="ltr" datetime="{{ t.assignment.due_at|date:'c' }}">{{ t.assignment.due_at|date:"Y-m-d H:i" }} م</time>
               {% if t.assignment.department %} · {{ t.assignment.department.name }}{% endif %}
             </div>
           </div>
@@ -88,7 +89,8 @@
             {% elif t.days_remaining <= 3 %}
               <span class="asg-tag asg-tag--soon">
                 <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
-                {{ t.days_remaining }} يوم
+                {# «3 يوم» ← «3 أيام»؛ والصفر يُقال «اليوم» لا «لا أيام». #}
+                {% if t.days_remaining == 0 %}اليوم{% else %}{{ t.days_remaining|arabic_count:"يوم,يومان,أيام,يوماً" }}{% endif %}
               </span>
             {% endif %}
             <span class="asg-tag">{{ t.get_approval_state_display }}</span>
@@ -117,7 +119,7 @@
             </div>
             <div class="asg-item__sub">
               اعتُمد {{ t.decided_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ t.decided_at|date:'c' }}">({{ t.decided_at|date:"Y-m-d" }})</time>
+              <time dir="ltr" datetime="{{ t.decided_at|date:'c' }}">{{ t.decided_at|date:"Y-m-d" }} م</time>
               {% if t.decided_by %} · بواسطة {{ t.decided_by.name }}{% endif %}
             </div>
           </div>
@@ -148,7 +150,7 @@
               من {{ t.assignment.issuer_name|default:"—" }}
               {% if t.assignment.cancelled_at %}
                 · أُلغي {{ t.assignment.cancelled_at|hijri }} هـ
-                <time dir="ltr" datetime="{{ t.assignment.cancelled_at|date:'c' }}">({{ t.assignment.cancelled_at|date:"Y-m-d" }})</time>
+                <time dir="ltr" datetime="{{ t.assignment.cancelled_at|date:'c' }}">{{ t.assignment.cancelled_at|date:"Y-m-d" }} م</time>
               {% endif %}
               {% if t.assignment.cancel_reason %} · {{ t.assignment.cancel_reason|truncatechars:90 }}{% endif %}
             </div>

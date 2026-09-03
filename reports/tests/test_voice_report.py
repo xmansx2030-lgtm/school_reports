@@ -332,7 +332,7 @@ class TranscriptionRequestTests(TestCase):
 
         raw = "ناقشت اللجنة 3 توصيات واعتمدت تنفيذها خلال 5 أيام"
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             return_value=self._polished("ناقشت اللجنة 4 توصيات واعتمدت تنفيذها خلال 5 أيام."),
         ):
             self.assertEqual(polish_meeting_dictation(raw), raw)
@@ -342,7 +342,7 @@ class TranscriptionRequestTests(TestCase):
         from reports.voice_report import polish_dictation
 
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             side_effect=VoiceReportUnavailable("outage"),
         ):
             self.assertEqual(polish_dictation("نص خام بلا ترقيم"), "نص خام بلا ترقيم")
@@ -371,7 +371,7 @@ class TranscriptionRequestTests(TestCase):
 
         raw = "اليوم نفذنا نشاط توعوي وحضره 54 طالب وكان في الاذاعه المدرسيه"
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             return_value=self._polished(
                 "اليوم نُفِّذ نشاط توعوي وحضره 54 طالبًا وكان في الإذاعة",
                 status="incomplete",
@@ -387,7 +387,7 @@ class TranscriptionRequestTests(TestCase):
         raw = "اليوم نفذت نشاط توعوي يعني وحضره ٤٥ طالب"
 
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             return_value=self._polished("اليوم نُفِّذ نشاط توعوي وحضره 54 طالبًا."),
         ):
             self.assertEqual(polish_dictation(raw), raw)
@@ -396,7 +396,7 @@ class TranscriptionRequestTests(TestCase):
         from reports.voice_report import polish_dictation
 
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             return_value=self._polished("اليوم نُفِّذ نشاط توعوي وحضره 45 طالبًا."),
         ):
             polished = polish_dictation("اليوم نفذت نشاط توعوي يعني وحضره ٤٥ طالب")
@@ -410,7 +410,7 @@ class TranscriptionRequestTests(TestCase):
         raw = "تم عمل دورة تدريبية"
 
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             return_value=self._polished("ابدأ اليوم بتقرير عن"),
         ):
             self.assertEqual(polish_dictation(raw), raw)
@@ -422,8 +422,25 @@ class TranscriptionRequestTests(TestCase):
         raw = "اليوم يعني نفذنا نشاط توعوي في الاذاعه المدرسيه وتفاعل الطلاب معه"
         polished = "اليوم نُفِّذ نشاط توعوي في الإذاعة المدرسية، وتفاعل الطلاب معه."
 
-        with patch("reports.voice_report._post", return_value=self._polished(polished)):
+        with patch("reports.voice_report._post_responses", return_value=self._polished(polished)):
             self.assertEqual(polish_dictation(raw), polished)
+
+    def test_a_provider_outage_during_polish_returns_the_raw_transcript(self):
+        """اختبارٌ عند الحدّ الحقيقي لا عند دالةٍ داخلية.
+
+        بقية اختبارات التجميل ترقّع ``_post_responses``، فلا ترى نوع الاستثناء
+        الذي يصعد من طبقة الشبكة فعلاً. ولمّا وُحّد نداء المزوّد صار الصاعد
+        ``HTTPError`` لا ``VoiceReportError``، فكاد التجميل المتعثّر يُسقط
+        الطلب كلّه ويضيّع على المعلّم كلامه. هذا ما يمسك ذلك.
+        """
+        from urllib.error import HTTPError
+
+        from reports.voice_report import polish_dictation
+
+        raw = "اليوم نفذنا نشاط توعوي وحضره 45 طالب"
+        error = HTTPError("https://api.openai.com/v1/responses", 500, "boom", {}, io.BytesIO(b"{}"))
+        with patch("reports.ai_client.urlopen", side_effect=error):
+            self.assertEqual(polish_dictation(raw), raw)
 
     def test_a_polish_that_swallows_most_of_the_dictation_is_discarded(self):
         from reports.voice_report import polish_dictation
@@ -434,7 +451,7 @@ class TranscriptionRequestTests(TestCase):
         )
 
         with patch(
-            "reports.voice_report._post",
+            "reports.voice_report._post_responses",
             return_value=self._polished("نُفِّذ برنامج توعوي."),
         ):
             self.assertEqual(polish_dictation(raw), raw)

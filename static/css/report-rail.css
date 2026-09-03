@@ -1,0 +1,118 @@
+/* شريط الإجراءات الجانبي: ملخّص التقرير، ثم فحص الجاهزية، ثم الحفظ.
+   العمود الجانبي صار يحمل حالة التقرير وإرساله فقط — أما محتواه، ومنه
+   الشواهد، فمكانه العمود الرئيسي مع بقية ما يكتبه المعلّم. */
+
+.report-rail-summary {
+  padding: 14px;
+  border: 1px solid rgba(0, 108, 53, .16);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0, 108, 53, .04), rgba(185, 151, 91, .06));
+}
+
+.rsm-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rsm-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, #087443, #005c30);
+  box-shadow: 0 7px 16px rgba(0, 92, 48, .18);
+}
+
+.rsm-head h3 { margin: 0; color: #183d2c; font-size: .88rem; font-weight: 900; }
+.rsm-head p { margin: 2px 0 0; color: #64736c; font-size: .73rem; font-weight: 700; }
+
+.rsm-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 11px;
+}
+
+.rsm-fact {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(185, 151, 91, .24);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .74);
+}
+
+.rsm-fact dt { margin: 0 0 3px; color: #6b7a73; font-size: .68rem; font-weight: 800; }
+.rsm-fact dd {
+  margin: 0;
+  color: #17251f;
+  font-size: .78rem;
+  font-weight: 800;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.rsm-fact dd.is-empty { color: #93a29a; font-weight: 700; }
+
+.rsm-sections {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+
+.rsm-sections li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .76rem;
+  font-weight: 750;
+  line-height: 1.6;
+}
+
+.rsm-sections li i { flex: none; font-size: .72rem; }
+.rsm-sections li.is-filled { color: #1d4d38; }
+.rsm-sections li.is-filled i { color: #079455; }
+.rsm-sections li.is-empty { color: #7b8a83; }
+.rsm-sections li.is-empty i { color: #b9c6bf; }
+.rsm-sections li.is-none { color: #8a6410; font-weight: 700; }
+.rsm-sections li small {
+  margin-inline-start: auto;
+  color: #97a49d;
+  font-size: .66rem;
+  font-weight: 700;
+}
+
+.rsm-evidence {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px dashed rgba(0, 108, 53, .18);
+  color: #66756e;
+  font-size: .73rem;
+  font-weight: 700;
+}
+
+/* ── الوضع الداكن ──────────────────────────────────────────────────── */
+html[data-theme="dark"] .report-rail-summary {
+  border-color: rgba(72, 187, 120, .22);
+  background: linear-gradient(135deg, rgba(16, 92, 57, .18), rgba(185, 151, 91, .09));
+}
+
+html[data-theme="dark"] .rsm-head h3 { color: #e6f2eb; }
+html[data-theme="dark"] .rsm-head p,
+html[data-theme="dark"] .rsm-evidence { color: #aebdb5; }
+html[data-theme="dark"] .rsm-fact { border-color: rgba(185, 151, 91, .22); background: rgba(13, 34, 26, .6); }
+html[data-theme="dark"] .rsm-fact dt { color: #a2b3aa; }
+html[data-theme="dark"] .rsm-fact dd { color: #edf6f1; }
+html[data-theme="dark"] .rsm-fact dd.is-empty { color: #8fa79c; }
+html[data-theme="dark"] .rsm-sections li.is-filled { color: #b9ead0; }
+html[data-theme="dark"] .rsm-sections li.is-filled i { color: #42ca88; }
+html[data-theme="dark"] .rsm-sections li.is-empty { color: #a2b3aa; }
+html[data-theme="dark"] .rsm-sections li.is-empty i { color: #52685e; }
+html[data-theme="dark"] .rsm-sections li.is-none { color: #eccf83; }
+html[data-theme="dark"] .rsm-sections li small { color: #8fa79c; }
+html[data-theme="dark"] .rsm-evidence { border-top-color: rgba(205, 225, 216, .16); }

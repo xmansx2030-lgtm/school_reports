@@ -162,9 +162,20 @@ class Report(ApprovalMixin):
         base_manager_name = "all_objects"
 
     def __str__(self):
+        """وصفٌ يُقرأ حيث يُعرض.
+
+        هذا النصّ ليس للسجلّات وحدها: هو ما يراه المستخدم في كل قائمة اختيار
+        تعرض تقريراً — منها ربطُ تقرير بتجربة مختبر. وكان يطبع ``report_date``
+        خاماً فيظهر ‎2026-09-02‎ وسط منصةٍ هجرية، فيقرأ المحضّر تقويمين في
+        سطرٍ واحد ولا يعرف أيّهما يقصد.
+        """
+        from ..hijri_utils import hijri_date
+
         display_name = self.teacher_name.strip() if self.teacher_name else getattr(self.teacher, "name", "")
         cat = getattr(self.category, "name", "بدون تصنيف")
-        return f"{self.title} - {cat} - {display_name} ({self.report_date})"
+        when = hijri_date(self.report_date, fallback="") if self.report_date else ""
+        stamp = f" ({when} هـ)" if when else ""
+        return f"{self.title} - {cat} - {display_name}{stamp}"
 
     @property
     def teacher_display_name(self) -> str:
@@ -396,6 +407,15 @@ class PlatformSettings(models.Model):
         default=True,
         db_index=True,
         help_text="إظهار مسجّل الصوت في صفحة إضافة تقرير والسماح بتفريغه نصًا.",
+    )
+    report_review_enabled = models.BooleanField(
+        "إظهار فحص جاهزية التقرير",
+        default=True,
+        db_index=True,
+        help_text=(
+            "إظهار لوحة فحص جاهزية التقرير قبل الحفظ. الفحص البنيوي يعمل دون "
+            "استهلاك رصيد، والفحص الذكي يستهلك محاولة من رصيد المستخدم اليومي."
+        ),
     )
 
     updated_by = models.ForeignKey(

@@ -10,14 +10,83 @@
     return a || 1;
   }
 
+  function allCards(editor) {
+    return Array.prototype.slice.call(editor.querySelectorAll("[data-evidence-card]"));
+  }
+
+  function liveCards(editor) {
+    return allCards(editor).filter(function (card) {
+      var deletion = card.querySelector('input[name$="-DELETE"]');
+      return !(deletion && deletion.checked);
+    });
+  }
+
   function updateOrder(editor) {
-    var cards = Array.prototype.slice.call(editor.querySelectorAll("[data-evidence-card]"));
-    cards.forEach(function (card, index) {
+    liveCards(editor).forEach(function (card, index) {
       var order = card.querySelector('input[name$="-order"]');
       var number = card.querySelector("[data-evidence-number]");
       if (order) order.value = index + 1;
       if (number) number.textContent = String(index + 1).padStart(2, "0");
     });
+  }
+
+  function maxForms(editor) {
+    var value = parseInt(editor.getAttribute("data-max-forms"), 10);
+    return Number.isFinite(value) && value > 0 ? value : 8;
+  }
+
+  /* الترقيم وحالة زر الإضافة والعدّاد — ثلاثتها تتبع عدد البطاقات الحيّة،
+     فتُحدَّث معاً بعد كل إضافة أو إزالة أو اختيار ملف. */
+  function refresh(editor) {
+    updateOrder(editor);
+    var live = liveCards(editor).length;
+    var limit = maxForms(editor);
+    var addButton = editor.querySelector("[data-evidence-add]");
+    var counter = editor.querySelector("[data-evidence-count]");
+
+    if (addButton) {
+      addButton.disabled = live >= limit;
+      addButton.hidden = live >= limit;
+    }
+    if (counter) {
+      if (live >= limit) counter.textContent = "بلغت الحد الأقصى: " + limit + " شواهد.";
+      else if (live === 0) counter.textContent = "لا شواهد بعد.";
+      else counter.textContent = live + " من " + limit;
+    }
+    // اللوحة تقرأ عدد الشواهد من الصفحة، فتُنبَّه ليبقى الفحص على الحقيقة.
+    editor.dispatchEvent(new CustomEvent("evidence:changed", { bubbles: true }));
+  }
+
+  /* بطاقةٌ جديدة من قالبٍ يحمل ``__prefix__``. الفهرس يؤخذ من
+     ``TOTAL_FORMS`` لا من عدد العقد: البطاقة المحذوفة تبقى في الصفحة، فعدّها
+     يُنتج فهرساً مكرّراً يدوس على نموذجٍ قائم. */
+  function addCard(editor) {
+    var template = editor.querySelector("[data-evidence-template]");
+    var list = editor.querySelector("[data-evidence-list]");
+    var prefix = editor.getAttribute("data-prefix") || "evidence";
+    var total = document.getElementById("id_" + prefix + "-TOTAL_FORMS");
+    if (!template || !list || !total) return;
+
+    var index = parseInt(total.value, 10);
+    if (!Number.isFinite(index)) index = allCards(editor).length;
+    if (liveCards(editor).length >= maxForms(editor)) return;
+
+    var markup = template.innerHTML.replace(/__prefix__/g, String(index));
+    var holder = document.createElement("div");
+    holder.innerHTML = markup;
+    var card = holder.querySelector("[data-evidence-card]");
+    if (!card) return;
+
+    var addTile = list.querySelector("[data-evidence-add]");
+    if (addTile) list.insertBefore(card, addTile);
+    else list.appendChild(card);
+    total.value = String(index + 1);
+    bindCard(editor, card);
+    refresh(editor);
+
+    var firstControl = card.querySelector("[data-image-source]");
+    if (firstControl) firstControl.focus();
+    return card;
   }
 
   function bindCard(editor, card) {
@@ -28,6 +97,7 @@
     var note = card.querySelector("[data-file-note]");
     var fit = card.querySelector('select[name$="-fit_mode"]');
     var deletion = card.querySelector('input[name$="-DELETE"]');
+    var remove = card.querySelector("[data-evidence-remove]");
 
     card.querySelectorAll("[data-image-source]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -48,10 +118,25 @@
     if (fit) fit.addEventListener("change", syncFit);
     syncFit();
 
+    /* البطاقةُ لا تُنتزع من الصفحة أبداً — تُعلَّم محذوفةً وتُخفى.
+       فهرسةُ نماذج Django متّصلة (‎0..N-1‎)، ونزعُ عقدةٍ من الوسط يفرض إعادة
+       ترقيم كل ما بعدها؛ وخطأٌ واحد في ذلك يرسل صورةً إلى حقل صورةٍ أخرى.
+       والخادم يتجاهل النموذج المعلَّم بالحذف أصلاً. */
     if (deletion) {
-      deletion.addEventListener("change", function () {
-        card.classList.toggle("is-deleted", deletion.checked);
-      });
+      var syncDeleted = function () {
+        var isDeleted = deletion.checked;
+        card.classList.toggle("is-deleted", isDeleted);
+        card.hidden = isDeleted;
+        refresh(editor);
+      };
+      deletion.addEventListener("change", syncDeleted);
+      if (remove) {
+        remove.addEventListener("click", function () {
+          deletion.checked = true;
+          syncDeleted();
+        });
+      }
+      syncDeleted();
     }
 
     if (input) input.addEventListener("change", function () {
@@ -105,6 +190,7 @@
       };
       reader.onerror = preview.onerror;
       reader.readAsDataURL(file);
+      refresh(editor);
     });
 
     card.querySelectorAll("[data-move]").forEach(function (button) {
@@ -120,7 +206,11 @@
   }
 
   document.querySelectorAll("[data-report-evidence-editor]").forEach(function (editor) {
-    editor.querySelectorAll("[data-evidence-card]").forEach(function (card) { bindCard(editor, card); });
-    updateOrder(editor);
+    allCards(editor).forEach(function (card) { bindCard(editor, card); });
+    var addButton = editor.querySelector("[data-evidence-add]");
+    if (addButton) {
+      addButton.addEventListener("click", function () { addCard(editor); });
+    }
+    refresh(editor);
   });
 })();

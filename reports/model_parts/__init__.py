@@ -17,6 +17,7 @@ from .meetings import *
 from .plans import *
 from .scopes import *
 from .audit import *
+from .ai_usage import *
 from .data_rights import *
 from .api_keys import *
 from .totp import *

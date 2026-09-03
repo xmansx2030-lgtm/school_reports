@@ -8,7 +8,10 @@
 {% if report_ai_enabled %}
 <link rel="stylesheet" href="{% static 'css/report-ai-improver.css' %}?v=20260813.2">
 {% endif %}
-<link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260825.1">
+{% if report_review_enabled %}
+<link rel="stylesheet" href="{% static 'css/report-review.css' %}?v=20260903.1">
+{% endif %}
+<link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260903.6">
 <style nonce="{{ CSP_NONCE }}">
   /* =========================================================
      Report Edit (page-only polish)
@@ -620,6 +623,12 @@
               {% include "reports/partials/report_evidence_formset.html" %}
             </div>
 
+            {% if report_review_enabled %}
+              <div class="row">
+                {% include "reports/partials/report_review_panel.html" %}
+              </div>
+            {% endif %}
+
             {% if request.GET.next %}
               <input type="hidden" name="next" value="{{ request.GET.next }}">
             {% endif %}
@@ -675,9 +684,14 @@
 
 {% block scripts %}
 {{ block.super }}
+{# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqHijri وقت التحليل. #}
+<script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script src="{% static 'js/report-details-limit.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% if report_ai_enabled %}
 <script src="{% static 'js/report-ai-improver.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
+{% endif %}
+{% if report_review_enabled %}
+<script src="{% static 'js/report-review.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endif %}
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   // إضافة class control لمدخلات Django
@@ -844,16 +858,14 @@
     const hijriEcho = document.getElementById("reportDateHijri");
     if(!dateInput || !dayInput) return;
 
-    let hijriFmt = null;
-    try { hijriFmt = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {day:'2-digit', month:'long', year:'numeric'}); } catch(e){ hijriFmt = null; }
-
     function setDay(v){
       if(!v){ dayInput.value=""; if(hijriEcho) hijriEcho.textContent=""; return; }
       const d = new Date(v);
       const days = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
       if(!isNaN(d.getTime())){
         dayInput.value = days[d.getDay()];
-        if(hijriEcho && hijriFmt) hijriEcho.textContent = "📅 الموافق " + hijriFmt.format(d) + " هـ";
+        // التقويم الهجري: التنسيق في js/hijri-date.js — مصدر واحد لكل الشاشات.
+        if(hijriEcho && window.TawtheeqHijri) hijriEcho.textContent = window.TawtheeqHijri.echo(d);
       }
     }
 
@@ -985,5 +997,5 @@
     });
   })();
 </script>
-<script src="{% static 'js/report-evidence-editor.js' %}?v=20260814.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-evidence-editor.js' %}?v=20260903.4" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

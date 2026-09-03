@@ -11,7 +11,12 @@
 {% if voice_report_enabled %}
 <link rel="stylesheet" href="{% static 'css/report-voice.css' %}?v=20260812.1">
 {% endif %}
-<link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260825.1">
+{% if report_review_enabled %}
+<link rel="stylesheet" href="{% static 'css/report-review.css' %}?v=20260903.1">
+{% endif %}
+<link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260903.6">
+<link rel="stylesheet" href="{% static 'css/report-rail.css' %}?v=20260903.1">
+<link rel="stylesheet" href="{% static 'css/report-mobile-actions.css' %}?v=20260903.2">
 <style nonce="{{ CSP_NONCE }}">
   /* 
     ═══════════════════════════════════════════════════════════
@@ -67,8 +72,10 @@
   .ar-header {
     background: var(--ar-surface);
     border-radius: var(--ar-radius-xl);
-    padding: 32px;
-    margin-bottom: 24px;
+    /* ‎32px‎ حشواً و‎110px‎ ارتفاعاً في صفحة نموذج: مساحةٌ تُدفع من أول شاشة
+       يراها المعلّم على الجوال. الهوية تبقى، والحجم ينزل إلى النصف. */
+    padding: 18px 22px;
+    margin-bottom: 18px;
     box-shadow: var(--ar-shadow-lg);
     border: 1px solid var(--ar-border-light);
     position: relative;
@@ -100,9 +107,9 @@
   }
   
   .ar-title-box h1 {
-    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-size: clamp(1.4rem, 3.2vw, 1.8rem);
     font-weight: 900;
-    margin: 0 0 8px;
+    margin: 0;
     background: var(--ar-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -155,10 +162,19 @@
     align-items: start;
   }
 
+  /* ‎align-items:start‎ يقلّص العمود الجانبي إلى ارتفاع بطاقته، فلا يبقى
+     للبطاقة اللاصقة مسافةُ سفرٍ داخل عمودها ولا تلتصق أبداً — كانت
+     ‎position:sticky‎ مكتوبةً ولا تعمل. تمديد هذا العمود وحده يعيدها للعمل
+     دون أن يمدّ العمود الرئيسي. */
+  .ar-col-side {
+    align-self: stretch;
+  }
+
   @media (max-width: 1100px) {
     .ar-grid {
       grid-template-columns: 1fr;
     }
+    .ar-col-side { align-self: auto; }
     /* Removed order: -1 so sidebar stays at bottom on mobile */
   }
 
@@ -198,19 +214,93 @@
     margin-bottom: 0;
   }
 
+  /* الأحمر معناه «خطأ» لا «هذا الحقل موجود». تسع رقعٍ حمراء قبل كتابة حرفٍ
+     واحد تُفقد اللون معناه، فحين يقع خطأٌ حقيقي لا يميّزه المستخدم عن الباقي.
+     فصارت العلامة نجمةً هادئة، ولا تحمرّ إلا حين يُخطئ الحقل فعلاً. */
   .ar-required-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 22px;
+    width: 14px;
     height: 22px;
-    padding: 0 8px;
-    border-radius: var(--ar-radius-full);
-    background: rgba(239, 68, 68, 0.12);
-    color: var(--ar-danger);
-    font-size: 0.72rem;
+    color: #6b7a73;
+    font-size: 0.95rem;
     font-weight: 900;
     line-height: 1;
+  }
+
+  .ar-field.is-invalid .ar-required-mark {
+    color: var(--ar-danger);
+  }
+
+  .ar-required-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 14px;
+    color: #6b7a73;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .ar-required-note b { color: #6b7a73; font-size: 0.9rem; }
+
+  .ar-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ar-date-caption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 7px;
+  }
+
+  .ar-date-day {
+    padding: 2px 9px;
+    border-radius: var(--ar-radius-full);
+    background: rgba(0, 108, 53, 0.09);
+    color: #175c3c;
+    font-size: 0.74rem;
+    font-weight: 900;
+  }
+
+  .ar-date-day:empty { display: none; }
+  .ar-date-caption .xs-add-report-4 { margin-top: 0; }
+
+  html[data-theme="dark"] .ar-required-mark,
+  html[data-theme="dark"] .ar-required-note,
+  html[data-theme="dark"] .ar-required-note b { color: #aebdb5; }
+
+  html[data-theme="dark"] .ar-date-day {
+    background: rgba(66, 202, 136, .16);
+    color: #c4f3d9;
+  }
+
+  html[data-theme="dark"] .ar-static-value {
+    border-color: rgba(205, 225, 216, .2);
+    background: #0f2620;
+    color: #dcebe3;
+  }
+
+  .ar-static-value {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px dashed #d7e3dc;
+    border-radius: 12px;
+    background: #fafcfb;
+    color: #46574f;
+    font-size: 0.9rem;
+    font-weight: 800;
   }
   
   .ar-field label {
@@ -270,9 +360,6 @@
     color: #991b1b;
   }
 
-  .ar-field.is-invalid .ar-required-mark {
-    background: rgba(239, 68, 68, 0.18);
-  }
   
   .add-report-page input:disabled,
   .add-report-page select:disabled,
@@ -862,13 +949,13 @@
     border:1px solid rgba(212,177,109,.42) !important;
     border-radius:24px !important;
     box-shadow:0 26px 60px -24px rgba(5,46,26,.7) !important;
-    padding-top:38px !important;
+    padding-top:20px !important;
   }
   .add-report-page .ar-header::before{
     content:"\f521" !important; font-family:"Font Awesome 6 Free" !important; font-weight:900 !important;
     width:auto !important; height:auto !important; background:none !important; opacity:1 !important;
     top:14px !important; right:auto !important; left:22px !important; transform:none !important;
-    font-size:2.4rem !important; color:rgba(212,177,109,.18) !important;
+    font-size:1.6rem !important; color:rgba(212,177,109,.18) !important;
   }
   .add-report-page .ar-header::after{
     content:"" !important; position:absolute; top:0; right:0; left:0; height:4px;
@@ -907,7 +994,9 @@
   .ar-section-option.is-selected .option-icon{background:#087442;color:#fff;}
   .ar-section-option .option-copy{display:flex;flex-direction:column;gap:2px;min-width:0;}
   .ar-section-option strong{font-size:.92rem;color:#173c2b;font-weight:900;}
-  .ar-section-option small{font-size:.72rem;color:#708078;font-weight:700;}
+  /* ‎#708078‎ على الأبيض يعطي ‎4.16‎ — دون الحدّ. و‎#68766f‎ هو ‎--text-muted‎
+     المعتمد في ‎tokens.css‎ ويعطي ‎4.76‎، فيوحّد اللون ويرفعه معاً. */
+  .ar-section-option small{font-size:.72rem;color:#68766f;font-weight:700;}
   .ar-section-option .option-check{margin-right:auto;color:#087442;opacity:0;transform:scale(.7);transition:.18s ease;}
   .ar-section-option.is-selected .option-check{opacity:1;transform:scale(1);}
   .ar-selected-fields{display:flex;flex-direction:column;gap:15px;}
@@ -916,7 +1005,6 @@
   .ar-section-field .ar-field{margin:0;}
   .ar-section-field textarea{min-height:110px;}
   .ar-section-field-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;color:#075b34;font-weight:950;}
-  .ar-section-field-head .ar-required-mark{margin-right:auto;}
   @media(max-width:900px){.ar-section-options{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media(max-width:560px){.ar-builder-head{flex-direction:column}.ar-section-options{grid-template-columns:1fr}.ar-section-option{min-height:56px}}
 </style>
@@ -929,7 +1017,11 @@
     <header class="ar-header">
       <div class="ar-title-box">
         <h1>{% if IS_LAB_TECHNICIAN %}توثيق إنجاز مهني{% elif IS_ADMIN_STAFF %}توثيق عمل إداري{% else %}إضافة تقرير جديد{% endif %}</h1>
-        <p>{% if IS_LAB_TECHNICIAN %}سجّل أعمال المختبر ونتائجها وشواهدها بصياغة مهنية قابلة للمراجعة والاعتماد.{% elif IS_ADMIN_STAFF %}سجّل ما نُفّذ ونتائجه وشواهده بصياغة مهنية قابلة للمراجعة والأرشفة.{% else %}مساحتك الإبداعية لتوثيق الإنجازات{% endif %}</p>
+        {% comment %} «مساحتك الإبداعية لتوثيق الإنجازات» عبارةٌ تسويقية في صفحةٍ يفتحها
+           المعلّم ليعمل لا ليُقنَع. أما وصفُ عمل الفنّي والإداري فيبقى: هو
+           إرشادٌ لدورٍ لا يعرف بالضرورة ما المتوقّع منه هنا. {% endcomment %}
+        {% if IS_LAB_TECHNICIAN %}<p>سجّل أعمال المختبر ونتائجها وشواهدها بصياغة مهنية قابلة للمراجعة والاعتماد.</p>
+        {% elif IS_ADMIN_STAFF %}<p>سجّل ما نُفّذ ونتائجه وشواهده بصياغة مهنية قابلة للمراجعة والأرشفة.</p>{% endif %}
       </div>
       <a href="{% url 'reports:home' %}" class="ar-back-btn">
         <i class="fa-solid fa-arrow-right"></i> الرئيسية
@@ -1010,13 +1102,16 @@
         <div class="ar-col-main">
           
           <div class="ar-card">
-            
+
+            {# سطرٌ واحد يشرح النجمة، بدل تكرار كلمة «مطلوب» عند كل حقل. #}
+            <p class="ar-required-note"><b aria-hidden="true">*</b> الحقول المعلَّمة بنجمة مطلوبة.</p>
+
             <!-- Top Controls -->
             <div class="xs-add-report-2">
               
               <!-- Category -->
               <div class="ar-field u-m-0" data-group="category">
-                <label for="{{ form.category.id_for_label }}"><i class="fa-solid fa-tag"></i> تصنيف التقرير <span class="ar-required-mark">مطلوب</span></label>
+                <label for="{{ form.category.id_for_label }}"><i class="fa-solid fa-tag"></i> تصنيف التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>
                  <select name="{{ form.category.html_name }}" id="{{ form.category.id_for_label }}">
                   <option value="" selected disabled>-- اختر التصنيف --</option>
                   {% for value,label in form.fields.category.choices %}
@@ -1037,7 +1132,7 @@
 
               <!-- Title -->
               <div class="ar-field u-m-0" data-group="title">
-                 <label for="{{ form.title.id_for_label }}"><i class="fa-solid fa-heading"></i> العنوان <span class="ar-required-mark">مطلوب</span></label>
+                 <label for="{{ form.title.id_for_label }}"><i class="fa-solid fa-heading"></i> العنوان <span class="ar-required-mark" aria-hidden="true">*</span></label>
                  {{ form.title }}
                  {% if form.title.errors %}<div class="ar-error-msg">{{ form.title.errors.0 }}</div>{% endif %}
               </div>
@@ -1048,22 +1143,25 @@
             <div class="xs-add-report-3">
                
                <div class="ar-field u-m-0" data-group="report_date">
-                 <label for="{{ form.report_date.id_for_label }}"><i class="fa-regular fa-calendar"></i> التاريخ <span class="ar-required-mark">مطلوب</span></label>
+                 <label for="{{ form.report_date.id_for_label }}"><i class="fa-regular fa-calendar"></i> التاريخ <span class="ar-required-mark" aria-hidden="true">*</span></label>
                  {{ form.report_date }}
-                 <div id="reportDateHijri" aria-live="polite" class="xs-add-report-4"></div>
+                 {% comment %} اليوم والتاريخ الهجري مشتقّان من التاريخ نفسه، فهما وصفٌ له
+                    لا حقلان يملؤهما المعلّم. وحقل اليوم يبقى في النموذج لأن
+                    الخادم يستقبله، لكنه لم يعد يشغل خانةً كاملة. {% endcomment %}
+                 <div class="ar-date-caption">
+                   <span id="reportDayEcho" class="ar-date-day"></span>
+                   <span id="reportDateHijri" aria-live="polite" class="xs-add-report-4"></span>
+                 </div>
+                 <div class="ar-visually-hidden">{{ form.day_name }}</div>
                  {% if form.report_date.errors %}<div class="ar-error-msg">{{ form.report_date.errors.0 }}</div>{% endif %}
                  <div class="ar-error-msg u-hidden" id="futureDateErr">تاريخ مستقبلي غير مسموح</div>
                </div>
 
-               <div class="ar-field u-m-0">
-                 <label for="{{ form.day_name.id_for_label }}">اليوم</label>
-                 {{ form.day_name }}
-               </div>
-
                <div class="ar-field u-m-0" data-group="teacher_name">
-                 <label for="id_teacher_name"><i class="fa-solid fa-user"></i> {{ SCHOOL_EXECUTOR_LABEL|default:"المنفّذ" }}</label>
-                 <input type="text" id="id_teacher_name" name="teacher_name" 
-                        value="{{ request.user.name|default:'' }}" readonly aria-readonly="true">
+                 <label><i class="fa-solid fa-user"></i> {{ SCHOOL_EXECUTOR_LABEL|default:"المنفّذ" }}</label>
+                 {% comment %} اسمُ المنفّذ يُثبّته الخادم من الحساب — الحقل هنا كان صندوقاً
+                    للقراءة فقط لا يُقرأ منه شيء، فصار ما هو: سطر معلومة. {% endcomment %}
+                 <p class="ar-static-value">{{ request.user.name|default:"—" }}</p>
                </div>
             </div>
 
@@ -1118,14 +1216,14 @@
               <div class="ar-selected-fields">
                 <div class="ar-section-field" data-section-field="goal">
                   <div class="ar-field" data-group="goal">
-                    <label class="ar-section-field-head" for="{{ form.goal.id_for_label }}"><i class="fa-solid fa-bullseye"></i> الهدف <span class="ar-required-mark">مطلوب عند الاختيار</span></label>
+                    <label class="ar-section-field-head" for="{{ form.goal.id_for_label }}"><i class="fa-solid fa-bullseye"></i> الهدف</label>
                     {{ form.goal }}
                     {% if form.goal.errors %}<div class="ar-error-msg">{{ form.goal.errors.0 }}</div>{% endif %}
                   </div>
                 </div>
                 <div class="ar-section-field ar-editor-wrap" data-section-field="details">
                   <div class="ar-field ar-editor-wrap" data-group="idea">
-                    <label class="ar-section-field-head" for="{{ form.idea.id_for_label }}"><i class="fa-solid fa-align-right"></i> تفاصيل التقرير <span class="ar-required-mark">مطلوب عند الاختيار</span></label>
+                    <label class="ar-section-field-head" for="{{ form.idea.id_for_label }}"><i class="fa-solid fa-align-right"></i> تفاصيل التقرير</label>
                     {{ form.idea }}
                     {% include "reports/partials/report_details_limit.html" with target_id=form.idea.id_for_label %}
                     {% if form.idea.errors %}<div class="ar-error-msg">{{ form.idea.errors.0 }}</div>{% endif %}
@@ -1135,28 +1233,28 @@
                 </div>
                 <div class="ar-section-field" data-section-field="implementation">
                   <div class="ar-field" data-group="implementation_method">
-                    <label class="ar-section-field-head" for="{{ form.implementation_method.id_for_label }}"><i class="fa-solid fa-gears"></i> آلية التنفيذ <span class="ar-required-mark">مطلوب عند الاختيار</span></label>
+                    <label class="ar-section-field-head" for="{{ form.implementation_method.id_for_label }}"><i class="fa-solid fa-gears"></i> آلية التنفيذ</label>
                     {{ form.implementation_method }}
                     {% if form.implementation_method.errors %}<div class="ar-error-msg">{{ form.implementation_method.errors.0 }}</div>{% endif %}
                   </div>
                 </div>
                 <div class="ar-section-field" data-section-field="results">
                   <div class="ar-field" data-group="results">
-                    <label class="ar-section-field-head" for="{{ form.results.id_for_label }}"><i class="fa-solid fa-chart-line"></i> النتائج <span class="ar-required-mark">مطلوب عند الاختيار</span></label>
+                    <label class="ar-section-field-head" for="{{ form.results.id_for_label }}"><i class="fa-solid fa-chart-line"></i> النتائج</label>
                     {{ form.results }}
                     {% if form.results.errors %}<div class="ar-error-msg">{{ form.results.errors.0 }}</div>{% endif %}
                   </div>
                 </div>
                 <div class="ar-section-field" data-section-field="recommendations">
                   <div class="ar-field" data-group="recommendations">
-                    <label class="ar-section-field-head" for="{{ form.recommendations.id_for_label }}"><i class="fa-solid fa-lightbulb"></i> التوصيات <span class="ar-required-mark">مطلوب عند الاختيار</span></label>
+                    <label class="ar-section-field-head" for="{{ form.recommendations.id_for_label }}"><i class="fa-solid fa-lightbulb"></i> التوصيات</label>
                     {{ form.recommendations }}
                     {% if form.recommendations.errors %}<div class="ar-error-msg">{{ form.recommendations.errors.0 }}</div>{% endif %}
                   </div>
                 </div>
                 <div class="ar-section-field" data-section-field="beneficiaries">
                   <div class="ar-field" data-group="beneficiaries_count">
-                    <label class="ar-section-field-head" for="{{ form.beneficiaries_count.id_for_label }}"><i class="fa-solid fa-users"></i> عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }} <span class="ar-required-mark">مطلوب عند الاختيار</span></label>
+                    <label class="ar-section-field-head" for="{{ form.beneficiaries_count.id_for_label }}"><i class="fa-solid fa-users"></i> عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</label>
                     {{ form.beneficiaries_count }}
                     {% if form.beneficiaries_count.errors %}<div class="ar-error-msg">{{ form.beneficiaries_count.errors.0 }}</div>{% endif %}
                   </div>
@@ -1165,31 +1263,39 @@
             </div>
 
           </div>
+
+          <div class="ar-card">
+            {% include "reports/partials/report_evidence_formset.html" %}
+          </div>
         </div>
 
-        <!-- SIDE COLUMN (Images & Actions) -->
+        <!-- SIDE COLUMN — شريط الإجراءات: ما يخصّ حالة التقرير وإرساله لا محتواه -->
         <div class="ar-col-side">
-          
-          <div class="ar-card ar-sticky">
-            {% include "reports/partials/report_evidence_formset.html" %}
-            
+
+          <div class="ar-card ar-sticky ar-rail">
+            {% include "reports/partials/report_summary_rail.html" %}
+
+            {% if report_review_enabled %}{% include "reports/partials/report_review_panel.html" %}{% endif %}
+
             <button type="submit" id="submitBtn" class="ar-submit-btn">
-               <i class="fa-solid fa-floppy-disk"></i> حفظ التقرير
+               <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ التقرير
             </button>
-            
+
              {% if form.non_field_errors %}
                <div class="ar-error-msg u-mt-3 u-justify-center">
                  {% for e in form.non_field_errors %}{{ e }}{% endfor %}
                </div>
              {% endif %}
           </div>
-          
+
         </div>
 
       </div>
+
+      {% include "reports/partials/report_mobile_actions.html" %}
     </form>
   </div>
-  
+
   <!-- Enhanced Upload Overlay -->
   <div class="ar-overlay" id="uploadOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
     <div class="ar-modal">
@@ -1214,12 +1320,17 @@
 {% endblock %}
 
 {% block scripts %}
+{# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqHijri وقت التحليل. #}
+<script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script src="{% static 'js/report-details-limit.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% if report_ai_enabled %}
 <script src="{% static 'js/report-ai-improver.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 {% endif %}
 {% if voice_report_enabled %}
 <script src="{% static 'js/report-voice.js' %}?v=20260812.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+{% endif %}
+{% if report_review_enabled %}
+<script src="{% static 'js/report-review.js' %}?v=20260903.4" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endif %}
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   /* Logic preserved and compacted */
@@ -1244,14 +1355,12 @@
     var day = document.getElementById("id_day_name");
     var err = document.getElementById("futureDateErr");
     var hijriEcho = document.getElementById("reportDateHijri");
-    // التقويم الهجري (أم القرى) مدمج في المتصفّح عبر Intl — بلا أي مكتبة خارجية
-    var hijriFmt = null;
-    try { hijriFmt = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {day:'2-digit', month:'long', year:'numeric'}); } catch(e){ hijriFmt = null; }
+    // التقويم الهجري (أم القرى): التنسيق في js/hijri-date.js — مصدر واحد لكل الشاشات.
     var applyHijri = function(){
        if(!hijriEcho) return;
-       var dt = parseDateInput(d.value);
-       if(!dt || !hijriFmt){ hijriEcho.textContent = ""; return; }
-       hijriEcho.textContent = "📅 الموافق " + hijriFmt.format(dt) + " هـ";
+       hijriEcho.textContent = window.TawtheeqHijri
+         ? window.TawtheeqHijri.echo(parseDateInput(d.value))
+         : "";
     };
     if(day){ day.setAttribute('readonly','readonly'); day.setAttribute('tabindex','-1'); }
     if(d){
@@ -1263,6 +1372,8 @@
          if(!dt) { day.value=""; return; }
          var days = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
          day.value = days[dt.getDay()];
+         var echo = document.getElementById("reportDayEcho");
+         if(echo) echo.textContent = day.value;
        };
        var syncDateFields = function(){
          if(err) err.style.display="none";
@@ -1271,6 +1382,8 @@
          if(dt && dt.getTime() > now.getTime()){
             if(err) err.style.display="flex";
             if(day) day.value="";
+            var echoOut = document.getElementById("reportDayEcho");
+            if(echoOut) echoOut.textContent="";
             if(hijriEcho) hijriEcho.textContent="";
          } else {
             applyDay();
@@ -1749,7 +1862,8 @@
     });
   })();
 </script>
-<script src="{% static 'js/report-evidence-editor.js' %}?v=20260814.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-evidence-editor.js' %}?v=20260903.4" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-summary-rail.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 
 
 {% endblock %}

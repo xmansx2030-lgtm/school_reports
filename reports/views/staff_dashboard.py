@@ -27,6 +27,7 @@ from ..model_parts.assignments import AssignmentTarget
 from ..model_parts.documents import Document
 from ..model_parts.meetings import Meeting
 from ..model_parts.plans import PlanTask
+from ..coverage import pending_documenters, school_staff_queryset
 from ..models import Report, SchoolMembership, TeacherAchievementFile
 from ..permissions import (
     capability_source,
@@ -215,6 +216,41 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
         logger.exception("Staff dashboard cards failed")
         cards = []
 
+    # ── تغطية التوثيق داخل النطاق ─────────────────────────────────────────
+    # هي أنفع ما يُعرض على هذا المستخدم: المدير يتابع مدرسته إجمالاً، والوكيل
+    # يتابع قسمين بعينهما — فمعرفة *من* فيهما لم يوثّق هي عملُه اليومي لا خبراً
+    # عاماً عنه.
+    #
+    # **ولا يُضاف لها حارسٌ جديد.** فنصّ ``view_school_dashboard`` هو «يرى
+    # مؤشرات المدرسة ضمن نطاقه»، وهذه منها. واختراعُ صلاحيةٍ ثانية لما تشمله
+    # الأولى يجعل المدير يمنح صلاحيتين ليحصل على شيءٍ واحد.
+    #
+    # والنافذة شهرٌ لا سنة: بقيّة بطاقات هذه الشاشة حالاتٌ قائمة الآن، فتغطيةٌ
+    # تُقاس على العام كلّه تبدو مطمئنّة بينما القسم صامتٌ منذ أسابيع.
+    coverage = None
+    if supervised and scoped_teacher_ids:
+        try:
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            scoped_staff = school_staff_queryset(school, limit_to=scoped_teacher_ids)
+            total = scoped_staff.count()
+            pending = list(
+                pending_documenters(school, since=month_start, limit_to=scoped_teacher_ids)[:6]
+            )
+            pending_total = pending_documenters(
+                school, since=month_start, limit_to=scoped_teacher_ids
+            ).count()
+            covered = max(0, total - pending_total)
+            coverage = {
+                "total": total,
+                "covered": covered,
+                "pending": pending_total,
+                "percent": round(covered * 100 / total) if total else 0,
+                "pending_preview": pending,
+            }
+        except Exception:
+            logger.exception("Staff dashboard coverage failed")
+            coverage = None
+
     departments = []
     if supervised:
         try:
@@ -234,5 +270,6 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
             "departments": departments,
             "supervised_count": len(supervised),
             "scoped_people": len(scoped_teacher_ids),
+            "coverage": coverage,
         },
     )

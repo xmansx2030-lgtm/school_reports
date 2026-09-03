@@ -38,6 +38,7 @@ from ..ai_features import (
 from ..guidance import role_guidance
 from ..permissions import effective_user_role_label, is_school_manager
 from ._helpers import _get_active_school
+from ..ai_usage import ai_usage_context
 
 
 logger = logging.getLogger(__name__)
@@ -159,6 +160,22 @@ def _resolve_audience(request: HttpRequest, requested_audience, question="", his
     return AUDIENCE_TEACHER
 
 
+def _ask_mansour_attributed(request: HttpRequest, question, **kwargs):
+    """ينادي منصور داخل سياق قياسٍ منسوب — إن كان هناك من يُنسب إليه.
+
+    منصور وحده بين مسارات الذكاء الاصطناعي يخدم زائراً بلا حساب ولا مدرسة،
+    فيُسجَّل نداؤه بلا نسبة. وهذا مقصود لا نقص: كلفةُ الزوّار رقمٌ يخصّ المنصة
+    نفسها لا مدرسةً بعينها، والفصل بينهما هو ما يجعل «كم أنفقت هذه المدرسة»
+    سؤالاً له جواب.
+    """
+    user = getattr(request, "user", None)
+    if not getattr(user, "is_authenticated", False):
+        user = None
+    school = _get_active_school(request) if user is not None else None
+    with ai_usage_context(school=school, teacher=user):
+        return ask_mansour(question, **kwargs)
+
+
 @csrf_exempt
 @never_cache
 @require_POST
@@ -265,7 +282,8 @@ def mansour_assistant_reply(request: HttpRequest) -> JsonResponse:
     try:
         if not getattr(request.session, "session_key", None):
             request.session.create()
-        answer, sources = ask_mansour(
+        answer, sources = _ask_mansour_attributed(
+            request,
             payload.get("question"),
             history=payload.get("history"),
             plans=serialised_plans,

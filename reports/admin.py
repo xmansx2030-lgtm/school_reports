@@ -36,6 +36,7 @@ from .models import (
     Payment,
     CustomerComplaint,
     AuditLog,
+    AiUsageEvent,
     ErasureRequest,
     SchoolApiKey,
     TeacherTotpDevice,
@@ -811,6 +812,36 @@ class CustomerComplaintAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def has_add_permission(self, request):
+        return False
+
+
+@admin.register(AiUsageEvent)
+class AiUsageEventAdmin(admin.ModelAdmin):
+    """قراءة فقط: هذه وقائع قياس، وتعديلها يُفسد الرقم الذي تقيسه."""
+
+    list_display = (
+        "created_at", "stage", "model_name", "outcome",
+        "input_tokens", "cached_display", "output_tokens",
+        "duration_ms", "estimated_cost", "school",
+    )
+    list_filter = ("stage", "outcome", "model_name", "created_at")
+    search_fields = ("school__name", "teacher__name", "model_name", "error_kind")
+    readonly_fields = tuple(
+        field.name for field in AiUsageEvent._meta.fields
+    )
+    date_hierarchy = "created_at"
+    list_select_related = ("school",)
+
+    @admin.display(description="المخزَّن")
+    def cached_display(self, obj):
+        if not obj.input_tokens:
+            return "—"
+        return f"{obj.cached_input_tokens:,} ({obj.cache_hit_ratio:.0%})"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False
 
 

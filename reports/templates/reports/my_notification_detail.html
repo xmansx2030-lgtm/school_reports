@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load hijri_tags %}
 {% load static %}
 
 {% block title %}{% if n.requires_signature %}تفاصيل التعميم{% else %}تفاصيل الإشعار{% endif %}{% endblock %}
@@ -546,7 +547,7 @@
             {% if r.created_at %}
               <div class="mnd-meta-item">
                 <span class="mnd-meta-label"><i class="fa-regular fa-calendar"></i> تاريخ الإرسال</span>
-                <span class="mnd-meta-value">{{ r.created_at|date:"Y-m-d H:i" }}</span>
+                <span class="mnd-meta-value">{{ r.created_at|hijri }} هـ · {{ r.created_at|time:"H:i" }}</span>
               </div>
             {% endif %}
             <div class="mnd-meta-item">
@@ -556,20 +557,20 @@
             {% if r.read_at %}
               <div class="mnd-meta-item">
                 <span class="mnd-meta-label"><i class="fa-regular fa-eye"></i> وقت القراءة</span>
-                <span class="mnd-meta-value">{{ r.read_at|date:"Y-m-d H:i" }}</span>
+                <span class="mnd-meta-value">{{ r.read_at|hijri }} هـ · {{ r.read_at|time:"H:i" }}</span>
               </div>
             {% endif %}
             {% if n.requires_signature %}
               {% if r.signed_at %}
                 <div class="mnd-meta-item">
                   <span class="mnd-meta-label"><i class="fa-solid fa-pen-nib"></i> وقت التوقيع</span>
-                  <span class="mnd-meta-value">{{ r.signed_at|date:"Y-m-d H:i" }}</span>
+                  <span class="mnd-meta-value">{{ r.signed_at|hijri }} هـ · {{ r.signed_at|time:"H:i" }}</span>
                 </div>
               {% endif %}
               {% if n.signature_deadline_at and not r.is_signed %}
                 <div class="mnd-meta-item">
                   <span class="mnd-meta-label"><i class="fa-solid fa-hourglass-half"></i> آخر موعد للتوقيع</span>
-                  <span class="mnd-meta-value xs-my-notification-detail-5">{{ n.signature_deadline_at|date:"Y-m-d H:i" }}</span>
+                  <span class="mnd-meta-value xs-my-notification-detail-5">{{ n.signature_deadline_at|hijri }} هـ · {{ n.signature_deadline_at|time:"H:i" }}</span>
                 </div>
               {% endif %}
             {% endif %}
@@ -602,7 +603,7 @@
                 <div>
                   <div class="mnd-signed-title">تم اعتماد توقيعك بنجاح</div>
                   <div class="mnd-signed-sub">
-                    {% if r.signed_at %}وُقِّع بتاريخ {{ r.signed_at|date:"Y-m-d H:i" }}{% else %}تم تسجيل توقيعك على هذا التعميم.{% endif %}
+                    {% if r.signed_at %}وُقِّع بتاريخ {{ r.signed_at|hijri }} هـ · {{ r.signed_at|time:"H:i" }}{% else %}تم تسجيل توقيعك على هذا التعميم.{% endif %}
                   </div>
                 </div>
               </div>
@@ -612,7 +613,7 @@
               {% if n.signature_deadline_at %}
                 <div class="mnd-deadline">
                   <i class="fa-solid fa-hourglass-half"></i>
-                  آخر موعد للتوقيع: {{ n.signature_deadline_at|date:"Y-m-d H:i" }}
+                  آخر موعد للتوقيع: {{ n.signature_deadline_at|hijri }} هـ · {{ n.signature_deadline_at|time:"H:i" }}
                 </div>
               {% endif %}
 

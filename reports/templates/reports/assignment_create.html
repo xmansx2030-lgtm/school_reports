@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}تكليف جديد | منصة توثيق{% endblock %}
 
@@ -296,6 +297,8 @@
 
 </div>
 
+{# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqHijri وقت التحليل. #}
+<script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function () {
     var form = document.getElementById('asgForm');
@@ -304,20 +307,14 @@
     // ── الموعد: اختصارات + صدى هجري ──────────────────────────────
     var due = document.getElementById('{{ form.due_at.id_for_label }}');
     var echo = document.getElementById('dueHijri');
-    var hijri = null;
-    try {
-      hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
-        day: '2-digit', month: 'long', year: 'numeric'
-      });
-    } catch (error) { hijri = null; }
-
     function pad(value) { return String(value).padStart(2, '0'); }
 
+    // التقويم الهجري: التنسيق في js/hijri-date.js — مصدر واحد لكل الشاشات.
     function paintEcho() {
       if (!echo || !due) return;
-      var value = due.value ? new Date(due.value) : null;
-      if (!value || isNaN(value.getTime()) || !hijri) { echo.textContent = ''; return; }
-      echo.textContent = 'الموافق ' + hijri.format(value) + ' هـ';
+      echo.textContent = window.TawtheeqHijri
+        ? window.TawtheeqHijri.echo(due.value, 'الموافق ')
+        : '';
     }
 
     if (due) {

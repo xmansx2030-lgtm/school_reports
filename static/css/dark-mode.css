@@ -27,6 +27,10 @@ html[data-theme="dark"] {
   --green-soft: #113328;
   --gold-soft: #352d1e;
   --danger: #ff8c91;
+  /* الشارة تبقى مضيئة لتشدّ العين على خلفيةٍ داكنة، ويصير حبرها داكناً
+     بدل الأبيض: ‎#3d0a0c‎ على ‎#ff8c91‎ = ‎7.55‎ بدلاً من ‎2.23‎. */
+  --badge-count-bg: #ff8c91;
+  --badge-count-ink: #3d0a0c;
   /* حلقة التركيز في الوضع الداكن: الذهبي الفاتح لا الغامق — الغامق
      يختفي على خلفية ‎#061512‎ فيعود مستعمل لوحة المفاتيح أعمى. */
   --focus-ring: #e8c877;
@@ -417,6 +421,20 @@ html[data-theme="dark"] .ar-section-option.is-selected {
   background: linear-gradient(135deg, #14382c, #2b2719);
   border-color: #55cf91;
 }
+/* داخل بطاقة البند: العنوان والوصف والعلامة كُتبت بألوانٍ فاتحةِ الوضع في
+   القالب، فورثت الخلفيةَ الداكنة دون الحبر — «الغاية المراد تحقيقها» بـ‎3.71‎
+   و«ملخص ما تم تنفيذه» بـ‎3.92‎، وكلاهما الشرحُ الوحيد لما يفعله البند. */
+html[data-theme="dark"] .ar-section-option strong { color: #edf6f1; }
+html[data-theme="dark"] .ar-section-option small { color: #abc0b6; }   /* 8.5 */
+html[data-theme="dark"] .ar-section-option .option-check { color: #42ca88; }
+/* علامة الحقل المطلوب صارت نجمةً هادئة لا رقعةً حمراء: تسعُ رقعٍ حمراء قبل
+   كتابة حرفٍ واحد تُفقد اللونَ معناه. فتبقى محايدةً هنا أيضاً، ولا تحمرّ إلا
+   حين يُخطئ الحقل فعلاً — وهي الحالة التي يُراد للأحمر أن يعنيها. */
+html[data-theme="dark"] .ar-required-mark {
+  color: #aebdb5;
+  background: transparent;
+}
+html[data-theme="dark"] .ar-field.is-invalid .ar-required-mark { color: #ff8c91; }
 html[data-theme="dark"] .ar-builder-badge {
   color: #9ce8bd;
   background: rgba(66, 202, 136, .13);
@@ -517,8 +535,13 @@ html[data-theme="dark"] .status-approved { color: #9ce8bd; background: rgba(66, 
 html[data-theme="dark"] .status-returned { color: #ffc5c8; background: rgba(255, 140, 145, .13); }
 
 /* Leadership portfolio. */
+/* ‎.lp-shell‎ هو غلاف قائمة ملفات الأداء القيادي، وكان ساقطاً من هذه القائمة.
+   ولمّا كان القالب يعرّف ‎--lp-ink‎ محلياً على الغلاف نفسه، لم تصله الطبقة
+   الداكنة: فبقيت أرقام «محاور مكتملة» و«تقارير موثقة» بلون ‎#17211c‎ فوق
+   بطاقةٍ صارت ‎#0d241d‎ — نسبة تباينٍ 1.01، أي غيابٌ تام لا ضعفَ قراءة. */
 html[data-theme="dark"] .lp-work,
-html[data-theme="dark"] .lp-page {
+html[data-theme="dark"] .lp-page,
+html[data-theme="dark"] .lp-shell {
   --deep: #d6f5e4;
   --ink: #edf6f1;
   --muted: #abc0b6;
@@ -526,6 +549,12 @@ html[data-theme="dark"] .lp-page {
   --lp-ink: #edf6f1;
   --lp-muted: #abc0b6;
 }
+/* شارة الحالة ("قيد الإعداد") تُثبّت خلفيةً فاتحة في القالب. */
+html[data-theme="dark"] .lp-status {
+  color: #c4f3d9;
+  background: #14382c;
+}
+html[data-theme="dark"] .lp-create { border-bottom-color: rgba(205, 225, 216, .16); }
 html[data-theme="dark"] .lp-btn:not(.lp-btn--gold):not(.lp-btn--green):not(.lp-btn--primary),
 html[data-theme="dark"] .lp-item,
 html[data-theme="dark"] .lp-panel,
@@ -1449,4 +1478,247 @@ html[data-theme="dark"] .theme-toggle--floating {
 @media print {
   .theme-toggle--floating,
   .theme-status { display: none !important; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     الورق أبيضُ دائماً.
+
+     الطبقة الداكنة تُعطي الحبر ألواناً فاتحة لتُقرأ على خلفيةٍ سوداء. ثم
+     تأتي الطابعة فتُسقط الخلفية — لأن المتصفّحات لا تطبع خلفيات الصفحة
+     افتراضاً — ويبقى الحبر الفاتح على بياض الورقة. فيخرج المدير بورقةٍ
+     عناوينُها رمادٌ باهت لا يكاد يُرى، ولا يعلم أن السبب زرٌّ ضغطه في
+     الليل قبل ساعة.
+
+     والعلاج في مكانٍ واحد: تُردّ الرموز إلى قيَمها الفاتحة داخل ‎@media
+     print‎ وحده. فيصلح بذلك كل ما يُطبع في المنصة — التقارير والمحاضر
+     والتكليفات ولقطة اللوحة — لا هذه الصفحة وحدها.
+     ───────────────────────────────────────────────────────────────────── */
+  html[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --bg-body: #ffffff;
+    --bg-sub: #f4f7f3;
+    --card: #ffffff;
+    --surface: #ffffff;
+    --paper: #ffffff;
+    --ink: #10251f;
+    --ink-soft: #10251f;
+    --muted: #4a5a52;
+    --line: #c9d3cd;
+    --line-2: #dde5e0;
+    --border: #c9d3cd;
+    --border-light: #dde5e0;
+    --text-main: #10251f;
+    --text-muted: #4a5a52;
+    --text-light: #63736b;
+    --brand: #006c35;
+    --brand-700: #005a2c;
+    --brand-ink: #04321f;
+    --brand-light: #edf5ef;
+    --brand-soft: #edf5ef;
+    --green-light: #edf5ef;
+    --green-soft: #edf5ef;
+    --gold-soft: #f7f1e5;
+    --danger: #b3261e;
+    --surface-color: #ffffff;
+    --surface-glass: #ffffff;
+    --card-bg: #ffffff;
+    --bg-main: #ffffff;
+    --bg-page: #ffffff;
+    --bg-card: #ffffff;
+    --bg-subtle: #f4f7f3;
+    --input-bg: #ffffff;
+    --hover-bg: #f4f7f3;
+    --border-color: #c9d3cd;
+    --badge-count-bg: #c62828;
+    --badge-count-ink: #ffffff;
+    /* رموز الهوية — منها تتقلّب أغلب الأسطح والحبر في اللوحة. */
+    --id-accent: #006c35;
+    --id-accent-ink: #ffffff;
+    --id-accent-wash: #edf5ef;
+    --id-ink: #10251f;
+    --id-muted: #4a5a52;
+    --id-line: #c9d3cd;
+    --id-surface: #ffffff;
+    --id-surface-2: #f4f7f3;
+    --id-canvas: #ffffff;
+  }
+
+  /* ما بقي بلونٍ مكتوبٍ بيده في الطبقة الداكنة يُردّ صراحةً. */
+  html[data-theme="dark"] body,
+  html[data-theme="dark"] h1,
+  html[data-theme="dark"] h2,
+  html[data-theme="dark"] h3,
+  html[data-theme="dark"] h4,
+  html[data-theme="dark"] p,
+  html[data-theme="dark"] td,
+  html[data-theme="dark"] th,
+  html[data-theme="dark"] li,
+  html[data-theme="dark"] strong,
+  html[data-theme="dark"] small,
+  html[data-theme="dark"] span,
+  html[data-theme="dark"] div {
+    color: #10251f !important;
+    background-color: transparent !important;
+  }
+  html[data-theme="dark"] .card,
+  html[data-theme="dark"] .app-card,
+  html[data-theme="dark"] .manager-section,
+  html[data-theme="dark"] .manager-insight,
+  html[data-theme="dark"] .manager-kpi {
+    background-color: #ffffff !important;
+    border-color: #c9d3cd !important;
+    box-shadow: none !important;
+  }
+
+  /* المساعد العائم وأدوات التنقّل ليست معلومات، فلا تُنفق حبراً. */
+  .mansour-launcher,
+  .mansour-panel,
+  .bottom-nav,
+  .drawer,
+  .hdr-nav,
+  .pwa-install,
+  .web-push-prompt { display: none !important; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ما سقط من الطبقة الداكنة — مواضعُ رُصدت بقياس التباين على مسارات المدير
+   الاثنين والثلاثين، لا بقراءة الملفات. العلّة واحدة في كلٍّ منها: القالب
+   كتب لونه بيده لوضعٍ فاتح، فقلبت الطبقةُ الخلفيةَ دون الحبر.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* رقم خطوة رحلة الاشتراك: ‎--id-accent-ink‎ يصير داكناً في الليل فوق تدرّجٍ
+   أخضرَ داكن — ‎1.08‎، أي رقمٌ غائب لا باهت. */
+html[data-theme="dark"] .subx-journey__number {
+  color: #d6f5e4;                     /* 13.76 على ‎#14251c‎ */
+  background: linear-gradient(135deg, #14523a, #0c3527);
+  border: 1px solid rgba(205, 225, 216, .18);
+}
+
+/* رقم خطوة المستلمين في الإشعار والتعميم: الخلفية ‎--c-primary‎ تصير خضراء
+   فاتحة في الليل، فالأبيض فوقها ‎2.09‎. الحبر يُقلب لا الخلفية — البهجة
+   مقصودة هنا، والمقروئية ليست ثمنها. */
+html[data-theme="dark"] .recipient-step-number,
+html[data-theme="dark"] .notify-scope .recipient-step-number {
+  color: #06231a;                     /* 7.95 على ‎#42ca88‎ */
+}
+
+/* شارات سجل العمليات: خمسُ صيغٍ بحبرٍ فاتحِ الوضع فوق حشوةٍ شفافة.
+   تُنقل إلى ألوان اللوحة الداكنة المعتمدة نفسها (‎8.5–12.29‎). */
+html[data-theme="dark"] .b-create { color: #9ce8bd; background: rgba(66, 202, 136, .14); border-color: rgba(66, 202, 136, .26); }
+html[data-theme="dark"] .b-update { color: #bae6fd; background: rgba(125, 200, 247, .13); border-color: rgba(125, 200, 247, .24); }
+html[data-theme="dark"] .b-delete { color: #ffc5c8; background: rgba(255, 140, 145, .14); border-color: rgba(255, 140, 145, .26); }
+html[data-theme="dark"] .b-login  { color: #f0d69d; background: rgba(240, 214, 157, .13); border-color: rgba(240, 214, 157, .24); }
+html[data-theme="dark"] .b-other  { color: #abc0b6; background: rgba(205, 225, 216, .10); border-color: rgba(205, 225, 216, .20); }
+
+/* نجمة الحقل المطلوب: ‎#ef4444‎ يعطي ‎4.34‎ — تحت الحدّ بقليل، وهي العلامة
+   الوحيدة التي تُميّز الإلزامي من الاختياري فلا تُترك على الحافة. */
+html[data-theme="dark"] .req,
+html[data-theme="dark"] .required-mark,
+html[data-theme="dark"] .xs-send-notification-1 { color: #ff8c91; }
+
+/* ‎send_circular.html‎ يعرّف لوحته الخاصة ‎--c-*‎ على ‎:root‎ لوضعٍ فاتح.
+   و‎html[data-theme="dark"]‎ أعلى تخصيصاً من ‎:root‎ فيسبقها هنا. */
+html[data-theme="dark"] {
+  --c-text-main: #edf6f1;
+  --c-text-muted: #abc0b6;            /* 8.05 بدل 3.24 */
+  --c-bg: #061512;
+  --c-card-bg: #0d241d;
+  --c-border: rgba(205, 225, 216, .18);
+  --c-primary: #42ca88;
+  --c-primary-dark: #36b979;
+  --c-primary-light: rgba(66, 202, 136, .12);
+  --c-success: #9ce8bd;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   extracted.css — الأنماط التي انتُزعت من سمات style= المتناثرة. جُمعت في
+   ملفٍ واحد لكن بلا نظيرٍ داكن، فبقيت أربعةَ عشرَ لوناً من سبعةَ عشرَ دون
+   الحدّ: أدناها #0f172a بتباين 1.09 وأعلاها #ef4444 بـ4.34.
+
+   والنقل هنا بحسب *دور* اللون لا درجته: كل أخضرٍ داكن يصير أخضر اللوحة
+   الفاتح، وكل رمادي يصير النص الثانوي، وكل أحمر يصير لون الخطر الداكن.
+   ───────────────────────────────────────────────────────────────────────── */
+/* أخضر العلامة: #08643b، #087f5b، #0a5c33، #147449، #184c35 تصير #9ce8bd — تباين 11.41 بدل 1.65 كأسوأ حال. */
+html[data-theme="dark"] .xs-add-report-1,
+html[data-theme="dark"] .xs-add-report-4,
+html[data-theme="dark"] .xs-assignment-board-1,
+html[data-theme="dark"] .xs-assignment-view-1,
+html[data-theme="dark"] .xs-council-list-1,
+html[data-theme="dark"] .xs-edit-report-1,
+html[data-theme="dark"] .xs-generated-export-status-3,
+html[data-theme="dark"] .xs-generated-export-status-7,
+html[data-theme="dark"] .xs-group-assignment-board-1,
+html[data-theme="dark"] .xs-group-report-1,
+html[data-theme="dark"] .xs-meeting-list-1,
+html[data-theme="dark"] .xs-notification-signatures-print-3,
+html[data-theme="dark"] .xs-notification-signatures-print-4 { color: #9ce8bd; }
+
+/* نص ثانوي: #53635c، #64748b، #68766d، #6b7772 تصير #abc0b6 — تباين 8.5 بدل 2.57 كأسوأ حال. */
+html[data-theme="dark"] .xs-departments-list-1,
+html[data-theme="dark"] .xs-generated-export-status-5,
+html[data-theme="dark"] .xs-generated-export-status-6,
+html[data-theme="dark"] .xs-notification-signatures-print-12,
+html[data-theme="dark"] .xs-reporttypes-list-1,
+html[data-theme="dark"] .xs-send-circular-12,
+html[data-theme="dark"] .xs-send-circular-7 { color: #abc0b6; }
+
+/* نص أساسي: #0f172a تصير #edf6f1 — تباين 14.8 بدل 1.09 كأسوأ حال. */
+html[data-theme="dark"] .xs-achievement-file-9 { color: #edf6f1; }
+
+/* تحذير أو خطر: #b42318، #b91c1c، #dc2626، #ef4444 تصير #ff8c91 — تباين 7.31 بدل 2.48 كأسوأ حال. */
+html[data-theme="dark"] .xs-achievement-school-files-6,
+html[data-theme="dark"] .xs-notification-signatures-print-5,
+html[data-theme="dark"] .xs-notification-signatures-print-6,
+html[data-theme="dark"] .xs-report-print-7,
+html[data-theme="dark"] .xs-report-print-8,
+html[data-theme="dark"] .xs-school-manager-create-2,
+html[data-theme="dark"] .xs-send-circular-10,
+html[data-theme="dark"] .xs-send-circular-4,
+html[data-theme="dark"] .xs-send-circular-6,
+html[data-theme="dark"] .xs-send-notification-1 { color: #ff8c91; }
+
+/* صندوق الطلبات: ستُّ شاراتِ حالةٍ وشارةُ قسم، كلُّها بحبرٍ فاتحِ الوضع فوق
+   حشوةٍ شفافة. ظهرت منها ‎.dept-chip‎ وحدها في القياس لأنها الوحيدة التي
+   حملت قيمةً في البيانات — والخمسُ الأخرى تنتظر أول طلبٍ بحالتها. */
+html[data-theme="dark"] .inbox-wrap .s-open,
+html[data-theme="dark"] .inbox-wrap .s-new { color: #9ce8bd; background: rgba(66, 202, 136, .14); border-color: rgba(66, 202, 136, .26); }
+html[data-theme="dark"] .inbox-wrap .s-in_progress,
+html[data-theme="dark"] .inbox-wrap .s-pending { color: #f0d69d; background: rgba(240, 214, 157, .13); border-color: rgba(240, 214, 157, .24); }
+html[data-theme="dark"] .inbox-wrap .s-done { color: #bae6fd; background: rgba(125, 200, 247, .13); border-color: rgba(125, 200, 247, .24); }
+html[data-theme="dark"] .inbox-wrap .s-rejected,
+html[data-theme="dark"] .inbox-wrap .s-cancelled { color: #ffc5c8; background: rgba(255, 140, 145, .14); border-color: rgba(255, 140, 145, .26); }
+html[data-theme="dark"] .inbox-wrap .s-unknown { color: #abc0b6; background: rgba(205, 225, 216, .10); border-color: rgba(205, 225, 216, .20); }
+html[data-theme="dark"] .inbox-wrap .dept-chip { color: #9ce8bd; background: rgba(66, 202, 136, .12); border-color: rgba(66, 202, 136, .24); }
+
+/* الحذف في جدول المنسوبين بعد خفضه إلى إطار: يحتاج نظيراً داكناً وإلا بقي
+   ‎#b3261e‎ بتباين ‎2.48‎ على البطاقة. */
+html[data-theme="dark"] .admin-scope .btn-delete { color: #ff8c91; border-color: rgba(255, 140, 145, .36); }
+html[data-theme="dark"] .admin-scope .btn-delete:hover,
+html[data-theme="dark"] .admin-scope .btn-delete:focus-visible { color: #3d0a0c; background: #ff8c91; border-color: #ff8c91; }
+
+/* ── شارة الاتجاه وبطاقة تغطية التوثيق ─────────────────────────────────
+   ‎--id-green-050‎ لا يُعاد تعريفه في الليل، فتبقى حشوة الشارة بيضاء ويقع
+   نصّها الرمادي عليها بتباين ‎1.99‎ — نفس علّة كل ما سبق: خلفيةٌ قُلبت وحبرٌ
+   لم يُقلب. فتُعطى الحالات الثلاث حشوتها وحبرها معاً. */
+html[data-theme="dark"] .kpi-trend--up { color: #9ce8bd; background: rgba(66, 202, 136, .14); }
+html[data-theme="dark"] .kpi-trend--down { color: #ff8c91; background: rgba(255, 140, 145, .14); }
+html[data-theme="dark"] .kpi-trend--flat { color: #abc0b6; background: rgba(205, 225, 216, .10); }
+html[data-theme="dark"] .kpi-trend__baseline { color: inherit; opacity: .78; }
+
+html[data-theme="dark"] .manager-coverage__names li { color: #edf6f1; background: #102920; border-color: rgba(205, 225, 216, .18); }
+html[data-theme="dark"] .manager-coverage__bar { background: #102920; }
+/* ‎:not()‎ لازم: هذا المحدّد (سمة + صنف) أعلى تخصيصاً من صنف المتغيّر
+   الأساسي وحده، فيسرق حبره ويضع الفاتح على الفاتح — تباين ‎1.66‎. */
+html[data-theme="dark"] .manager-coverage__link:not(.manager-coverage__link--primary) {
+  color: #edf6f1;
+  border-color: rgba(205, 225, 216, .20);
+}
+
+/* شريط سياق التذكير في نموذج الإشعار. */
+html[data-theme="dark"] .notify-prefill {
+  border-color: rgba(66, 202, 136, .26);
+  border-inline-start-color: #42ca88;
+  background: rgba(66, 202, 136, .10);
+}
+html[data-theme="dark"] .notify-prefill > i { color: #42ca88; }
+html[data-theme="dark"] .notify-prefill span { color: #abc0b6; }

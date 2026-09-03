@@ -1,9 +1,14 @@
-<section class="report-evidence-editor" data-report-evidence-editor>
+<section
+  class="report-evidence-editor"
+  data-report-evidence-editor
+  data-max-forms="{{ evidence_formset.max_num|default:8 }}"
+  data-prefix="{{ evidence_formset.prefix }}"
+>
   {{ evidence_formset.management_form }}
   <div class="ree-heading">
     <div>
       <h3><i class="fa-solid fa-images" aria-hidden="true"></i> الشواهد المصورة</h3>
-      <p>رتّب الصور، صف محتواها، واختر طريقة ظهورها في النسخة الرسمية.</p>
+      <p>صورة واحدة تختصر نقاشًا كاملًا مع المراجع. <span class="ree-optional">اختيارية</span></p>
     </div>
     <div class="ree-page-mode">
       {{ form.evidence_page_mode }}
@@ -16,57 +21,28 @@
     <div class="ree-error">{{ evidence_formset.non_form_errors.0 }}</div>
   {% endif %}
 
+  {% comment %}
+  بطاقةٌ واحدة تُرسَم، وما بعدها بطلب المستخدم. أربعُ بطاقاتٍ فارغة كانت تشغل
+  نصف الصفحة على الجوال وتدفع زرَّ الحفظ خلف ست شاشات.
+
+  وزرّ الإضافة بلاطةٌ داخل الشبكة لا زرٌّ تحتها: بطاقةٌ واحدة في شبكةِ ثلاثة
+  أعمدة تترك فجوةً تبدو خللاً في التخطيط، أما بلاطةُ «إضافة» بجوارها فتقرأ
+  معرضَ صورٍ فيه مكانٌ شاغر — وهو ما هي عليه فعلاً.
+  {% endcomment %}
   <div class="ree-list" data-evidence-list>
     {% for evidence_form in evidence_formset.forms %}
-      <article class="ree-card{% if not evidence_form.instance.pk %} ree-card--new{% endif %}" data-evidence-card>
-        {{ evidence_form.id }}
-        {{ evidence_form.order }}
-        <div class="ree-card-bar">
-          <span class="ree-number" data-evidence-number>{{ forloop.counter|stringformat:"02d" }}</span>
-          <div class="ree-order-actions">
-            <button type="button" data-move="up" title="تحريك لأعلى" aria-label="تحريك الشاهد لأعلى"><i class="fa-solid fa-arrow-up"></i></button>
-            <button type="button" data-move="down" title="تحريك لأسفل" aria-label="تحريك الشاهد لأسفل"><i class="fa-solid fa-arrow-down"></i></button>
-          </div>
-        </div>
-
-        <div class="ree-preview" data-preview-wrap>
-          {% if evidence_form.instance.image %}
-            <img src="{{ evidence_form.instance.image.url }}" alt="{{ evidence_form.instance.description|default:'معاينة الشاهد' }}" data-preview-image>
-          {% else %}
-            <div class="ree-placeholder" data-preview-placeholder><i class="fa-regular fa-image"></i><span>اختر صورة للشاهد</span></div>
-            <img alt="معاينة الشاهد" data-preview-image hidden>
-          {% endif %}
-          <span class="ree-ratio" data-image-ratio>{% if evidence_form.instance.aspect_ratio_label %}{{ evidence_form.instance.width_px }} × {{ evidence_form.instance.height_px }} · {{ evidence_form.instance.aspect_ratio_label }}{% endif %}</span>
-        </div>
-
-        <div class="ree-fields">
-          <div class="ree-source-actions" aria-label="مصدر الصورة">
-            <button type="button" class="ree-file-label" data-image-source="camera">
-              <i class="fa-solid fa-camera" aria-hidden="true"></i><span>التقاط صورة</span>
-            </button>
-            <label class="ree-file-label ree-file-label--secondary" data-image-source="gallery" for="{{ evidence_form.image.id_for_label }}">
-              <i class="fa-regular fa-images" aria-hidden="true"></i><span>{% if evidence_form.instance.pk %}استبدال من الصور{% else %}اختيار من الصور{% endif %}</span>
-            </label>
-          </div>
-          {{ evidence_form.image }}
-          <label class="ree-description">
-            <span>وصف الشاهد <small>اختياري</small></span>
-            {{ evidence_form.description }}
-          </label>
-          <div class="ree-options">
-            <label><span>حجم العرض</span>{{ evidence_form.display_size }}</label>
-            <label><span>ملاءمة الصورة</span>{{ evidence_form.fit_mode }}</label>
-          </div>
-          <div class="ree-switches">
-            <label>{{ evidence_form.show_in_print }}<span>إظهار في الطباعة</span></label>
-            <label class="ree-delete">{{ evidence_form.DELETE }}<span>حذف الشاهد</span></label>
-          </div>
-          <div class="ree-file-note" data-file-note aria-live="polite"></div>
-          {% for field in evidence_form.visible_fields %}
-            {% if field.errors %}<div class="ree-error">{{ field.label }}: {{ field.errors.0 }}</div>{% endif %}
-          {% endfor %}
-        </div>
-      </article>
+      {% include "reports/partials/report_evidence_card.html" with evidence_form=evidence_form card_number=forloop.counter|stringformat:"02d" %}
     {% endfor %}
+
+    <button type="button" class="ree-add" data-evidence-add>
+      <span class="ree-add-plus" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
+      <span class="ree-add-label">إضافة شاهد</span>
+    </button>
   </div>
+
+  <p class="ree-count" data-evidence-count aria-live="polite"></p>
+
+  <template data-evidence-template>
+    {% include "reports/partials/report_evidence_card.html" with evidence_form=evidence_formset.empty_form card_number="00" %}
+  </template>
 </section>

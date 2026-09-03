@@ -102,13 +102,18 @@ class MobilePwaWorkflowTests(SimpleTestCase):
         self.assertNotIn('form.addEventListener("submit", function(){\n      try{ localStorage.removeItem(KEY)', add_template)
 
     def test_report_evidence_picker_exposes_camera_and_gallery(self):
-        template = _source("reports/templates/reports/partials/report_evidence_formset.html")
+        # بطاقة الشاهد صارت جزئيةً مستقلة يشترك فيها العرضُ من الخادم وقالبُ
+        # البطاقة المضافة بالجافاسكربت، فلا تُكتب مرّتين.
+        template = _source("reports/templates/reports/partials/report_evidence_card.html")
+        formset = _source("reports/templates/reports/partials/report_evidence_formset.html")
         script = _source("static/js/report-evidence-editor.js")
         styles = _source("static/css/report-evidence.css")
 
         self.assertIn('data-image-source="camera"', template)
         self.assertIn('data-image-source="gallery"', template)
         self.assertIn('for="{{ evidence_form.image.id_for_label }}"', template)
+        # الجزئية الواحدة تُدرَج في الموضعين — وإلا افترقت البطاقتان.
+        self.assertEqual(formset.count("reports/partials/report_evidence_card.html"), 2)
         self.assertIn('input.setAttribute("capture", "environment")', script)
         self.assertIn('input.removeAttribute("capture")', script)
         self.assertIn("new FileReader()", script)

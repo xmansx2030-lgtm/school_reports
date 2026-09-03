@@ -1,0 +1,82 @@
+{% comment %}
+لوحة فحص جاهزية التقرير. تُدرَج في العمود الجانبي فوق زر الحفظ.
+
+اللوحة لا تمنع الحفظ ولا تعطّل زراً: المعلّم صاحب القرار، وهذه ملاحظات لا بوّابة.
+والتسميات كلها تصل من الخادم داخل كل ملاحظة، فلا تُترجم الواجهة حقلاً بنفسها
+ولا تفترق تسميةٌ هنا عن تسميةٍ في المدقّق.
+{% endcomment %}
+<section
+  class="report-review"
+  data-report-review
+  data-endpoint="{% url 'reports:review_report_readiness' %}"
+  data-daily-limit="{{ report_review_daily_limit|default:5 }}"
+  data-remaining="{{ report_review_daily_remaining|default:5 }}"
+  data-semantic-enabled="{% if report_review_semantic_enabled %}1{% else %}0{% endif %}"
+  aria-labelledby="report-review-title"
+>
+  <header class="rrv-head">
+    <span class="rrv-head-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+    <div class="rrv-head-copy">
+      <h3 id="report-review-title">فحص الجاهزية</h3>
+      <p>اعرف ما قد يُعيد التقرير قبل أن ترسله.</p>
+    </div>
+  </header>
+
+  <div class="rrv-intro" data-rrv-intro>
+    <p class="rrv-intro-text">
+      يفحص اكتمال البنود المفعّلة وترابطها، ولا يغيّر حرفًا في تقريرك.
+    </p>
+  </div>
+
+  <div class="rrv-result" data-rrv-result hidden>
+    <div class="rrv-score">
+      <div class="rrv-ring" data-rrv-ring role="img" aria-label="درجة الجاهزية" data-rrv-ring-label>
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <circle class="rrv-ring-track" cx="32" cy="32" r="26"></circle>
+          <circle class="rrv-ring-value" cx="32" cy="32" r="26" data-rrv-ring-value></circle>
+        </svg>
+        <b data-rrv-score>0</b>
+      </div>
+      <div class="rrv-score-copy">
+        <strong data-rrv-headline>—</strong>
+        <span data-rrv-summary></span>
+      </div>
+    </div>
+
+    <p class="rrv-stale" data-rrv-stale hidden>
+      <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+      عدّلت التقرير بعد هذا الفحص. أعد الفحص لتحديث النتيجة.
+    </p>
+
+    <ul class="rrv-strengths" data-rrv-strengths hidden></ul>
+
+    <ul class="rrv-issues" data-rrv-issues hidden></ul>
+
+    <p class="rrv-scroll-hint" data-rrv-scroll-hint hidden>
+      <i class="fa-solid fa-angles-down" aria-hidden="true"></i>
+      مرّر داخل القائمة لقراءة باقي الملاحظات.
+    </p>
+
+    <p class="rrv-clean" data-rrv-clean hidden>
+      <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+      لم أجد ما يستوقف المراجع. أرسله وأنت مطمئن.
+    </p>
+
+    <p class="rrv-degraded" data-rrv-degraded hidden>
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      <span data-rrv-degraded-text></span>
+    </p>
+  </div>
+
+  <button type="button" class="rrv-trigger" data-rrv-trigger>
+    <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+    <span data-rrv-trigger-label>افحص جاهزية التقرير</span>
+  </button>
+
+  <p class="rrv-status" data-rrv-status role="status" aria-live="polite"></p>
+
+  <p class="rrv-quota" data-rrv-quota{% if not report_review_semantic_enabled %} hidden{% endif %}>
+    الفحص الذكي: <b data-rrv-remaining>{{ report_review_daily_remaining|default:5 }}</b>
+    من {{ report_review_daily_limit|default:5 }} اليوم · إعادة فحص نصٍّ لم يتغيّر لا تُحتسب
+  </p>
+</section>

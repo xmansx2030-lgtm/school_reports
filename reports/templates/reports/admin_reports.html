@@ -901,12 +901,14 @@
       <form method="get" class="repdash-filters-grid">
         <div class="repdash-field">
           <label for="reportStartDate">من تاريخ</label>
-          <input id="reportStartDate" type="date" name="start_date" value="{{ start_date }}" class="repdash-control">
+          <input id="reportStartDate" type="date" name="start_date" value="{{ start_date }}" class="repdash-control"
+                 data-hijri-echo>
         </div>
 
         <div class="repdash-field">
           <label for="reportEndDate">إلى تاريخ</label>
-          <input id="reportEndDate" type="date" name="end_date" value="{{ end_date }}" class="repdash-control">
+          <input id="reportEndDate" type="date" name="end_date" value="{{ end_date }}" class="repdash-control"
+                 data-hijri-echo>
         </div>
 
         <div class="repdash-field">
@@ -1012,23 +1014,23 @@
 
                 <td>
                   <div class="rd-actions">
-                    <button type="button" class="rd-iconbtn rd-view" title="عرض التفاصيل" data-rd-action="details" data-pk="{{ r.pk }}">
-                      <i class="fa-solid fa-eye"></i>
+                    <button type="button" class="rd-iconbtn rd-view" title="عرض التفاصيل" aria-label="عرض تفاصيل تقرير: {{ r.title|default:"بلا عنوان" }}" data-rd-action="details" data-pk="{{ r.pk }}">
+                      <i class="fa-solid fa-eye" aria-hidden="true"></i>
                     </button>
 
-                    <a href="{% url 'reports:report_print' r.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="rd-iconbtn rd-print" title="طباعة">
-                      <i class="fa-solid fa-print"></i>
+                    <a href="{% url 'reports:report_print' r.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="rd-iconbtn rd-print" title="طباعة" aria-label="طباعة تقرير: {{ r.title|default:"بلا عنوان" }}">
+                      <i class="fa-solid fa-print" aria-hidden="true"></i>
                     </a>
 
                     {% if r.user_can_edit|default:can_delete %}
-                      <a href="{% url 'reports:edit_my_report' r.pk %}?next={{ request.get_full_path|urlencode }}" class="rd-iconbtn rd-edit" title="تعديل">
-                        <i class="fa-solid fa-pen-to-square"></i>
+                      <a href="{% url 'reports:edit_my_report' r.pk %}?next={{ request.get_full_path|urlencode }}" class="rd-iconbtn rd-edit" title="تعديل" aria-label="تعديل تقرير: {{ r.title|default:"بلا عنوان" }}">
+                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                       </a>
                     {% endif %}
 
                     {% if r.user_can_share|default:can_delete %}
-                      <a href="{% url 'reports:report_share_manage' r.pk %}" class="rd-iconbtn rd-share" title="مشاركة">
-                        <i class="fa-solid fa-share-nodes"></i>
+                      <a href="{% url 'reports:report_share_manage' r.pk %}" class="rd-iconbtn rd-share" title="مشاركة" aria-label="مشاركة تقرير: {{ r.title|default:"بلا عنوان" }}">
+                        <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
                       </a>
                     {% endif %}
 
@@ -1036,8 +1038,8 @@
                       <form method="post" action="{% url 'reports:admin_delete_report' r.pk %}" class="rd-delete-form u-inline" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكن استعادته لاحقًا." data-confirm-type="warning">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" class="rd-iconbtn rd-del" title="حذف">
-                          <i class="fa-solid fa-trash"></i>
+                        <button type="submit" class="rd-iconbtn rd-del" title="حذف" aria-label="نقل تقرير إلى سلة المحذوفات: {{ r.title|default:"بلا عنوان" }}">
+                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
                         </button>
                       </form>
                     {% endif %}
@@ -1222,6 +1224,8 @@
 {% endblock %}
 
 {% block scripts %}
+{# الجدول يعرض هجرياً والفلتر يستقبل ميلادياً — هذا يبني الجسر بينهما. #}
+<script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function(){
     function byId(id){ return document.getElementById(id); }

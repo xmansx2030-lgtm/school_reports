@@ -14,8 +14,9 @@ FEATURE_MANSOUR_PUBLIC = "mansour_public"
 FEATURE_REPORT_IMPROVEMENT = "report_improvement"
 FEATURE_INTERNAL_HELP = "internal_help"
 FEATURE_VOICE_REPORT = "voice_report"
+FEATURE_REPORT_REVIEW = "report_review"
 
-CACHE_KEY = "platform_ai_feature_toggles_v1"
+CACHE_KEY = "platform_ai_feature_toggles_v2"
 CACHE_TIMEOUT_SECONDS = 15
 
 _DEFAULTS = {
@@ -23,6 +24,7 @@ _DEFAULTS = {
     FEATURE_REPORT_IMPROVEMENT: True,
     FEATURE_INTERNAL_HELP: True,
     FEATURE_VOICE_REPORT: True,
+    FEATURE_REPORT_REVIEW: True,
 }
 
 _MODEL_FIELDS = {
@@ -30,6 +32,7 @@ _MODEL_FIELDS = {
     FEATURE_REPORT_IMPROVEMENT: "report_ai_enabled",
     FEATURE_INTERNAL_HELP: "internal_ai_help_enabled",
     FEATURE_VOICE_REPORT: "voice_report_enabled",
+    FEATURE_REPORT_REVIEW: "report_review_enabled",
 }
 
 
@@ -43,7 +46,7 @@ def clear_platform_ai_feature_cache() -> None:
 
 
 def get_platform_ai_feature_toggles() -> dict[str, bool]:
-    """Return the three visual feature switches with safe upgrade defaults."""
+    """Return every visual feature switch with safe upgrade defaults."""
 
     try:
         cached = cache.get(CACHE_KEY)
@@ -111,5 +114,6 @@ def ai_feature_flags(request) -> dict[str, object]:
         "AI_REPORT_IMPROVEMENT_ENABLED": toggles[FEATURE_REPORT_IMPROVEMENT],
         "AI_INTERNAL_HELP_ENABLED": toggles[FEATURE_INTERNAL_HELP],
         "AI_VOICE_REPORT_ENABLED": toggles[FEATURE_VOICE_REPORT],
+        "AI_REPORT_REVIEW_ENABLED": toggles[FEATURE_REPORT_REVIEW],
         "MANSOUR_CHAT_SCOPE": mansour_chat_scope(request),
     }

@@ -53,7 +53,8 @@
   .asg-kpi__v { font-size: 1.6rem; font-weight: 900; line-height: 1.1; }
   .asg-kpi__l { font-size: .78rem; font-weight: 700; color: var(--asg-muted); margin-top: .18rem; }
   .asg-kpi[data-tone="danger"] .asg-kpi__v { color: var(--asg-danger); }
-  .asg-kpi[data-tone="warn"] .asg-kpi__v { color: var(--asg-gold); }
+  /* رقمٌ كبير يحمل نصّاً: يأخذ ذهب الحبر لا ذهب الحشوة. */
+  .asg-kpi[data-tone="warn"] .asg-kpi__v { color: var(--id-gold-ink, var(--asg-gold)); }
 
   .asg-card {
     background: var(--asg-surface); border: 1px solid var(--asg-line);
@@ -86,7 +87,7 @@
     border: 1px solid currentColor; white-space: nowrap; color: var(--asg-muted);
   }
   .asg-tag--late { color: var(--asg-danger); }
-  .asg-tag--soon { color: var(--asg-gold); }
+  .asg-tag--soon { color: var(--id-gold-ink, var(--asg-gold)); }
   .asg-tag--done { color: var(--id-accent-ink); background: var(--asg-green); border-color: transparent; }
   .asg-tag--urgent { color: var(--asg-danger); }
 
@@ -106,7 +107,7 @@
   .asg-btn--primary { background: var(--asg-green); color: var(--id-accent-ink); }
   .asg-btn--ghost { background: transparent; color: var(--asg-muted); border-color: var(--asg-line); }
   .asg-btn--ghost:hover { color: var(--asg-green); border-color: var(--asg-green); }
-  .asg-btn--warn { background: transparent; color: var(--asg-gold); border-color: currentColor; }
+  .asg-btn--warn { background: transparent; color: var(--id-gold-ink, var(--asg-gold)); border-color: currentColor; }
   .asg-btn--danger { background: transparent; color: var(--asg-danger); border-color: currentColor; }
   .asg-btn--violet { background: transparent; color: var(--asg-violet); border-color: currentColor; }
   .asg-btn--sm { padding: .34rem .75rem; font-size: .76rem; }

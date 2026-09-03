@@ -152,7 +152,7 @@ class DarkModeExperienceTests(TestCase):
                 )
 
     def test_dark_stylesheet_cache_version_is_consistent(self):
-        expected_version = "dark-mode.css' %}?v=20260826.1"
+        expected_version = "dark-mode.css' %}?v=20260903.10"
         templates = (
             "reports/templates/base.html",
             "reports/templates/reports/landing.html",

@@ -27,7 +27,13 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from .ai_client import log_usage, request_json, truncation_reason
+from .ai_client import (
+    OPENAI_TRANSCRIPTIONS_URL,
+    call_api,
+    extract_output_text,
+    responses_create,
+    truncation_reason,
+)
 from .ai_errors import AI_SERVICE_PAUSED_MESSAGE, is_openai_spend_limit_error
 from .report_ai import figures_in
 
@@ -41,9 +47,6 @@ MIN_POLISHED_OVERLAP_RATIO = 0.5
 
 
 logger = logging.getLogger(__name__)
-
-OPENAI_TRANSCRIPTIONS_URL = "https://api.openai.com/v1/audio/transcriptions"
-OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
 VOICE_REPORT_DAILY_LIMIT = 3
 VOICE_QUOTA_TIMEOUT_SECONDS = 60 * 60 * 48
@@ -301,29 +304,21 @@ def _words(text: str) -> set[str]:
     }
 
 
-def _extract_output_text(payload: dict) -> str:
-    parts: list[str] = []
-    for output_item in payload.get("output") or []:
-        if not isinstance(output_item, dict) or output_item.get("type") != "message":
-            continue
-        for content_item in output_item.get("content") or []:
-            if not isinstance(content_item, dict) or content_item.get("type") != "output_text":
-                continue
-            text = str(content_item.get("text") or "").strip()
-            if text:
-                parts.append(text)
-    return "\n".join(parts).strip()
-
-
 def _clean(value: str) -> str:
     text = str(value or "").replace("​", "").replace("﻿", "").strip()
     return re.sub(r"^```(?:\w+)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
 
 
-def _post(request: Request, *, timeout: float, stage: str) -> dict:
-    try:
-        return request_json(request, timeout=timeout, stage=stage)
-    except HTTPError as exc:
+# أعطالُ المزوّد تُترجَم إلى ``VoiceReportUnavailable`` في **كل** مسارات هذه
+# الوحدة، لا في مسار التفريغ وحده. ومرحلة التجميل تعتمد على ذلك: هي تلتقط
+# ``VoiceReportError`` لتعيد التفريغ الخام بدل أن تُسقط الطلب، فلو تسرّب إليها
+# ``HTTPError`` خاماً لضاع على المعلّم كلامه كلّه لأن التجميل تعثّر.
+PROVIDER_ERRORS = (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError)
+
+
+def _raise_voice_error(exc: Exception, stage: str) -> None:
+    """يرفع دائماً — لا يعود."""
+    if isinstance(exc, HTTPError):
         if is_openai_spend_limit_error(exc):
             logger.warning("Voice report %s stopped by the configured spend limit.", stage)
             raise VoiceReportUnavailable(AI_SERVICE_PAUSED_MESSAGE) from exc
@@ -331,11 +326,26 @@ def _post(request: Request, *, timeout: float, stage: str) -> dict:
         raise VoiceReportUnavailable(
             "تعذر تفريغ التسجيل الآن. حاول مرة أخرى بعد قليل."
         ) from exc
-    except (URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
-        logger.warning("Voice report %s failed: %s.", stage, exc.__class__.__name__)
-        raise VoiceReportUnavailable(
-            "تعذر الوصول إلى خدمة التفريغ الآن. تحقق من الاتصال ثم أعد المحاولة."
-        ) from exc
+    logger.warning("Voice report %s failed: %s.", stage, exc.__class__.__name__)
+    raise VoiceReportUnavailable(
+        "تعذر الوصول إلى خدمة التفريغ الآن. تحقق من الاتصال ثم أعد المحاولة."
+    ) from exc
+
+
+def _post(request: Request, *, timeout: float, stage: str, model: str = "") -> dict:
+    """التفريغ: طلب multipart يبنيه المتّصل."""
+    try:
+        return call_api(request, timeout=timeout, stage=stage, model=model)
+    except PROVIDER_ERRORS as exc:
+        _raise_voice_error(exc, stage)
+
+
+def _post_responses(body: dict, *, timeout: float, stage: str) -> dict:
+    """التجميل: واجهة الاستجابات عبر الباب الموحّد، بالترجمة نفسها."""
+    try:
+        return responses_create(body, api_key=_api_key(), timeout=timeout, stage=stage)
+    except PROVIDER_ERRORS as exc:
+        _raise_voice_error(exc, stage)
 
 
 def _transcription_keywords() -> list[str]:
@@ -399,14 +409,14 @@ def _transcribe_audio(payload: bytes, extension: str, *, filename_prefix: str) -
         content_type=f"audio/{extension}",
         payload=payload,
     )
-    request = Request(
+    request = Request(  # noqa: S310 - عنوانٌ ثابت للمزوّد، لا مدخلٌ من مستخدم
         OPENAI_TRANSCRIPTIONS_URL,
         data=body,
         headers={"Authorization": f"Bearer {_api_key()}", "Content-Type": content_type},
         method="POST",
     )
     timeout = float(getattr(settings, "VOICE_REPORT_TIMEOUT_SECONDS", 60))
-    result = _post(request, timeout=timeout, stage="transcription")
+    result = _post(request, timeout=timeout, stage="transcription", model=model)
 
     text = _clean(str(result.get("text") or ""))
     if len(text) < MIN_TRANSCRIPT_LENGTH:
@@ -443,24 +453,17 @@ def _polish_dictation(raw_text: str, *, instructions: str) -> str:
         "max_output_tokens": int(getattr(settings, "VOICE_REPORT_MAX_OUTPUT_TOKENS", 1200)),
         "store": False,
     }
-    request = Request(
-        OPENAI_RESPONSES_URL,
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={"Authorization": f"Bearer {_api_key()}", "Content-Type": "application/json"},
-        method="POST",
-    )
     timeout = float(getattr(settings, "VOICE_REPORT_TIMEOUT_SECONDS", 60))
 
     try:
-        payload = _post(request, timeout=timeout, stage="polish")
-        log_usage(payload, stage="voice-polish", model=model)
+        payload = _post_responses(body, timeout=timeout, stage="voice-polish")
         # فقرةٌ انقطعت عند سقف الرموز تصل بحقل نصّ سليم الشكل. والتفريغ الخام
         # كاملٌ وإن كان بلا ترقيم، فهو أصدق من تجميلٍ مقطوع في منتصف جملة.
         reason = truncation_reason(payload)
         if reason:
             logger.warning("Voice report polish was incomplete (%s); keeping the transcript.", reason)
             return raw_text
-        polished = _clean(_extract_output_text(payload))
+        polished = _clean(extract_output_text(payload))
     except VoiceReportError:
         # التفريغ الخام نصٌّ صحيح وإن كان بلا ترقيم. إسقاط الطلب كله لأن
         # مرحلة التجميل تعثّرت يضيّع على المعلّم كلامه بلا سبب.

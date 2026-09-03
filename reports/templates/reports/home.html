@@ -656,7 +656,12 @@
     font-size: .66rem;
     font-weight: 900;
   }
-  .th-status.status-open { color: var(--th-orange); background: rgba(201, 106, 22, .1); }
+  /* ‎--th-orange‎ نغمةُ تنبيهٍ للأيقونات والحدود؛ وحملُها نصاً بـ‎10.5px‎ فوق
+     حشوتها الشفافة يعطي ‎3.16‎. فتأخذ الشارة ذهبَ الحبر — ‎4.55‎ — ويبقى
+     ‎--th-orange‎ حيث هو سطحٌ لا حبر.
+
+     وهو تعليق CSS لا تعليق قالب: هذا السطر داخل ‎<style>‎. */
+  .th-status.status-open { color: var(--id-gold-ink, var(--th-orange)); background: rgba(201, 106, 22, .1); }
   .th-status.status-in_progress { color: var(--th-blue); background: rgba(37, 99, 235, .1); }
   .th-status.status-rejected { color: var(--th-red); background: rgba(195, 59, 59, .1); }
 
@@ -821,7 +826,7 @@
               الإدارة
             {% endif %}
           </span>
-          <time dir="ltr">{{ home_notification.created_at|date:"Y-m-d H:i" }}</time>
+          <time datetime="{{ home_notification.created_at|date:'c' }}">{{ home_notification.created_at|hijri }} هـ · {{ home_notification.created_at|time:"H:i" }}</time>
           {% if home_notification_recipient_id %}
             <span class="th-notification-actions">
               <a class="th-notification-open" href="{% if home_notification.requires_signature %}{% url 'reports:my_circular_detail' home_notification_recipient_id %}{% else %}{% url 'reports:my_notification_detail' home_notification_recipient_id %}{% endif %}">
@@ -1287,7 +1292,7 @@
                   <span class="th-item-meta">
                     {% if ticket.department %}<span>{{ ticket.department.name }}</span>{% endif %}
                     <span>{{ ticket.created_at|hijri }} هـ</span>
-                    <time dir="ltr" datetime="{{ ticket.created_at|date:'c' }}">({{ ticket.created_at|date:"Y-m-d" }})</time>
+                    <time dir="ltr" datetime="{{ ticket.created_at|date:'c' }}">{{ ticket.created_at|date:"Y-m-d" }} م</time>
                   </span>
                 </span>
                 <span class="th-status status-{{ ticket.status }}">{{ ticket.get_status_display }}</span>

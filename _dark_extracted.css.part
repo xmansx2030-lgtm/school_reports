@@ -1,0 +1,83 @@
+/* نص أساسي: #0f172a → #edf6f1 (تباين 14.8 بدل 1.09) */
+html[data-theme="dark"] .xs-achievement-file-9
+{ color: #edf6f1; }
+
+/* أخضر العلامة: #184c35 → #9ce8bd (تباين 11.41 بدل 1.65) */
+html[data-theme="dark"] /* ── reports/add_report.html ── */
+.xs-add-report-1
+{ color: #9ce8bd; }
+
+/* أخضر العلامة: #0a5c33 → #9ce8bd (تباين 11.41 بدل 2.01) */
+html[data-theme="dark"] .xs-add-report-4,
+html[data-theme="dark"] /* ── reports/edit_report.html ── */
+.xs-edit-report-1
+{ color: #9ce8bd; }
+
+/* أخضر العلامة: #08643b → #9ce8bd (تباين 11.41 بدل 2.25) */
+html[data-theme="dark"] /* ── reports/assignment_board.html ── */
+.xs-assignment-board-1,
+html[data-theme="dark"] /* ── reports/assignment_view.html ── */
+.xs-assignment-view-1,
+html[data-theme="dark"] /* ── reports/council_list.html ── */
+.xs-council-list-1,
+html[data-theme="dark"] /* ── reports/group_assignment_board.html ── */
+.xs-group-assignment-board-1,
+html[data-theme="dark"] /* ── reports/group_report.html ── */
+.xs-group-report-1,
+html[data-theme="dark"] /* ── reports/meeting_list.html ── */
+.xs-meeting-list-1
+{ color: #9ce8bd; }
+
+/* أخضر العلامة: #147449 → #9ce8bd (تباين 11.41 بدل 2.82) */
+html[data-theme="dark"] .xs-notification-signatures-print-3,
+html[data-theme="dark"] .xs-notification-signatures-print-4
+{ color: #9ce8bd; }
+
+/* أخضر العلامة: #087f5b → #9ce8bd (تباين 11.41 بدل 3.26) */
+html[data-theme="dark"] .xs-generated-export-status-3,
+html[data-theme="dark"] .xs-generated-export-status-7
+{ color: #9ce8bd; }
+
+/* نص ثانوي: #53635c → #abc0b6 (تباين 8.5 بدل 2.57) */
+html[data-theme="dark"] .xs-generated-export-status-5
+{ color: #abc0b6; }
+
+/* نص ثانوي: #68766d → #abc0b6 (تباين 8.5 بدل 3.42) */
+html[data-theme="dark"] .xs-notification-signatures-print-12
+{ color: #abc0b6; }
+
+/* نص ثانوي: #6b7772 → #abc0b6 (تباين 8.5 بدل 3.5) */
+html[data-theme="dark"] .xs-generated-export-status-6
+{ color: #abc0b6; }
+
+/* نص ثانوي: #64748b → #abc0b6 (تباين 8.5 بدل 3.43) */
+html[data-theme="dark"] /* ── reports/departments_list.html ── */
+.xs-departments-list-1,
+html[data-theme="dark"] /* ── reports/reporttypes_list.html ── */
+.xs-reporttypes-list-1,
+html[data-theme="dark"] .xs-send-circular-7,
+html[data-theme="dark"] .xs-send-circular-12
+{ color: #abc0b6; }
+
+/* تحذير/خطر: #b42318 → #ff8c91 (تباين 7.31 بدل 2.48) */
+html[data-theme="dark"] .xs-notification-signatures-print-5,
+html[data-theme="dark"] .xs-notification-signatures-print-6
+{ color: #ff8c91; }
+
+/* تحذير/خطر: #b91c1c → #ff8c91 (تباين 7.31 بدل 2.52) */
+html[data-theme="dark"] .xs-report-print-7,
+html[data-theme="dark"] .xs-report-print-8
+{ color: #ff8c91; }
+
+/* تحذير/خطر: #dc2626 → #ff8c91 (تباين 7.31 بدل 3.38) */
+html[data-theme="dark"] .xs-school-manager-create-2,
+html[data-theme="dark"] .xs-send-circular-10
+{ color: #ff8c91; }
+
+/* تحذير/خطر: #ef4444 → #ff8c91 (تباين 7.31 بدل 4.34) */
+html[data-theme="dark"] .xs-achievement-school-files-6,
+html[data-theme="dark"] .xs-send-circular-4,
+html[data-theme="dark"] .xs-send-circular-6,
+html[data-theme="dark"] /* ── reports/send_notification.html ── */
+.xs-send-notification-1
+{ color: #ff8c91; }

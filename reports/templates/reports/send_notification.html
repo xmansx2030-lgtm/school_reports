@@ -1,6 +1,7 @@
 {# reports/templates/reports/notification_create.html (or your path) #}
 {% extends "base.html" %}
 {% load static %}
+{% load arabic_tags %}
 
 {% block title %}إرسال إشعار{% endblock %}
 
@@ -429,6 +430,27 @@
     gap: 10px;
   }
 
+  /* شريط سياق التذكير: يقول لماذا وُجد النموذج مملوءاً. */
+  .notify-prefill {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 18px;
+    padding: 14px 18px;
+    border: 1px solid rgba(0, 108, 53, .22);
+    border-inline-start: 4px solid var(--primary, #006c35);
+    border-radius: 14px;
+    background: rgba(0, 108, 53, .06);
+  }
+  .notify-prefill > i { flex: 0 0 auto; color: var(--primary, #006c35); font-size: 1.2rem; }
+  .notify-prefill div { display: grid; gap: 3px; flex: 1 1 auto; min-width: 0; }
+  .notify-prefill strong { font-size: .95rem; font-weight: 900; }
+  .notify-prefill span { color: #4a5a52; font-size: .82rem; font-weight: 700; }
+  .notify-prefill .btn { flex: 0 0 auto; }
+  @media (max-width: 620px) {
+    .notify-prefill { flex-wrap: wrap; }
+  }
+
   .notify-scope .recipient-step-number {
     display: inline-grid;
     place-items: center;
@@ -811,6 +833,27 @@
         </a>
       </div>
     </header>
+
+    {% if reminder_context %}
+      {% comment %}
+        المدير جاء من بطاقة «تغطية التوثيق» في لوحته، والمستلمون مُختارون سلفاً.
+
+        ويُقال له ذلك صراحةً: نموذجٌ يجد المدير حقولَه مملوءةً بلا تفسير يدفعه
+        إلى مراجعة كل اختيارٍ فيه — والشرح هنا يوفّر عليه المراجعة، ويُبقي له
+        حرية التعديل قبل الإرسال.
+      {% endcomment %}
+      <div class="notify-prefill" role="status">
+        <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+        <div>
+          <strong>
+            اخترنا لك {{ reminder_context.count|arabic_count:"منسوباً,منسوبَين,منسوبين,منسوباً" }}
+            ممّن لم يوثّقوا بعد
+          </strong>
+          <span>راجع القائمة أدناه وعدّلها كما تشاء قبل الإرسال.</span>
+        </div>
+        <a class="btn btn-ghost" href="{% url 'reports:admin_dashboard' %}">عودة إلى اللوحة</a>
+      </div>
+    {% endif %}
 
     <div class="grid">
 

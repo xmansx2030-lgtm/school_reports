@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from core.observability import report_degraded as _degraded, soft_call, soft_fail
 
+from ..coverage import pending_documenters
+
 from ._helpers import *
 from ._helpers import (
     _is_staff, _is_staff_or_officer, _is_manager_in_school,
@@ -52,6 +54,26 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
     initial = {}
     if request.method == "GET" and is_circular:
         initial["requires_signature"] = True
+
+    # ── التذكير بالتوثيق: الفعل من حيث رُئي ────────────────────────────────
+    # لوحة المدير تعرض من لم يوثّق، ثم تُرسله إلى هنا. وكان الزرّ يفتح نموذجاً
+    # فارغاً فيعيد المدير اختيار الخمسة يدوياً من أربعةٍ وأربعين — أي أن اللوحة
+    # عرفت الجواب ثم نسيته في الخطوة التالية.
+    #
+    # **ولماذا لا تُمرَّر المعرّفات في الرابط.** لأن الرابط يُكتب: من مرّر
+    # ‎?teachers=1,2,3‎ استهدف من شاء. فيُمرَّر *سببٌ* لا قائمة، ويُعاد الحساب
+    # هنا على المدرسة النشطة وحدها — فلا يبلغ المستلمَ إلا من كان أهلاً له.
+    reminder_context = None
+    if request.method == "GET" and request.GET.get("remind") == "coverage" and active_school is not None:
+        pending = list(pending_documenters(active_school)[:200])
+        if pending:
+            initial["teachers"] = [teacher.pk for teacher in pending]
+            initial["title"] = "تذكير بتوثيق الأعمال"
+            initial["message"] = (
+                "نلفت عنايتكم إلى توثيق أعمالكم في منصة توثيق. "
+                "لم يُسجَّل لكم تقرير حتى تاريخه، ونأمل استكمال ذلك."
+            )
+            reminder_context = {"count": len(pending)}
 
     form = NotificationCreateForm(
         request.POST or None,
@@ -103,6 +125,7 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
             "form": form,
             "mode": mode,
             "title": "إنشاء تعميم" if is_circular else "إنشاء إشعار",
+            "reminder_context": reminder_context,
         },
     )
 

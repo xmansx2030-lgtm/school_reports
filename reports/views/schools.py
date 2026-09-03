@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime, time as dt_time, timedelta
+
 from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.functions import TruncWeek
+from django.urls import reverse
 
 from core.observability import report_degraded as _degraded, soft_call, soft_fail
 
@@ -16,11 +19,14 @@ from ._helpers import (
     _clean_query_params, _clean_query_value, _parse_date_safe,
 )
 from ..academic_years import hijri_academic_year_options
+from ..hijri_utils import hijri_date
 from ..context_processors import nav_context
 from ..cache_utils import get_school_dashboard_payload
 from ..gender_labels import school_gender_labels
 from ..guidance import school_readiness
 from ..audit_export import audit_csv_response
+from ..models import Assignment, Meeting, Plan
+from ..coverage import documented_teacher_ids, pending_documenters
 
 
 # ========= دعم الأقسام =========
@@ -74,6 +80,10 @@ _DASHBOARD_PERIOD_LABELS = {
     "month": "هذا الشهر",
 }
 
+# كم اسماً من المتأخرين تعرضه اللوحة قبل أن تُحيل إلى القائمة الكاملة.
+# اللوحة تُعطي بداية الخيط لا الكشف كلّه — والصفحة تُكمل.
+_COVERAGE_PREVIEW = 5
+
 
 def _normalize_dashboard_period(raw: str | None) -> str:
     value = (raw or "all").strip().lower()
@@ -90,6 +100,374 @@ def _dashboard_period_start(period: str):
     if period == "month":
         return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     return None
+
+
+def _previous_period_window(period: str):
+    """النافذة السابقة المكافئة للمقارنة — أو ``(None, None)`` إن تعذّرت.
+
+    **لماذا مكافئة لا كاملة.** لو قُورن شهرٌ مضى منه ثلاثة أيام بشهرٍ كامل قبله
+    لقال المؤشّر «انخفاض 90%» في اليوم الثالث من كل شهر، ثم يتعافى من تلقاء
+    نفسه — وهو إنذارٌ كاذبٌ شهري يُعلّم المدير تجاهل السهم.
+
+    فتُقاس المدة المنقضية من الفترة الحالية، ويُقارن بها **نفسُ المدة** من
+    الفترة السابقة: ثلاثة أيام مقابل ثلاثة أيام.
+
+    و«الكل» لا نظير له — المقارنة بما قبل بداية التاريخ لا معنى لها.
+    """
+    start = _dashboard_period_start(period)
+    if start is None:
+        return None, None
+
+    now = timezone.now()
+    elapsed = now - start
+
+    if period == "year":
+        previous_start = start.replace(year=start.year - 1)
+    elif period == "quarter":
+        month = start.month - 3
+        year = start.year
+        if month < 1:
+            month += 12
+            year -= 1
+        previous_start = start.replace(year=year, month=month)
+    else:  # month
+        month = start.month - 1
+        year = start.year
+        if month < 1:
+            month = 12
+            year -= 1
+        previous_start = start.replace(year=year, month=month)
+
+    return previous_start, previous_start + elapsed
+
+
+# كم يوماً يمتدّ أفق «ما هو قادم». أسبوعان: أطولُ من أن يفاجئ، وأقصرُ من أن
+# يصير قائمةً تُتجاهل. وما فات موعده يبقى ظاهراً مهما بَعُد — الفائت لا يُخفى.
+_AGENDA_HORIZON_DAYS = 14
+
+
+def _school_agenda(active_school) -> dict:
+    """المواعيد القادمة من مصادرها الأربعة على خطٍّ واحد.
+
+    **لماذا تُجمع.** الاجتماعات في وحدة، والتكليفات في أخرى، والخطط في ثالثة،
+    وتواقيع التعاميم في رابعة — ولكلٍّ صفحتها وتواريخها. ومدير المدرسة يعمل
+    بتقويمٍ لا بأربع قوائم؛ فما لم تُجمع، يبقى الموعد معروفاً لمن يفتح صفحته
+    ومنسيّاً عند من لا يفتحها.
+
+    **ولماذا يبقى الفائت.** الأفق أربعةَ عشرَ يوماً إلى الأمام، أما ما فات
+    موعده فيظهر مهما بَعُد ويتصدّر. فإخفاء المتأخّر بعد أسبوعٍ من فواته يجعل
+    اللوحة أهدأ ممّا ينبغي، والصمت هنا ليس طمأنينة بل فقدُ أثر.
+
+    استعلامٌ واحد لكل مصدر، وكلٌّ منها محدودٌ بعدده — فالتكلفة ثابتة مهما كبرت
+    المدرسة. وأي مصدرٍ يتعثّر يسقط وحده: بقيّة التقويم أصدق من لا تقويم.
+    """
+    empty = {"items": [], "overdue": 0, "upcoming": 0, "horizon_days": _AGENDA_HORIZON_DAYS}
+    if active_school is None:
+        return empty
+
+    now = timezone.now()
+    horizon = now + timedelta(days=_AGENDA_HORIZON_DAYS)
+    items: list[dict] = []
+
+    def collect(source_name, builder):
+        # مصدرٌ يتعثّر لا يُسقط التقويم كلّه — ويُسجَّل تعثّره ولا يُبتلع.
+        try:
+            items.extend(builder())
+        except Exception:
+            _degraded(f"dashboard.agenda.{source_name}", school_id=getattr(active_school, "pk", None))
+
+    def meetings():
+        rows = (
+            Meeting.objects.filter(
+                school=active_school,
+                status=Meeting.Status.SCHEDULED,
+                scheduled_at__lte=horizon,
+            )
+            .order_by("scheduled_at")
+            .values("id", "title", "scheduled_at")[:20]
+        )
+        return [
+            {
+                "kind": "meeting",
+                "label": "اجتماع",
+                "icon": "fa-users-rectangle",
+                "title": row["title"] or "اجتماع بلا عنوان",
+                "at": row["scheduled_at"],
+                "url": reverse("reports:meeting_detail", args=[row["id"]]),
+            }
+            for row in rows
+        ]
+
+    def assignments():
+        rows = (
+            Assignment.objects.filter(
+                school=active_school,
+                cancelled_at__isnull=True,
+                due_at__isnull=False,
+                due_at__lte=horizon,
+            )
+            .order_by("due_at")
+            .values("id", "title", "due_at")[:20]
+        )
+        return [
+            {
+                "kind": "assignment",
+                "label": "تكليف",
+                "icon": "fa-list-check",
+                "title": row["title"] or "تكليف بلا عنوان",
+                "at": row["due_at"],
+                # ‎assignment_detail‎ يأخذ مُعرّف *هدف* لا تكليف؛ والمدير مُصدِرٌ لا مُكلَّف.
+                "url": reverse("reports:assignment_view", args=[row["id"]]),
+            }
+            for row in rows
+        ]
+
+    def signatures():
+        rows = (
+            Notification.objects.filter(
+                school=active_school,
+                requires_signature=True,
+                signature_deadline_at__isnull=False,
+                signature_deadline_at__lte=horizon,
+            )
+            .order_by("signature_deadline_at")
+            .values("id", "title", "signature_deadline_at")[:20]
+        )
+        return [
+            {
+                "kind": "signature",
+                "label": "توقيع تعميم",
+                "icon": "fa-file-signature",
+                "title": row["title"] or "تعميم بلا عنوان",
+                "at": row["signature_deadline_at"],
+                "url": reverse("reports:circulars_sent"),
+            }
+            for row in rows
+        ]
+
+    def plans():
+        rows = (
+            Plan.objects.filter(school=active_school, ends_on__isnull=False)
+            .exclude(approval_state="draft")
+            .order_by("ends_on")
+            .values("id", "title", "ends_on")[:20]
+        )
+        out = []
+        for row in rows:
+            # ‎ends_on‎ تاريخٌ لا لحظة؛ يُنتهى منه بنهاية يومه لا بأوّله.
+            ends_at = timezone.make_aware(
+                datetime.combine(row["ends_on"], dt_time(23, 59)),
+                timezone.get_current_timezone(),
+            )
+            if ends_at > horizon:
+                continue
+            out.append(
+                {
+                    "kind": "plan",
+                    "label": "نهاية خطة",
+                    "icon": "fa-diagram-project",
+                    "title": row["title"] or "خطة بلا عنوان",
+                    "at": ends_at,
+                    "url": reverse("reports:plan_detail", args=[row["id"]]),
+                }
+            )
+        return out
+
+    collect("meetings", meetings)
+    collect("assignments", assignments)
+    collect("signatures", signatures)
+    collect("plans", plans)
+
+    for item in items:
+        # الفرق يُحسب دائماً في اتجاهٍ موجب. فـ‎timedelta.days‎ يُقرِّب نحو
+        # السالب لا نحو الصفر: موعدٌ فات قبل أربعين يوماً وثلاثِ ميكروثانية
+        # يعطي ‎-41‎، فتصير قيمته المطلقة واحداً وأربعين — ويقرأ المدير
+        # «متأخّر 41 يوماً» عن أربعين.
+        item["is_overdue"] = item["at"] < now
+        item["days"] = (now - item["at"]).days if item["is_overdue"] else (item["at"] - now).days
+        item["hijri"] = hijri_date(timezone.localtime(item["at"]).date())
+        item["time"] = timezone.localtime(item["at"]).strftime("%H:%M")
+
+    # الفائت أولاً ثم الأقرب: الترتيب الزمني الصاعد يحقّق الأمرين معاً.
+    items.sort(key=lambda item: item["at"])
+    overdue = sum(1 for item in items if item["is_overdue"])
+
+    return {
+        "items": items[:8],
+        "overdue": overdue,
+        "upcoming": len(items) - overdue,
+        "horizon_days": _AGENDA_HORIZON_DAYS,
+    }
+
+
+def _ticket_responsiveness(all_tickets_qs, closed_in_period_qs) -> dict:
+    """سرعة الإغلاق وعمر أقدم مفتوح — لا نسبة الإنجاز وحدها.
+
+    «إنجاز الطلبات 100%» جملةٌ تُخفي ما ينبغي أن تكشفه: طلبٌ بقي مفتوحاً ثلاثة
+    أسابيع وطلبٌ أُغلق في ساعة كلاهما «مكتمل»، والنسبة تساويهما. والمدير لا
+    يُسأل عن نسبته بل عن الطلب الذي شاخ عنده.
+
+    فيُقاس أمران: **متوسط زمن الإغلاق** لما أُغلق في الفترة، و**عمر أقدم
+    مفتوح** الآن — والثاني أهمّ، لأنه وحده يشير إلى شيءٍ قائم يُفعل به شيء.
+    """
+    empty = {
+        "avg_close_hours": None,
+        "avg_close_label": "",
+        "oldest_open_days": None,
+        "oldest_open_id": None,
+        "oldest_open_title": "",
+        "has_signal": False,
+    }
+
+    try:
+        closed = list(
+            closed_in_period_qs.filter(status=Ticket.Status.DONE)
+            .values_list("created_at", "updated_at")[:500]
+        )
+        oldest = (
+            all_tickets_qs.filter(
+                status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS]
+            )
+            .order_by("created_at")
+            .values("id", "title", "created_at")
+            .first()
+        )
+    except Exception:
+        logger.exception("Failed to measure ticket responsiveness")
+        return empty
+
+    result = dict(empty)
+
+    spans = [
+        (updated - created).total_seconds() / 3600
+        for created, updated in closed
+        if created and updated and updated >= created
+    ]
+    if spans:
+        hours = sum(spans) / len(spans)
+        result["avg_close_hours"] = round(hours, 1)
+        # الساعات تُقرأ حتى يومين؛ وبعدهما الأيام أصدق في الذهن.
+        if hours < 48:
+            result["avg_close_label"] = f"{round(hours)} ساعة"
+        else:
+            result["avg_close_label"] = f"{round(hours / 24)} يوم"
+        result["has_signal"] = True
+
+    if oldest:
+        age = (timezone.now() - oldest["created_at"]).days
+        result["oldest_open_days"] = max(0, age)
+        result["oldest_open_id"] = oldest["id"]
+        result["oldest_open_title"] = oldest.get("title") or "بلا عنوان"
+        result["has_signal"] = True
+
+    return result
+
+
+def _department_activity(active_school, reports_qs, documented_ids: set) -> list[dict]:
+    """نشاط كل قسم داخل الفترة المختارة — مرتّباً بالأضعف أولاً.
+
+    **لماذا يُنسب التقرير إلى كاتبه لا إلى نوعه.** في المشروع نسبةٌ قائمة عبر
+    ``Department.reporttypes``، وهي تصلح لصفحة الأقسام لكنها لا تصلح للمقارنة:
+    نوعٌ واحدٌ مشتركٌ بين قسمين يُحتسب مرتين، فيبدو القسمان أنشطَ مما هما.
+    والمدير حين يقول «قسم العلوم كتب اثني عشر تقريراً» يعني معلّمي العلوم —
+    فالنسبة عبر العضوية أقرب إلى ما يقصده.
+
+    **ولماذا الأضعف أولاً.** القائمة تُقرأ من أعلاها، والمدير يتصرّف مع
+    المتأخّر لا مع المتقدّم. فترتيبها بالأعلى تغطيةً يضع ما لا يحتاج عملاً في
+    مقدمة النظر، ويدفن ما يحتاجه في ذيلها.
+
+    استعلامان مجمّعان مهما بلغ عدد الأقسام — لا استعلامٌ لكل قسم.
+    """
+    if Department is None or DepartmentMembership is None or active_school is None:
+        return []
+
+    try:
+        departments = list(
+            Department.objects.filter(school=active_school, is_active=True).order_by("name")
+        )
+    except Exception:
+        logger.exception("Failed to load departments for dashboard comparison")
+        return []
+
+    if not departments:
+        return []
+
+    department_ids = [d.pk for d in departments]
+    members_by_department = defaultdict(set)
+    try:
+        rows = DepartmentMembership.objects.filter(
+            department_id__in=department_ids
+        ).values_list("department_id", "teacher_id")
+        for department_id, teacher_id in rows:
+            if department_id and teacher_id:
+                members_by_department[int(department_id)].add(int(teacher_id))
+    except Exception:
+        logger.exception("Failed to batch department memberships for dashboard comparison")
+        return []
+
+    reports_by_teacher = defaultdict(int)
+    try:
+        for row in (
+            reports_qs.exclude(teacher__isnull=True)
+            .values("teacher_id")
+            .annotate(total=Count("id"))
+        ):
+            reports_by_teacher[int(row["teacher_id"])] = int(row.get("total") or 0)
+    except Exception:
+        logger.exception("Failed to batch report counts for dashboard comparison")
+        return []
+
+    items = []
+    for department in departments:
+        member_ids = members_by_department.get(int(department.pk), set())
+        members = len(member_ids)
+        # قسمٌ بلا أعضاء لا يُقارَن: تغطيته ‎0%‎ ليست تأخّراً بل فراغ تنظيمي،
+        # وإظهاره في صدارة المتأخرين يُغرق القائمة بما لا إجراء له.
+        if not members:
+            continue
+
+        documented = len(member_ids & documented_ids)
+        items.append(
+            {
+                "id": department.pk,
+                "name": department.name,
+                "members": members,
+                "documented": documented,
+                "pending": members - documented,
+                "reports": sum(reports_by_teacher.get(tid, 0) for tid in member_ids),
+                "percent": round(documented * 100 / members),
+            }
+        )
+
+    items.sort(key=lambda item: (item["percent"], -item["members"]))
+    return items
+
+
+def _trend(current: int, previous: int) -> dict:
+    """فرق النافذتين في صورةٍ جاهزة للعرض.
+
+    ``direction`` ثلاثيّ لا ثنائي: ``flat`` حالةٌ قائمة بذاتها، إذ السهم
+    الصاعد على فرقٍ صفر يكذب. و``percent`` يبقى ``None`` عند انطلاقٍ من صفر —
+    فالنسبة من لا شيء ليست «زيادة 100%» بل لا نسبة لها.
+    """
+    delta = int(current) - int(previous)
+    if delta > 0:
+        direction = "up"
+    elif delta < 0:
+        direction = "down"
+    else:
+        direction = "flat"
+
+    percent = None
+    if previous > 0:
+        percent = round(delta * 100 / previous)
+
+    return {
+        "previous": int(previous),
+        "delta": delta,
+        "direction": direction,
+        "percent": percent,
+    }
 
 
 def _build_manager_focus_items(
@@ -188,6 +566,49 @@ def _build_school_dashboard_payload(active_school: Optional[School], period: str
         status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS],
     ).count()
 
+    reports_count = int(reports_qs.count())
+    teachers_count = int(teachers_qs.count())
+
+    # ── تغطية التوثيق ────────────────────────────────────────────────────
+    # كانت اللوحة تعرف طرفَي المسألة ولا تعرف ما بينهما: «44 معلماً» و«2 تقرير»،
+    # ولا تقول أيُّ اثنين. ووظيفة المدير ليست معرفة العدد بل معرفة الاسم.
+    #
+    # التغطية تُقاس على الفترة المختارة لا على عمر المدرسة: من وثّق العام الماضي
+    # ولم يوثّق هذا الشهر متأخّرٌ اليوم، لا مغطّى.
+    # الحساب في ``reports.coverage`` لا هنا: تحتاجه شاشة التذكير أيضاً، ولو
+    # نُسخ لاختلفت الشاشتان يوماً — فيقرأ المدير خمسةً ويُرسل إلى ستة.
+    documented_ids = documented_teacher_ids(active_school, since=start_at)
+    covered_count = len(documented_ids)
+    # القائمة تُقتطع للعرض: اللوحة تُعطي الاسم والوجهة، والصفحة تُعطي البقية.
+    pending_teachers = list(
+        pending_documenters(active_school, since=start_at)[:_COVERAGE_PREVIEW]
+    )
+    coverage_percent = round(covered_count * 100 / teachers_count) if teachers_count else 0
+
+    # ── الاتجاه ──────────────────────────────────────────────────────────
+    # الرقم الذي لا يُقارَن لا معنى له: «2 تقرير» ليست جيدةً ولا سيئة حتى
+    # تُوضع بجوار ما قبلها.
+    previous_start, previous_end = _previous_period_window(period)
+    trends = {}
+    if previous_start is not None:
+        previous_reports = _filter_by_school(Report.objects.all(), active_school).filter(
+            created_at__gte=previous_start, created_at__lt=previous_end
+        )
+        previous_tickets = all_school_tickets_qs.filter(
+            created_at__gte=previous_start, created_at__lt=previous_end
+        )
+        previous_documented = (
+            previous_reports.exclude(teacher__isnull=True)
+            .values_list("teacher_id", flat=True)
+            .distinct()
+            .count()
+        )
+        trends = {
+            "reports_count": _trend(reports_count, previous_reports.count()),
+            "tickets_total": _trend(int(ticket_agg.get("total") or 0), previous_tickets.count()),
+            "coverage_covered": _trend(covered_count, int(previous_documented)),
+        }
+
     chart_start = start_at or (now - timedelta(weeks=8))
     reports_by_week = (
         reports_qs.filter(created_at__gte=chart_start)
@@ -230,16 +651,47 @@ def _build_school_dashboard_payload(active_school: Optional[School], period: str
     return {
         "period": period,
         "period_label": _DASHBOARD_PERIOD_LABELS.get(period, "الكل"),
+        "has_comparison": previous_start is not None,
         "generated_at": timezone.localtime(now).strftime("%Y-%m-%d %H:%M"),
         "kpis": {
-            "reports_count": int(reports_qs.count()),
-            "teachers_count": int(teachers_qs.count()),
+            "reports_count": reports_count,
+            "teachers_count": teachers_count,
             "reporttypes_count": int(reporttypes_count or 0),
             "tickets_total": int(ticket_agg.get("total") or 0),
             # عناصر المتابعة يجب ألا تختفي عند تغيير فترة التحليلات.
             "tickets_open": int(actionable_tickets_open),
             "tickets_done": int(ticket_agg.get("done") or 0),
             "tickets_rejected": int(ticket_agg.get("rejected") or 0),
+        },
+        # نطاق كل مؤشّر مُعلَنٌ بدل الاعتذار بين قوسين تحت البطاقات. بعضها
+        # يتبع الفترة وبعضها لا يتبعها عمداً — الطلبات المفتوحة يجب ألا تختفي
+        # لأن المدير بدّل نافذة التحليل — والفرق يجب أن يُقال لا أن يُخمَّن.
+        "kpi_scopes": {
+            "reports_count": "period",
+            "tickets_total": "period",
+            "tickets_done": "period",
+            "tickets_rejected": "period",
+            "teachers_count": "current",
+            "tickets_open": "current",
+            "reporttypes_count": "current",
+        },
+        "trends": trends,
+        "responsiveness": _ticket_responsiveness(all_school_tickets_qs, tickets_qs),
+        "departments": _department_activity(active_school, reports_qs, documented_ids),
+        "coverage": {
+            "covered": covered_count,
+            "total": teachers_count,
+            "pending": max(0, teachers_count - covered_count),
+            "percent": coverage_percent,
+            # مدرسةٌ بلا منسوبين ليست مدرسةً وثّق جميعُها: صفرٌ من صفر ليس
+            # نجاحاً بل غياب فريق. ولو تُرك للقالب أن يستنتج من ‎pending == 0‎
+            # لقال لمدرسةٍ جديدة «وثّق الجميع» في أول يومٍ لها — وهي أول جملة
+            # يقرؤها المدير، فتُعلّمه أن اللوحة تجامل.
+            "has_staff": teachers_count > 0,
+            "pending_preview": [
+                {"id": t.pk, "name": t.name or t.phone}
+                for t in pending_teachers
+            ],
         },
         "charts": {
             "reports": {"labels": reports_labels, "data": reports_data},
@@ -1141,6 +1593,16 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
             "attention_total": attention_total,
             "initial_period": selected_period,
             "selected_period_label": dashboard_payload["period_label"],
+            "coverage": dashboard_payload["coverage"],
+            "trends": dashboard_payload["trends"],
+            "has_comparison": dashboard_payload["has_comparison"],
+            "departments": dashboard_payload["departments"],
+            "responsiveness": dashboard_payload["responsiveness"],
+            # التقويم خارج الحمولة المخزَّنة عمداً: هو حالةٌ قائمة الآن لا
+            # حصيلةَ فترة، ولا يجوز أن يتأخّر خمسَ عشرة ثانية خلف ذاكرةٍ مؤقتة.
+            "agenda": _school_agenda(active_school),
+            # تاريخ اللقطة على الورق هجريّ كبقية تواريخ المنصة.
+            "today_hijri": hijri_date(timezone.localdate()),
             "ticket_completion_rate": ticket_completion_rate,
             "pending_achievement_files": pending_achievement_files,
             "departments_count": departments_count,

@@ -82,6 +82,7 @@ from ..voice_report import (
 )
 from ._helpers import *  # noqa: F401,F403
 from ._helpers import _get_active_school
+from ..ai_usage import ai_usage_context
 
 logger = logging.getLogger(__name__)
 
@@ -420,7 +421,8 @@ def improve_meeting_minutes(request: HttpRequest, pk: int) -> JsonResponse:
         )
 
     try:
-        improved_text = improve_meeting_minutes_text(original_text)
+        with ai_usage_context(school=_get_active_school(request), teacher=request.user):
+            improved_text = improve_meeting_minutes_text(original_text)
     except ReportAIUnavailable as exc:
         release_report_ai_daily_slot(request.user.pk)
         return _meeting_ai_json(
@@ -514,8 +516,9 @@ def transcribe_meeting_minutes_voice(request: HttpRequest, pk: int) -> JsonRespo
         )
 
     try:
-        raw_text = transcribe_meeting_audio(audio_bytes, extension)
-        text = polish_meeting_dictation(raw_text)
+        with ai_usage_context(school=_get_active_school(request), teacher=request.user):
+            raw_text = transcribe_meeting_audio(audio_bytes, extension)
+            text = polish_meeting_dictation(raw_text)
     except VoiceReportUnavailable as exc:
         release_voice_report_daily_slot(request.user.pk)
         return _meeting_ai_json(

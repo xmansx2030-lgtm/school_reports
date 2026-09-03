@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load arabic_tags %}
 
 {% block title %}مؤشرات نطاقي | منصة توثيق{% endblock %}
 
@@ -127,6 +128,72 @@
     color: var(--scp-muted);
     line-height: 1.9;
   }
+
+  /* تغطية النطاق — بالرموز ذاتها التي تحمل بقية الشاشة، فتتقلّب معها
+     في الوضعين بلا سطرٍ داكن إضافي. */
+  .scp-coverage {
+    margin-top: 20px;
+    padding: 18px 20px;
+    border: 1px solid var(--scp-line);
+    border-radius: 14px;
+    background: var(--scp-card);
+  }
+  .scp-coverage__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .scp-coverage__head h2 { margin: 0; font-size: 16px; font-weight: 900; color: var(--scp-ink); }
+  .scp-coverage__ratio { color: var(--scp-muted); font-size: 13px; font-weight: 700; }
+  .scp-coverage__ratio strong {
+    margin-inline-end: 8px;
+    color: var(--scp-green);
+    font-size: 24px;
+    font-weight: 950;
+    font-variant-numeric: tabular-nums;
+  }
+  .scp-coverage__bar {
+    height: 8px;
+    margin: 12px 0 14px;
+    border-radius: 999px;
+    background: var(--scp-soft);
+    overflow: hidden;
+  }
+  .scp-coverage__bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--scp-green);
+  }
+  .scp-coverage__label { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: var(--scp-ink); }
+  .scp-coverage__names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .scp-coverage__names li {
+    padding: 5px 11px;
+    border: 1px solid var(--scp-line);
+    border-radius: 999px;
+    background: var(--scp-soft);
+    color: var(--scp-ink);
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .scp-coverage__done {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--scp-green);
+    font-size: 13.5px;
+    font-weight: 800;
+  }
 </style>
 {% endblock %}
 
@@ -187,6 +254,48 @@
           {% endif %}
         </a>
       {% endfor %}
+    </section>
+  {% endif %}
+
+  {% if coverage %}
+    {% comment %}
+      تغطية التوثيق داخل النطاق.
+
+      البطاقات أعلاه تقول «كم»، وهذه تقول «مَن» — وهي ما يعمل عليه الوكيل
+      فعلاً: قسمان تحت إشرافه، ومعرفةُ الصامت فيهما عملُه اليومي.
+
+      ولا زرّ هنا: هذه الشاشة تقول «أين تقف الأمور» ولا تحرّكها. والتذكير
+      يُرسله المدير من لوحته — فمن لا يملك الإرسال لا يُعرض له زرُّه.
+    {% endcomment %}
+    <section class="scp-coverage" aria-labelledby="scopeCoverageTitle">
+      <div class="scp-coverage__head">
+        <h2 id="scopeCoverageTitle">توثيق نطاقك هذا الشهر</h2>
+        <span class="scp-coverage__ratio">
+          <strong>{{ coverage.percent }}%</strong>
+          {{ coverage.covered }} من {{ coverage.total }} وثّقوا
+        </span>
+      </div>
+      <div class="scp-coverage__bar" role="img"
+           aria-label="تغطية التوثيق {{ coverage.percent }} بالمئة">
+        <span data-progress="{{ coverage.percent }}"></span>
+      </div>
+
+      {% if coverage.pending %}
+        <p class="scp-coverage__label">
+          لم يوثّق بعد:
+          {{ coverage.pending|arabic_count:"منسوب,منسوبان,منسوبين,منسوباً" }}
+        </p>
+        <ul class="scp-coverage__names">
+          {% for person in coverage.pending_preview %}
+            <li><bdi>{{ person.name|default:person.phone }}</bdi></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="scp-coverage__done">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          وثّق جميع من في نطاقك هذا الشهر.
+        </p>
+      {% endif %}
     </section>
   {% endif %}
 

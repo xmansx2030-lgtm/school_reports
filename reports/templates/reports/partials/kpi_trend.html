@@ -1,0 +1,37 @@
+{% comment %}
+  شارة الاتجاه تحت مؤشّر.
+
+  المتغيّرات:
+    trend   — قاموس من ``_trend()``: previous / delta / direction / percent
+    dom_id  — معرّف يستعمله التحديث الحيّ لإعادة رسم الشارة بلا إعادة تحميل
+
+  تُخفى تماماً حين لا تكون هناك مقارنة (فترة «الكل»): شارةٌ فارغة تشغل مكاناً
+  وتوحي بعطل، والصمت هنا أصدق من صفرٍ لا معنى له.
+
+  و«ثابت» حالةٌ ثالثة قائمة بذاتها لا حيادٌ بين صعودٍ وهبوط — السهم الصاعد
+  على فرقٍ صفر يكذب على من يقرأه بسرعة.
+{% endcomment %}
+{% if trend %}
+  <span class="kpi-trend kpi-trend--{{ trend.direction }}"
+        id="{{ dom_id }}"
+        title="مقارنةً بالفترة السابقة نفسِها ({{ trend.previous }})">
+    {% if trend.direction == "up" %}
+      <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i>
+      <span class="sr-only">ارتفاع</span>
+    {% elif trend.direction == "down" %}
+      <i class="fa-solid fa-arrow-trend-down" aria-hidden="true"></i>
+      <span class="sr-only">انخفاض</span>
+    {% else %}
+      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+      <span class="sr-only">بلا تغيّر</span>
+    {% endif %}
+    <span class="kpi-trend__value">
+      {% if trend.direction == "flat" %}
+        ثابت
+      {% else %}
+        {{ trend.delta|stringformat:"+d" }}{% if trend.percent is not None %} ({{ trend.percent|stringformat:"+d" }}%){% endif %}
+      {% endif %}
+    </span>
+    <span class="kpi-trend__baseline">عن السابقة</span>
+  </span>
+{% endif %}

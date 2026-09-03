@@ -1,0 +1,88 @@
+/* شريط إجراءات الجوال — يظهر دون ‎769px‎ فقط.
+   فوق سطح المكتب لا حاجة له: البطاقة اللاصقة تحمل الحفظ والفحص وتتبع المستخدم. */
+
+.report-mobile-actions { display: none; }
+
+@media (max-width: 768px) {
+  .report-mobile-actions {
+    position: fixed;
+    /* ‎.mobile-tabbar‎ ثابتٌ بارتفاع ‎66px + safe-area‎؛ هذا الشريط يعلوه
+       ولا يغطّيه، فيبقى طريق الخروج من الصفحة مفتوحاً. */
+    z-index: 935;
+    right: 0;
+    /* ‎66px‎ ارتفاع شريط التنقّل، و‎1px‎ حدُّه العلوي — بدونها يتراكبان بمقدار
+       بكسل واحد فيظهر خطٌّ مزدوج. */
+    bottom: calc(67px + env(safe-area-inset-bottom));
+    left: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    padding: 9px 12px;
+    border-top: 1px solid var(--line-2, #d8e2dc);
+    background: color-mix(in srgb, var(--card, #fff) 96%, transparent);
+    box-shadow: 0 -10px 26px rgba(16, 35, 26, .12);
+    backdrop-filter: blur(18px);
+  }
+
+  /* الشريط يغطّي آخر المحتوى ما لم يُفسح له. ‎76px‎ لشريط التنقّل أصلاً،
+     و‎62px‎ لهذا الشريط. */
+  body.page:has(.report-mobile-actions) {
+    padding-bottom: calc(138px + env(safe-area-inset-bottom));
+  }
+
+  .rma-check,
+  .rma-save {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font: 900 .86rem/1.4 "Cairo", sans-serif;
+  }
+
+  .rma-check {
+    color: #1d4d38;
+    border-color: rgba(0, 108, 53, .26);
+    background: var(--card, #fff);
+    white-space: nowrap;
+  }
+
+  .rma-save {
+    width: 100%;
+    color: #fff;
+    background: linear-gradient(135deg, #087443, #005c30);
+    box-shadow: 0 8px 18px rgba(0, 92, 48, .18);
+  }
+
+  .rma-check:focus-visible,
+  .rma-save:focus-visible { outline: 2px solid var(--focus-ring, #b9975b); outline-offset: 2px; }
+
+  /* الدرجة تُعرض على الزرّ نفسه بعد الفحص، فيعرف المستخدم حاله بلا تمرير. */
+  .report-mobile-actions.is-ready .rma-check { color: #067647; border-color: rgba(7, 148, 85, .4); }
+  .report-mobile-actions.is-almost .rma-check { color: #8a6410; border-color: rgba(197, 143, 42, .45); }
+  .report-mobile-actions.is-needs-work .rma-check { color: #b42318; border-color: rgba(180, 35, 24, .38); }
+
+  /* زرّ الحفظ في العمود الجانبي يصير مكرّراً على الجوال. */
+  .ar-rail .ar-submit-btn { display: none; }
+
+  /* مشغّل «اسأل منصور» ثابتٌ عند ‎bottom: 82px‎ ليعلو شريط التنقّل وحده، وهذا
+     الشريط يحتلّ الشريحة نفسها فيغطّيه تماماً: قياسُ ``elementFromPoint`` في
+     مركز المشغّل كان يعيد ``rma-save`` — أي أن نقرة «اسأل منصور» تحفظ التقرير.
+     فيُرفع فوق الشريطين معاً حيث توجد اللوحة. */
+  body:has(.report-mobile-actions) .mansour-launcher {
+    bottom: calc(146px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 768px) {
+  html[data-theme="dark"] .rma-check { color: #b9ead0; border-color: rgba(66, 202, 136, .3); background: #0d241d; }
+  html[data-theme="dark"] .report-mobile-actions { border-top-color: rgba(205, 225, 216, .16); }
+  html[data-theme="dark"] .report-mobile-actions.is-ready .rma-check { color: #9fe0bd; }
+  html[data-theme="dark"] .report-mobile-actions.is-almost .rma-check { color: #eccf83; }
+  html[data-theme="dark"] .report-mobile-actions.is-needs-work .rma-check { color: #ff9aa0; }
+}

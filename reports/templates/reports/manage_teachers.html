@@ -188,7 +188,7 @@
                         href="{% url 'reports:edit_teacher' pk=t.id %}?next={{ nxt|urlencode }}"
                         class="btn btn-icon btn-edit"
                         title="تعديل"
-                        aria-label="تعديل"
+                        aria-label="تعديل بيانات: {{ t.name|default:t.phone }}"
                       >
                         <i class="fas fa-edit"></i>
                       </a>
@@ -204,7 +204,7 @@
                           type="submit"
                           class="btn btn-icon btn-delete"
                           title="حذف"
-                          aria-label="حذف"
+                          aria-label="حذف: {{ t.name|default:t.phone }}"
                         >
                           <i class="fas fa-trash-alt"></i>
                         </button>
@@ -454,8 +454,12 @@
   .admin-scope .btn-icon{padding:9px 12px;border-radius:10px}
   .admin-scope .btn-edit{background:#b9975b;color:#fff}
   .admin-scope .btn-edit:hover{background:#d97706}
-  .admin-scope .btn-delete{background:#ef4444;color:#fff}
-  .admin-scope .btn-delete:hover{background:#dc2626}
+  /* الحذف إجراءٌ نادرٌ لا رجعة فيه، والتعديل هو الشائع. فلمّا كان الحذف
+     مربّعاً أحمرَ مصمتاً بجوار التعديل، صار أعلى الاثنين صوتاً وأقربهما
+     إلى نقرةٍ بالخطأ. فيبقى أحمرَ الدلالة، ويُخفَض إلى إطارٍ حتى يُقصد. */
+  .admin-scope .btn-delete{background:transparent;color:#b3261e;border:1px solid rgba(179,38,30,.34)}
+  .admin-scope .btn-delete:hover,
+  .admin-scope .btn-delete:focus-visible{background:#b3261e;color:#fff;border-color:#b3261e}
   .admin-scope .btn-outline{background:#fff;border:1px solid var(--line);color:#1e293b}
   .admin-scope .btn-outline:hover{background: var(--line-2)}
 

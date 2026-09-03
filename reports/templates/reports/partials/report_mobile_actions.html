@@ -1,0 +1,22 @@
+{% comment %}
+شريط إجراءات ثابت للجوال.
+
+على الجوال يتحوّل العمود الجانبي إلى كتلةٍ أسفل الصفحة، فيقع «حفظ التقرير»
+بعد أربع شاشات من التمرير. وهذا الشريط يبقيه — ومعه فحص الجاهزية — في متناول
+الإبهام دائماً.
+
+يجلس فوق ‎.mobile-tabbar‎ لا فوقه: شريط التنقّل السفلي ثابتٌ أصلاً، وتغطيته
+تُفقد المستخدم طريق الخروج من الصفحة.
+{% endcomment %}
+<div class="report-mobile-actions" data-report-mobile-actions>
+  {% if report_review_enabled %}
+    <button type="button" class="rma-check" data-mobile-review>
+      <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+      <span data-mobile-review-label>فحص الجاهزية</span>
+    </button>
+  {% endif %}
+  <button type="submit" class="rma-save" form="report-form">
+    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+    <span>حفظ التقرير</span>
+  </button>
+</div>

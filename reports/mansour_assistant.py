@@ -6,11 +6,10 @@ import logging
 import re
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request
 
 from django.conf import settings
 
-from .ai_client import log_usage, request_json, truncation_reason
+from .ai_client import extract_output_text, responses_create, truncation_reason
 from .ai_errors import AI_SERVICE_PAUSED_MESSAGE, is_openai_spend_limit_error
 from .mansour_knowledge import (
     AUDIENCE_GENERAL,
@@ -25,7 +24,6 @@ from .mansour_knowledge import (
 
 logger = logging.getLogger(__name__)
 
-OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 MAX_QUESTION_LENGTH = 500
 MAX_HISTORY_MESSAGES = 6
 MAX_HISTORY_MESSAGE_LENGTH = 500
@@ -2286,20 +2284,6 @@ def _rewrite_context(
     )
 
 
-def _extract_output_text(payload: dict[str, Any]) -> str:
-    parts: list[str] = []
-    for output_item in payload.get("output") or []:
-        if not isinstance(output_item, dict) or output_item.get("type") != "message":
-            continue
-        for content_item in output_item.get("content") or []:
-            if not isinstance(content_item, dict) or content_item.get("type") != "output_text":
-                continue
-            text = str(content_item.get("text") or "").strip()
-            if text:
-                parts.append(text)
-    return "\n".join(parts).strip()
-
-
 def _sanitise_answer_text(value: str) -> str:
     """Keep navigation in the trusted sources UI, never in generated answer text."""
     text = str(value or "").strip()
@@ -2361,20 +2345,21 @@ def _looks_low_quality(value: str) -> bool:
     return False
 
 
-def _call_openai_response(body: dict[str, Any], api_key: str, timeout_seconds: float) -> dict[str, Any]:
-    request = Request(
-        OPENAI_RESPONSES_URL,
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+def _call_openai_response(
+    body: dict[str, Any],
+    api_key: str,
+    timeout_seconds: float,
+    *,
+    stage: str = "mansour",
+) -> dict[str, Any]:
+    """المرحلة تُمرَّر لأن إعادة الصياغة نداءٌ ثانٍ كامل.
 
-    payload = request_json(request, timeout=timeout_seconds, stage="mansour")
-    log_usage(payload, stage="mansour", model=str(body.get("model") or ""))
-    return payload
+    خلطها بالنداء الأول يُخفي أغلى ما في منصور: كل مسودة ضعيفة تُضاعف كلفة
+    الردّ، ولا يُعرف كم تتكرّر إلا إذا عُدّت وحدها.
+    """
+    return responses_create(
+        body, api_key=api_key, timeout=timeout_seconds, stage=stage
+    )
 
 
 def ask_mansour(
@@ -2619,7 +2604,7 @@ def ask_mansour(
             offer_ticket=True,
         )
 
-    answer = _sanitise_answer_text(_extract_output_text(response_payload))
+    answer = _sanitise_answer_text(extract_output_text(response_payload))
     # ``max_output_tokens`` سقفٌ للتفكير والإخراج معاً، فقد يلتهم التفكير
     # الميزانية ويعود الردّ مقطوعاً في منتصف جملة بحقل نصّ سليم الشكل. وإفراغه
     # هنا يدفعه إلى إعادة الصياغة بجهد ``none`` — وهي تُخلي الميزانية كلها
@@ -2656,8 +2641,10 @@ def ask_mansour(
             },
         }
         try:
-            retry_payload = _call_openai_response(retry_body, api_key, timeout_seconds)
-            improved = _sanitise_answer_text(_extract_output_text(retry_payload))
+            retry_payload = _call_openai_response(
+                retry_body, api_key, timeout_seconds, stage="mansour-rewrite"
+            )
+            improved = _sanitise_answer_text(extract_output_text(retry_payload))
             if improved and not truncation_reason(retry_payload):
                 answer = improved
         except Exception:

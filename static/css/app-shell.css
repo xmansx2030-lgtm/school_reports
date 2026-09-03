@@ -370,8 +370,8 @@ body {
 .icon-btn .dot {
   position: absolute;
   top: -2px; right: -2px;
-  background: var(--danger);
-  color: white;
+  background: var(--badge-count-bg, var(--danger));
+  color: var(--badge-count-ink, #fff);
   font-size: 0.7rem;
   font-weight: 800;
   min-width: 18px;
