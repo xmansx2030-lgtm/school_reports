@@ -8,12 +8,14 @@
 - الحجز عند إنشاء الطلب، والتحرير عند رفضه أو إلغائه قبل تطبيق الأثر.
 - خصم 100% يفعّل الاشتراك فوراً بلا إيصال وبدفعة معتمدة بمبلغ صفر.
 """
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from reports.billing_invoices import build_invoice_context
 from reports.discount_codes import (
@@ -304,6 +306,43 @@ class DiscountCheckEndpointTests(DiscountCodeBaseTests):
             reverse("reports:discount_code_check"), {"discount_code": "SAVE10"}
         )
         self.assertEqual(resp.status_code, 403)
+
+    def test_expired_manager_can_check_code_while_renewing(self):
+        """SubscriptionMiddleware must not block the renewal helper endpoint."""
+        self._make_code()
+        self.subscription.end_date = timezone.localdate() - timedelta(days=1)
+        self.subscription.save(update_fields=["end_date"])
+
+        resp = self.client.post(
+            reverse("reports:discount_code_check"),
+            {"discount_code": "SAVE10", "plan_id": str(self.plan.id)},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resp.status_code, 200, resp.headers)
+        self.assertTrue(resp.json()["ok"])
+
+    def test_manager_with_temporary_password_can_check_code_while_renewing(self):
+        """ForcePasswordChangeMiddleware must allow the whole payment journey."""
+        self._make_code()
+        self.manager.set_password(self.manager.phone)
+        self.manager.save(update_fields=["password"])
+        # Changing a logged-in user's password invalidates Django's existing
+        # session hash; log the fixture in again to exercise the middleware,
+        # not the login-required redirect.
+        self.client.force_login(self.manager)
+        session = self.client.session
+        session["active_school_id"] = self.school.id
+        session.save()
+
+        resp = self.client.post(
+            reverse("reports:discount_code_check"),
+            {"discount_code": "SAVE10", "plan_id": str(self.plan.id)},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resp.status_code, 200, resp.headers)
+        self.assertTrue(resp.json()["ok"])
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)

@@ -23,6 +23,31 @@ logger = logging.getLogger(__name__)
 FORCE_PASSWORD_CHANGE_SESSION_KEY = "force_password_change_required"
 _PASSWORD_VERIFIED_OK_SESSION_KEY = "_pw_verified_not_default"
 
+# A renewal is one journey even though it crosses several views.  Keep the
+# list in one place so subscription expiry and temporary-password guards do
+# not drift apart when another payment helper or gateway route is added.
+SUBSCRIPTION_PAYMENT_FLOW_VIEWS = frozenset(
+    {
+        "reports:my_subscription",
+        "reports:payment_create",
+        "reports:discount_code_check",
+        "reports:moyasar_checkout_create",
+        "reports:moyasar_checkout_cancel",
+        "reports:moyasar_return",
+        "reports:tamara_checkout_create",
+        "reports:tamara_checkout_cancel",
+        "reports:tamara_return",
+    }
+)
+
+
+def _resolved_view_name(request) -> str:
+    try:
+        match = resolve(request.path_info)
+        return f"{match.namespace}:{match.url_name}" if match.namespace else (match.url_name or "")
+    except Exception:
+        return ""
+
 def get_current_request():
     return getattr(_thread_locals, "request", None)
 
@@ -647,6 +672,8 @@ class SubscriptionMiddleware:
         archive_download_prefix = reverse("reports:school_archive").rstrip("/") + "/download/"
         if request.path in allowed_paths or (
             is_manager and request.path.startswith(archive_download_prefix)
+        ) or (
+            is_manager and _resolved_view_name(request) in SUBSCRIPTION_PAYMENT_FLOW_VIEWS
         ):
             return self.get_response(request)
 
@@ -728,19 +755,12 @@ class ForcePasswordChangeMiddleware:
             "reports:logout",
             "reports:unread_notifications_count",
             "reports:subscription_expired",
-            "reports:my_subscription",
-            "reports:payment_create",
             "reports:switch_school",
             "service_worker",
         }
+        allowed_names.update(SUBSCRIPTION_PAYMENT_FLOW_VIEWS)
 
-        try:
-            match = resolve(request.path_info)
-            url_name = match.url_name
-            namespace = match.namespace
-            full_name = f"{namespace}:{url_name}" if namespace else (url_name or "")
-        except Exception:
-            full_name = ""
+        full_name = _resolved_view_name(request)
 
         if full_name in allowed_names:
             return self.get_response(request)

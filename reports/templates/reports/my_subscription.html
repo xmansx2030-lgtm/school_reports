@@ -2846,7 +2846,14 @@
         .then((data) => {
           if (!data || !data.ok) {
             clearDiscount();
-            setDiscountStatus((data && data.message) || 'تعذّر التحقق من الكود.', 'error');
+            const middlewareMessages = {
+              subscription_expired: 'يمكنك استخدام كود الخصم أثناء تجديد الاشتراك. أعد تحميل الصفحة وحاول مرة أخرى.',
+              password_change_required: 'غيّر كلمة المرور المؤقتة ثم أعد محاولة تطبيق كود الخصم.',
+            };
+            const errorMessage = data && (
+              data.message || middlewareMessages[data.detail]
+            );
+            setDiscountStatus(errorMessage || 'تعذّر التحقق من الكود.', 'error');
             return;
           }
           discountInput.value = data.code;
