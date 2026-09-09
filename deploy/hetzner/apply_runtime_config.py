@@ -40,6 +40,7 @@ import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 DEFAULT_ENV_PATH = Path(
     os.environ.get("DEPLOY_PATH", "/opt/school_reports")
@@ -96,6 +97,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--operations-github-repository",
         help="GitHub owner/repository used by the production operations monitor.",
+    )
+    parser.add_argument(
+        "--configure-redis-limits",
+        action="store_true",
+        help=(
+            "Build REDIS_LIMITS_URL from the REDIS_PASSWORD already stored in "
+            "env.production and enable fail-closed login throttling. The password "
+            "is never printed or passed through argv."
+        ),
     )
     parser.add_argument(
         "--fcm-service-account-from-stdin",
@@ -265,9 +275,44 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
             }
         )
 
-    if not values:
+    if not values and not getattr(args, "configure_redis_limits", False):
         raise SystemExit("Nothing to apply — pass at least one option.")
     return values
+
+
+def _redis_limits_values(path: Path) -> dict[str, str]:
+    """Derive the isolated limits-store URL without moving its password.
+
+    ``REDIS_PASSWORD`` already lives in the protected server-only environment
+    file and is also what authenticates the ``redis-limits`` container. Reading
+    it here avoids creating a second secret in GitHub or exposing it in an SSH
+    command. Quoting is mandatory: production passwords may contain URL syntax
+    such as ``@``, ``#`` or ``/``.
+    """
+
+    existing: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^([A-Z0-9_]+)=(.*)$", line)
+        if match:
+            existing[match.group(1)] = match.group(2).strip()
+
+    password = existing.get("REDIS_PASSWORD", "")
+    if not password:
+        raise SystemExit(
+            "Cannot configure the isolated limits store: REDIS_PASSWORD is missing."
+        )
+    if len(password) > 512:
+        raise SystemExit(
+            "Cannot configure the isolated limits store: REDIS_PASSWORD is malformed."
+        )
+
+    encoded_password = quote(password, safe="")
+    return {
+        "REDIS_LIMITS_URL": (
+            f"redis://:{encoded_password}@redis-limits:6379/0"
+        ),
+        "LOGIN_THROTTLE_FAIL_CLOSED": "True",
+    }
 
 
 def _assert_gateway_can_boot(path: Path, values: dict[str, str]) -> None:
@@ -468,6 +513,8 @@ def main() -> None:
         raise SystemExit(f"{path} not found — run this on the server.")
 
     values = _collect(args)
+    if args.configure_redis_limits:
+        values.update(_redis_limits_values(path))
     _assert_gateway_can_boot(path, values)
     _assert_tamara_can_boot(path, values)
     _assert_web_push_can_boot(path, values)

@@ -13,6 +13,7 @@ from deploy.hetzner.apply_runtime_config import (
     _assert_tamara_can_boot,
     _assert_web_push_can_boot,
     _collect,
+    _redis_limits_values,
     _rewrite,
     _write_fcm_service_account,
 )
@@ -40,6 +41,7 @@ class WebPushRuntimeConfigTests(SimpleTestCase):
             "resend_system_backend": False,
             "fcm_service_account_from_stdin": False,
             "operations_github_repository": None,
+            "configure_redis_limits": False,
         }
         values.update(overrides)
         return SimpleNamespace(**values)
@@ -121,6 +123,42 @@ class WebPushRuntimeConfigTests(SimpleTestCase):
             values["OPERATIONS_GITHUB_REPOSITORY"],
             "xmansx2030-lgtm/school_reports",
         )
+
+    def test_isolated_limits_store_uses_url_encoded_existing_password(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "env.production"
+            path.write_text("REDIS_PASSWORD=p@ss:/%# ?\n", encoding="utf-8")
+
+            values = _redis_limits_values(path)
+
+        self.assertEqual(
+            values["REDIS_LIMITS_URL"],
+            "redis://:p%40ss%3A%2F%25%23%20%3F@redis-limits:6379/0",
+        )
+        self.assertEqual(values["LOGIN_THROTTLE_FAIL_CLOSED"], "True")
+
+    def test_isolated_limits_store_flag_is_a_complete_runtime_action(self):
+        values = _collect(
+            self._args(
+                web_push_enabled=None,
+                web_push_config_from_stdin=False,
+                configure_redis_limits=True,
+            )
+        )
+
+        self.assertEqual(values, {})
+
+    def test_isolated_limits_store_refuses_a_missing_password(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "env.production"
+            path.write_text("REDIS_URL=redis://redis:6379/0\n", encoding="utf-8")
+
+            with self.assertRaisesMessage(SystemExit, "REDIS_PASSWORD is missing"):
+                _redis_limits_values(path)
 
     def test_invalid_operations_repository_is_rejected(self):
         with self.assertRaisesMessage(SystemExit, "owner/repository"):
