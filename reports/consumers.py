@@ -328,8 +328,19 @@ class NotificationCountsConsumer(AsyncJsonWebsocketConsumer):
         # Exclude expired
         qs = qs.filter(Q(notification__expires_at__gt=now) | Q(notification__expires_at__isnull=True))
 
-        unread_q = Q(is_read=False) & Q(notification__requires_signature=False)
-        pending_sig_q = Q(notification__requires_signature=True, is_signed=False)
+        unread_q = Q(notification__kind__in=["notification", "newsletter"]) & (
+            Q(is_read=False)
+            | Q(
+                notification__kind="newsletter",
+                notification__requires_signature=True,
+                is_signed=False,
+            )
+        )
+        pending_sig_q = Q(
+            notification__kind="circular",
+            notification__requires_signature=True,
+            is_signed=False,
+        )
         attention_q = unread_q | pending_sig_q
 
         agg = qs.aggregate(

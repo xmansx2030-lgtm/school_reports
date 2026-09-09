@@ -63,6 +63,19 @@ class GroupNotificationBatch(models.Model):
 
 
 class Notification(models.Model):
+    class Kind(models.TextChoices):
+        NOTIFICATION = "notification", "إشعار"
+        NEWSLETTER = "newsletter", "نشرة"
+        CIRCULAR = "circular", "تعميم"
+
+    kind = models.CharField(
+        "نوع التواصل",
+        max_length=16,
+        choices=Kind.choices,
+        default=Kind.NOTIFICATION,
+        db_index=True,
+        help_text="يفصل نوع الوثيقة عن طلب التوقيع؛ فقد تتطلب النشرة توقيعًا أو لا تتطلبه.",
+    )
     title = models.CharField(max_length=120, blank=True, default="")
     message = models.TextField()
     is_important = models.BooleanField(default=False)
@@ -88,12 +101,12 @@ class Notification(models.Model):
     requires_signature = models.BooleanField(
         "يتطلب توقيع؟",
         default=False,
-        help_text="عند التفعيل يصبح الإشعار تعميمًا ويتطلب إقرار + إدخال الجوال للتوقيع.",
+        help_text="عند التفعيل تتطلب الوثيقة إقرارًا وإدخال رقم الجوال لاعتماد التوقيع.",
     )
     is_broadcast = models.BooleanField(
         "للجميع (بث عام)؟",
         default=False,
-        help_text="عند التفعيل يُعرض الإشعار/التعميم لجميع مستلميه دون تخصيص.",
+        help_text="عند التفعيل يُعرض التواصل لجميع مستلميه دون تخصيص.",
     )
     signature_deadline_at = models.DateTimeField(
         "آخر موعد للتوقيع",
@@ -154,6 +167,26 @@ class Notification(models.Model):
     @property
     def details(self) -> str:
         return self.message
+
+    @property
+    def is_newsletter(self) -> bool:
+        return self.kind == self.Kind.NEWSLETTER
+
+    @property
+    def is_circular(self) -> bool:
+        return self.kind == self.Kind.CIRCULAR
+
+    @property
+    def kind_label(self) -> str:
+        return self.get_kind_display()
+
+    def save(self, *args, **kwargs):
+        # Backward compatibility for older internal callers that created a
+        # circular by setting only ``requires_signature=True``.  A newsletter
+        # always supplies its explicit kind and is therefore never rewritten.
+        if self._state.adding and self.kind == self.Kind.NOTIFICATION and self.requires_signature:
+            self.kind = self.Kind.CIRCULAR
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title or (self.message[:30] + ("..." if len(self.message) > 30 else ""))

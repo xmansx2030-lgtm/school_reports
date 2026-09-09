@@ -41,7 +41,9 @@ def generate_notification_archive_pdf(notification, *, request=None) -> bytes:
     return _render_pdf(
         {
             "record_kind": (
-                "circular" if notification.requires_signature else "notification"
+                "circular"
+                if getattr(notification, "kind", "notification") == "circular"
+                else ("newsletter" if getattr(notification, "kind", "notification") == "newsletter" else "notification")
             ),
             "record": notification,
             "school": notification.school,

@@ -544,6 +544,9 @@
     transition:transform .16s, box-shadow .16s;
   }
   .ns-scope .notif-card:hover{ transform:translateY(-3px); box-shadow:0 20px 38px -22px rgba(10,92,51,.5) !important; }
+  .ns-scope .kind-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:-24px 0 28px;padding:10px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;box-shadow:var(--shadow-sm)}
+  .ns-scope .kind-tab{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:11px;color:var(--text-secondary);font-weight:850;text-decoration:none}
+  .ns-scope .kind-tab.is-active{background:linear-gradient(135deg,rgba(0,108,53,.12),rgba(185,151,91,.16));color:var(--primary);box-shadow:inset 0 0 0 1px rgba(0,108,53,.18)}
 
 </style>
 {% endblock %}
@@ -552,11 +555,17 @@
 <div class="ns-scope" dir="rtl">
   <div class="wrap">
     <div class="page-header">
-      <h1>الإشعارات المرسلة</h1>
+      <h1>التواصل المرسل</h1>
       <a class="create-btn" href="{% url 'reports:notifications_create' %}">
-        <i class="fa-solid fa-plus" aria-hidden="true"></i> إنشاء إشعار جديد
+        <i class="fa-solid fa-plus" aria-hidden="true"></i> إنشاء إشعار أو نشرة
       </a>
     </div>
+
+    <nav class="kind-tabs" aria-label="تصفية التواصل المرسل">
+      <a class="kind-tab{% if kind_filter == 'all' %} is-active{% endif %}" href="{% url 'reports:notifications_sent' %}"><i class="fa-solid fa-layer-group"></i> الكل</a>
+      <a class="kind-tab{% if kind_filter == 'notification' %} is-active{% endif %}" href="{% url 'reports:notifications_sent' %}?kind=notification"><i class="fa-solid fa-bell"></i> الإشعارات</a>
+      <a class="kind-tab{% if kind_filter == 'newsletter' %} is-active{% endif %}" href="{% url 'reports:notifications_sent' %}?kind=newsletter"><i class="fa-solid fa-newspaper"></i> النشرات</a>
+    </nav>
 
     {% if page_obj and page_obj.object_list %}
       <div class="cards-grid">
@@ -569,6 +578,11 @@
                 </h3>
 
                 <div class="badges-container">
+                  {% if n.is_newsletter %}
+                    <span class="pill blue"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> نشرة</span>
+                  {% else %}
+                    <span class="pill"><i class="fa-solid fa-bell" aria-hidden="true"></i> إشعار</span>
+                  {% endif %}
                   {% if n.is_important %}
                     <span class="pill important"><i class="fa-solid fa-exclamation-circle" aria-hidden="true"></i> هام</span>
                   {% endif %}
@@ -576,7 +590,7 @@
                     <span class="pill blue"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i> للجميع</span>
                   {% endif %}
                   {% if n.requires_signature %}
-                    <span class="pill blue"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> تعميم بتوقيع</span>
+                    <span class="pill blue"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> يتطلب توقيعًا</span>
                   {% endif %}
                 </div>
               </div>
@@ -627,7 +641,7 @@
                 </a>
               {% endif %}
 
-              <form method="post" action="{% url 'reports:notification_delete' n.id %}" class="js-delete-form u-inline" data-confirm="سيتم حذف هذا الإشعار نهائيًا ولا يمكن التراجع. هل تريد المتابعة؟" data-confirm-type="danger">
+              <form method="post" action="{% url 'reports:notification_delete' n.id %}" class="js-delete-form u-inline" data-confirm="سيتم حذف {% if n.is_newsletter %}هذه النشرة{% else %}هذا الإشعار{% endif %} نهائيًا ولا يمكن التراجع. هل تريد المتابعة؟" data-confirm-type="danger">
                 {% csrf_token %}
                 <button class="ns-btn danger" type="submit">
                   <i class="fa-regular fa-trash-can" aria-hidden="true"></i> حذف
@@ -641,7 +655,7 @@
       {% if page_obj.paginator.num_pages > 1 %}
         <nav class="pager" aria-label="التنقل بين الصفحات">
           {% if page_obj.has_previous %}
-            <a class="ns-btn" href="?page={{ page_obj.previous_page_number }}">
+            <a class="ns-btn" href="?page={{ page_obj.previous_page_number }}{% if kind_filter != 'all' %}&kind={{ kind_filter }}{% endif %}">
               <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> السابق
             </a>
           {% endif %}
@@ -649,7 +663,7 @@
           <span class="ns-btn current">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
 
           {% if page_obj.has_next %}
-            <a class="ns-btn" href="?page={{ page_obj.next_page_number }}">
+            <a class="ns-btn" href="?page={{ page_obj.next_page_number }}{% if kind_filter != 'all' %}&kind={{ kind_filter }}{% endif %}">
               التالي <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
             </a>
           {% endif %}
@@ -658,8 +672,8 @@
     {% else %}
       <div class="empty-state">
         <i class="fa-regular fa-bell" aria-hidden="true"></i>
-        <h3>لا توجد إشعارات مرسلة حتى الآن</h3>
-        <p>يمكنك إنشاء أول إشعار بالنقر على زر “إنشاء إشعار جديد”.</p>
+        <h3>لا يوجد تواصل مرسل في هذا القسم</h3>
+        <p>أنشئ إشعارًا سريعًا أو نشرة مرفقة وحدد المستلمين من شاشة واحدة.</p>
       </div>
     {% endif %}
   </div>

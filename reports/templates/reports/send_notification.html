@@ -815,6 +815,28 @@
   }
   .notify-scope .page-head .btn-ghost:hover{ background:#d4b16d !important; color:#063d22 !important; }
   .notify-scope .btn-primary{ background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important; box-shadow:0 10px 22px -12px rgba(10,92,51,.6) !important; }
+
+  .notify-scope .communication-picker{
+    grid-column:1/-1; padding:18px; border:1px solid rgba(185,151,91,.34);
+    border-radius:18px; background:linear-gradient(135deg,rgba(0,108,53,.06),rgba(185,151,91,.08));
+  }
+  .notify-scope .communication-picker__label{display:block;margin-bottom:12px;font-weight:950;color:var(--text-primary)}
+  .notify-scope .communication-picker ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;margin:0;padding:0}
+  .notify-scope .communication-picker label{display:flex;align-items:flex-start;gap:12px;padding:16px;border:2px solid var(--border-color);border-radius:15px;background:var(--card-bg);cursor:pointer;transition:var(--transition)}
+  .notify-scope .communication-picker label:has(input:checked){border-color:var(--primary);box-shadow:0 0 0 4px rgba(0,108,53,.10);background:rgba(0,108,53,.055)}
+  .notify-scope .communication-picker input{margin-top:4px;accent-color:var(--primary)}
+  .notify-scope .communication-picker small{display:block;color:var(--text-light);font-weight:650;margin-top:3px;line-height:1.5}
+  .notify-scope .newsletter-options{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:20px;border:1px solid rgba(185,151,91,.32);border-radius:18px;background:rgba(185,151,91,.055)}
+  .notify-scope .newsletter-options[hidden],.notify-scope .signature-options[hidden]{display:none!important}
+  .notify-scope .newsletter-options__head{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+  .notify-scope .newsletter-options__head i{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:rgba(0,108,53,.1);color:var(--primary)}
+  .notify-scope .newsletter-options__head strong{display:block;font-size:1.05rem}
+  .notify-scope .newsletter-options__head span{display:block;color:var(--text-light);font-size:.88rem;font-weight:650;margin-top:2px}
+  .notify-scope .signature-switch{grid-column:1/-1;display:flex!important;align-items:center!important;justify-content:space-between;padding:15px 16px;border:1px solid var(--border-color);border-radius:14px;background:var(--card-bg)}
+  .notify-scope .signature-switch input{width:21px;height:21px;accent-color:var(--primary)}
+  .notify-scope .signature-options{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .notify-scope .signature-options .full{grid-column:1/-1}
+  @media(max-width:680px){.notify-scope .communication-picker ul,.notify-scope .newsletter-options,.notify-scope .signature-options{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 
@@ -824,12 +846,12 @@
 
     <header class="page-head">
       <div>
-        <h1 class="title">إرسال إشعار</h1>
-        <div class="hint">اكتب عنوانًا واضحًا ومحتوى رسميًا. يمكنك معاينة الشكل قبل الإرسال.</div>
+        <h1 class="title" id="pageTitle">إنشاء تواصل</h1>
+        <div class="hint" id="pageHint">اختر إشعارًا سريعًا أو نشرة مرفقة، ثم حدّد المستلمين بوضوح.</div>
       </div>
       <div>
         <a class="btn btn-ghost" href="{% url 'reports:notifications_sent' %}">
-          <i class="fa-solid fa-list"></i> الإشعارات المرسلة
+          <i class="fa-solid fa-list"></i> التواصل المرسل
         </a>
       </div>
     </header>
@@ -860,8 +882,8 @@
       <!-- العمود الأيسر: النموذج -->
       <section class="card" aria-labelledby="form-title">
         <div class="card-hd">
-          <strong id="form-title">نموذج الإشعار</strong>
-          <span class="help">يظهر هذا الخيار للمصرّح لهم فقط</span>
+          <strong id="form-title">بيانات التواصل</strong>
+          <span class="help">خطوات قليلة ومعاينة قبل الإرسال</span>
         </div>
 
         <div class="card-bd">
@@ -876,8 +898,56 @@
               {% endif %}
 
               <div class="form-grid">
+                <div class="communication-picker" aria-labelledby="communicationTypeLabel">
+                  <span class="communication-picker__label" id="communicationTypeLabel">ماذا تريد أن ترسل؟</span>
+                  <ul>
+                    {% for choice in form.communication_type %}
+                      <li>
+                        <label for="{{ choice.id_for_label }}">
+                          {{ choice.tag }}
+                          <span>
+                            <strong>{% if choice.data.value == 'newsletter' %}<i class="fa-solid fa-newspaper" aria-hidden="true"></i> نشرة{% else %}<i class="fa-solid fa-bell" aria-hidden="true"></i> إشعار{% endif %}</strong>
+                            <small>{% if choice.data.value == 'newsletter' %}وثيقة مرفقة، ويمكن طلب توقيع المستلمين عليها.{% else %}رسالة مباشرة لمشاركة تنبيه أو معلومة سريعة.{% endif %}</small>
+                          </span>
+                        </label>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                  {% for e in form.communication_type.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+                </div>
+
+                <section class="newsletter-options" id="newsletterOptions" hidden aria-labelledby="newsletterOptionsTitle">
+                  <div class="newsletter-options__head">
+                    <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+                    <div><strong id="newsletterOptionsTitle">خيارات النشرة</strong><span>أرفق الوثيقة وحدد هل تحتاج إقرارًا إلكترونيًا من المستلمين.</span></div>
+                  </div>
+                  <div class="field full">
+                    <label for="{{ form.attachment.id_for_label }}">{{ form.attachment.label }}</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.help_text %}<div class="help">{{ form.attachment.help_text }}</div>{% endif %}
+                    {% for e in form.attachment.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+                  </div>
+                  <label class="signature-switch" for="{{ form.requires_signature.id_for_label }}">
+                    <span><strong>طلب توقيع المستلمين</strong><small>فعّله عندما تحتاج إثبات اطلاع وإقرار موثقًا.</small></span>
+                    {{ form.requires_signature }}
+                  </label>
+                  <div class="signature-options" id="signatureOptions" hidden>
+                    <div class="field">
+                      <label for="{{ form.signature_deadline_at.id_for_label }}">{{ form.signature_deadline_at.label }}</label>
+                      {{ form.signature_deadline_at }}
+                      {% for e in form.signature_deadline_at.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="field full">
+                      <label for="{{ form.signature_ack_text.id_for_label }}">{{ form.signature_ack_text.label }}</label>
+                      {{ form.signature_ack_text }}
+                      {% for e in form.signature_ack_text.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+                    </div>
+                  </div>
+                </section>
+
                 {% for field in form.visible_fields %}
-                  {% if field.name == "teachers" or field.name == "target_department" %}
+                  {% if field.name == "communication_type" or field.name == "attachment" %}
+                  {% elif field.name == "teachers" or field.name == "target_department" %}
                     <div class="field full" data-name="{{ field.html_name|lower }}">
                       <label for="{{ field.id_for_label }}" class="u-flex u-items-center u-justify-between u-gap-2">
                         <span>
@@ -931,12 +1001,19 @@
                       {% for e in field.errors %}<div class="errors">{{ e }}</div>{% endfor %}
                     </div>
                   {% elif field.name == "requires_signature" or field.name == "signature_deadline_at" or field.name == "signature_ack_text" %}
-                    {# حقل خاص بالتعاميم، لا يظهر في صفحة الإشعار #}
                   {% else %}
                     <div class="field" data-name="{{ field.html_name|lower }}">
                       <label for="{{ field.id_for_label }}">
-                        {% if field.field.required %}<span class="xs-send-notification-1">*</span>{% endif %}
-                        {{ field.label|default:"الحقل" }}
+                        {% if field.name == "title" %}
+                          <span class="xs-send-notification-1" id="titleRequiredMark" hidden>*</span>
+                          <span id="titleFieldLabel">{{ field.label|default:"العنوان" }}</span>
+                        {% elif field.name == "message" %}
+                          {% if field.field.required %}<span class="xs-send-notification-1">*</span>{% endif %}
+                          <span id="messageFieldLabel">{{ field.label|default:"النص" }}</span>
+                        {% else %}
+                          {% if field.field.required %}<span class="xs-send-notification-1">*</span>{% endif %}
+                          {{ field.label|default:"الحقل" }}
+                        {% endif %}
                       </label>
                       {{ field }}
                       {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
@@ -948,7 +1025,7 @@
 
               <div class="actions">
                 <button class="btn btn-primary" type="submit">
-                  <i class="fa-solid fa-paper-plane"></i> إرسال الإشعار
+                  <i class="fa-solid fa-paper-plane"></i> <span id="submitLabel">إرسال الإشعار</span>
                 </button>
                 <a class="btn" href="{% if IS_SCHOOL_MANAGER %}{% url 'reports:admin_dashboard' %}{% else %}{% url 'reports:home' %}{% endif %}">
                   <i class="fa-solid fa-home"></i> الرجوع للرئيسية
@@ -987,6 +1064,8 @@
               <span class="pill u-hidden" id="pv_expires">
                 <i class="fa-solid fa-clock"></i> ينتهي لاحقًا
               </span>
+              <span class="pill u-hidden" id="pv_newsletter"><i class="fa-solid fa-newspaper"></i> نشرة</span>
+              <span class="pill u-hidden" id="pv_signature"><i class="fa-solid fa-pen-nib"></i> يلزم التوقيع</span>
             </div>
           </div>
         </div>
@@ -1023,7 +1102,7 @@
 
     const urlInput =
       $("#id_action_url") ||
-      document.querySelector('input[type="url"][name*="action_url"],input[type="url"]');
+      document.querySelector('input[type="url"][name*="action_url"],input[type="url"][name*="link"]');
 
     const impInput =
       $("#id_is_important") ||
@@ -1041,6 +1120,19 @@
       $("#id_signature_deadline_at") ||
       document.querySelector('input[type="datetime-local"][name*="signature_deadline"],input[name*="signature_deadline"]');
 
+    const signatureAckInput = $("#id_signature_ack_text");
+
+    const communicationInputs = Array.from(document.querySelectorAll('input[name="communication_type"]'));
+    const newsletterOptions = $("#newsletterOptions");
+    const signatureOptions = $("#signatureOptions");
+    const pageTitle = $("#pageTitle");
+    const pageHint = $("#pageHint");
+    const submitLabel = $("#submitLabel");
+    const pvNewsletter = $("#pv_newsletter");
+    const titleFieldLabel = $("#titleFieldLabel");
+    const titleRequiredMark = $("#titleRequiredMark");
+    const messageFieldLabel = $("#messageFieldLabel");
+
     const pvTitle = $("#pv_title");
     const pvBody  = $("#pv_body");
     const pvImportant = $("#pv_important");
@@ -1049,12 +1141,42 @@
     const pvAction = $("#pv_action");
     const pvExpires = $("#pv_expires");
 
+    function selectedCommunicationType(){
+      const selected = communicationInputs.find(input => input.checked);
+      return selected ? selected.value : 'notification';
+    }
+
+    function syncCommunicationUI(){
+      const isNewsletter = selectedCommunicationType() === 'newsletter';
+      if(newsletterOptions) newsletterOptions.hidden = !isNewsletter;
+      if(signatureOptions) signatureOptions.hidden = !(isNewsletter && sigInput && sigInput.checked);
+      if(titleInput){
+        titleInput.required = isNewsletter;
+        titleInput.placeholder = isNewsletter ? 'عنوان النشرة' : 'عنوان الإشعار (اختياري)';
+      }
+      if(titleFieldLabel) titleFieldLabel.textContent = isNewsletter ? 'عنوان النشرة' : 'عنوان (اختياري)';
+      if(titleRequiredMark) titleRequiredMark.hidden = !isNewsletter;
+      if(messageFieldLabel) messageFieldLabel.textContent = isNewsletter ? 'مقدمة النشرة' : 'نص الإشعار';
+      if(signatureAckInput && isNewsletter){
+        const circularDefault = 'أقرّ بأنني اطلعت على هذا التعميم وفهمت ما ورد فيه وأتعهد بالالتزام به.';
+        if(!signatureAckInput.value.trim() || signatureAckInput.value.trim() === circularDefault){
+          signatureAckInput.value = 'أقرّ بأنني اطلعت على هذه النشرة وفهمت ما ورد فيها.';
+        }
+      }
+      if(msgInput) msgInput.placeholder = isNewsletter ? 'اكتب مقدمة مختصرة توضّح محتوى النشرة…' : 'اكتب نص الإشعار…';
+      if(pageTitle) pageTitle.textContent = isNewsletter ? 'إنشاء نشرة' : 'إرسال إشعار';
+      if(pageHint) pageHint.textContent = isNewsletter ? 'أرفق النشرة، حدّد المستلمين، واختر إن كانت تحتاج توقيعًا.' : 'أرسل تنبيهًا واضحًا ومباشرًا إلى الأفراد أو الأقسام.';
+      if(submitLabel) submitLabel.textContent = isNewsletter ? 'إرسال النشرة' : 'إرسال الإشعار';
+      if(pvNewsletter) pvNewsletter.style.display = isNewsletter ? 'inline-flex' : 'none';
+      updatePreview();
+    }
+
     function updatePreview(){
       if(pvTitle && titleInput){
-        pvTitle.textContent = (titleInput.value || "").trim() || "عنوان الإشعار";
+        pvTitle.textContent = (titleInput.value || "").trim() || (selectedCommunicationType() === 'newsletter' ? 'عنوان النشرة' : 'عنوان الإشعار');
       }
       if(pvBody && msgInput){
-        pvBody.textContent = (msgInput.value || "").trim() || "سيظهر نص الإشعار هنا…";
+        pvBody.textContent = (msgInput.value || "").trim() || (selectedCommunicationType() === 'newsletter' ? 'ستظهر مقدمة النشرة هنا…' : 'سيظهر نص الإشعار هنا…');
       }
       if(pvImportant && impInput){
         pvImportant.style.display = impInput.checked ? "block" : "none";
@@ -1079,7 +1201,9 @@
         el.addEventListener("change", updatePreview);
       }
     });
-    updatePreview();
+    communicationInputs.forEach(input => input.addEventListener('change', syncCommunicationUI));
+    if(sigInput) sigInput.addEventListener('change', syncCommunicationUI);
+    syncCommunicationUI();
 
     // ===== Unified recipients chooser: departments + individual teachers =====
     const teacherField = document.querySelector('.form-grid .field[data-name*="teachers"]');

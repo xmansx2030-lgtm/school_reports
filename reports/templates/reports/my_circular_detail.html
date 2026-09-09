@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ n.title|default:"التعميم الرسمي" }}{% endblock %}
+{% block title %}{{ n.title|default:communication_label }}{% endblock %}
 
 {% block head %}
   <link rel="stylesheet" href="{% static 'css/circulars-official.css' %}">
@@ -13,15 +13,15 @@
     <header class="cir-hero cir-no-print">
       <div class="cir-hero__main">
         <div class="cir-hero__eyebrow"><i class="fa-solid fa-file-shield"></i> وثيقة إدارية رسمية</div>
-        <h1>الاطلاع على التعميم</h1>
-        <p>اقرأ الوثيقة ومرفقاتها بعناية، ثم اعتمد إقرار الاطلاع من لوحة التوقيع الإلكتروني.</p>
+        <h1>الاطلاع على {{ communication_label|default:"التعميم" }}</h1>
+        <p>{% if n.requires_signature %}اقرأ الوثيقة ومرفقاتها بعناية، ثم اعتمد إقرار الاطلاع من لوحة التوقيع الإلكتروني.{% else %}اقرأ النشرة ومرفقها، وتُسجّل حالة الاطلاع تلقائيًا عند فتحها.{% endif %}</p>
       </div>
       <div class="cir-hero__actions">
-        <a href="{% url 'reports:my_circulars' %}" class="cir-btn cir-btn--hero">
+        <a href="{% if is_newsletter %}{% url 'reports:my_notifications' %}{% else %}{% url 'reports:my_circulars' %}{% endif %}" class="cir-btn cir-btn--hero">
           <i class="fa-solid fa-arrow-right"></i> رجوع
         </a>
         <button type="button" class="cir-btn cir-btn--hero" id="printCircular">
-          <i class="fa-solid fa-print"></i> طباعة التعميم
+          <i class="fa-solid fa-print"></i> طباعة {{ communication_label|default:"التعميم" }}
         </button>
       </div>
     </header>
@@ -39,31 +39,31 @@
             <span>وثيقة إلكترونية معتمدة</span>
           </div>
           <dl class="cir-document__reference">
-            <div><dt>الرقم المرجعي</dt><dd>CIR-{{ n.id|stringformat:"05d" }}</dd></div>
+            <div><dt>الرقم المرجعي</dt><dd>{% if is_newsletter %}NWS{% else %}CIR{% endif %}-{{ n.id|stringformat:"05d" }}</dd></div>
             <div><dt>تاريخ الإصدار</dt><dd>{{ n.created_at|date:"Y/m/d" }}</dd></div>
-            <div><dt>حالة الوثيقة</dt><dd>{% if r.is_signed %}<span class="cir-document__state cir-document__state--signed">موقّع إلكترونيًا</span>{% else %}<span class="cir-document__state">بانتظار التوقيع</span>{% endif %}</dd></div>
+            <div><dt>حالة الوثيقة</dt><dd>{% if n.requires_signature and r.is_signed %}<span class="cir-document__state cir-document__state--signed">موقّع إلكترونيًا</span>{% elif n.requires_signature %}<span class="cir-document__state">بانتظار التوقيع</span>{% else %}<span class="cir-document__state cir-document__state--signed">تم الاطلاع</span>{% endif %}</dd></div>
           </dl>
         </header>
 
         <div class="cir-document__heading">
-          <div class="cir-document__type"><span></span><strong>تعميم إداري</strong><span></span></div>
+          <div class="cir-document__type"><span></span><strong>{% if is_newsletter %}نشرة مدرسية{% else %}تعميم إداري{% endif %}</strong><span></span></div>
           <div class="cir-document__subject-label">الموضوع</div>
-          <h2 class="cir-document__title" id="circularTitle">{{ n.title|default:"تعميم رسمي" }}</h2>
+          <h2 class="cir-document__title" id="circularTitle">{{ n.title|default:communication_label }}</h2>
           <div class="cir-document__heading-meta">صادر عن {% firstof sender_name "إدارة المدرسة" %}{% if sender_role_label %} — {{ sender_role_label }}{% endif %}</div>
         </div>
 
-        <section class="cir-document__content" aria-label="نص التعميم">
-          <div class="cir-document__content-label"><span>نص التعميم</span></div>
+        <section class="cir-document__content" aria-label="محتوى الوثيقة">
+          <div class="cir-document__content-label"><span>{% if is_newsletter %}مقدمة النشرة{% else %}نص التعميم{% endif %}</span></div>
           <div class="cir-document__body">
             {% if body %}
               {{ body|linebreaksbr }}
             {% else %}
-              <p>يرجى الاطلاع على المرفق المعتمد لهذا التعميم.</p>
+              <p>يرجى الاطلاع على المرفق المعتمد لهذه الوثيقة.</p>
             {% endif %}
           </div>
         </section>
 
-        {% if n.signature_ack_text or n.signature_deadline_at %}
+        {% if n.requires_signature and n.signature_ack_text or n.requires_signature and n.signature_deadline_at %}
         <aside class="cir-document__footnote">
           <div class="cir-document__footnote-icon" aria-hidden="true"><i class="fa-solid fa-fingerprint"></i></div>
           <div class="cir-document__footnote-content">
@@ -85,24 +85,32 @@
               <strong>{{ r.teacher.name|default:r.teacher }}</strong>
             </div>
             <div class="cir-document__issued-item cir-document__issued-item--status">
-              {% if r.is_signed %}
+            {% if n.requires_signature and r.is_signed %}
                 <span class="cir-document__verified"><i class="fa-solid fa-circle-check"></i> تم الاعتماد إلكترونيًا</span>
                 <strong>{{ r.signed_at|date:"Y/m/d — H:i" }}</strong>
-              {% else %}
-                <span>حالة الاعتماد</span>
-                <strong>بانتظار إقرار المستلم</strong>
+            {% elif n.requires_signature %}
+              <span>حالة الاعتماد</span>
+              <strong>بانتظار إقرار المستلم</strong>
+            {% else %}
+              <span class="cir-document__verified"><i class="fa-solid fa-eye"></i> تم الاطلاع إلكترونيًا</span>
+              <strong>{{ r.read_at|date:"Y/m/d — H:i" }}</strong>
               {% endif %}
             </div>
           </div>
           <div class="cir-document__verification">
             <span><i class="fa-solid fa-shield-halved"></i> وثيقة موثقة إلكترونيًا عبر منصة توثيق</span>
-            <span>CIR-{{ n.id|stringformat:"05d" }}</span>
+            <span>{% if is_newsletter %}NWS{% else %}CIR{% endif %}-{{ n.id|stringformat:"05d" }}</span>
           </div>
         </footer>
       </article>
 
-      <aside class="cir-side cir-no-print" aria-label="بيانات وإجراءات التعميم">
-        {% if r.is_signed %}
+      <aside class="cir-side cir-no-print" aria-label="بيانات وإجراءات الوثيقة">
+        {% if not n.requires_signature %}
+          <div class="cir-notice cir-notice--success">
+            <i class="fa-solid fa-eye fa-lg"></i>
+            <div><strong>تم تسجيل الاطلاع</strong><br>هذه النشرة لا تتطلب توقيعًا، ويمكنك فتح المرفق أو طباعتها.</div>
+          </div>
+        {% elif r.is_signed %}
           <div class="cir-notice cir-notice--success">
             <i class="fa-solid fa-circle-check fa-lg"></i>
             <div><strong>اكتمل توقيعك</strong><br>سُجّل إقرارك بتاريخ {{ r.signed_at|date:"Y/m/d" }} عند {{ r.signed_at|date:"H:i" }}.</div>
@@ -115,7 +123,7 @@
         {% else %}
           <div class="cir-notice cir-notice--danger">
             <i class="fa-solid fa-circle-exclamation fa-lg"></i>
-            <div><strong>إجراء مطلوب</strong><br>هذا التعميم يتطلب توقيعك الإلكتروني بعد إتمام الاطلاع.</div>
+            <div><strong>إجراء مطلوب</strong><br>{{ communication_label|default:"هذه الوثيقة" }} تتطلب توقيعك الإلكتروني بعد إتمام الاطلاع.</div>
           </div>
         {% endif %}
 
@@ -123,7 +131,7 @@
           <h3 class="cir-panel__head"><i class="fa-solid fa-circle-info"></i> بيانات الوثيقة</h3>
           <div class="cir-panel__body">
             <dl class="cir-info-list">
-              <div class="cir-info-row"><dt>الرقم المرجعي</dt><dd>CIR-{{ n.id|stringformat:"05d" }}</dd></div>
+              <div class="cir-info-row"><dt>الرقم المرجعي</dt><dd>{% if is_newsletter %}NWS{% else %}CIR{% endif %}-{{ n.id|stringformat:"05d" }}</dd></div>
               <div class="cir-info-row"><dt>جهة الإصدار</dt><dd>{% firstof sender_name "إدارة المدرسة" %}{% if sender_role_label %} — {{ sender_role_label }}{% endif %}</dd></div>
               <div class="cir-info-row"><dt>تاريخ الإصدار</dt><dd>{{ n.created_at|date:"Y/m/d — H:i" }}</dd></div>
               {% if n.signature_deadline_at %}<div class="cir-info-row"><dt>مهلة التوقيع</dt><dd>{{ n.signature_deadline_at|date:"Y/m/d — H:i" }}</dd></div>{% endif %}
@@ -142,12 +150,12 @@
         </section>
         {% endif %}
 
-        {% if not r.is_signed and not signing_closed %}
+        {% if n.requires_signature and not r.is_signed and not signing_closed %}
         <section class="cir-panel cir-signature" aria-labelledby="signatureTitle">
           <h3 class="cir-panel__head" id="signatureTitle"><i class="fa-solid fa-pen-nib"></i> التوقيع الإلكتروني</h3>
           <div class="cir-panel__body">
             <div class="cir-signature__declaration">
-              {% if n.signature_ack_text %}{{ n.signature_ack_text|linebreaksbr }}{% else %}أقرّ بأنني اطلعت على التعميم وفهمت ما ورد فيه وأتعهد بالالتزام بمضمونه.{% endif %}
+              {% if n.signature_ack_text %}{{ n.signature_ack_text|linebreaksbr }}{% else %}أقرّ بأنني اطلعت على الوثيقة وفهمت ما ورد فيها وأتعهد بالالتزام بمضمونها.{% endif %}
             </div>
 
             <form
@@ -157,7 +165,7 @@
               data-sign-confirm="سيتم تسجيل إقرارك ووقت التوقيع إلكترونيًا، ولن تتمكن من التراجع بعد الاعتماد."
               data-sign-confirm-title="اعتماد التوقيع الإلكتروني؟"
               data-sign-confirm-ok="نعم، اعتماد التوقيع"
-              data-sign-confirm-cancel="مراجعة التعميم"
+              data-sign-confirm-cancel="مراجعة الوثيقة"
               novalidate
             >
               {% csrf_token %}
@@ -171,7 +179,7 @@
               <label class="cir-ack" for="sig_ack">
                 <input type="checkbox" id="sig_ack" name="ack" required>
                 <span class="cir-ack__box" aria-hidden="true"></span>
-                <span class="cir-ack__text">قرأت التعميم ومرفقاته، وأوافق على إقرار الاطلاع الموضح أعلاه.</span>
+                <span class="cir-ack__text">قرأت الوثيقة ومرفقاتها، وأوافق على إقرار الاطلاع الموضح أعلاه.</span>
               </label>
 
               <button type="submit" id="sigSubmit" class="cir-btn cir-btn--primary cir-sign-submit">

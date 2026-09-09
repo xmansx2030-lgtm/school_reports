@@ -22,6 +22,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .. import capabilities as caps
+from ..manager_approval_queue import manager_approval_rows
 from ..model_parts.approvals import ApprovalRoute, ApprovalState, PENDING_REVIEW_STATES
 from ..models import Document, Report
 from ..permissions import (
@@ -124,73 +125,94 @@ def approval_inbox(request):
         return redirect("reports:home")
 
     state_filter = (request.GET.get("state") or "").strip()
-    reports = _reviewable_reports(request.user, active_school)
-    documents = _reviewable_documents(request.user, active_school)
-    if state_filter in {value for value, _ in ApprovalState.choices}:
-        reports = reports.filter(approval_state=state_filter)
-        documents = documents.filter(approval_state=state_filter)
-    else:
+    valid_states = {value for value, _ in ApprovalState.choices}
+    if state_filter not in valid_states:
         state_filter = ""
 
-    now = timezone.now()
-    rows = []
-    for report in reports[:200]:
-        actions = available_actions(report, request.user, school=active_school)
-        # عمر الانتظار يُحسب هنا لا في القالب: صندوقٌ يعرض عشرين عملاً بلا
-        # تمييزٍ بين ما وصل اليوم وما ينتظر منذ أسبوعين يُقرأ بالترتيب لا
-        # بالأولوية — فيُنسى الأقدم لأنه في الأسفل.
-        waiting_days = (
-            (now - report.submitted_at).days if report.submitted_at else None
+    if is_manager or request.user.is_superuser:
+        # المدير يرى كل أنواع العمل من مصدر واحد تشترك فيه لوحة المدرسة. لا
+        # تُعاد كتابة العدادات هنا حتى لا تقول الصفحة رقماً واللوحة رقماً آخر.
+        all_rows = manager_approval_rows(request.user, active_school)
+    else:
+        now = timezone.now()
+        all_rows = []
+        for report in _reviewable_reports(request.user, active_school)[:200]:
+            actions = available_actions(report, request.user, school=active_school)
+            waiting_days = max(0, (now - report.submitted_at).days) if report.submitted_at else 0
+            subtitle = f"بواسطة {report.teacher_display_name}"
+            if report.category_id:
+                subtitle += f" · {report.category.name}"
+            all_rows.append(
+                {
+                    "item": report,
+                    "kind": "report",
+                    "kind_label": "تقرير",
+                    "kind_icon": "fa-chart-line",
+                    "title": report.title,
+                    "subtitle": subtitle,
+                    "detail_url": reverse("reports:approval_detail", args=[report.pk]),
+                    "action_url": reverse("reports:approval_action", args=[report.pk]),
+                    "inline_action": True,
+                    "actions": actions,
+                    "state": report.approval_state,
+                    "state_label": report.get_approval_state_display(),
+                    "tone": report.approval_tone,
+                    "submitted_at": report.submitted_at,
+                    "waiting_days": waiting_days,
+                    "is_mine": bool({"approve", "recommend", "start_review"} & set(actions)),
+                    "pk": report.pk,
+                }
+            )
+        for document in _reviewable_documents(request.user, active_school)[:200]:
+            actions = available_actions(document, request.user, school=active_school)
+            waiting_days = max(0, (now - document.submitted_at).days) if document.submitted_at else 0
+            owner_name = document.owner_name or getattr(document.owner, "name", "") or "غير محدد"
+            subtitle = f"بواسطة {owner_name}"
+            if document.department_id:
+                subtitle += f" · {document.department.name}"
+            subtitle += f" · {document.get_kind_display()}"
+            all_rows.append(
+                {
+                    "item": document,
+                    "kind": "document",
+                    "kind_label": "وثيقة",
+                    "kind_icon": "fa-file-lines",
+                    "title": document.title,
+                    "subtitle": subtitle,
+                    "detail_url": reverse("reports:document_detail", args=[document.pk]),
+                    "action_url": reverse("reports:document_action", args=[document.pk]),
+                    "inline_action": True,
+                    "actions": actions,
+                    "state": document.approval_state,
+                    "state_label": document.get_approval_state_display(),
+                    "tone": document.approval_tone,
+                    "submitted_at": document.submitted_at,
+                    "waiting_days": waiting_days,
+                    "is_mine": bool({"approve", "recommend", "issue", "start_review"} & set(actions)),
+                    "pk": document.pk,
+                }
+            )
+        all_rows.sort(
+            key=lambda row: (
+                not row["is_mine"],
+                _STATE_ORDER.get(row["state"], 9),
+                -row["waiting_days"],
+                -row["pk"],
+            )
         )
-        rows.append(
-            {
-                "item": report,
-                "report": report,
-                "kind": "report",
-                "detail_url": reverse("reports:approval_detail", args=[report.pk]),
-                "action_url": reverse("reports:approval_action", args=[report.pk]),
-                "actions": actions,
-                "order": _STATE_ORDER.get(report.approval_state, 9),
-                "waiting_days": waiting_days,
-                # «دورك الآن» يشمل التوصية أو الاعتماد أو الإصدار، بخلاف ما
-                # يراه المستخدم للمتابعة فقط وينتظر إجراء شخص آخر.
-                "is_mine": bool({"approve", "recommend"} & set(actions)),
-            }
-        )
-    for document in documents[:200]:
-        actions = available_actions(document, request.user, school=active_school)
-        waiting_days = (
-            (now - document.submitted_at).days if document.submitted_at else None
-        )
-        rows.append(
-            {
-                "item": document,
-                "document": document,
-                "kind": "document",
-                "detail_url": reverse("reports:document_detail", args=[document.pk]),
-                "action_url": reverse("reports:document_action", args=[document.pk]),
-                "actions": actions,
-                "order": _STATE_ORDER.get(document.approval_state, 9),
-                "waiting_days": waiting_days,
-                "is_mine": bool({"approve", "recommend", "issue"} & set(actions)),
-            }
-        )
-    # ما يتطلب إجراء المستخدم أولاً، ثم بترتيب الحالة. و``regroup`` في القالب يجمع
-    # المتجاورَ وحده، فالفرز بـ ``is_mine`` شرطُ صحّته لا تحسينُ عرض.
-    rows.sort(
-        key=lambda row: (not row["is_mine"], row["order"], -(row["item"].pk or 0))
-    )
-
-    mine_count = sum(1 for row in rows if row["is_mine"])
-    oldest_days = max(
-        (row["waiting_days"] for row in rows if row["waiting_days"] is not None),
-        default=0,
-    )
 
     counts = {
-        state: sum(1 for row in rows if row["item"].approval_state == state)
+        state: sum(1 for row in all_rows if row["state"] == state)
         for state in PENDING_REVIEW_STATES
     }
+    total = len(all_rows)
+    mine_count = sum(1 for row in all_rows if row["is_mine"])
+    oldest_days = max((row["waiting_days"] for row in all_rows), default=0)
+    rows = (
+        [row for row in all_rows if row["state"] == state_filter]
+        if state_filter
+        else all_rows
+    )
 
     return render(
         request,
@@ -200,7 +222,8 @@ def approval_inbox(request):
             "active_school": active_school,
             "rows": rows,
             "counts": counts,
-            "total": len(rows),
+            "total": total,
+            "visible_total": len(rows),
             "mine_count": mine_count,
             "oldest_days": oldest_days,
             "state_filter": state_filter,

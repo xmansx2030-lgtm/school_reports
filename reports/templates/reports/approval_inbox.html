@@ -182,32 +182,20 @@
 
       <div class="inb-list">
         {% for row in group.list %}
-          <article class="inb-item" data-tone="{{ row.item.approval_tone }}"
+          <article class="inb-item" data-tone="{{ row.tone }}"
                    {% if row.is_mine %}data-mine="1"{% endif %}>
             <span class="inb-item__ico" aria-hidden="true">
-              {% if row.kind == 'document' %}<i class="fa-solid fa-file-lines"></i>
-              {% elif row.item.approval_state == 'recommended' %}<i class="fa-solid fa-thumbs-up"></i>
-              {% elif row.item.approval_state == 'under_review' %}<i class="fa-solid fa-eye"></i>
-              {% elif row.item.approval_state == 'needs_info' %}<i class="fa-solid fa-circle-question"></i>
-              {% elif row.item.approval_state == 'returned' %}<i class="fa-solid fa-rotate-left"></i>
-              {% else %}<i class="fa-solid fa-paper-plane"></i>{% endif %}
+              <i class="fa-solid {{ row.kind_icon }}"></i>
             </span>
 
             <div class="inb-item__main">
               <div class="inb-item__title">
-                <span class="inb-kind"><i class="fa-solid {% if row.kind == 'document' %}fa-file-lines{% else %}fa-chart-line{% endif %}" aria-hidden="true"></i>{% if row.kind == 'document' %}وثيقة{% else %}تقرير{% endif %}</span>
-                <a href="{{ row.detail_url }}">{{ row.item.title }}</a>
+                <span class="inb-kind"><i class="fa-solid {{ row.kind_icon }}" aria-hidden="true"></i>{{ row.kind_label }}</span>
+                <a href="{{ row.detail_url }}">{{ row.title }}</a>
               </div>
               <div class="inb-item__sub">
-                {% if row.kind == 'document' %}
-                  وثيقة · {{ row.document.owner_name|default:row.document.owner.name }}
-                  {% if row.document.department %} · {{ row.document.department.name }}{% endif %}
-                  · {{ row.document.get_kind_display }}
-                {% else %}
-                  تقرير · {{ row.report.teacher_display_name }}
-                  {% if row.report.category %} · {{ row.report.category.name }}{% endif %}
-                {% endif %}
-                {% if row.item.submitted_at %} · أُرسل {{ row.item.submitted_at|hijri }} هـ{% endif %}
+                {{ row.subtitle }}
+                {% if row.submitted_at %} · أُرسل {{ row.submitted_at|hijri }} هـ{% endif %}
                 {% if row.item.reviewed_by %} · راجعه {{ row.item.reviewed_by.name }}{% endif %}
               </div>
             </div>
@@ -215,7 +203,7 @@
             <div class="inb-item__side">
               {# الحارس على ``submitted_at`` لا على ``waiting_days``: صفرُ أيام #}
               {# قيمةٌ صحيحة تعني «اليوم»، وفحصُ العدد وحده يُخفيها. #}
-              {% if row.item.submitted_at %}
+              {% if row.submitted_at %}
                 <span class="inb-age"
                       data-w="{% if row.waiting_days >= 7 %}late{% elif row.waiting_days >= 3 %}warn{% endif %}"
                       title="مضى على إرساله {{ row.waiting_days }} يوماً">
@@ -224,11 +212,11 @@
                 </span>
               {% endif %}
 
-              <span class="apr-state" data-tone="{{ row.item.approval_tone }}">
-                {{ row.item.get_approval_state_display }}
+              <span class="apr-state" data-tone="{{ row.tone }}">
+                {{ row.state_label }}
               </span>
 
-              {% if 'approve' in row.actions or 'issue' in row.actions or 'recommend' in row.actions or 'start_review' in row.actions %}
+              {% if row.inline_action and row.action_url and 'approve' in row.actions or row.inline_action and row.action_url and 'issue' in row.actions or row.inline_action and row.action_url and 'recommend' in row.actions or row.inline_action and row.action_url and 'start_review' in row.actions %}
                 <form method="post" action="{{ row.action_url }}" class="inb-primary-form">
                   {% csrf_token %}
                   <input type="hidden" name="approval_action" value="{% if 'issue' in row.actions %}issue{% elif 'approve' in row.actions %}approve{% elif 'recommend' in row.actions %}recommend{% else %}start_review{% endif %}">
@@ -242,7 +230,7 @@
 
               <a class="apr-btn apr-btn--ghost apr-btn--sm"
                  href="{{ row.detail_url }}">
-                فتح
+                {% if row.inline_action %}فتح{% else %}فتح ومراجعة{% endif %}
               </a>
             </div>
           </article>

@@ -56,6 +56,7 @@ def publish_draft(draft: CircularDraft, publisher) -> Notification:
         school_id=draft.school_id,
         title=draft.title,
         message=draft.body,
+        kind=Notification.Kind.CIRCULAR,
         requires_signature=bool(draft.requires_signature),
         signature_deadline_at=draft.signature_deadline_at,
         signature_ack_text=DEFAULT_ACK_TEXT if draft.requires_signature else "",

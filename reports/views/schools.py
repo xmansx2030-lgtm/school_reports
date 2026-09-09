@@ -231,16 +231,18 @@ def _school_agenda(active_school) -> dict:
                 signature_deadline_at__lte=horizon,
             )
             .order_by("signature_deadline_at")
-            .values("id", "title", "signature_deadline_at")[:20]
+            .values("id", "kind", "title", "signature_deadline_at")[:20]
         )
         return [
             {
                 "kind": "signature",
-                "label": "توقيع تعميم",
+                "label": "توقيع نشرة" if row["kind"] == "newsletter" else "توقيع تعميم",
                 "icon": "fa-file-signature",
-                "title": row["title"] or "تعميم بلا عنوان",
+                "title": row["title"] or (
+                    "نشرة بلا عنوان" if row["kind"] == "newsletter" else "تعميم بلا عنوان"
+                ),
                 "at": row["signature_deadline_at"],
-                "url": reverse("reports:circulars_sent"),
+                "url": reverse("reports:notification_detail", args=[row["id"]]),
             }
             for row in rows
         ]
@@ -473,6 +475,7 @@ def _trend(current: int, previous: int) -> dict:
 def _build_manager_focus_items(
     *,
     tickets_open: int,
+    pending_approvals: int,
     pending_achievement_files: int,
     assigned_to_me: int,
     notifications_unread: int,
@@ -494,12 +497,20 @@ def _build_manager_focus_items(
             "subset": False,
         },
         {
+            "key": "approvals",
+            "count": int(pending_approvals or 0),
+            "title": "أعمال بانتظار الاعتماد",
+            "hint": "تقارير ووثائق وتكليفات وخطط ومحاضر وغيرها",
+            "url": reverse("reports:approval_inbox"),
+            "subset": False,
+        },
+        {
             "key": "achievement",
             "count": int(pending_achievement_files or 0),
-            "title": "اعتمادات الإنجاز",
-            "hint": "ملفات مرسلة للمراجعة",
+            "title": "منها اعتمادات الإنجاز",
+            "hint": "ضمن أعمال الاعتماد أعلاه",
             "url": f"{reverse('reports:achievement_school_files')}?status=submitted",
-            "subset": False,
+            "subset": True,
         },
         {
             "key": "notifications",
@@ -1543,6 +1554,7 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
     ticket_completion_rate = round((tickets_done / tickets_total) * 100) if tickets_total else 0
 
     pending_achievement_files = 0
+    pending_approvals = 0
     departments_count = 0
     if active_school is not None:
         try:
@@ -1554,6 +1566,16 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
             ).count()
         except Exception:
             pending_achievement_files = 0
+        try:
+            from ..manager_approval_queue import manager_approval_count
+
+            pending_approvals = manager_approval_count(request.user, active_school)
+        except Exception:
+            _degraded(
+                "dashboard.pending_approvals",
+                school_id=getattr(active_school, "pk", None),
+            )
+            pending_approvals = pending_achievement_files
         if Department is not None:
             try:
                 departments_count = Department.objects.filter(
@@ -1579,6 +1601,7 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
         nav_counters = nav_context(request)
         focus_items = _build_manager_focus_items(
             tickets_open=payload_kpis.get("tickets_open"),
+            pending_approvals=pending_approvals,
             pending_achievement_files=pending_achievement_files,
             assigned_to_me=nav_counters.get("NAV_ASSIGNED_TO_ME"),
             notifications_unread=nav_counters.get("NAV_NOTIFICATIONS_UNREAD"),
@@ -1605,6 +1628,7 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
             "today_hijri": hijri_date(timezone.localdate()),
             "ticket_completion_rate": ticket_completion_rate,
             "pending_achievement_files": pending_achievement_files,
+            "pending_approvals": pending_approvals,
             "departments_count": departments_count,
             "setup_steps": setup_steps,
             "setup_completed": setup_completed,

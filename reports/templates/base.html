@@ -214,7 +214,7 @@
                 <div class="nav-pop" role="menu" aria-label="التواصل">
                   <a class="np-item {% if active == 'notifications_sent' or active == 'notifications_create' or active == 'circulars_sent' or active == 'circulars_create' %}is-active{% endif %}" role="menuitem" href="{% url 'reports:notifications_sent' %}">
                     <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                    <span><b>التعاميم والإشعارات</b><em>ما أُرسل للمنسوبين وحالة توقيعه</em></span>
+                    <span><b>الإشعارات والنشرات والتعاميم</b><em>ما أُرسل للمنسوبين وحالة الاطلاع والتوقيع</em></span>
                   </a>
                   <a class="np-item {% if active == 'circular_draft_list' or active == 'circular_draft_detail' %}is-active{% endif %}" role="menuitem" href="{% url 'reports:circular_draft_list' %}">
                     <i class="fa-solid fa-file-pen" aria-hidden="true"></i>
@@ -486,7 +486,7 @@
             {% endif %}
 
             {% if CAN_SEND_NOTIFICATIONS and SEND_NOTIFICATION_URL %}
-              <a class="icon-btn" href="{{ SEND_NOTIFICATION_URL }}" aria-label="إرسال إشعار" title="إرسال إشعار">
+              <a class="icon-btn" href="{{ SEND_NOTIFICATION_URL }}" aria-label="إنشاء إشعار أو نشرة" title="إنشاء إشعار أو نشرة">
                 <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
               </a>
             {% endif %}
@@ -674,7 +674,7 @@
           {% endif %}
 
           {% if CAN_SEND_NOTIFICATIONS and SEND_NOTIFICATION_URL %}
-            <a class="icon-btn" href="{{ SEND_NOTIFICATION_URL }}" aria-label="إرسال إشعار" title="إرسال إشعار">
+            <a class="icon-btn" href="{{ SEND_NOTIFICATION_URL }}" aria-label="إنشاء إشعار أو نشرة" title="إنشاء إشعار أو نشرة">
               <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
             </a>
           {% endif %}

@@ -18,6 +18,7 @@ from django.utils import timezone
 
 from reports.models import (
     Department,
+    Plan,
     Report,
     ReportType,
     School,
@@ -28,6 +29,7 @@ from reports.models import (
     TeacherAchievementFile,
     Ticket,
 )
+from reports.model_parts.approvals import ApprovalState
 
 DASHBOARD_TEMPLATE = "reports/templates/reports/admin_dashboard.html"
 
@@ -111,6 +113,69 @@ class ManagerDashboardAuditTests(TestCase):
             if response.status_code != 200:
                 broken.append((name, url, response.status_code))
         self.assertEqual(broken, [], f"روابط غير قابلة للوصول من لوحة المدير: {broken}")
+
+    def test_workspaces_cover_the_managers_operational_routes(self):
+        """The drawer is the complete task map, not a partial copy of the header."""
+        self._login()
+
+        response = self.client.get(reverse("reports:admin_dashboard"))
+
+        for route_name in (
+            "reports:staff_roles",
+            "reports:api_keys",
+            "reports:assignment_board",
+            "reports:meeting_list",
+            "reports:plan_list",
+            "reports:initiative_list",
+            "reports:approval_inbox",
+            "reports:manager_school_tickets",
+            "reports:circular_draft_list",
+            "reports:document_archive",
+            "reports:school_health",
+        ):
+            with self.subTest(route_name=route_name):
+                self.assertContains(response, f'href="{reverse(route_name)}"')
+        self.assertContains(response, "الأقسام وتوزيع الأعضاء")
+        self.assertContains(response, "الأدوار والصلاحيات")
+
+    def test_dashboard_and_inbox_share_one_cross_feature_approval_count(self):
+        """A pending plan must be as visible as a pending report."""
+        self._login()
+        report_type = ReportType.objects.get(school=self.school)
+        Report.objects.create(
+            school=self.school,
+            teacher=self.teacher,
+            teacher_name=self.teacher.name,
+            title="تقرير ينتظر القرار",
+            report_date=timezone.localdate(),
+            academic_year=self.school.current_academic_year,
+            category=report_type,
+            approval_state=ApprovalState.SUBMITTED,
+            submitted_at=timezone.now(),
+        )
+        Plan.objects.create(
+            scope=Plan.Scope.SCHOOL,
+            school=self.school,
+            owner=self.teacher,
+            owner_name=self.teacher.name,
+            title="خطة تنتظر القرار",
+            academic_year=self.school.current_academic_year,
+            approval_state=ApprovalState.SUBMITTED,
+            submitted_at=timezone.now(),
+        )
+
+        inbox = self.client.get(reverse("reports:approval_inbox"))
+        dashboard = self.client.get(reverse("reports:admin_dashboard"))
+
+        self.assertEqual(inbox.context["total"], 2)
+        self.assertEqual(inbox.context["mine_count"], 2)
+        self.assertEqual(dashboard.context["pending_approvals"], 2)
+        approval_focus = next(
+            item for item in dashboard.context["focus_items"] if item["key"] == "approvals"
+        )
+        self.assertEqual(approval_focus["count"], inbox.context["mine_count"])
+        self.assertContains(inbox, "تقرير ينتظر القرار")
+        self.assertContains(inbox, "خطة تنتظر القرار")
 
     def test_focus_links_actually_apply_their_filter(self):
         """A focus chip that drops its filter dumps the manager into a full list."""
