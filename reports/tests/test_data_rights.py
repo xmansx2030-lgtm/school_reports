@@ -12,22 +12,32 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 
+from django.core import mail
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from reports.models import (
+    AiUsageEvent,
+    CircularDraft,
     ErasureRequest,
     Notification,
     NotificationRecipient,
+    Plan,
     Report,
     ReportType,
     School,
     SchoolMembership,
     SchoolSubscription,
+    Initiative,
     SubscriptionPlan,
     Teacher,
     TeacherPrivateComment,
+    TeacherTotpDevice,
+    TotpRecoveryCode,
     Ticket,
     WebAuthnCredential,
 )
@@ -93,6 +103,36 @@ class PersonalDataExportTests(TestCase):
             school=cls.school, teacher=cls.other, category=cls.category,
             title="تقرير غيري", idea="فكرة", report_date="2026-06-02",
         )
+        CircularDraft.objects.create(
+            school=cls.school, owner=cls.subject, title="تعميمي أنا", body="محتواي",
+        )
+        CircularDraft.objects.create(
+            school=cls.school, owner=cls.other, title="تعميم غيري", body="محتوى غيري",
+        )
+        own_plan = Plan.objects.create(
+            scope=Plan.Scope.SCHOOL, school=cls.school, owner=cls.subject,
+            title="خطتي أنا", description="وصف خطتي",
+        )
+        Plan.objects.create(
+            scope=Plan.Scope.SCHOOL, school=cls.school, owner=cls.other,
+            title="خطة غيري", description="وصف غيري",
+        )
+        Initiative.objects.create(
+            school=cls.school, teacher=cls.subject, plan=own_plan,
+            title="مبادرتي أنا", summary="أثري",
+        )
+        Initiative.objects.create(
+            school=cls.school, teacher=cls.other,
+            title="مبادرة غيري", summary="أثر غيري",
+        )
+        AiUsageEvent.objects.create(
+            school=cls.school, teacher=cls.subject,
+            stage=AiUsageEvent.Stage.REPORT_IMPROVE, model_name="my-model",
+        )
+        AiUsageEvent.objects.create(
+            school=cls.school, teacher=cls.other,
+            stage=AiUsageEvent.Stage.REPORT_REVIEW, model_name="other-model",
+        )
         Ticket.objects.create(
             school=cls.school, creator=cls.subject, is_platform=False,
             title="طلبي أنا", body="نص",
@@ -120,6 +160,10 @@ class PersonalDataExportTests(TestCase):
         self.assertIn("تقريري أنا", blob)
         self.assertIn("طلبي أنا", blob)
         self.assertIn("إشعار لي", blob)
+        self.assertIn("تعميمي أنا", blob)
+        self.assertIn("خطتي أنا", blob)
+        self.assertIn("مبادرتي أنا", blob)
+        self.assertIn("my-model", blob)
         self.assertEqual(export["incomplete_sections"], [])
 
     def test_every_declared_section_is_present(self):
@@ -139,6 +183,10 @@ class PersonalDataExportTests(TestCase):
         self.assertNotIn("إشعار لغيري", blob)
         self.assertNotIn("9988776655", blob)
         self.assertNotIn("شخص آخر", blob)
+        self.assertNotIn("تعميم غيري", blob)
+        self.assertNotIn("خطة غيري", blob)
+        self.assertNotIn("مبادرة غيري", blob)
+        self.assertNotIn("other-model", blob)
 
     # ── الأسرار ─────────────────────────────────────────────────────────
 
@@ -174,6 +222,22 @@ class PersonalDataExportTests(TestCase):
         self.assertNotIn("a" * 64, blob)
         self.assertNotIn("super-secret-key-material", blob)
 
+    def test_totp_is_disclosed_without_secret_or_recovery_hashes(self):
+        device = TeacherTotpDevice.objects.create(
+            teacher=self.subject,
+            secret_encrypted="encrypted-secret-material",
+            confirmed_at=timezone.now(),
+        )
+        TotpRecoveryCode.objects.create(device=device, code_hash="f" * 64)
+        export = build_personal_data_export(self.subject)
+        security = export["sections"]["security"]["two_factor_authentication"]
+        blob = json.dumps(export, ensure_ascii=False)
+
+        self.assertTrue(security["is_confirmed"])
+        self.assertEqual(security["recovery_codes_available"], 1)
+        self.assertNotIn("encrypted-secret-material", blob)
+        self.assertNotIn("f" * 64, blob)
+
     def test_private_notes_are_counted_but_not_quoted(self):
         """نصّ الملاحظة رأيُ طرفٍ آخر — يُعلَم بوجودها لا بمحتواها."""
         TeacherPrivateComment.objects.create(
@@ -195,7 +259,12 @@ class PersonalDataExportTests(TestCase):
             )
 
 
-@override_settings(ALLOWED_HOSTS=["testserver"])
+@override_settings(
+    ALLOWED_HOSTS=["testserver"],
+    RATELIMIT_ENABLE=False,
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    DEFAULT_FROM_EMAIL="noreply@example.com",
+)
 class DataRightsEndpointTests(TestCase):
     def setUp(self):
         plan = SubscriptionPlan.objects.create(
@@ -204,7 +273,7 @@ class DataRightsEndpointTests(TestCase):
         self.school = School.objects.create(name="مدرسة", code="rights-endpoint")
         SchoolSubscription.objects.create(school=self.school, plan=plan)
         self.user = Teacher.objects.create_user(
-            phone="500700001", name="معلم", password="pass"
+            phone="500700001", name="معلم", password="pass", email="teacher@example.com"
         )
         SchoolMembership.objects.create(
             school=self.school, teacher=self.user,
@@ -219,7 +288,7 @@ class DataRightsEndpointTests(TestCase):
         response = self.client.get(reverse("reports:my_data"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "تنزيل نسخة بياناتي")
+        self.assertContains(response, "عرض نسختي المقروءة")
 
     def test_download_is_an_attachment_and_never_cached(self):
         response = self.client.get(reverse("reports:my_data_download"))
@@ -237,34 +306,87 @@ class DataRightsEndpointTests(TestCase):
 
         self.assertIn(response.status_code, {302, 403})
 
+    def test_readable_copy_is_private_and_contains_arabic_sections(self):
+        response = self.client.get(reverse("reports:my_data_readable"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response.headers["Cache-Control"])
+        self.assertContains(response, "نسخة بيانات معلم")
+        self.assertContains(response, "الملف الشخصي")
+        self.assertContains(response, "رقم الجوال")
+
     def test_an_erasure_request_is_recorded(self):
         response = self.client.post(
-            reverse("reports:request_erasure"), {"reason": "لم أعد أعمل هنا"}
+            reverse("reports:request_erasure"),
+            {"reason": "لم أعد أعمل هنا", "acknowledge_review": "yes"},
         )
 
         self.assertEqual(response.status_code, 302)
         record = ErasureRequest.objects.get(teacher=self.user)
         self.assertEqual(record.status, ErasureRequest.Status.RECEIVED)
         self.assertEqual(record.reason, "لم أعد أعمل هنا")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("استلام طلب إتلاف", mail.outbox[0].subject)
+
+    def test_acknowledgement_is_required_server_side(self):
+        response = self.client.post(
+            reverse("reports:request_erasure"), {"reason": "طلب بلا إقرار"}
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ErasureRequest.objects.filter(teacher=self.user).exists())
 
     def test_resending_does_not_create_a_second_open_request(self):
         """طلبان مفتوحان يُشتّتان المعالجة، والقيد في القاعدة يمنعهما."""
-        self.client.post(reverse("reports:request_erasure"), {"reason": "أول"})
-        self.client.post(reverse("reports:request_erasure"), {"reason": "ثانٍ"})
+        self.client.post(reverse("reports:request_erasure"), {"reason": "أول", "acknowledge_review": "yes"})
+        self.client.post(reverse("reports:request_erasure"), {"reason": "ثانٍ", "acknowledge_review": "yes"})
 
         self.assertEqual(ErasureRequest.objects.filter(teacher=self.user).count(), 1)
 
     def test_erasure_is_a_request_not_an_immediate_deletion(self):
         """الحساب يبقى: المحتوى مدرسي وسجلّ التدقيق مقصودٌ بقاؤه."""
-        self.client.post(reverse("reports:request_erasure"), {"reason": "طلب"})
+        self.client.post(reverse("reports:request_erasure"), {"reason": "طلب", "acknowledge_review": "yes"})
 
         self.user.refresh_from_db()
         self.assertTrue(Teacher.objects.filter(pk=self.user.pk).exists())
         self.assertTrue(self.user.is_active)
 
     def test_the_request_form_is_hidden_while_one_is_open(self):
-        self.client.post(reverse("reports:request_erasure"), {"reason": "طلب"})
+        self.client.post(reverse("reports:request_erasure"), {"reason": "طلب", "acknowledge_review": "yes"})
         response = self.client.get(reverse("reports:my_data"))
 
-        self.assertContains(response, "لديك طلب قائم")
-        self.assertNotContains(response, "تسجيل طلب الإتلاف")
+        self.assertContains(response, "الطلب #")
+        self.assertContains(response, "مستلَم")
+        self.assertNotContains(response, "إرسال الطلب للمراجعة")
+
+    def test_deadline_and_extension_are_bounded(self):
+        record = ErasureRequest.objects.create(teacher=self.user)
+
+        self.assertEqual(record.response_due_at, record.created_at + timedelta(days=30))
+        record.extended_until = record.response_due_at + timedelta(days=31)
+        record.extension_reason = "ازدحام موثق"
+        with self.assertRaises(ValidationError):
+            record.full_clean()
+
+        record.extended_until = record.response_due_at + timedelta(days=15)
+        record.full_clean()
+
+    def test_closed_request_requires_a_response_note(self):
+        record = ErasureRequest(
+            teacher=self.user,
+            status=ErasureRequest.Status.REFUSED,
+        )
+        with self.assertRaises(ValidationError):
+            record.full_clean()
+
+    def test_completed_request_requires_execution_evidence(self):
+        record = ErasureRequest(
+            teacher=self.user,
+            status=ErasureRequest.Status.COMPLETED,
+            response_note="تم تنفيذ طلبك.",
+        )
+        with self.assertRaises(ValidationError):
+            record.full_clean()
+
+        record.execution_evidence = "أُتلفت بيانات الملف الاختيارية، واستُبقي سجل التدقيق. مرجع 42."
+        record.full_clean()

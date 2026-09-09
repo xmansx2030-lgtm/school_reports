@@ -9,6 +9,8 @@ from django.db.models import Count
 from django.utils import timezone
 from django.utils.html import format_html
 
+from .data_rights_notifications import notify_erasure_updated
+
 from .forms import DepartmentForm  # نموذج القسم الذي يحتوي على reporttypes
 
 from .models import (
@@ -945,20 +947,39 @@ class ErasureRequestAdmin(admin.ModelAdmin):
     وترتيبُ العرض بالأقدم أولاً مقصود: الأقدم هو الأقرب إلى تجاوز المدة.
     """
 
-    list_display = ("teacher", "status", "created_at", "resolved_at", "resolved_by")
+    list_display = ("teacher", "status", "created_at", "response_deadline", "resolved_at", "resolved_by")
     list_filter = ("status", "created_at")
     search_fields = ("teacher__name", "teacher__phone", "reason", "response_note")
     autocomplete_fields = ("teacher", "resolved_by")
-    readonly_fields = ("teacher", "reason", "created_at")
-    ordering = ("status", "created_at")
+    readonly_fields = (
+        "teacher", "reason", "created_at", "response_deadline",
+        "extension_notified_at", "resolved_at", "resolved_by",
+    )
+    fieldsets = (
+        ("الطلب", {"fields": ("teacher", "reason", "created_at", "response_deadline")}),
+        ("المعالجة", {"fields": ("status", "response_note", "execution_evidence")}),
+        ("التمديد النظامي", {"fields": ("extended_until", "extension_reason", "extension_notified_at")}),
+        ("البت", {"fields": ("resolved_at", "resolved_by")}),
+    )
+    ordering = ("created_at",)
 
     def has_add_permission(self, request):
         # الطلب يُنشئه صاحبه من شاشته وحده — إنشاؤه من هنا ينتحل إرادته.
         return False
 
+    @admin.display(description="موعد الرد")
+    def response_deadline(self, obj):
+        return obj.effective_due_at
+
     def save_model(self, request, obj, form, change):
         # البتّ يُختم بوقته وصاحبه تلقائياً: تركُ ذلك يدوياً يُنتج سجلاً ناقصاً
         # في أكثر ما يحتاج إثباتاً.
+        previous = None
+        if change and obj.pk:
+            previous = ErasureRequest.objects.filter(pk=obj.pk).values(
+                "status", "response_note", "extended_until", "extension_reason"
+            ).first()
+
         if obj.status in {ErasureRequest.Status.COMPLETED, ErasureRequest.Status.REFUSED}:
             if obj.resolved_at is None:
                 obj.resolved_at = timezone.now()
@@ -967,7 +988,24 @@ class ErasureRequestAdmin(admin.ModelAdmin):
         else:
             obj.resolved_at = None
             obj.resolved_by = None
+        extension_changed = bool(obj.extended_until and (
+            not previous
+            or previous["extended_until"] != obj.extended_until
+            or previous["extension_reason"] != obj.extension_reason
+        ))
+        if extension_changed:
+            obj.extension_notified_at = timezone.now()
+        elif not obj.extended_until:
+            obj.extension_notified_at = None
         super().save_model(request, obj, form, change)
+        current = {
+            "status": obj.status,
+            "response_note": obj.response_note,
+            "extended_until": obj.extended_until,
+            "extension_reason": obj.extension_reason,
+        }
+        if previous and any(previous[key] != current[key] for key in current):
+            notify_erasure_updated(obj)
 
 
 @admin.register(SchoolApiKey)

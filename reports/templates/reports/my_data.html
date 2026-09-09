@@ -1,82 +1,102 @@
 {% extends 'base.html' %}
 {% load static hijri_tags %}
 
-{% block title %}بياناتي | منصة توثيق{% endblock %}
+{% block title %}مركز بياناتي | منصة توثيق{% endblock %}
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/my-data.css' %}?v=20260909.1">
+{% endblock %}
 
 {% block content %}
-<main class="container u-mt-2xl" id="mainContent">
-
-  <header class="u-mb-lg">
-    <h1 class="u-m-0">بياناتي</h1>
-    <p class="u-text-muted u-mt-2">
-      حقوقك على بياناتك الشخصية وفق نظام حماية البيانات الشخصية، ووسيلة ممارستها مباشرة.
-    </p>
-  </header>
-
-  <section class="card u-mb-lg" aria-labelledby="copyHeading">
-    <h2 id="copyHeading" class="u-mt-0">نسخة من بياناتك</h2>
-    <p class="u-text-muted">
-      ملف يحتوي ملفّك الشخصي، وعضوياتك، وتقاريرك، وطلباتك، والإشعارات التي وصلتك،
-      وتكليفاتك، ووثائقك، وسجلّ إجراءاتك.
-    </p>
-
-    <p class="u-text-muted u-fs-sm">
-      <strong>ما لا تتضمّنه، حمايةً لك:</strong>
-      كلمة المرور، ومفاتيح المصادقة (Passkeys)، ومفاتيح إشعارات المتصفح.
-      تسليم هذه المفاتيح يعرّض حسابك وجهازك للاختراق، ولا يضيف إليك معرفةً عن نفسك.
-      وتُدرَج الملفات المرفوعة بأسمائها وأحجامها لا بمحتواها.
-    </p>
-
-    <a class="btn btn-primary" href="{% url 'reports:my_data_download' %}">
-      <i class="fa-solid fa-download" aria-hidden="true"></i>
-      تنزيل نسخة بياناتي
-    </a>
+<main class="container data-rights" id="mainContent">
+  <section class="dr-hero" aria-labelledby="dataRightsTitle">
+    <div class="dr-hero__glow" aria-hidden="true"></div>
+    <div class="dr-hero__content">
+      <span class="dr-eyebrow"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> الخصوصية والتحكم</span>
+      <h1 id="dataRightsTitle">بياناتك، واضحة وتحت سيطرتك</h1>
+      <p>اطّلع على ما تحفظه منصة توثيق عنك، خذ نسخة سهلة القراءة أو تقنية، وتابع طلبات الإتلاف من مكان واحد.</p>
+      <div class="dr-trust-row" aria-label="خصائص الحماية">
+        <span><i class="fa-solid fa-lock" aria-hidden="true"></i> خاصة بحسابك</span>
+        <span><i class="fa-solid fa-ban" aria-hidden="true"></i> بلا كلمات مرور أو مفاتيح سرية</span>
+        <span><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ covered_sections_count }} قسماً من بياناتك</span>
+      </div>
+    </div>
+    <div class="dr-hero__mark" aria-hidden="true"><i class="fa-solid fa-fingerprint"></i></div>
   </section>
 
-  <section class="card" aria-labelledby="erasureHeading">
-    <h2 id="erasureHeading" class="u-mt-0">طلب إتلاف البيانات</h2>
+  <section class="dr-grid" aria-label="خيارات نسخة البيانات">
+    <article class="dr-card dr-card--primary">
+      <div class="dr-card__icon"><i class="fa-solid fa-file-lines" aria-hidden="true"></i></div>
+      <div>
+        <span class="dr-card__tag">الأنسب لمعظم المستخدمين</span>
+        <h2>نسخة عربية مقروءة</h2>
+        <p>عرض منظم بعناوين عربية وبطاقات واضحة، يمكنك مراجعته وطباعته أو حفظه PDF من المتصفح.</p>
+      </div>
+      <a class="dr-action dr-action--solid" href="{% url 'reports:my_data_readable' %}">عرض نسختي المقروءة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+    </article>
 
-    {% if erasure_request and erasure_request.is_open %}
-      <p class="section-degraded" role="status">
-        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
-        لديك طلب قائم بتاريخ {{ erasure_request.created_at|hijri }} — الحالة:
-        {{ erasure_request.get_status_display }}. سنبلغك بالنتيجة ضمن المدد النظامية.
-      </p>
-    {% elif erasure_request %}
-      <p class="u-text-muted">
-        آخر طلب لك بتاريخ {{ erasure_request.created_at|hijri }} —
-        <strong>{{ erasure_request.get_status_display }}</strong>.
-        {% if erasure_request.response_note %}
-          <br>{{ erasure_request.response_note }}
-        {% endif %}
-      </p>
+    <article class="dr-card">
+      <div class="dr-card__icon dr-card__icon--code"><i class="fa-solid fa-code" aria-hidden="true"></i></div>
+      <div>
+        <span class="dr-card__tag dr-card__tag--muted">للحفظ أو النقل التقني</span>
+        <h2>نسخة JSON تقنية</h2>
+        <p>ملف منظم آلياً يضم نفس البيانات، مناسب للأرشفة أو نقلها إلى نظام آخر.</p>
+      </div>
+      <a class="dr-action dr-action--outline" href="{% url 'reports:my_data_download' %}"><i class="fa-solid fa-download" aria-hidden="true"></i> تنزيل JSON</a>
+    </article>
+  </section>
+
+  <aside class="dr-safety" aria-labelledby="safetyTitle">
+    <div class="dr-safety__icon"><i class="fa-solid fa-key" aria-hidden="true"></i></div>
+    <div><h2 id="safetyTitle">ما نستبعده لحمايتك</h2><p>لا تتضمن النسخة كلمة المرور، أسرار المصادقة الثنائية، مفاتيح المرور، أو مفاتيح إشعارات جهازك. وتظهر الملفات المرفوعة كمراجع وأحجام، لا كحزمة تنزيل ضخمة.</p></div>
+  </aside>
+
+  <section class="dr-erasure" aria-labelledby="erasureHeading">
+    <header class="dr-section-head">
+      <div>
+        <span class="dr-eyebrow dr-eyebrow--dark"><i class="fa-regular fa-clock" aria-hidden="true"></i> طلب رسمي ومؤرّخ</span>
+        <h2 id="erasureHeading">طلب إتلاف البيانات</h2>
+        <p>الإتلاف ليس حذفاً فورياً للحساب؛ نراجع ما يمكن إتلافه وما يلزم الاحتفاظ به نظامياً أو لحماية حقوق المدرسة والآخرين.</p>
+      </div>
+      <span class="dr-sla"><strong>30</strong> يوماً للرد الأولي</span>
+    </header>
+
+    {% if erasure_request %}
+      <article class="dr-request" aria-label="حالة آخر طلب إتلاف">
+        <div class="dr-request__top">
+          <div><span class="dr-request__number">الطلب #{{ erasure_request.id }}</span><h3>{{ erasure_request.get_status_display }}</h3></div>
+          <span class="dr-status dr-status--{{ erasure_request.status }}"><i class="fa-solid fa-circle" aria-hidden="true"></i> {{ erasure_request.get_status_display }}</span>
+        </div>
+        <div class="dr-timeline">
+          <div class="is-done"><span><i class="fa-solid fa-check" aria-hidden="true"></i></span><strong>تم الاستلام</strong><small>{{ erasure_request.created_at|hijri }}</small></div>
+          <div class="{% if erasure_request.status != 'received' %}is-done{% endif %}"><span><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span><strong>المراجعة</strong><small>{% if erasure_request.status == 'received' %}الخطوة التالية{% else %}بدأت المعالجة{% endif %}</small></div>
+          <div class="{% if not erasure_request.is_open %}is-done{% endif %}"><span><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i></span><strong>البت</strong><small>{% if erasure_request.resolved_at %}{{ erasure_request.resolved_at|hijri }}{% else %}بانتظار القرار{% endif %}</small></div>
+        </div>
+        <dl class="dr-request__details">
+          <div><dt>موعد الرد الحالي</dt><dd>{{ erasure_request.effective_due_at|hijri }}</dd></div>
+          {% if erasure_request.extended_until %}<div><dt>سبب التمديد</dt><dd>{{ erasure_request.extension_reason }}</dd></div>{% endif %}
+          {% if erasure_request.response_note %}<div><dt>رد المنصة</dt><dd>{{ erasure_request.response_note }}</dd></div>{% endif %}
+        </dl>
+      </article>
     {% endif %}
 
     {% if not erasure_request or not erasure_request.is_open %}
-      <p class="u-text-muted">
-        يحق لك طلب إتلاف بياناتك الشخصية. ويُراجَع الطلب قبل تنفيذه لأن بعض
-        المحتوى لا يخصّك وحدك: التقارير والوثائق التي أعددتها عملٌ مدرسي تملكه
-        مدرستك، وسجلّ الإجراءات يُحتفظ به لأغراض التدقيق والأمن. سنبيّن لك ما
-        يُتلَف وما يوجب النظام الاحتفاظ به، ومسوّغ ذلك.
-      </p>
-
-      <form method="post" action="{% url 'reports:request_erasure' %}" class="u-mt-lg">
+      <form method="post" action="{% url 'reports:request_erasure' %}" class="dr-form">
         {% csrf_token %}
-        <label for="erasureReason" class="u-block u-fw-700 u-mb-2">سبب الطلب (اختياري)</label>
-        <textarea id="erasureReason" name="reason" rows="4" class="u-w-full"
-                  placeholder="يساعدنا على تحديد المسوّغ النظامي بدقة."></textarea>
-        <button type="submit" class="btn btn-outline u-mt-3">
-          <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-          تسجيل طلب الإتلاف
-        </button>
+        <div class="dr-field">
+          <label for="erasureReason">ما الذي تريد إتلافه؟ <span>اختياري</span></label>
+          <textarea id="erasureReason" name="reason" rows="4" maxlength="2000" placeholder="مثال: انتهت علاقتي بالمدرسة وأرغب في إتلاف بيانات الحساب غير الملزم الاحتفاظ بها."></textarea>
+          <small>كلما كان الطلب محدداً استطعنا مراجعته بدقة أكبر.</small>
+        </div>
+        <label class="dr-confirm"><input type="checkbox" name="acknowledge_review" value="yes" required><span>أفهم أن الطلب يخضع للمراجعة، وأن بعض السجلات المدرسية أو النظامية قد يلزم الاحتفاظ بها مع توضيح السبب لي.</span></label>
+        <div class="dr-form__footer">
+          <p><i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> يصلك تأكيد بالبريد إن كان مسجلاً، وتبقى الحالة ظاهرة هنا دائماً.</p>
+          <button type="submit" class="dr-action dr-action--danger"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i> إرسال الطلب للمراجعة</button>
+        </div>
       </form>
     {% endif %}
   </section>
 
-  <p class="u-text-muted u-fs-sm u-mt-lg">
-    لممارسة حقّي التصحيح أو الاعتراض، أو لطلب الاطلاع على الملاحظات الإدارية
-    المكتوبة عنك، استخدم <a href="{% url 'reports:complaints_policy' %}">نموذج الشكاوى</a>.
-  </p>
-
+  <footer class="dr-footer-note"><i class="fa-regular fa-circle-question" aria-hidden="true"></i><span>لتصحيح بياناتك أو الاعتراض أو طلب الاطلاع على ملاحظة إدارية، استخدم <a href="{% url 'reports:complaints_policy' %}">مركز الشكاوى والحقوق</a>.</span></footer>
 </main>
 {% endblock %}

@@ -40,6 +40,7 @@ urlpatterns = [
     # وطلب إتلاف مسجَّل ومُتتبَّع.
     path("profile/my-data/", views.my_data, name="my_data"),
     path("profile/my-data/download/", views.my_data_download, name="my_data_download"),
+    path("profile/my-data/readable/", views.my_data_readable, name="my_data_readable"),
     path("profile/my-data/erasure/", views.request_erasure, name="request_erasure"),
     # مفاتيح التكامل — لمدير المدرسة وحده.
     path("integrations/keys/", views.api_keys_list, name="api_keys"),

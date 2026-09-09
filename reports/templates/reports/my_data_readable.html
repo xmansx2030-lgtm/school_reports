@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static hijri_tags %}
+
+{% block title %}نسختي المقروءة | منصة توثيق{% endblock %}
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/my-data.css' %}?v=20260909.1">
+  <script src="{% static 'js/my-data.js' %}?v=20260909.1" defer></script>
+{% endblock %}
+
+{% block content %}
+<main class="container data-copy" id="mainContent">
+  <header class="dc-head">
+    <div>
+      <span class="dr-eyebrow dr-eyebrow--dark"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> نسخة شخصية خاصة</span>
+      <h1>نسخة بيانات {{ payload.subject }}</h1>
+      <p>{{ payload.notice }}</p>
+    </div>
+    <div class="dc-actions">
+      <button type="button" class="dr-action dr-action--solid" id="printDataCopy"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة أو حفظ PDF</button>
+      <a class="dr-action dr-action--outline" href="{% url 'reports:my_data_download' %}"><i class="fa-solid fa-code" aria-hidden="true"></i> تنزيل JSON</a>
+      <a class="dc-back" href="{% url 'reports:my_data' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى مركز بياناتي</a>
+    </div>
+  </header>
+
+  <div class="dc-meta">
+    <span><strong>صاحب البيانات</strong>{{ payload.subject }}</span>
+    <span><strong>تاريخ تجهيز النسخة</strong>{{ generated_at|hijri }}</span>
+    <span><strong>الأقسام</strong>{{ readable_sections|length }} قسماً</span>
+  </div>
+
+  {% if payload.incomplete_sections %}<div class="dc-warning" role="alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> تعذر تجهيز بعض الأقسام مؤقتاً: {{ payload.incomplete_sections|join:'، ' }}. أعد المحاولة لاحقاً أو تواصل مع الدعم.</div>{% endif %}
+
+  <nav class="dc-index" aria-label="فهرس النسخة">{% for section in readable_sections %}<a href="#section-{{ section.key }}">{{ section.title }}</a>{% endfor %}</nav>
+
+  <div class="dc-sections">
+    {% for section in readable_sections %}
+      <section class="dc-section" id="section-{{ section.key }}">
+        <header><h2>{{ section.title }}</h2><span>{{ section.count }} سجل</span></header>
+        {% for record in section.records %}
+          <article class="dc-record">
+            {% if section.records|length > 1 %}<h3>{{ record.title }}</h3>{% endif %}
+            <dl>{% for field in record.fields %}<div><dt>{{ field.label }}</dt><dd>{{ field.value|linebreaksbr }}</dd></div>{% endfor %}</dl>
+          </article>
+        {% empty %}<p class="dc-empty"><i class="fa-regular fa-folder-open" aria-hidden="true"></i> لا توجد سجلات في هذا القسم.</p>{% endfor %}
+      </section>
+    {% endfor %}
+  </div>
+  <footer class="dc-footer">هذه النسخة مخصّصة لصاحب الحساب. احفظها في مكان آمن ولا تشاركها إلا عند الحاجة.</footer>
+</main>
+{% endblock %}

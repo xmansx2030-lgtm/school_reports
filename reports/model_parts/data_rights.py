@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from .base import *  # noqa: F401,F403
 
 
@@ -55,7 +57,28 @@ class ErasureRequest(models.Model):  # noqa: F405
         default="",
         help_text="يُبلَّغ به صاحب الطلب. الرفض يجب أن يذكر مسوّغه النظامي.",
     )
+    execution_evidence = models.TextField(
+        "محضر التنفيذ الداخلي",
+        blank=True,
+        default="",
+        help_text="إلزامي عند اعتبار الطلب منفذاً: دوّن ما أُتلف وما استُبقي ومرجع الإجراء.",
+    )
     created_at = models.DateTimeField("تاريخ الطلب", default=timezone.now)  # noqa: F405
+    extended_until = models.DateTimeField(
+        "الموعد بعد التمديد",
+        null=True,
+        blank=True,
+        help_text="تمديد واحد لا يتجاوز 30 يوماً إضافياً، مع بيان السبب لصاحب الطلب.",
+    )
+    extension_reason = models.TextField(
+        "سبب التمديد",
+        blank=True,
+        default="",
+        help_text="إلزامي عند تمديد موعد الرد، ويظهر لصاحب الطلب.",
+    )
+    extension_notified_at = models.DateTimeField(
+        "تاريخ إشعار صاحب الطلب بالتمديد", null=True, blank=True
+    )
     resolved_at = models.DateTimeField("تاريخ البتّ", null=True, blank=True)
     resolved_by = models.ForeignKey(  # noqa: F405
         "reports.Teacher",
@@ -90,3 +113,30 @@ class ErasureRequest(models.Model):  # noqa: F405
     @property
     def is_open(self) -> bool:
         return self.status in {self.Status.RECEIVED, self.Status.IN_REVIEW}
+
+    @property
+    def response_due_at(self):
+        return self.created_at + timedelta(days=30)
+
+    @property
+    def effective_due_at(self):
+        return self.extended_until or self.response_due_at
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.status in {self.Status.COMPLETED, self.Status.REFUSED} and not self.response_note.strip():
+            errors["response_note"] = "اكتب رداً واضحاً لصاحب الطلب قبل إغلاقه."
+        if self.status == self.Status.COMPLETED and not self.execution_evidence.strip():
+            errors["execution_evidence"] = "وثّق ما أُتلف وما استُبقي قبل اعتبار الطلب منفذاً."
+        if self.extended_until:
+            if not self.extension_reason.strip():
+                errors["extension_reason"] = "اذكر سبب التمديد الذي سيظهر لصاحب الطلب."
+            if self.extended_until <= self.response_due_at:
+                errors["extended_until"] = "موعد التمديد يجب أن يكون بعد مهلة الرد الأصلية."
+            elif self.extended_until > self.response_due_at + timedelta(days=30):
+                errors["extended_until"] = "لا يجوز أن يتجاوز التمديد 30 يوماً إضافياً."
+        elif self.extension_reason.strip():
+            errors["extended_until"] = "حدّد الموعد الجديد المرتبط بسبب التمديد."
+        if errors:
+            raise ValidationError(errors)  # noqa: F405
