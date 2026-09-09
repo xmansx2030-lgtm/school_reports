@@ -217,12 +217,14 @@ def _search_notifications(user, school, query: str, limit: int) -> list[SearchHi
     hits: list[SearchHit] = []
     for recipient in qs[:limit]:
         notification = recipient.notification
-        is_circular = bool(getattr(notification, "requires_signature", False))
+        kind = str(getattr(notification, "kind", "") or "notification")
+        is_circular = kind == "circular"
+        is_newsletter = kind == "newsletter"
         hits.append(
             SearchHit(
-                kind="circular" if is_circular else "notification",
-                label="تعميم" if is_circular else "إشعار",
-                icon="fa-file-signature" if is_circular else "fa-bell",
+                kind="circular" if is_circular else ("newsletter" if is_newsletter else "notification"),
+                label="تعميم" if is_circular else ("نشرة" if is_newsletter else "إشعار"),
+                icon="fa-file-signature" if is_circular else ("fa-newspaper" if is_newsletter else "fa-bell"),
                 title=_clip(notification.title or "بلا عنوان"),
                 subtitle=_clip(getattr(notification.created_by, "name", "") or "الإدارة"),
                 url=reverse(

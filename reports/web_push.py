@@ -91,8 +91,10 @@ def _clean_text(value: str, limit: int) -> str:
 
 
 def _payload_for(notification: Notification, recipient_id: int) -> dict:
-    is_circular = bool(notification.requires_signature)
-    fallback_title = "تعميم جديد" if is_circular else "إشعار جديد"
+    kind = str(getattr(notification, "kind", "") or "notification")
+    is_circular = kind == Notification.Kind.CIRCULAR
+    is_newsletter = kind == Notification.Kind.NEWSLETTER
+    fallback_title = "تعميم جديد" if is_circular else ("نشرة جديدة" if is_newsletter else "إشعار جديد")
     title = _clean_text(notification.title, 100) or fallback_title
     body = _clean_text(notification.message, 220) or "لديك تنبيه جديد في منصة توثيق."
     route_name = "reports:my_circular_detail" if is_circular else "reports:my_notification_detail"
@@ -102,7 +104,7 @@ def _payload_for(notification: Notification, recipient_id: int) -> dict:
         "url": reverse(route_name, args=[recipient_id]),
         "tag": f"tawtheeq-notification-{notification.pk}",
         "notificationId": notification.pk,
-        "requireInteraction": bool(notification.is_important or is_circular),
+        "requireInteraction": bool(notification.is_important or notification.requires_signature),
         "icon": "/static/img/pwa/icon-192.png",
         # Android keeps only the badge's alpha and tints it, so a full-colour
         # icon arrives in the status bar as a grey square. ``badge-96`` is the

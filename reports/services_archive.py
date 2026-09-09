@@ -174,8 +174,14 @@ def school_storage_breakdown(school: School | None) -> dict:
     def _sum(queryset) -> int:
         return int(queryset.aggregate(total=Sum("storage_bytes")).get("total") or 0)
 
-    circulars_qs = Notification.objects.filter(school=school, requires_signature=True)
-    notifications_qs = Notification.objects.filter(school=school, requires_signature=False)
+    circulars_qs = Notification.objects.filter(
+        school=school,
+        kind=Notification.Kind.CIRCULAR,
+    )
+    notifications_qs = Notification.objects.filter(
+        school=school,
+        kind__in=(Notification.Kind.NOTIFICATION, Notification.Kind.NEWSLETTER),
+    )
     values = {
         "reports": (
             _sum(Report.objects.filter(school=school))
@@ -222,14 +228,16 @@ def school_administrative_archive_stats(school: School | None) -> dict:
     notifications = Notification.objects.filter(school=school)
     values = {
         "tickets": Ticket.objects.filter(school=school).count(),
-        "circulars": notifications.filter(requires_signature=True).count(),
-        "notifications": notifications.filter(requires_signature=False).count(),
+        "circulars": notifications.filter(kind=Notification.Kind.CIRCULAR).count(),
+        "notifications": notifications.filter(
+            kind__in=(Notification.Kind.NOTIFICATION, Notification.Kind.NEWSLETTER)
+        ).count(),
         "system_notifications": notifications.filter(
-            requires_signature=False,
+            kind__in=(Notification.Kind.NOTIFICATION, Notification.Kind.NEWSLETTER),
             created_by__isnull=True,
         ).count(),
         "user_notifications": notifications.filter(
-            requires_signature=False,
+            kind__in=(Notification.Kind.NOTIFICATION, Notification.Kind.NEWSLETTER),
             created_by__isnull=False,
         ).count(),
         "assignments": Assignment.objects.filter(
@@ -286,8 +294,10 @@ def school_administrative_archive_payload(
         .prefetch_related("recipients__teacher")
         .order_by("-created_at", "-id")
     )
-    circulars_qs = notification_base.filter(requires_signature=True)
-    notifications_qs = notification_base.filter(requires_signature=False)
+    circulars_qs = notification_base.filter(kind=Notification.Kind.CIRCULAR)
+    notifications_qs = notification_base.filter(
+        kind__in=(Notification.Kind.NOTIFICATION, Notification.Kind.NEWSLETTER)
+    )
 
     search = (search or "").strip()
     if search:

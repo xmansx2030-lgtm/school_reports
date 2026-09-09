@@ -1619,17 +1619,21 @@
           <span><i class="fa-solid fa-users" aria-hidden="true"></i> {{ teachers_count|intcomma }} من {{ SCHOOL_TEACHERS_OBJ_LABEL|default:"المعلمين" }}</span>
         </div>
         <div class="manager-hero__actions">
-          <a class="manager-hero__button manager-hero__button--primary" href="{% url 'reports:admin_reports' %}">
-            <i class="fa-solid fa-file-shield" aria-hidden="true"></i>
-            مراجعة تقارير المدرسة
+          <a class="manager-hero__button manager-hero__button--primary" href="{% url 'reports:approval_inbox' %}">
+            <i class="fa-solid fa-gavel" aria-hidden="true"></i>
+            صندوق الاعتماد{% if pending_approvals %} ({{ pending_approvals }}){% endif %}
+          </a>
+          <a class="manager-hero__button" href="{% url 'reports:assignment_create' %}">
+            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+            إنشاء تكليف
+          </a>
+          <a class="manager-hero__button" href="{% url 'reports:notifications_create' %}">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            إشعار أو نشرة
           </a>
           <a class="manager-hero__button" href="{% url 'reports:school_settings' %}">
             <i class="fa-solid fa-sliders" aria-hidden="true"></i>
             إعدادات المدرسة
-          </a>
-          <a class="manager-hero__button" href="{% url 'reports:school_addition_requests' %}">
-            <i class="fa-solid fa-school-circle-check" aria-hidden="true"></i>
-            إضافة مدرسة أخرى
           </a>
           {% if USER_SCHOOLS|length > 1 %}
             <a class="manager-hero__button" href="{% url 'reports:select_school' %}">
@@ -1657,8 +1661,8 @@
           <a href="{% url 'reports:manager_school_tickets' %}?status=attention">
             <strong id="heroTicketsOpen">{{ tickets_open|intcomma }}</strong><span>طلبات</span>
           </a>
-          <a href="{% url 'reports:achievement_school_files' %}?status=submitted">
-            <strong>{{ pending_achievement_files|intcomma }}</strong><span>ملفات اعتماد</span>
+          <a href="{% url 'reports:approval_inbox' %}">
+            <strong>{{ pending_approvals|intcomma }}</strong><span>بانتظار الاعتماد</span>
           </a>
           <a href="{% url 'reports:admin_reports' %}">
             <strong id="heroReportsCount">{{ reports_count|intcomma }}</strong><span>تقارير {{ selected_period_label }}</span>
@@ -2066,8 +2070,45 @@
           <div class="manager-workspace__links">
             <a class="manager-workspace__link" href="{% url 'reports:manage_teachers' %}"><span>إدارة منسوبي المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:bulk_import_teachers' %}"><span>إضافة منسوبي المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
-            <a class="manager-workspace__link" href="{% url 'reports:departments_list' %}"><span>الأقسام والصلاحيات</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:departments_list' %}"><span>الأقسام وتوزيع الأعضاء</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:staff_roles' %}"><span>الأدوار والصلاحيات</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:school_settings' %}"><span>بيانات المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:api_keys' %}"><span>مفاتيح التكامل</span><i class="fa-solid fa-arrow-left"></i></a>
+          </div>
+        </article>
+
+        <article class="manager-workspace">
+          <header class="manager-workspace__head">
+            <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+            <div><h3>التشغيل والتخطيط</h3><p>حوّل القرارات والخطط إلى أعمال لها مسؤول وموعد ومتابعة.</p></div>
+          </header>
+          <div class="manager-workspace__links">
+            <a class="manager-workspace__link" href="{% url 'reports:assignment_board' %}"><span>التكليفات ومتابعة التنفيذ</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:meeting_list' %}"><span>الاجتماعات والمحاضر</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:plan_list' %}"><span>الخطط التشغيلية</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:initiative_list' %}"><span>المبادرات والممارسات</span><i class="fa-solid fa-arrow-left"></i></a>
+            {% if SHOW_LAB_NAV %}
+              <a class="manager-workspace__link" href="{% url 'reports:lab_dashboard' %}"><span>متابعة المختبر والعهدة</span><i class="fa-solid fa-arrow-left"></i></a>
+              <a class="manager-workspace__link" href="{% url 'reports:lab_experiments' %}"><span>تجارب المختبر واعتمادها</span><i class="fa-solid fa-arrow-left"></i></a>
+            {% endif %}
+          </div>
+        </article>
+
+        <article class="manager-workspace">
+          <header class="manager-workspace__head">
+            <i class="fa-solid fa-gavel" aria-hidden="true"></i>
+            <div><h3>القرارات والحوكمة</h3><p>ما ينتظر قرارك، وما يثبت سلامة الإجراءات داخل المدرسة.</p></div>
+          </header>
+          <div class="manager-workspace__links">
+            <a class="manager-workspace__link" href="{% url 'reports:approval_inbox' %}">
+              <span>صندوق المراجعة والاعتماد</span>
+              {% if pending_approvals %}<span class="manager-lock"><i class="fa-solid fa-bell"></i> {{ pending_approvals }}</span>{% else %}<i class="fa-solid fa-arrow-left"></i>{% endif %}
+            </a>
+            <a class="manager-workspace__link" href="{% url 'reports:manager_school_tickets' %}"><span>طلبات المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:circular_draft_list' %}"><span>مسودات التعاميم</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:document_archive' %}"><span>وثائق المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:school_health' %}"><span>صحة المدرسة والجاهزية</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:school_audit_logs' %}"><span>سجل عمليات المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
           </div>
         </article>
 
@@ -2077,6 +2118,7 @@
             <div><h3>التقارير والتوثيق</h3><p>أرشفة كل سنة داخل المنصة أو تنزيل نسخة كاملة للاحتفاظ الخارجي.</p></div>
           </header>
           <div class="manager-workspace__links">
+            <a class="manager-workspace__link" href="{% url 'reports:admin_reports' %}"><span>تقارير المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:my_reports' %}"><span>تقاريري</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:reporttypes_list' %}"><span>أنواع التقارير</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:achievement_school_files' %}"><span>ملفات الإنجاز</span><i class="fa-solid fa-arrow-left"></i></a>
@@ -2105,7 +2147,9 @@
             <div><h3>التواصل والمتابعة</h3><p>الإشعارات والتعاميم والطلبات دون خلطها بالدعم.</p></div>
           </header>
           <div class="manager-workspace__links">
-            <a class="manager-workspace__link" href="{% url 'reports:notifications_sent' %}"><span>سجل الإشعارات</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:notifications_create' %}"><span>إنشاء إشعار أو نشرة</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:circulars_create' %}"><span>إنشاء تعميم رسمي</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:notifications_sent' %}"><span>سجل الإشعارات والنشرات</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:circulars_sent' %}"><span>سجل التعاميم</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:assigned_to_me' %}"><span>الطلبات المسندة إليّ</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:request_create' %}"><span>إنشاء طلب داخلي</span><i class="fa-solid fa-arrow-left"></i></a>
@@ -2118,10 +2162,10 @@
             <div><h3>الاشتراك والدعم</h3><p>إدارة خدمة المدرسة والتواصل مع فريق المنصة.</p></div>
           </header>
           <div class="manager-workspace__links">
-            <a class="manager-workspace__link" href="{% url 'reports:school_audit_logs' %}"><span>سجل عمليات المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:my_subscription' %}"><span>اشتراك المدرسة</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:my_support_tickets' %}"><span>طلبات دعم المنصة</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:support_ticket_create' %}"><span>فتح طلب دعم</span><i class="fa-solid fa-arrow-left"></i></a>
+            <a class="manager-workspace__link" href="{% url 'reports:school_addition_requests' %}"><span>إضافة مدرسة أخرى</span><i class="fa-solid fa-arrow-left"></i></a>
             <a class="manager-workspace__link" href="{% url 'reports:my_profile' %}"><span>حسابي والأمان</span><i class="fa-solid fa-arrow-left"></i></a>
           </div>
         </article>

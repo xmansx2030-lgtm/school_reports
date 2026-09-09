@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if n.requires_signature %}تفاصيل التعميم{% else %}تفاصيل الإشعار{% endif %}{% endblock %}
+{% block title %}تفاصيل {{ communication_label|default:"الإشعار" }}{% endblock %}
 
 {% block head %}
 <style nonce="{{ CSP_NONCE }}">
@@ -116,7 +116,7 @@
     gap: 20px;
     grid-template-columns: 1fr;
   }
-  @media (min-width: 960px) { .nd-grid { grid-template-columns: 1.15fr .85fr; } }
+  @media (min-width: 960px) { .nd-grid { grid-template-columns: 1fr 1fr; } }
 
   /* ── Card ── */
   .nd-card {
@@ -587,7 +587,9 @@
       <div class="nd-hero-inner">
         <div class="xs-notification-detail-1">
           <div class="nd-hero-icon">
-            {% if n.requires_signature %}
+            {% if n.is_newsletter %}
+              <i class="fa-solid fa-newspaper"></i>
+            {% elif n.requires_signature %}
               <i class="fa-solid fa-file-signature"></i>
             {% else %}
               <i class="fa-solid fa-bell"></i>
@@ -595,7 +597,7 @@
           </div>
           <div class="nd-hero-text">
             <h1 class="nd-hero-title">
-              {% if n.requires_signature %}تفاصيل التعميم{% else %}تفاصيل الإشعار{% endif %}
+              تفاصيل {{ communication_label|default:"الإشعار" }}
             </h1>
             <p class="nd-hero-sub">
               {{ n.title|default:"بدون عنوان" }}
@@ -603,7 +605,11 @@
             </p>
           </div>
         </div>
-        {% if n.requires_signature %}
+        {% if n.is_newsletter %}
+          <a class="nd-back-btn" href="{% url 'reports:notifications_sent' %}?kind=newsletter">
+            <i class="fa-solid fa-arrow-right"></i> رجوع
+          </a>
+        {% elif n.requires_signature %}
           <a class="nd-back-btn" href="{% url 'reports:circulars_sent' %}">
             <i class="fa-solid fa-arrow-right"></i> رجوع
           </a>
@@ -639,6 +645,9 @@
               {% if n.is_broadcast %}
                 <span class="nd-pill blue"><i class="fa-solid fa-bullhorn"></i> للجميع</span>
               {% endif %}
+              {% if n.is_newsletter %}
+                <span class="nd-pill blue"><i class="fa-solid fa-newspaper"></i> نشرة</span>
+              {% endif %}
               {% if n.requires_signature %}
                 <span class="nd-pill blue"><i class="fa-solid fa-pen-to-square"></i> يتطلب توقيع</span>
               {% endif %}
@@ -651,6 +660,14 @@
               <div class="nd-empty xs-notification-detail-2">
                 <i class="fa-regular fa-comment-dots"></i>
                 <p>لا يوجد محتوى نصي.</p>
+              </div>
+            {% endif %}
+
+            {% if n.attachment %}
+              <div class="nd-actions">
+                <a class="nd-btn outline-blue" href="{{ n.attachment.url }}" target="_blank" rel="noopener">
+                  <i class="fa-solid fa-paperclip"></i> فتح مرفق النشرة أو تنزيله
+                </a>
               </div>
             {% endif %}
 
@@ -695,7 +712,7 @@
                 </a>
               {% endif %}
               {% if n.id %}
-                <form method="post" action="{% url 'reports:notification_delete' n.id %}" id="deleteNotifForm" data-confirm="سيتم حذف هذا الإشعار نهائيًا ولا يمكن التراجع. هل تريد المتابعة؟" data-confirm-type="danger" class="xs-notification-detail-3">
+                <form method="post" action="{% url 'reports:notification_delete' n.id %}" id="deleteNotifForm" data-confirm="سيتم حذف {{ communication_label|default:'الإشعار' }} نهائيًا ولا يمكن التراجع. هل تريد المتابعة؟" data-confirm-type="danger" class="xs-notification-detail-3">
                   {% csrf_token %}
                   <button class="nd-btn danger" type="submit">
                     <i class="fa-solid fa-trash"></i> حذف
@@ -813,10 +830,10 @@
               <div class="nd-empty">
                 {% if n.is_broadcast %}
                   <i class="fa-solid fa-bullhorn"></i>
-                  <p>هذا الإشعار مُرسل لجميع المستخدمين.</p>
+                  <p>{{ communication_label|default:"الإشعار" }} مُرسل لجميع المستخدمين.</p>
                 {% else %}
                   <i class="fa-regular fa-folder-open"></i>
-                  <p>لا يوجد مستلمون مسجّلون لهذا الإشعار.</p>
+                  <p>لا يوجد مستلمون مسجّلون لهذه الرسالة.</p>
                 {% endif %}
               </div>
 

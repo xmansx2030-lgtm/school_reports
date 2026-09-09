@@ -1301,12 +1301,12 @@ def send_subscription_activation_email_task(self, payment_id: int) -> dict:
 @shared_task(ignore_result=True, soft_time_limit=120, time_limit=300)
 def remind_unsigned_circulars_task() -> dict:
     """
-    ترسل تذكيرات للمعلمين الذين لم يوقّعوا على تعاميم لها موعد نهائي قريب.
+    ترسل تذكيرات للمستلمين الذين لم يوقّعوا على تعاميم أو نشرات لها موعد نهائي قريب.
 
     - تعمل مرتين يومياً عبر Celery Beat.
-    - تفحص التعاميم ذات `requires_signature=True` و `signature_deadline_at` قريب.
+    - تفحص الوثائق ذات `requires_signature=True` و `signature_deadline_at` قريب.
     - ترسل إشعار داخلي فقط للمعلمين الذين لم يوقّعوا بعد.
-    - تتجنب التكرار بعدم التذكير أكثر من مرة واحدة لنفس المستلم لنفس التعميم خلال 12 ساعة.
+    - تتجنب التكرار بعدم التذكير أكثر من مرة لنفس المستلم ولنفس الوثيقة خلال 12 ساعة.
     """
     import time as _time
     _t0 = _time.monotonic()
@@ -1340,13 +1340,13 @@ def remind_unsigned_circulars_task() -> dict:
     max_hours = max(reminder_hours) if reminder_hours else 48
     window_end = now + timedelta(hours=max_hours)
 
-    # التعاميم التي تتطلب توقيع ولها موعد نهائي بين الآن ونهاية النافذة
+    # الوثائق (التعاميم أو النشرات) التي تتطلب توقيع ولها موعد نهائي قريب
     circulars = Notification.objects.filter(
         requires_signature=True,
         signature_deadline_at__gt=now,
         signature_deadline_at__lte=window_end,
     ).select_related("school").only(
-        "id", "title", "signature_deadline_at", "school__id", "school__name"
+        "id", "kind", "title", "signature_deadline_at", "school__id", "school__name"
     )
 
     for circular in circulars.iterator():
@@ -1373,7 +1373,7 @@ def remind_unsigned_circulars_task() -> dict:
         if not unsigned_ids:
             continue
 
-        # تجنب التكرار: لا نذكّر نفس المعلمين عن نفس التعميم خلال 12 ساعة
+        # تجنب التكرار: لا نذكّر نفس المستلمين عن نفس الوثيقة خلال 12 ساعة
         dedup_title = f"🔔 تذكير بالتوقيع: {circular.title[:60]}"
         existing_reminder = Notification.objects.filter(
             title=dedup_title,
@@ -1400,8 +1400,9 @@ def remind_unsigned_circulars_task() -> dict:
         else:
             time_text = f"{hours_display} ساعة"
 
+        document_label = "النشرة" if circular.is_newsletter else "التعميم"
         message = (
-            f"لم يتم توقيعك على التعميم \"{circular.title}\" بعد.\n"
+            f"لم يتم توقيعك على {document_label} \"{circular.title}\" بعد.\n"
             f"الموعد النهائي للتوقيع: خلال {time_text}.\n"
             "يرجى التوقيع في أقرب وقت."
         )

@@ -983,7 +983,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
         <div class="page-eyebrow"><i class="fa-solid fa-inbox" aria-hidden="true"></i> مركز التنبيهات</div>
         <h1 class="page-title">
           <i class="fa-solid fa-bell" aria-hidden="true"></i>
-          إشعاراتي
+          الإشعارات والنشرات
 
         {% with unread=NAV_NOTIFICATIONS_UNREAD|default_if_none:"0"|add:"0" %}
           <span class="chip" id="unreadCount" aria-live="polite" {% if unread == 0 %}style="display:none"{% endif %} data-initial="{{ unread }}">
@@ -993,9 +993,9 @@ html[data-theme="dark"] .notif-scope .time-badge{
           </span>
         {% endwith %}
         </h1>
-        <p class="page-subtitle">تابع رسائل الإدارة والتنبيهات المهمة، وافتح التفاصيل عند الحاجة دون أن تفقد حالة القراءة.</p>
+        <p class="page-subtitle">تابع رسائل الإدارة والنشرات المرفقة، وأكمل التوقيع عندما تطلبه النشرة.</p>
         <div class="head-summary">
-          <span><i class="fa-solid fa-bell" aria-hidden="true"></i> إشعارات المدرسة</span>
+          <span><i class="fa-solid fa-bell" aria-hidden="true"></i> تواصل المدرسة</span>
           <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> عزل حسب المدرسة النشطة</span>
         </div>
       </div>
@@ -1003,7 +1003,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
       <div class="head-actions">
         <div class="notif-search">
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-          <input type="search" id="notifSearch" placeholder="ابحث في الإشعارات…" aria-label="بحث في الإشعارات">
+          <input type="search" id="notifSearch" placeholder="ابحث في الإشعارات والنشرات…" aria-label="بحث في التواصل الوارد">
         </div>
 
         <label class="toggle" for="onlyUnread">
@@ -1023,7 +1023,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
     </header>
 
     <nav class="inbox-nav" aria-label="التنقل بين الوارد">
-      <a href="{% url 'reports:my_notifications' %}"><i class="fa-solid fa-bell" aria-hidden="true"></i> الإشعارات</a>
+      <a href="{% url 'reports:my_notifications' %}"><i class="fa-solid fa-bell" aria-hidden="true"></i> الإشعارات والنشرات</a>
       <a href="{% url 'reports:my_circulars' %}"><i class="fa-solid fa-file-signature" aria-hidden="true"></i> التعاميم والتوقيعات</a>
     </nav>
 
@@ -1034,6 +1034,9 @@ html[data-theme="dark"] .notif-scope .time-badge{
           <article class="n-card {% if r.is_read %}read{% endif %}" data-read="{% if r.is_read %}1{% else %}0{% endif %}">
             <div class="n-head">
               <h3 class="n-title">
+                {% if n.is_newsletter %}
+                  <span class="chip info"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> نشرة</span>
+                {% endif %}
                 {% if n.is_important %}
                   <span class="chip danger"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> هام</span>
                 {% endif %}
@@ -1067,7 +1070,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
               <div class="left">
                 <a
                   class="btn-sm ghost"
-                  aria-label="عرض الإشعار كاملًا"
+                  aria-label="عرض {% if n.is_newsletter %}النشرة{% else %}الإشعار{% endif %} كاملًا"
                   href="{% url 'reports:my_notification_detail' r.pk %}"
                 >
                   <i class="fa-regular fa-eye" aria-hidden="true"></i>
@@ -1076,7 +1079,17 @@ html[data-theme="dark"] .notif-scope .time-badge{
               </div>
 
               <div class="right">
-                {% if r.is_read %}
+                {% if n.requires_signature and not r.is_signed %}
+                  <span class="btn-sm primary">
+                    <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
+                    توقيع مطلوب
+                  </span>
+                {% elif n.requires_signature and r.is_signed %}
+                  <span class="btn-sm success">
+                    <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+                    تم التوقيع
+                  </span>
+                {% elif r.is_read %}
                   <span class="btn-sm success">
                     <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                     مقروء
@@ -1131,7 +1144,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
     {% else %}
       <div class="empty">
         <i class="fa-regular fa-bell" aria-hidden="true"></i>
-        لا توجد إشعارات حتى الآن.
+        لا توجد إشعارات أو نشرات حتى الآن.
       </div>
     {% endif %}
   </div>

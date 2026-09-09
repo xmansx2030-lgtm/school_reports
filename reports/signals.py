@@ -344,6 +344,7 @@ def _notif_recipient_pre_save(sender, instance: NotificationRecipient, **kwargs)
                 "id",
                 "is_read",
                 "is_signed",
+                "notification__kind",
                 "notification__requires_signature",
                 "notification__school_id",
             )
@@ -355,6 +356,7 @@ def _notif_recipient_pre_save(sender, instance: NotificationRecipient, **kwargs)
         instance._sr_old_is_read = bool(getattr(old, "is_read", False))
         instance._sr_old_is_signed = bool(getattr(old, "is_signed", False))
         n = getattr(old, "notification", None)
+        instance._sr_old_notification_kind = getattr(n, "kind", "notification") if n else "notification"
         instance._sr_old_requires_signature = bool(getattr(n, "requires_signature", False)) if n else False
         instance._sr_old_notification_school_id = getattr(n, "school_id", None) if n else None
     except Exception:
@@ -385,16 +387,18 @@ def _notif_recipient_post_save(sender, instance: NotificationRecipient, created:
 
     try:
         n = getattr(instance, "notification", None)
+        notification_kind = getattr(n, "kind", "notification") if n else "notification"
         requires_signature = bool(getattr(n, "requires_signature", False)) if n else False
         notif_school_id = getattr(n, "school_id", None) if n else None
     except Exception:
+        notification_kind = "notification"
         requires_signature = False
         notif_school_id = None
 
     if created:
         # New recipient row == new attention item.
         try:
-            if requires_signature:
+            if notification_kind == "circular" and requires_signature:
                 push_delta_to_user(
                     teacher_id=teacher_id,
                     notification_school_id=notif_school_id,
@@ -418,12 +422,14 @@ def _notif_recipient_post_save(sender, instance: NotificationRecipient, created:
     try:
         old_is_read = getattr(instance, "_sr_old_is_read", None)
         old_is_signed = getattr(instance, "_sr_old_is_signed", None)
+        old_kind = getattr(instance, "_sr_old_notification_kind", notification_kind)
         old_requires_signature = getattr(instance, "_sr_old_requires_signature", requires_signature)
         old_school_id = getattr(instance, "_sr_old_notification_school_id", notif_school_id)
     except Exception:
         _degraded("realtime.read_previous_state", user_id=teacher_id)
         old_is_read = None
         old_is_signed = None
+        old_kind = notification_kind
         old_requires_signature = requires_signature
         old_school_id = notif_school_id
 
@@ -434,51 +440,50 @@ def _notif_recipient_post_save(sender, instance: NotificationRecipient, created:
                 push_force_resync(teacher_id=teacher_id, trace_id=trace_id)
         return
 
-    # Circulars: count depends on is_signed only.
-    if bool(old_requires_signature):
-        try:
-            new_is_signed = bool(getattr(instance, "is_signed", False))
-            if old_is_signed is False and new_is_signed is True:
-                push_delta_to_user(
-                    teacher_id=teacher_id,
-                    notification_school_id=old_school_id,
-                    delta_signatures_pending=-1,
-                    delta_count=-1,
-                    trace_id=trace_id,
-                )
-            elif old_is_signed is True and new_is_signed is False:
-                push_delta_to_user(
-                    teacher_id=teacher_id,
-                    notification_school_id=old_school_id,
-                    delta_signatures_pending=1,
-                    delta_count=1,
-                    trace_id=trace_id,
-                )
-        except Exception:
-            _degraded("realtime.delta_signature_change", user_id=teacher_id)
-        return
-
-    # Normal notifications: count depends on is_read.
+    # Compute both badge states explicitly. A signed newsletter belongs to the
+    # notification bell and stays there after opening until its signature is done.
     try:
         new_is_read = bool(getattr(instance, "is_read", False))
-        if old_is_read is False and new_is_read is True:
-            push_delta_to_user(
-                teacher_id=teacher_id,
-                notification_school_id=old_school_id,
-                delta_unread=-1,
-                delta_count=-1,
-                trace_id=trace_id,
+        new_is_signed = bool(getattr(instance, "is_signed", False))
+        old_notification_attention = old_kind in {"notification", "newsletter"} and (
+            not bool(old_is_read)
+            or (
+                old_kind == "newsletter"
+                and bool(old_requires_signature)
+                and not bool(old_is_signed)
             )
-        elif old_is_read is True and new_is_read is False:
+        )
+        new_notification_attention = notification_kind in {"notification", "newsletter"} and (
+            not new_is_read
+            or (
+                notification_kind == "newsletter"
+                and requires_signature
+                and not new_is_signed
+            )
+        )
+        old_circular_pending = (
+            old_kind == "circular"
+            and bool(old_requires_signature)
+            and not bool(old_is_signed)
+        )
+        new_circular_pending = (
+            notification_kind == "circular"
+            and requires_signature
+            and not new_is_signed
+        )
+        delta_unread = int(new_notification_attention) - int(old_notification_attention)
+        delta_signatures = int(new_circular_pending) - int(old_circular_pending)
+        if delta_unread or delta_signatures:
             push_delta_to_user(
                 teacher_id=teacher_id,
                 notification_school_id=old_school_id,
-                delta_unread=1,
-                delta_count=1,
+                delta_unread=delta_unread,
+                delta_signatures_pending=delta_signatures,
+                delta_count=delta_unread + delta_signatures,
                 trace_id=trace_id,
             )
     except Exception:
-        _degraded("realtime.delta_read_change", user_id=teacher_id)
+        _degraded("realtime.delta_attention_change", user_id=teacher_id)
 
 # =========================
 # System Notifications Logic (Added for System Manager)

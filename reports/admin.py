@@ -455,9 +455,18 @@ from .models import Notification, NotificationRecipient, WebPushDelivery, WebPus
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "is_important", "created_by", "created_at", "expires_at")
+    list_display = (
+        "id",
+        "title",
+        "kind",
+        "requires_signature",
+        "is_important",
+        "created_by",
+        "created_at",
+        "expires_at",
+    )
     search_fields = ("title", "message")
-    list_filter = ("is_important", "created_at")
+    list_filter = ("kind", "requires_signature", "is_important", "created_at")
     list_select_related = ("created_by",)
 
     def get_queryset(self, request):

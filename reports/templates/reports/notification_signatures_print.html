@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>تقرير تواقيع — {{ n.title|default:"تعميم رسمي" }}</title>
+  <title>تقرير تواقيع {{ communication_label|default:"الوثيقة" }} — {{ n.title|default:"وثيقة رسمية" }}</title>
   {% comment %}
     ‏`app.css` صار يقرأ رموز الهوية (`--id-*`)، وهذه الصفحة لا ترث `base.html`
     فلا تصلها. تُضمَّن هنا كي لا تسقط قواعدُه صامتةً على صفحةٍ مستقلة.
@@ -32,14 +32,14 @@
       </div>
       <img class="cir-report-logo" src="{% static 'img/brand-mark.svg' %}" alt="شعار منصة توثيق">
       <div class="cir-report-head__text">
-        <div>الرقم: CIR-{{ n.id|stringformat:"05d" }}</div>
+        <div>الرقم: {% if communication_kind == 'newsletter' %}NWS{% else %}CIR{% endif %}-{{ n.id|stringformat:"05d" }}</div>
         <div>تاريخ الإصدار: {{ n.created_at|date:"Y/m/d" }}</div>
         <div>تاريخ التقرير: {% now "Y/m/d — H:i" %}</div>
       </div>
     </header>
 
     <div class="cir-report-kicker">محضر متابعة إلكتروني</div>
-    <h1 class="cir-report-title">تقرير الاطلاع والتوقيع<br><span class="xs-notification-signatures-print-2">{{ n.title|default:"تعميم رسمي" }}</span></h1>
+    <h1 class="cir-report-title">تقرير الاطلاع والتوقيع — سجل تواقيع {{ communication_label|default:"الوثيقة" }}<br><span class="xs-notification-signatures-print-2">{{ n.title|default:"وثيقة رسمية" }}</span></h1>
 
     <table class="cir-report-meta">
       <tbody>
@@ -86,7 +86,7 @@
           <td>{% if row.signed_at %}{{ row.signed_at|date:"Y/m/d — H:i" }}{% else %}—{% endif %}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="xs-notification-signatures-print-11">لا توجد سجلات مستلمين لهذا التعميم.</td></tr>
+        <tr><td colspan="6" class="xs-notification-signatures-print-11">لا توجد سجلات مستلمين لهذه الوثيقة.</td></tr>
         {% endfor %}
       </tbody>
     </table>

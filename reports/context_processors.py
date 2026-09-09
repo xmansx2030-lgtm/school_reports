@@ -605,7 +605,7 @@ def _unread_count(user, request: Optional[HttpRequest] = None) -> int:
     uid = int(getattr(user, "id", 0) or 0)
     sid = _active_school_id_from_request(request)
     ttl = _nav_cache_ttl_seconds()
-    cache_key = f"nav:unread:v2:u{uid}:s{sid}"
+    cache_key = f"nav:unread:v3:u{uid}:s{sid}"
     if uid and ttl > 0:
         cached_val = _cache_get(cache_key)
         if cached_val is not None:
@@ -641,20 +641,36 @@ def _unread_count(user, request: Optional[HttpRequest] = None) -> int:
                         Q(**{f"{notif_fk}__school_id__isnull": True})
                     )
 
-            if "is_read" in fR:
-                qs = qs.filter(is_read=False)
-            elif "read_at" in fR:
-                qs = qs.filter(read_at__isnull=True)
-
             # استبعاد المنتهي عبر FK إن أمكن
             if notif_fk:
                 fN = _model_fields(N)
                 now = timezone.now()
 
-                # فصل: احتساب غير المقروء للإشعارات فقط (يستبعد التعاميم)
+                # الإشعار أو النشرة يحتاج انتباه المستخدم ما دام غير مقروء،
+                # وتبقى النشرة الموقعة في العداد حتى بعد فتحها إن لم يكتمل
+                # توقيعها. أما التعاميم فلها عداد مستقل في شريط التنقل.
                 with soft_fail("nav.unread_exclude_circulars", user_id=uid):
-                    if "requires_signature" in fN:
-                        qs = qs.filter(**{f"{notif_fk}__requires_signature": False})
+                    unread_q = Q(is_read=False) if "is_read" in fR else Q(read_at__isnull=True)
+                    if "kind" in fN:
+                        newsletter_signature_q = (
+                            Q(
+                                **{
+                                    f"{notif_fk}__kind": "newsletter",
+                                    f"{notif_fk}__requires_signature": True,
+                                    "is_signed": False,
+                                }
+                            )
+                            if "is_signed" in fR
+                            else Q(pk__in=[])
+                        )
+                        qs = qs.filter(
+                            Q(**{f"{notif_fk}__kind__in": ["notification", "newsletter"]})
+                            & (unread_q | newsletter_signature_q)
+                        )
+                    else:
+                        qs = qs.filter(unread_q).filter(
+                            **{f"{notif_fk}__requires_signature": False}
+                        )
 
                 if "expires_at" in fN:
                     qs = qs.filter(**{f"{notif_fk}__expires_at__gt": now}) | qs.filter(
@@ -763,6 +779,8 @@ def _pending_signatures_count(user, request: Optional[HttpRequest] = None) -> in
 
         # فلترة نشر/انتهاء على مستوى Notification إن وُجدت
         fN = _model_fields(N)
+        if "kind" in fN:
+            qs = qs.filter(**{f"{notif_fk}__kind": "circular"})
         with soft_fail("nav.pending_signatures_active_filter", user_id=uid):
             if "is_active" in fN:
                 qs = qs.filter(**{f"{notif_fk}__is_active": True})

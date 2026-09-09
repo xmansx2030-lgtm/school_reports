@@ -2022,6 +2022,16 @@ class FlexibleModelMultipleChoiceField(forms.ModelMultipleChoiceField):
 
 
 class NotificationCreateForm(forms.Form):
+    communication_type = forms.ChoiceField(
+        label="نوع التواصل",
+        choices=(
+            ("notification", "إشعار"),
+            ("newsletter", "نشرة"),
+        ),
+        initial="notification",
+        required=False,
+        widget=forms.RadioSelect,
+    )
     title = forms.CharField(max_length=120, required=False, label="عنوان (اختياري)")
     message = forms.CharField(widget=forms.Textarea(attrs={"rows":5}), label="نص الإشعار")
     is_important = forms.BooleanField(required=False, initial=False, label="مهم")
@@ -2103,14 +2113,31 @@ class NotificationCreateForm(forms.Form):
         self.mode = mode if mode in {"notification", "circular"} else "notification"
         is_circular = self.mode == "circular"
 
+        requested_kind = (
+            "circular"
+            if is_circular
+            else str(
+                self.data.get("communication_type")
+                or self.initial.get("communication_type")
+                or "notification"
+            ).strip()
+        )
+
         if is_circular:
+            self.fields.pop("communication_type", None)
             self.fields["title"].required = True
             self.fields["title"].label = "عنوان التعميم"
             self.fields["message"].label = "نص التعميم"
-
-        # المرفقات للتعاميم فقط
-        if not is_circular:
-            self.fields.pop("attachment", None)
+        elif requested_kind == "newsletter":
+            self.fields["title"].label = "عنوان النشرة"
+            self.fields["message"].label = "مقدمة النشرة"
+            self.fields["requires_signature"].label = "يلزم توقيع المستلمين"
+            self.fields["requires_signature"].help_text = (
+                "اختياري — عند تفعيله تظهر مهلة التوقيع ونص الإقرار للمستلمين."
+            )
+            self.fields["signature_ack_text"].initial = (
+                "أقرّ بأنني اطلعت على هذه النشرة وفهمت ما ورد فيها."
+            )
 
         is_superuser = bool(getattr(user, "is_superuser", False))
         labels = school_gender_labels(active_school)
@@ -2261,6 +2288,22 @@ class NotificationCreateForm(forms.Form):
 
         mode = getattr(self, "mode", "notification") or "notification"
         is_circular = mode == "circular"
+        communication_type = (
+            "circular"
+            if is_circular
+            else str(cleaned.get("communication_type") or "notification").strip()
+        )
+        if communication_type not in {"notification", "newsletter", "circular"}:
+            communication_type = "notification"
+
+        if communication_type == "newsletter" and not (cleaned.get("title") or "").strip():
+            self.add_error("title", "اكتب عنوانًا واضحًا للنشرة.")
+
+        if communication_type == "notification":
+            cleaned["attachment"] = None
+            cleaned["requires_signature"] = False
+            cleaned["signature_deadline_at"] = None
+            cleaned["signature_ack_text"] = ""
 
         if is_superuser:
             scope = cleaned.get("audience_scope") or "school"
@@ -2333,25 +2376,38 @@ class NotificationCreateForm(forms.Form):
             else:
                 school_for_notification = cleaned.get("target_school") or None
 
+        kind = (
+            Notification.Kind.CIRCULAR
+            if getattr(self, "mode", "notification") == "circular"
+            else cleaned.get("communication_type") or Notification.Kind.NOTIFICATION
+        )
+        if kind not in Notification.Kind.values:
+            kind = Notification.Kind.NOTIFICATION
+
         requires_signature = bool(cleaned.get("requires_signature"))
         if force_requires_signature is not None:
             requires_signature = bool(force_requires_signature)
 
-        # المرفقات للتعاميم فقط
+        # المرفقات للتعاميم والنشرات، سواء طلبت النشرة توقيعًا أم لا.
         attachment = None
-        if requires_signature:
+        if kind in {Notification.Kind.CIRCULAR, Notification.Kind.NEWSLETTER}:
             attachment = cleaned.get("attachment") if "attachment" in cleaned else None
 
         n = Notification.objects.create(
             title=cleaned.get("title") or "",
             message=cleaned["message"],
+            kind=kind,
             is_important=bool(cleaned.get("is_important")),
             expires_at=cleaned.get("expires_at") or None,
             attachment=attachment,
             requires_signature=requires_signature,
             signature_deadline_at=(cleaned.get("signature_deadline_at") or None) if requires_signature else None,
-            signature_ack_text=(cleaned.get("signature_ack_text") or "").strip()
-            or "أقرّ بأنني اطلعت على هذا التعميم وفهمت ما ورد فيه وأتعهد بالالتزام به.",
+            signature_ack_text=(
+                (cleaned.get("signature_ack_text") or "").strip()
+                or "أقرّ بأنني اطلعت على هذه الوثيقة وفهمت ما ورد فيها وأتعهد بالالتزام بها."
+            )
+            if requires_signature
+            else "",
             created_by=creator,
             school=school_for_notification,
         )
@@ -2368,7 +2424,7 @@ class NotificationCreateForm(forms.Form):
         target_departments = cleaned.get("target_department")
         # الأقسام والأفراد مصدران متكاملان للمستلمين؛ تزيل المجموعة أي تكرار.
         if target_departments and (
-            not bool(requires_signature)
+            kind != Notification.Kind.CIRCULAR
             or not is_superuser
         ):
             from .models import DepartmentMembership
@@ -2386,9 +2442,9 @@ class NotificationCreateForm(forms.Form):
         
         teacher_ids = list(teacher_ids_set) if teacher_ids_set else None
 
-        # التعميمات (requires_signature=True): مدير النظام يرسل لمدراء المدارس.
+        # التعاميم: مدير النظام يرسل لمدراء المدارس.
         # لو لم يحدد أسماء، نعتبره "إرسال للكل" ضمن النطاق المحدد.
-        if bool(requires_signature) and bool(getattr(creator, "is_superuser", False)):
+        if kind == Notification.Kind.CIRCULAR and bool(getattr(creator, "is_superuser", False)):
             if not teacher_ids:
                 try:
                     qs = self.fields["teachers"].queryset

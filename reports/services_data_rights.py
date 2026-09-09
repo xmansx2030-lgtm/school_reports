@@ -192,7 +192,12 @@ def _notifications_section(user) -> list[dict[str, Any]]:
     return [
         {
             "title": getattr(row.notification, "title", None),
-            "is_circular": bool(getattr(row.notification, "requires_signature", False)),
+            "kind": getattr(row.notification, "kind", "notification"),
+            "kind_label": getattr(row.notification, "kind_label", "إشعار"),
+            "is_circular": bool(getattr(row.notification, "is_circular", False)),
+            "requires_signature": bool(
+                getattr(row.notification, "requires_signature", False)
+            ),
             "received_at": _iso(row.created_at),
             "is_read": bool(row.is_read),
             "read_at": _iso(row.read_at),
@@ -557,6 +562,7 @@ FIELD_LABELS = {
     "generated_at": "تاريخ التجهيز", "created": "طلبات أنشأتها", "notes_written": "ملاحظات كتبتها",
     "passkeys": "مفاتيح المرور", "push_subscriptions": "اشتراكات الإشعارات",
     "two_factor_authentication": "المصادقة الثنائية", "is_circular": "تعميم",
+    "kind": "نوع التواصل", "kind_label": "نوع التواصل",
 }
 
 

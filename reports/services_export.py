@@ -71,10 +71,16 @@ def _counts(school) -> dict:
         "leadership": SchoolLeadershipPortfolio.objects.filter(school=school).count(),
         "tickets": Ticket.objects.filter(school=school).count(),
         "circulars": Notification.objects.filter(
-            school=school, requires_signature=True
+            school=school,
+            kind=Notification.Kind.CIRCULAR,
         ).count(),
         "notifications": Notification.objects.filter(
-            school=school, requires_signature=False
+            school=school,
+            kind=Notification.Kind.NOTIFICATION,
+        ).count(),
+        "newsletters": Notification.objects.filter(
+            school=school,
+            kind=Notification.Kind.NEWSLETTER,
         ).count(),
         "documents": Document.objects.filter(school=school).count(),
         "meetings": Meeting.objects.filter(school=school).count(),
@@ -163,6 +169,7 @@ def build_school_export_workbook(school):
         ("عدد التذاكر والطلبات", counts["tickets"]),
         ("عدد التعاميم", counts["circulars"]),
         ("عدد الإشعارات", counts["notifications"]),
+        ("عدد النشرات", counts["newsletters"]),
         (f"عدد {labels['teachers_object']}", counts["teachers"]),
         ("عدد الأقسام", counts["departments"]),
         ("تاريخ التصدير", timezone.localtime().strftime("%Y-%m-%d %H:%M")),
@@ -317,7 +324,7 @@ def build_school_export_workbook(school):
         ticket_rows,
     )
 
-    # ---------------- ورقة التعاميم والإشعارات ----------------
+    # ---------------- ورقة التعاميم والإشعارات والنشرات ----------------
     ws_notifications = wb.create_sheet("التعاميم والإشعارات")
     _style_sheet_rtl(ws_notifications)
     notification_rows = []
@@ -325,7 +332,7 @@ def build_school_export_workbook(school):
         notification_rows.append(
             [
                 notification.id,
-                "تعميم" if notification.requires_signature else "إشعار",
+                notification.kind_label,
                 notification.title or "",
                 getattr(notification.created_by, "name", "") or "—",
                 notification.created_at.strftime("%Y-%m-%d %H:%M"),
@@ -607,7 +614,7 @@ def build_year_archive_index_bytes(
         ("نطاق النسخة", "أرشيف مستندات وسجلات المدرسة"),
         (
             "ملاحظة السجلات الإدارية",
-            "الطلبات والتعاميم والإشعارات تحفظ بحالتها الكاملة لحظة إنشاء النسخة؛ لأنها غير مرتبطة بسنة دراسية.",
+            "الطلبات والتعاميم والإشعارات والنشرات تحفظ بحالتها الكاملة لحظة إنشاء النسخة؛ لأنها غير مرتبطة بسنة دراسية.",
         ),
         ("تاريخ إنشاء الفهرس", timezone.localtime().isoformat()),
         ("عدد التقارير", reports.count()),
@@ -622,21 +629,27 @@ def build_year_archive_index_bytes(
                     "عدد التعاميم",
                     Notification.objects.filter(
                         school=school,
-                        requires_signature=True,
+                        kind=Notification.Kind.CIRCULAR,
                     ).count(),
                 ),
                 (
-                    "عدد الإشعارات",
+                    "عدد الإشعارات والنشرات",
                     Notification.objects.filter(
                         school=school,
-                        requires_signature=False,
+                        kind__in=(
+                            Notification.Kind.NOTIFICATION,
+                            Notification.Kind.NEWSLETTER,
+                        ),
                     ).count(),
                 ),
                 (
                     "منها إشعارات آلية",
                     Notification.objects.filter(
                         school=school,
-                        requires_signature=False,
+                        kind__in=(
+                            Notification.Kind.NOTIFICATION,
+                            Notification.Kind.NEWSLETTER,
+                        ),
                         created_by__isnull=True,
                     ).count(),
                 ),
@@ -858,7 +871,7 @@ def build_year_archive_index_bytes(
             notification_sheet.append(
                 [
                     notification.pk,
-                    "تعميم" if notification.requires_signature else "إشعار",
+                    notification.kind_label,
                     notification.title,
                     notification.message or "",
                     getattr(notification.created_by, "name", "") or "النظام",
@@ -1535,7 +1548,11 @@ def _ticket_folder(ticket) -> str:
 
 
 def _notification_folder(notification) -> str:
-    root = "التعاميم" if notification.requires_signature else "الإشعارات"
+    roots = {
+        Notification.Kind.CIRCULAR: "التعاميم",
+        Notification.Kind.NEWSLETTER: "النشرات",
+    }
+    root = roots.get(notification.kind, "الإشعارات")
     day = (
         notification.created_at.strftime("%Y-%m-%d")
         if notification.created_at
@@ -1881,12 +1898,18 @@ def build_school_export_zip_file(
     )
     ticket_count = _tickets_qs(school).count() if school_wide else 0
     circular_count = (
-        Notification.objects.filter(school=school, requires_signature=True).count()
+        Notification.objects.filter(
+            school=school,
+            kind=Notification.Kind.CIRCULAR,
+        ).count()
         if school_wide
         else 0
     )
     notification_count = (
-        Notification.objects.filter(school=school, requires_signature=False).count()
+        Notification.objects.filter(
+            school=school,
+            kind__in=(Notification.Kind.NOTIFICATION, Notification.Kind.NEWSLETTER),
+        ).count()
         if school_wide
         else 0
     )

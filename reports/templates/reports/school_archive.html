@@ -328,7 +328,7 @@
           <div class="ar-kpi"><span>حركات العهدة</span><strong>{{ administrative_stats.lab_handovers }}</strong></div>
           <div class="ar-kpi"><span>تجارب المختبر</span><strong>{{ administrative_stats.lab_experiments }}</strong></div>
           <div class="ar-kpi">
-            <span>إشعارات المدرسة حتى الآن</span>
+            <span>الإشعارات والنشرات حتى الآن</span>
             <strong>{{ administrative_stats.notifications }}</strong>
             <small>{{ administrative_stats.user_notifications }} من مستخدمين · {{ administrative_stats.system_notifications }} آلي</small>
           </div>
@@ -559,16 +559,16 @@
 
               <section class="ar-record-section" aria-labelledby="archiveNotificationsTitle">
                 <div class="ar-record-title">
-                  <h3 id="archiveNotificationsTitle">إشعارات المدرسة</h3>
+                  <h3 id="archiveNotificationsTitle">إشعارات ونشرات المدرسة</h3>
                   <span>{{ administrative_stats.notifications }} سجل · {{ administrative_stats.system_notifications }} آلي</span>
                 </div>
                 <div class="ar-table-wrap">
                   <table class="ar-table">
-                    <thead><tr><th>الإشعار</th><th>المصدر</th><th>المستلمون</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+                    <thead><tr><th>التواصل</th><th>المصدر</th><th>المستلمون</th><th>التاريخ</th><th>إجراء</th></tr></thead>
                     <tbody>
                       {% for notification in archive_notifications %}
                         <tr>
-                          <td><div class="ar-name">{{ notification.title|default:"إشعار بدون عنوان" }}</div><div class="ar-meta">{{ notification.message|truncatechars:90 }}</div></td>
+                          <td><div class="ar-name">{{ notification.title|default:"تواصل بدون عنوان" }}</div><div class="ar-meta">{{ notification.kind_label }} · {{ notification.message|truncatechars:90 }}</div></td>
                           <td>{% if notification.created_by_id %}<span class="ar-source">{{ notification.created_by.name }}</span>{% else %}<span class="ar-source ar-source--system">النظام — آلي</span>{% endif %}</td>
                           <td>{{ notification.recipients.count }}</td>
                           <td>{{ notification.created_at|date:"Y-m-d H:i" }}</td>

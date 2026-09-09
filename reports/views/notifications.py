@@ -15,6 +15,39 @@ from ._helpers import (
 )
 
 
+def _communication_kind(notification) -> str:
+    kind = str(getattr(notification, "kind", "") or "").strip()
+    if kind in {"notification", "newsletter", "circular"}:
+        return kind
+    return "circular" if bool(getattr(notification, "requires_signature", False)) else "notification"
+
+
+def _is_circular(notification) -> bool:
+    return _communication_kind(notification) == "circular"
+
+
+def _is_newsletter(notification) -> bool:
+    return _communication_kind(notification) == "newsletter"
+
+
+def _sent_list_url(notification) -> str:
+    if _is_circular(notification):
+        return "reports:circulars_sent"
+    if _is_newsletter(notification):
+        return f"{reverse('reports:notifications_sent')}?kind=newsletter"
+    return "reports:notifications_sent"
+
+
+def _recipient_detail_url_name(notification) -> str:
+    return "reports:my_circular_detail" if _is_circular(notification) else "reports:my_notification_detail"
+
+
+def _communication_label(notification) -> str:
+    return {"circular": "التعميم", "newsletter": "النشرة"}.get(
+        _communication_kind(notification), "الإشعار"
+    )
+
+
 @login_required(login_url="reports:login")
 @access_required(_is_staff_or_officer)
 @ratelimit(key="user", rate="10/h", method="POST", block=True)
@@ -28,6 +61,12 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
     if mode not in {"notification", "circular"}:
         mode = "notification"
     is_circular = mode == "circular"
+    requested_kind = (
+        "circular"
+        if is_circular
+        else str(request.POST.get("communication_type") or "notification").strip()
+    )
+    is_newsletter = requested_kind == "newsletter"
 
     # نربط الإشعارات بمدرسة معيّنة للمدير/الضابط عبر المدرسة النشطة
     active_school = soft_call(
@@ -89,7 +128,7 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
             storage_school = active_school or form.cleaned_data.get("target_school")
             capacity_error = archive_storage_capacity_error(
                 storage_school,
-                [attachment] if attachment and is_circular else [],
+                [attachment] if attachment and (is_circular or is_newsletter) else [],
             )
             if capacity_error:
                 form.add_error("attachment", capacity_error)
@@ -100,7 +139,7 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
                     {
                         "form": form,
                         "mode": mode,
-                        "title": "إنشاء تعميم" if is_circular else "إنشاء إشعار",
+                        "title": "إنشاء تعميم" if is_circular else "إنشاء تواصل",
                     },
                 )
             try:
@@ -108,10 +147,15 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
                     form.save(
                         creator=request.user,
                         default_school=active_school,
-                        force_requires_signature=True if is_circular else False,
+                        force_requires_signature=True if is_circular else None,
                     )
-                messages.success(request, "تم إرسال التعميم." if is_circular else "تم إرسال الإشعار.")
-                return redirect("reports:circulars_sent" if is_circular else "reports:notifications_sent")
+                sent_label = "التعميم" if is_circular else ("النشرة" if is_newsletter else "الإشعار")
+                messages.success(request, f"تم إرسال {sent_label} إلى المستلمين المحددين.")
+                if is_circular:
+                    return redirect("reports:circulars_sent")
+                if is_newsletter:
+                    return redirect(f"{reverse('reports:notifications_sent')}?kind=newsletter")
+                return redirect("reports:notifications_sent")
             except Exception:
                 logger.exception("notifications_create failed")
                 messages.error(request, "تعذّر الإرسال. جرّب لاحقًا.")
@@ -124,7 +168,7 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
         {
             "form": form,
             "mode": mode,
-            "title": "إنشاء تعميم" if is_circular else "إنشاء إشعار",
+            "title": "إنشاء تعميم" if is_circular else "إنشاء تواصل",
             "reminder_context": reminder_context,
         },
     )
@@ -144,10 +188,10 @@ def notification_delete(request: HttpRequest, pk: int) -> HttpResponse:
         return redirect("reports:home")
 
     n = get_object_or_404(Notification, pk=pk)
-    sent_list_url = "reports:circulars_sent" if bool(getattr(n, "requires_signature", False)) else "reports:notifications_sent"
+    sent_list_url = _sent_list_url(n)
 
     # التعميمات: سماح لمدير المدرسة/مدير النظام
-    if bool(getattr(n, "requires_signature", False)):
+    if _is_circular(n):
         if not is_superuser and not _is_manager_in_school(request.user, active_school):
             messages.error(request, "لا تملك صلاحية التعامل مع التعاميم.")
             return redirect(sent_list_url)
@@ -257,10 +301,10 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
         return redirect("reports:home")
 
     n = get_object_or_404(Notification, pk=pk)
-    sent_list_url = "reports:circulars_sent" if bool(getattr(n, "requires_signature", False)) else "reports:notifications_sent"
+    sent_list_url = _sent_list_url(n)
 
     # التعميمات: سماح لمدير المدرسة/مدير النظام
-    if bool(getattr(n, "requires_signature", False)):
+    if _is_circular(n):
         if (not is_superuser) and (not _is_manager_in_school(request.user, active_school)):
             messages.error(request, "لا تملك صلاحية عرض التعاميم.")
             return redirect(sent_list_url)
@@ -413,8 +457,11 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
         },
         "can_add_recipients": can_add_recipients,
         "eligible_new_recipients": eligible_new_recipients,
+        "communication_kind": _communication_kind(n),
+        "communication_label": _communication_label(n),
+        "is_newsletter": _is_newsletter(n),
     }
-    template_name = "reports/circular_detail.html" if bool(getattr(n, "requires_signature", False)) else "reports/notification_detail.html"
+    template_name = "reports/circular_detail.html" if _is_circular(n) else "reports/notification_detail.html"
     return render(request, template_name, ctx)
 
 
@@ -546,22 +593,25 @@ def notification_sign(request: HttpRequest, pk: int) -> HttpResponse:
 
     n = getattr(rec, "notification", None)
     if n is None:
-        messages.error(request, "تعذّر العثور على التعميم.")
+        messages.error(request, "تعذّر العثور على الوثيقة.")
         return redirect("reports:my_circulars")
+
+    label = _communication_label(n)
+    detail_url_name = _recipient_detail_url_name(n)
 
     if not bool(getattr(n, "requires_signature", False)):
         messages.error(request, "هذا الإشعار لا يتطلب توقيعاً.")
         return redirect("reports:my_notification_detail", pk=rec.pk)
 
     if bool(getattr(rec, "is_signed", False)):
-        messages.info(request, "تم تسجيل توقيعك مسبقاً على هذا التعميم.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        messages.info(request, f"تم تسجيل توقيعك مسبقاً على {label}.")
+        return redirect(detail_url_name, pk=rec.pk)
 
     # ✅ منع التوقيع بعد انتهاء آخر موعد للتوقيع (إن حُدّد)
     deadline = getattr(n, "signature_deadline_at", None)
     if deadline and timezone.now() > deadline:
-        messages.error(request, "انتهى آخر موعد للتوقيع على هذا التعميم، ولم يعد بالإمكان اعتماد التوقيع.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        messages.error(request, f"انتهى آخر موعد للتوقيع على {label}، ولم يعد بالإمكان اعتماد التوقيع.")
+        return redirect(detail_url_name, pk=rec.pk)
 
     now = timezone.now()
     max_attempts = 5
@@ -580,7 +630,7 @@ def notification_sign(request: HttpRequest, pk: int) -> HttpResponse:
     if last_attempt and (now - last_attempt) <= window and attempts >= max_attempts:
         minutes_left = int(max(1, (window - (now - last_attempt)).total_seconds() // 60))
         messages.error(request, f"تم تجاوز عدد المحاولات. حاول مرة أخرى بعد {minutes_left} دقيقة.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        return redirect(detail_url_name, pk=rec.pk)
 
     entered_phone = (request.POST.get("phone") or "").strip()
     ack = request.POST.get("ack") in {"1", "on", "true", "yes"}
@@ -595,15 +645,15 @@ def notification_sign(request: HttpRequest, pk: int) -> HttpResponse:
 
     if not ack:
         messages.error(request, "يلزم الموافقة على الإقرار قبل اعتماد التوقيع.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        return redirect(detail_url_name, pk=rec.pk)
 
     if not entered_phone:
         messages.error(request, "يرجى إدخال رقم الجوال المسجل للتوقيع.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        return redirect(detail_url_name, pk=rec.pk)
 
     if _phone_key(entered_phone) != _phone_key(getattr(request.user, "phone", "")):
         messages.error(request, "رقم الجوال غير مطابق للرقم المسجل. تأكد وحاول مرة أخرى.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        return redirect(detail_url_name, pk=rec.pk)
 
     # Sign + mark read
     try:
@@ -628,10 +678,10 @@ def notification_sign(request: HttpRequest, pk: int) -> HttpResponse:
     except Exception:
         logger.exception("notification_sign failed")
         messages.error(request, "تعذّر تسجيل التوقيع. جرّب لاحقًا.")
-        return redirect("reports:my_circular_detail", pk=rec.pk)
+        return redirect(detail_url_name, pk=rec.pk)
 
-    messages.success(request, "تم تسجيل توقيعك على التعميم.")
-    return redirect("reports:my_circular_detail", pk=rec.pk)
+    messages.success(request, f"تم تسجيل توقيعك على {label}.")
+    return redirect(detail_url_name, pk=rec.pk)
 
 
 @login_required(login_url="reports:login")
@@ -649,23 +699,23 @@ def notification_signatures_print(request: HttpRequest, pk: int) -> HttpResponse
         return redirect("reports:home")
 
     n = get_object_or_404(Notification, pk=pk)
-    sent_list_url = "reports:circulars_sent" if bool(getattr(n, "requires_signature", False)) else "reports:notifications_sent"
+    sent_list_url = _sent_list_url(n)
 
-    # هذا التقرير خاص بالتعاميم فقط
+    # التقرير متاح للتعميم أو النشرة متى كان التوقيع مطلوبًا.
     if not bool(getattr(n, "requires_signature", False)):
-        messages.error(request, "هذا التقرير متاح للتعاميم فقط.")
+        messages.error(request, "تقرير التواقيع متاح للوثائق التي تطلب توقيعًا فقط.")
         return redirect(sent_list_url)
 
     # Permission: manager in school or creator
     if not _is_manager_in_school(request.user, active_school):
         if getattr(n, "created_by_id", None) != request.user.id:
-            messages.error(request, "لا تملك صلاحية عرض تقرير هذا التعميم.")
+            messages.error(request, "لا تملك صلاحية عرض تقرير هذه الوثيقة.")
             return redirect(sent_list_url)
 
     # School isolation
     if (not is_superuser) and hasattr(n, "school_id"):
         if getattr(n, "school_id", None) != getattr(active_school, "id", None):
-            messages.error(request, "لا تملك صلاحية عرض تعميم من مدرسة أخرى.")
+            messages.error(request, "لا تملك صلاحية عرض وثيقة من مدرسة أخرى.")
             return redirect(sent_list_url)
 
     qs = (
@@ -706,6 +756,8 @@ def notification_signatures_print(request: HttpRequest, pk: int) -> HttpResponse
 
     ctx = {
         "n": n,
+        "communication_label": _communication_label(n),
+        "communication_kind": _communication_kind(n),
         "rows": rows,
         "stats": {
             "total": total,
@@ -820,7 +872,7 @@ def unread_notifications_count(request: HttpRequest) -> HttpResponse:
             sid_for_key = "none"
         try:
             uid = int(getattr(request.user, "id", 0) or 0)
-            cache_key = f"unreadcnt:v1:u{uid}:s{sid_for_key}"
+            cache_key = f"unreadcnt:v2:u{uid}:s{sid_for_key}"
             cached = cache.get(cache_key)
             if isinstance(cached, dict):
                 return JsonResponse(cached)
@@ -841,11 +893,23 @@ def unread_notifications_count(request: HttpRequest) -> HttpResponse:
     # استبعاد المنتهي
     qs = qs.filter(Q(notification__expires_at__gt=now) | Q(notification__expires_at__isnull=True))
 
-    # unread = unread notifications only (exclude circulars)
-    unread_q = Q(is_read=False) & Q(notification__requires_signature=False)
+    # Bell attention: unread notifications/newsletters, plus a signed newsletter
+    # that was opened but still awaits the recipient's signature.
+    unread_q = Q(notification__kind__in=["notification", "newsletter"]) & (
+        Q(is_read=False)
+        | Q(
+            notification__kind="newsletter",
+            notification__requires_signature=True,
+            is_signed=False,
+        )
+    )
 
-    # signatures_pending = unsigned circulars
-    pending_sig_q = Q(notification__requires_signature=True, is_signed=False)
+    # The circular badge remains exclusive to actual circulars.
+    pending_sig_q = Q(
+        notification__kind="circular",
+        notification__requires_signature=True,
+        is_signed=False,
+    )
 
     # count = items needing attention (backward compatible): unread notifications OR pending circular signatures
     attention_q = unread_q | pending_sig_q
@@ -887,8 +951,8 @@ def my_notifications(request: HttpRequest) -> HttpResponse:
         .order_by("-created_at", "-id")
     )
 
-    # فصل: هذه الصفحة للإشعارات فقط (بدون التعاميم)
-    qs = qs.filter(notification__requires_signature=False)
+    # الإشعارات والنشرات في صندوق واحد؛ التعاميم الرسمية لها سجلها المستقل.
+    qs = qs.filter(notification__kind__in=["notification", "newsletter"])
 
     # عزل حسب المدرسة النشطة (مع السماح بإشعارات عامة school=NULL)
     if active_school is not None:
@@ -942,8 +1006,9 @@ def my_circulars(request: HttpRequest) -> HttpResponse:
         messages.error(request, "تعذر تحميل التعاميم حالياً. سيتم تسجيل المشكلة تلقائياً.")
         return render(request, "reports/my_circulars.html", {"page_obj": Paginator([], 12).get_page(1)})
 
-    # فصل: هذه الصفحة للتعاميم فقط
-    qs = qs.filter(notification__requires_signature=True)
+    # فصل النوع عن سياسة التوقيع: التعميم يبقى تعميماً حتى لو أنشئ من مسودة
+    # لا تطلب توقيعاً، والنشرة الموقعة لا تتسرب إلى سجل التعاميم.
+    qs = qs.filter(notification__kind="circular")
 
     # عزل حسب المدرسة النشطة (مع السماح بإشعارات عامة school=NULL)
     if active_school is not None:
@@ -1007,7 +1072,8 @@ def my_notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
         messages.error(request, "تعذّر العثور على الإشعار.")
         return redirect("reports:my_notifications")
 
-    is_circular = bool(getattr(n, "requires_signature", False))
+    is_circular = _is_circular(n)
+    is_newsletter = _is_newsletter(n)
 
     # منع الخلط 100%: إذا كان الرابط من تبويب خاطئ نعيد توجيهه للرابط الصحيح
     with soft_fail("notifications.detail_tab_redirect", recipient_id=r.pk):
@@ -1061,7 +1127,7 @@ def my_notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
     return render(
         request,
-        "reports/my_circular_detail.html" if is_circular else "reports/my_notification_detail.html",
+        "reports/my_circular_detail.html" if (is_circular or is_newsletter) else "reports/my_notification_detail.html",
         {
             "r": r,
             "n": n,
@@ -1069,6 +1135,9 @@ def my_notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
             "sender_name": sender_name,
             "sender_role_label": sender_role_label,
             "signing_closed": signing_closed,
+            "communication_kind": _communication_kind(n),
+            "communication_label": _communication_label(n),
+            "is_newsletter": is_newsletter,
         },
     )
 
@@ -1110,8 +1179,17 @@ def notifications_sent(request: HttpRequest, mode: str = "notification") -> Http
     # إشعارات النظام (created_by=NULL) مثل التعليقات الخاصة والتنبيهات الآلية لا تظهر هنا.
     qs = qs.filter(created_by__isnull=False)
 
-    # فصل التعاميم عن الإشعارات
-    qs = qs.filter(requires_signature=True) if is_circular else qs.filter(requires_signature=False)
+    # فصل النوع عن سياسة التوقيع. صفحة التواصل المرسل تجمع الإشعارات والنشرات
+    # وتتيح تبويباً واضحاً بينهما، بينما تبقى التعاميم في سجلها الرسمي.
+    kind_filter = (request.GET.get("kind") or "all").strip().lower()
+    if is_circular:
+        qs = qs.filter(kind="circular")
+        kind_filter = "circular"
+    elif kind_filter in {"notification", "newsletter"}:
+        qs = qs.filter(kind=kind_filter)
+    else:
+        kind_filter = "all"
+        qs = qs.filter(kind__in=["notification", "newsletter"])
 
     # غير السوبر: لا يرى إلا إشعارات المدرسة النشطة (لا إشعارات عامة)
     if not request.user.is_superuser:
@@ -1214,6 +1292,7 @@ def notifications_sent(request: HttpRequest, mode: str = "notification") -> Http
             "stats": stats,
             "mode": mode,
             "title": "التعاميم المرسلة" if is_circular else "الإشعارات المرسلة",
+            "kind_filter": kind_filter,
         },
     )
 
@@ -1254,7 +1333,7 @@ def notifications_mark_all_read(request: HttpRequest) -> HttpResponse:
     qs = qs.filter(Q(notification__expires_at__gt=timezone.now()) | Q(notification__expires_at__isnull=True))
 
     # فصل: هذا الإجراء خاص بالإشعارات فقط (يستبعد التعاميم)
-    qs = qs.filter(notification__requires_signature=False)
+    qs = qs.filter(notification__kind__in=["notification", "newsletter"])
 
     # ``update`` واحد بدل حلقةِ حفظٍ لكل صف. والفشل هنا **لا يُبتلع**: المستخدم
     # كان يُخبَر «تم تحديد الجميع كمقروءة» ثم يجد العدّاد كما هو — وهو أسوأ من
@@ -1286,7 +1365,7 @@ def circulars_mark_all_read(request: HttpRequest) -> HttpResponse:
     else:
         qs = qs.filter(notification__school__isnull=True)
     qs = qs.filter(Q(notification__expires_at__gt=timezone.now()) | Q(notification__expires_at__isnull=True))
-    qs = qs.filter(notification__requires_signature=True)
+    qs = qs.filter(notification__kind="circular")
 
     try:
         qs.filter(is_read=False).update(is_read=True, read_at=timezone.now())
