@@ -47,6 +47,11 @@ ssh-keyscan -H <SERVER_IP>            # المخرجات تذهب إلى DEPLOY_
 | `DEPLOY_PATH` | اختياري — مسار المشروع على الخادم، الافتراضي `/opt/school_reports` |
 | `DEPLOY_SSH_PORT` | اختياري — الافتراضي `22` |
 
+يهيئ مسار النشر مخزن عدادات الحدود المنفصل تلقائيًا من `REDIS_PASSWORD`
+المحفوظ داخل `env.production` على الخادم، ويكتب `REDIS_LIMITS_URL` مع
+`LOGIN_THROTTLE_FAIL_CLOSED=True` دون نقل كلمة المرور إلى GitHub أو سطر الأوامر.
+لذلك يجب أن يبقى `REDIS_PASSWORD` موجودًا وصحيحًا في ملف الإنتاج المحمي.
+
 `GITHUB_TOKEN` يُوفَّر تلقائياً ولا يحتاج إعداداً.
 
 أو من سطر الأوامر:

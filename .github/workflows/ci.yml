@@ -259,6 +259,20 @@ jobs:
                git -C '$DEPLOY_PATH' remote remove upstream 2>/dev/null || true; \
              fi"
 
+      - name: Configure isolated rate-limit store
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
+        run: |
+          # Derive the dedicated store URL from REDIS_PASSWORD inside the
+          # protected server-only env file. The password never enters GitHub,
+          # argv, the process list, or the workflow log.
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+              "DEPLOY_PATH='$DEPLOY_PATH' python3 \
+               '$DEPLOY_PATH/deploy/hetzner/apply_runtime_config.py' \
+               --configure-redis-limits"
+
       - name: Configure stable Web Push keys
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
