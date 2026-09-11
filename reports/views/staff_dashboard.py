@@ -28,7 +28,7 @@ from ..model_parts.documents import Document
 from ..model_parts.meetings import Meeting
 from ..model_parts.plans import PlanTask
 from ..coverage import pending_documenters, school_staff_queryset
-from ..models import Report, SchoolMembership, TeacherAchievementFile
+from ..models import Report, TeacherAchievementFile
 from ..permissions import (
     capability_source,
     is_school_manager,

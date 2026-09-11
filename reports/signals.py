@@ -14,7 +14,6 @@ from reports.models import (
     Payment,
     Report,
     School,
-    SchoolMembership,
     SchoolSubscription,
     Ticket,
 )

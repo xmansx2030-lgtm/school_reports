@@ -1550,8 +1550,6 @@ def check_archive_addon_expiry_task(self) -> dict:
     SchoolMembership = apps.get_model("reports", "SchoolMembership")
     Notification = apps.get_model("reports", "Notification")
     NotificationRecipient = apps.get_model("reports", "NotificationRecipient")
-    School = apps.get_model("reports", "School")
-
     today = timezone.localdate()
     dedup_cutoff = timezone.now() - timedelta(hours=24)
 

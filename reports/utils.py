@@ -219,7 +219,6 @@ def create_system_notification(title, message, school=None, teacher_ids=None, is
     """
     from .models import Notification
     from .tasks import send_notification_task
-    from django.db import transaction
 
     n = Notification.objects.create(
         title=title,

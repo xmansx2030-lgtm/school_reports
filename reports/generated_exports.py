@@ -49,7 +49,7 @@ def enqueue_generated_export(*, school, requested_by, kind: str, parameters: dic
     params["fingerprint"] = fingerprint
     lock_key = f"generated-export:enqueue:{fingerprint}"
 
-    with redis_cache_lock(lock_key, timeout=10) as acquired:
+    with redis_cache_lock(lock_key, timeout=10):
         active = GeneratedExportJob.objects.filter(
             school=school,
             requested_by=requested_by,

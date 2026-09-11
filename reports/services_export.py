@@ -35,7 +35,6 @@ from .models import (
     SchoolMembership,
     TeacherAchievementFile,
     Ticket,
-    TicketImage,
 )
 
 # ألوان الهوية

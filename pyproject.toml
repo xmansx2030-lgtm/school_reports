@@ -19,12 +19,10 @@ extend-exclude = [
 #   B  (flake8-bugbear) — مصائد وقتِ التشغيل: القيمة الافتراضية المتغيّرة،
 #      و``except`` الفارغ الذي يبتلع الخطأ، والمتغيّر المُلتقَط في حلقة.
 #
-# ولا تُفعَّل ``F`` كاملة عن قصد: ``F403/F405`` تشتكيان من
-# ``from ._helpers import *`` وهو **عُرف معماري** في وحدات العرض هنا لا سهو —
-# مدخلات مشتركة لخمس وثلاثين شاشة. و``F401`` تعدّ استيرادات ``_helpers`` نفسها
-# «غير مستعملة» بينما وجودُها هو الغرض، فحذفها آلياً يكسر كل وحدة تستوردها.
-# التنظيف اللغوي شأن تغييرٍ مستقل، لا تغييرٍ أمني تجب مراجعته سطراً سطراً.
-select = ["E9", "F63", "F7", "F82", "B", "S"]
+# فحص الاستيرادات والمتغيّرات غير المستخدمة مفعّل صراحةً. الاستثناء الوحيد
+# هو وحدات التوافق القديمة التي تعمل كـ import hubs؛ حصرُها أدناه يمنع أن
+# تتحول استثناءاتها إلى سياسة عامة تخفي imports ميتة في الملفات الجديدة.
+select = ["E9", "F63", "F7", "F82", "F401", "F841", "B", "S"]
 
 ignore = [
   # S101: ``assert`` — أصلُ الاختبارات، ولا يُستعمل في كود التشغيل هنا.
@@ -81,7 +79,7 @@ ignore = [
 "reports/views/home.py" = ["S110", "S112"]
 "reports/views/platform.py" = ["S110", "S112"]
 "reports/views/api.py" = ["S110", "S112"]
-"reports/views/_helpers.py" = ["S110", "S112"]
+"reports/views/_helpers.py" = ["F401", "S110", "S112"]
 "reports/ai_features.py" = ["S110", "S112"]
 "reports/apps.py" = ["S110", "S112"]
 "reports/services_export.py" = ["S110", "S112"]
@@ -124,3 +122,12 @@ ignore = [
 "reports/telegram_alerts.py" = ["S310", "S110", "S112"]
 "reports/mansour_assistant.py" = ["S310"]
 "reports/report_ai.py" = ["S310"]
+
+# وحدات توافق تصدّر أسماءها إلى ملفات النماذج/العروض القديمة عبر ``import *``.
+# إزالة F401 منها آلياً تكسر أسماءً تُستهلك في الوحدة المستورِدة. هذا دين
+# معماري محصور يجب إزالته عند استبدال import hubs باستيرادات صريحة.
+"reports/model_parts/base.py" = ["F401"]
+"reports/views/billing_core.py" = ["F401"]
+"reports/views/billing_gateways.py" = ["F401"]
+"reports/views/billing_platform.py" = ["F401"]
+"reports/views/billing_school.py" = ["F401"]

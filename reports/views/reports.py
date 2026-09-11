@@ -8,7 +8,6 @@ import json
 import logging
 import re
 
-from django.contrib.auth.decorators import user_passes_test
 from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
@@ -53,7 +52,7 @@ from ..gender_labels import school_gender_labels, school_gender_template_context
 from ..generated_exports import async_exports_enabled, enqueue_generated_export
 from ..models import GeneratedExportJob
 
-from core.observability import report_degraded as _degraded, soft_call, soft_fail
+from core.observability import report_degraded as _degraded, soft_fail
 
 from ._helpers import *
 from .export_jobs import export_creation_is_limited, generated_export_job_response
@@ -62,8 +61,7 @@ from ..services_archive import _human_size
 from ._helpers import (
     _is_staff, _is_staff_or_officer, _is_manager_in_school,
     _parse_date_safe, _filter_by_school, _safe_next_url, _safe_redirect,
-    _private_comment_role_label, _model_has_field,
-    _get_active_school,
+    _private_comment_role_label, _get_active_school,
     _ensure_achievement_sections,
     _clean_query_value, _clean_query_params,
 )

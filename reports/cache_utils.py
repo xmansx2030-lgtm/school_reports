@@ -11,7 +11,6 @@ import logging
 import secrets
 import time
 from contextlib import contextmanager
-from typing import Optional
 
 from core.observability import report_degraded as _degraded, soft_call, soft_fail
 

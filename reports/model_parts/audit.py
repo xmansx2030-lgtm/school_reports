@@ -4,7 +4,7 @@ import threading
 from contextlib import contextmanager
 
 from .base import *
-from .schools import School, Teacher
+from .schools import School
 
 __all__ = ["AuditLog", "AuditLogImmutableError", "audit_retention_purge"]
 

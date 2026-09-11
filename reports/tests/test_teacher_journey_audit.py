@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone

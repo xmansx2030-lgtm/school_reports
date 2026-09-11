@@ -11,7 +11,6 @@ from rest_framework import serializers
 from .report_limits import REPORT_DETAILS_MAX_LENGTH
 
 from .models import (
-    Department,
     Notification,
     Report,
     ReportType,

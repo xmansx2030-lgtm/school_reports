@@ -20,7 +20,7 @@ from core.observability import report_degraded as _degraded, soft_call, soft_fai
 
 from ._helpers import *
 from ._helpers import (
-    _is_staff, _safe_next_url, _set_active_school,
+    _safe_next_url, _set_active_school,
     _get_active_school, _user_schools,
 )
 from ..webauthn import (
@@ -1040,7 +1040,7 @@ def passkey_register_verify(request: HttpRequest) -> JsonResponse:
     try:
         payload = json_body(request)
         response = payload.get("response") or {}
-        client_data_hash = parse_client_data(
+        parse_client_data(
             client_data_json_b64=response.get("clientDataJSON") or "",
             expected_type="webauthn.create",
             expected_challenge=challenge,

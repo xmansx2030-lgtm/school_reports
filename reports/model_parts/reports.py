@@ -7,7 +7,7 @@ from django.utils.dateparse import parse_date
 
 from .base import *
 from .approvals import ApprovalMixin
-from .schools import School, Teacher, ReportType
+from .schools import School, Teacher
 
 
 class ActiveReportManager(models.Manager):

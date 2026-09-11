@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .approvals import ApprovalMixin, ApprovalState
 from .base import *
-from .schools import Department, School, SchoolGroup, SchoolMembership, Teacher
+from .schools import Department, School, SchoolGroup, Teacher
 
 __all__ = ["Assignment", "AssignmentTarget", "AssignmentEvidence"]
 

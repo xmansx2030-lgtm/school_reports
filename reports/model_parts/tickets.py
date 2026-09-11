@@ -3,7 +3,7 @@ from __future__ import annotations
 from core.observability import report_degraded as _degraded
 
 from .base import *
-from .schools import Department, School, SchoolMembership, Teacher
+from .schools import Department, School, Teacher
 
 
 # =========================

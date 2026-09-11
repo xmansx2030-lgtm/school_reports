@@ -2,10 +2,8 @@ from django.test import TestCase
 
 from reports.models import (
     PlatformSettings,
-    Report,
     School,
     SchoolArchiveAddon,
-    Teacher,
 )
 from reports.services_archive import (
     archive_storage_capacity_error,

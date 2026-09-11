@@ -419,8 +419,6 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
 
         # ملخص تشغيلي للتخزين دون أي اتصالات شبكية مع R2.
         # الحد الفعلي يأتي من إضافة الأرشيف النشطة، وإلا من الحد المجاني العام.
-        platform_settings = PlatformSettings.get_solo()
-        free_limit_bytes = max(0, int(getattr(platform_settings, "free_storage_mb", 0) or 0)) * 1024 * 1024
         storage_near_limit_count = 0
         # Storage no longer depends on the yearly-archive add-on; it comes from
         # the purchased teacher capacity plus any separately bought space.

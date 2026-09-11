@@ -15,7 +15,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from .model_parts.approvals import ApprovalState
-from .model_parts.assignments import Assignment, AssignmentEvidence, AssignmentTarget
+from .model_parts.assignments import AssignmentEvidence, AssignmentTarget
 from .services_approval import ApprovalError
 
 __all__ = [

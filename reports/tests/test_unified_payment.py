@@ -1,4 +1,3 @@
-from io import BytesIO
 
 from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile

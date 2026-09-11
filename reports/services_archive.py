@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Iterable
 
 from django.db.models import Count, Q, Sum
-from django.utils import timezone
 
 from .models import (
     Assignment,

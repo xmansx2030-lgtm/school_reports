@@ -23,7 +23,6 @@ from reports.forms_assignments import SchoolAssignmentForm
 from reports.model_parts.approvals import ApprovalState
 from reports.models import (
     Assignment,
-    AssignmentEvidence,
     AssignmentTarget,
     Department,
     DepartmentMembership,

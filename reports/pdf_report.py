@@ -298,7 +298,6 @@ def _generate_report_pdf_fallback(report, *, context: dict | None = None) -> byt
     green_dark = HexColor("#073D2B")
     green_soft = HexColor("#EDF6F1")
     gold = HexColor("#B9975B")
-    gold_soft = HexColor("#F7F1E5")
     ink = HexColor("#17251F")
     muted = HexColor("#64736C")
     line_color = HexColor("#D6E0DA")

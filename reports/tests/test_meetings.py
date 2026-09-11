@@ -41,7 +41,6 @@ from reports.models import (
     Teacher,
 )
 from reports.services_approval import (
-    ApprovalError,
     approve,
     available_actions,
     issue,

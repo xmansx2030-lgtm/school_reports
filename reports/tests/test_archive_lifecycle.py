@@ -26,7 +26,6 @@ from reports.models import (
 )
 from reports.services_archive import (
     archive_storage_capacity_error,
-    reclaimable_storage_by_year,
     school_storage_allowance,
     school_storage_limit_bytes,
     school_storage_overview,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._helpers import *
 from ._helpers import (
-    _is_staff, _parse_date_safe, _set_active_school,
+    _parse_date_safe, _set_active_school,
     _get_active_school, _user_manager_schools,
     _clean_query_value, _clean_query_params,
 )
@@ -59,7 +59,6 @@ def _attach_directory_subscription_status(schools: list[School]) -> None:
 @login_required(login_url="reports:login")
 @require_http_methods(["GET"])
 def platform_schools_directory(request: HttpRequest) -> HttpResponse:
-    user = request.user
     if not _require_platform_admin_or_superuser(request):
         messages.error(request, "لا تملك صلاحية الوصول إلى شاشة المدارس.")
         return redirect("reports:home")

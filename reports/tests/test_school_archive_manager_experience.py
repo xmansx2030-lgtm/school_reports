@@ -730,7 +730,7 @@ class SchoolArchiveManagerExperienceTests(TestCase):
             due_at=assignment.due_at,
             assignment=assignment,
         )
-        initiative = Initiative.objects.create(
+        Initiative.objects.create(
             school=self.school,
             teacher=self.teacher,
             plan=plan,
@@ -747,7 +747,7 @@ class SchoolArchiveManagerExperienceTests(TestCase):
             custodian=self.teacher,
             recorded_by=self.manager,
         )
-        handover = LabAssetHandover.objects.create(
+        LabAssetHandover.objects.create(
             school=self.school,
             asset=asset,
             direction=LabAssetHandover.Direction.OUT,

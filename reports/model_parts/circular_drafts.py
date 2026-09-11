@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .approvals import ApprovalMixin, ApprovalState
+from .approvals import ApprovalMixin
 from .base import *
 from .schools import Department, School, Teacher
 

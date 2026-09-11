@@ -2,7 +2,7 @@
 from ._helpers import *
 from ._helpers import (
     _is_staff_or_officer, _is_manager_in_school,
-    _model_has_field, _get_active_school,
+    _get_active_school,
 )
 from .schools import _members_for_department, _resolve_department_by_code_or_pk
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from .model_parts.approvals import ApprovalState

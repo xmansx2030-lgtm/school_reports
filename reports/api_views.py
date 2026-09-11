@@ -24,14 +24,12 @@ from .api_schema import build_openapi_schema
 from django.db import models as db_models
 
 from .models import (
-    Department,
     DepartmentMembership,
     Notification,
     NotificationRecipient,
     Report,
     ReportType,
     School,
-    SchoolMembership,
     Ticket,
 )
 from .permissions import (

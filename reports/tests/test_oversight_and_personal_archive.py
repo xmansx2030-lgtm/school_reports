@@ -7,14 +7,12 @@
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from django.utils import timezone
 
 from reports import capabilities as caps
-from reports.model_parts.approvals import ApprovalState
 from reports.models import (
     AuditLog,
     Department,

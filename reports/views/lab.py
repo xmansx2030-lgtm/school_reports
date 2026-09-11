@@ -15,7 +15,7 @@ from django.core.exceptions import PermissionDenied
 from ._helpers import *  # noqa: F401,F403
 from ._helpers import _get_active_school, _clean_query_params
 from ..forms_lab import LabAssetForm, LabExperimentForm, LabHandoverForm
-from ..model_parts.approvals import ApprovalState, PENDING_REVIEW_STATES
+from ..model_parts.approvals import ApprovalState
 from ..models import LabAsset, LabAssetHandover, LabExperiment
 from ..permissions import can_record_lab, can_view_lab, is_lab_technician
 from ..services_approval import (
