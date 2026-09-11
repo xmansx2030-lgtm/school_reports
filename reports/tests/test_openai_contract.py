@@ -273,7 +273,7 @@ class WireContractTests(SimpleTestCase):
 
         كان المعرّف في منصور وحده، وثلاثةُ مسارات تصل المزوّد بلا نسبة.
         """
-        from reports.ai_usage import ai_usage_context
+        from reports.ai_usage import ai_usage_context, safety_identifier_for
 
         cases = {
             "report-improve": lambda: report_ai.improve_report_text(REPORT_TEXT),
@@ -290,7 +290,8 @@ class WireContractTests(SimpleTestCase):
                 for sent in capture.requests:
                     identifier = sent["body"].get("safety_identifier", "")
                     self.assertTrue(identifier.startswith("tawtheeq_"), f"{name}: {identifier!r}")
-                    self.assertNotIn("7", identifier[9:12])
+                    self.assertEqual(identifier, safety_identifier_for(7))
+                    self.assertNotEqual(identifier, "tawtheeq_7")
 
     def test_the_identifier_never_carries_the_account_number(self):
         from reports.ai_usage import safety_identifier_for

@@ -120,7 +120,7 @@ class PwaInstallExperienceTests(TestCase):
         self.assertIn("navigator.userAgentData", script)
         self.assertIn("pwaInstallAnnouncement", script)
         self.assertIn("يتوفر تثبيت منصة توثيق على هذا الجوال", script)
-        self.assertIn('var SW_URL = "/sw.js?v=11"', script)
+        self.assertIn('var SW_URL = "/sw.js?v=12"', script)
         self.assertIn('updateViaCache: "none"', script)
         self.assertIn("TASK_COMPLETE_KEY", script)
         self.assertIn("hasCompletedTask()", script)
@@ -211,7 +211,7 @@ class PwaInstallExperienceTests(TestCase):
         worker = self._source("static/sw.js")
         offline = self._source("static/offline.html")
 
-        self.assertIn('const CACHE_NAME = "tawtheeq-v11"', worker)
+        self.assertIn('const CACHE_NAME = "tawtheeq-v12"', worker)
         self.assertIn('const OFFLINE_URL = "/static/offline.html"', worker)
         self.assertIn("navigationPreload.enable()", worker)
         self.assertIn('startsWith("/api/")', worker)
@@ -220,6 +220,8 @@ class PwaInstallExperienceTests(TestCase):
         self.assertNotIn("cache.put(event.request", worker)
         self.assertIn("أنت الآن دون اتصال", offline)
         self.assertIn('name="viewport"', offline)
+        self.assertIn("cairo-arabic.woff2", worker)
+        self.assertIn("cairo-arabic.woff2", offline)
 
     def test_service_worker_response_prevents_browser_and_cdn_caching(self):
         response = self.client.get(reverse("service_worker"))

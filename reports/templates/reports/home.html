@@ -796,7 +796,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="teacher-home" dir="rtl">
+<div class="teacher-home" dir="rtl">
   {% if home_notification %}
     <div class="th-notification-overlay" id="homeNotification" role="region" aria-labelledby="homeNotificationTitle">
       <section class="th-notification">
@@ -1582,5 +1582,5 @@
   <a class="th-mobile-add" href="{% url 'reports:add_report' %}" aria-label="إضافة تقرير جديد">
     <i class="fa-solid fa-plus" aria-hidden="true"></i>
   </a>
-</main>
+</div>
 {% endblock %}

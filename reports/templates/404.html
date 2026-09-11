@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}الصفحة غير موجودة (404){% endblock %}
+
+{% block content %}
+{% url 'reports:home' as home_url %}
+{% include "reports/partials/ui_state.html" with variant="warning" role="alert" icon="fa-map-signs" eyebrow="تعذر الوصول" code="404" title="الصفحة غير موجودة" message="قد يكون الرابط قديمًا أو أن الصفحة نُقلت إلى مكان آخر." primary_url=home_url allow_back=True %}
+{% endblock %}

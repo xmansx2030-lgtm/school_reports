@@ -51,7 +51,7 @@
       </div>
     </aside>
 
-    <main class="mail-list-panel">
+    <div class="mail-list-panel">
       <div class="mail-toolbar">
         <form method="get" class="mail-search">
           <input type="hidden" name="folder" value="{{ folder }}">
@@ -78,7 +78,7 @@
         {% endfor %}
       </div>
       {% include "reports/_pagination.html" %}
-    </main>
+    </div>
   </div>
 </div>
 {% endblock %}

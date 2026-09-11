@@ -1440,100 +1440,12 @@ html[data-theme="dark"] .mr-page{
     }
   }
 
-  /* ============================================================
-     👑 ROYAL OVERLAY — تقاريري (زمرّدي + ذهبي)
-     ============================================================ */
-  .mr-wrap .mr-stat{
-    border:1px solid rgba(185,151,91,.20) !important;
-    border-radius:18px !important;
-    box-shadow:0 14px 34px -24px rgba(10,92,51,.4) !important;
-    position:relative; overflow:hidden;
-    transition:transform .16s, box-shadow .16s;
-  }
-  .mr-wrap .mr-stat::before{
-    content:""; position:absolute; top:0; right:0; width:70px; height:70px;
-    background:linear-gradient(135deg, rgba(212,177,109,.20), transparent 70%); border-radius:0 0 0 100%; pointer-events:none;
-  }
-  .mr-wrap .mr-stat:hover{ transform:translateY(-4px); box-shadow:0 20px 38px -22px rgba(10,92,51,.5); }
-  .mr-wrap .mr-stat-ico{
-    background:linear-gradient(135deg,#e6cf9a,#d4b16d) !important; color:#063d22 !important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 8px 16px -10px rgba(185,151,91,.9) !important;
-  }
-  .mr-wrap .mr-stat-ico.green{ background:linear-gradient(135deg,var(--id-green-800),var(--id-green-950)) !important; color:var(--id-gold-300) !important; }
-  .mr-wrap .mr-stat-ico.amber{ background:linear-gradient(135deg,var(--id-green-700),var(--id-green-500)) !important; color:#fff !important; }
-  .mr-wrap .mr-stat .num{
-    background:linear-gradient(180deg,var(--id-green-700),var(--id-green-950)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  [data-theme="dark"] .mr-wrap .mr-stat .num{ background:linear-gradient(180deg,var(--id-gold-300),var(--id-gold-400)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-
-  .mr-wrap .mr-card{
-    border:1px solid rgba(185,151,91,.18) !important;
-    border-radius:22px !important;
-    box-shadow:0 18px 44px -28px rgba(10,92,51,.4) !important;
-  }
-  .mr-wrap .mr-card > .mr-hd{
-    background:
-      radial-gradient(120% 180% at 92% -40%, rgba(212,177,109,.20), transparent 50%),
-      linear-gradient(135deg,var(--id-hero-from),var(--id-hero-to)) !important;
-    padding:18px 20px !important; margin-bottom:18px !important;
-    border-radius:18px !important; color:var(--id-hero-ink) !important;
-    border:1px solid rgba(212,177,109,.4) !important;
-    box-shadow:0 14px 30px -20px rgba(5,46,26,.6) !important;
-  }
-  .mr-wrap .mr-card > .mr-hd .mr-title{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,var(--id-gold-300)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .mr-wrap .mr-card > .mr-hd .mr-title i{ -webkit-text-fill-color:var(--id-gold-300) !important; color:var(--id-gold-300) !important; }
-  .mr-wrap .mr-card > .mr-hd .btn-primary{
-    background:rgba(212,177,109,.18) !important; border:1px solid rgba(212,177,109,.5) !important; color:var(--id-gold-100) !important; font-weight:900 !important;
-  }
-  .mr-wrap .mr-card > .mr-hd .btn-primary:hover{ background:var(--id-gold-400) !important; color:var(--id-green-950) !important; }
-
-  .mr-wrap .mr-table thead th{
-    background:var(--id-surface-2) !important; color:var(--id-accent) !important; font-weight:950 !important;
-    border-bottom:2px solid rgba(185,151,91,.3) !important;
-  }
-  .mr-wrap .mr-chip{
-    background:linear-gradient(135deg, rgba(212,177,109,.16), rgba(10,92,51,.08)) !important;
-    color:var(--id-accent) !important; border:1px solid var(--id-gold-line) !important; font-weight:900 !important;
-  }
-  .mr-wrap .btn-primary{ background:linear-gradient(135deg,var(--id-green-700),var(--id-green-800)) !important; border:none !important; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="mr-wrap">
   <div class="mr-container">
-
-    <!-- Stats -->
-    <div class="mr-stats">
-      <div class="mr-stat">
-        <div class="mr-stat-ico"><i class="fa-solid fa-file-lines"></i></div>
-        <div>
-          <div class="num">{{ stats.total|default:"0" }}</div>
-          <div class="lbl">إجمالي التقارير</div>
-        </div>
-      </div>
-
-      <div class="mr-stat">
-        <div class="mr-stat-ico green"><i class="fa-solid fa-calendar-check"></i></div>
-        <div>
-          <div class="num">{{ stats.this_month|default:"0" }}</div>
-          <div class="lbl">تقارير هذا الشهر</div>
-        </div>
-      </div>
-
-      <div class="mr-stat">
-        <div class="mr-stat-ico amber"><i class="fa-solid fa-magnifying-glass"></i></div>
-        <div>
-          <div class="num">{{ reports.paginator.count|default:"0" }}</div>
-          <div class="lbl">نتائج البحث</div>
-        </div>
-      </div>
-    </div>
 
     <div class="mr-card">
       <div class="mr-hd">
@@ -1547,6 +1459,34 @@ html[data-theme="dark"] .mr-page{
           <a href="{% url 'reports:add_report' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة تقرير جديد</a>
         </div>
       </div>
+
+      <!-- Primary KPIs follow the page heading so screen-reader and visual
+           hierarchy match the user's task: understand, then act, then filter. -->
+      <section class="mr-stats" aria-label="ملخص التقارير">
+        <article class="mr-stat">
+          <div class="mr-stat-ico"><i class="fa-solid fa-file-lines" aria-hidden="true"></i></div>
+          <div>
+            <div class="num">{{ stats.total|default:"0" }}</div>
+            <div class="lbl">إجمالي التقارير</div>
+          </div>
+        </article>
+
+        <article class="mr-stat">
+          <div class="mr-stat-ico green"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i></div>
+          <div>
+            <div class="num">{{ stats.this_month|default:"0" }}</div>
+            <div class="lbl">تقارير هذا الشهر</div>
+          </div>
+        </article>
+
+        <article class="mr-stat">
+          <div class="mr-stat-ico amber"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></div>
+          <div>
+            <div class="num">{{ reports.paginator.count|default:"0" }}</div>
+            <div class="lbl">نتائج البحث</div>
+          </div>
+        </article>
+      </section>
 
       <!-- Filters -->
       <form method="get" class="mr-filters" aria-label="تصفية التقارير">
@@ -1628,30 +1568,7 @@ html[data-theme="dark"] .mr-page{
 
                 <td>
                   <div class="mr-actions-cell">
-                    {% include "reports/partials/report_submit_btn.html" with report=report %}
-
-                    {% if not report_approval_enabled or report.is_editable_by_owner %}
-                      <a href="{% url 'reports:edit_my_report' report.pk %}" class="mr-iconbtn" title="تعديل" aria-label="تعديل تقرير: {{ report.title|default:"بلا عنوان" }}">
-                        <i class="fa-solid fa-pen"></i>
-                      </a>
-                    {% endif %}
-
-                    <a href="{% url 'reports:report_share_manage' report.pk %}" class="mr-iconbtn" title="مشاركة" aria-label="مشاركة تقرير: {{ report.title|default:"بلا عنوان" }}">
-                      <i class="fa-solid fa-share-nodes"></i>
-                    </a>
-
-                    <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="mr-iconbtn" title="عرض التقرير" aria-label="عرض تقرير: {{ report.title|default:"بلا عنوان" }}">
-                      <i class="fa-solid fa-eye"></i>
-                    </a>
-
-                    {% if not report_approval_enabled or report.is_editable_by_owner %}
-                      <form action="{% url 'reports:delete_my_report' report.pk %}" method="post" class="mr-del-form" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكنك استعادته لاحقًا." data-confirm-type="warning">
-                        {% csrf_token %}
-                        <button type="submit" class="mr-iconbtn danger" title="حذف" aria-label="نقل إلى سلة المحذوفات: {{ report.title|default:"بلا عنوان" }}">
-                          <i class="fa-solid fa-trash"></i>
-                        </button>
-                      </form>
-                    {% endif %}
+                    {% include "reports/partials/report_actions_menu.html" with report=report %}
                   </div>
                 </td>
               </tr>
@@ -1697,28 +1614,7 @@ html[data-theme="dark"] .mr-page{
               </div>
 
               <div class="mr-actions-cell">
-                {% include "reports/partials/report_submit_btn.html" with report=report %}
-
-                {% if not report_approval_enabled or report.is_editable_by_owner %}
-                  <a href="{% url 'reports:edit_my_report' report.pk %}" class="mr-iconbtn" title="تعديل" aria-label="تعديل تقرير: {{ report.title|default:"بلا عنوان" }}">
-                    <i class="fa-solid fa-pen"></i>
-                  </a>
-                {% endif %}
-                <a href="{% url 'reports:report_share_manage' report.pk %}" class="mr-iconbtn" title="مشاركة" aria-label="مشاركة تقرير: {{ report.title|default:"بلا عنوان" }}">
-                  <i class="fa-solid fa-share-nodes"></i>
-                </a>
-                <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="mr-iconbtn" title="عرض التقرير" aria-label="عرض تقرير: {{ report.title|default:"بلا عنوان" }}">
-                  <i class="fa-solid fa-eye"></i>
-                </a>
-
-                {% if not report_approval_enabled or report.is_editable_by_owner %}
-                  <form action="{% url 'reports:delete_my_report' report.pk %}" method="post" class="mr-del-form u-inline" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكنك استعادته لاحقًا." data-confirm-type="warning">
-                    {% csrf_token %}
-                    <button type="submit" class="mr-iconbtn danger" title="حذف" aria-label="نقل إلى سلة المحذوفات: {{ report.title|default:"بلا عنوان" }}">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </form>
-                {% endif %}
+                {% include "reports/partials/report_actions_menu.html" with report=report %}
               </div>
             </div>
           </div>

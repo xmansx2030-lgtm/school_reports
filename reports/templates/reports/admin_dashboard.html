@@ -1581,7 +1581,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="manager-page id-root" id="managerDashboard">
+<div class="manager-page id-root" id="managerDashboard">
   {% if active_school %}
     {% comment %}
       رأس اللقطة المطبوعة.
@@ -2309,7 +2309,7 @@
       </div>
     </section>
   {% endif %}
-</main>
+</div>
 
 {% if active_school %}
   {{ dashboard_period_payload|json_script:"schoolDashboardPayload" }}

@@ -168,8 +168,8 @@ class WebPushFrontendContractTests(TestCase):
         self.assertIn('self.addEventListener("notificationclick"', worker)
         self.assertIn("self.clients.openWindow", worker)
         # يُرفع مع كل تغيير في ``CORE_ASSETS`` وإلا بقيت الأجهزة على الملفات
-        # القديمة. رُفع إلى v11 عند إضافة أصول وتجربة PWA المحدّثة.
-        self.assertIn('const CACHE_NAME = "tawtheeq-v11"', worker)
+        # القديمة. رُفع إلى v12 عند إضافة خط واجهة عدم الاتصال إلى الأصول الأساسية.
+        self.assertIn('const CACHE_NAME = "tawtheeq-v12"', worker)
 
     def test_client_only_requests_permission_after_an_explicit_click(self):
         script = self._source("static/js/web-push.js")

@@ -875,59 +875,6 @@
     }
   }
 
-  /* ============================================================
-     👑 ROYAL OVERLAY — حسابي (زمرّدي + ذهبي)
-     ============================================================ */
-  .profile-scope .profile-header{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 150% at 92% -20%, rgba(212,177,109,.22), transparent 48%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:24px !important;
-    box-shadow:0 26px 60px -24px rgba(5,46,26,.7) !important;
-    padding:30px 26px !important; color:#fff !important;
-  }
-  .profile-scope .profile-header::after{
-    content:"\f521"; font-family:"Font Awesome 6 Free"; font-weight:900;
-    position:absolute; top:14px; left:22px; font-size:2.4rem; color:rgba(212,177,109,.18);
-  }
-  .profile-scope .profile-header::before{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .profile-scope .profile-title{
-    color:#fff !important;
-    background:linear-gradient(90deg,#ffffff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .profile-scope .profile-title i{ -webkit-text-fill-color:#e6cf9a; color:#e6cf9a; }
-  .profile-scope .profile-subtitle{ color:rgba(255,255,255,.82) !important; font-weight:800 !important; }
-
-  .profile-scope .profile-card{
-    border:1px solid rgba(185,151,91,.20) !important;
-    border-radius:20px !important;
-    box-shadow:0 16px 40px -26px rgba(10,92,51,.4) !important;
-    position:relative; overflow:hidden;
-  }
-  .profile-scope .profile-card::before{
-    content:""; position:absolute; top:0; right:0; width:84px; height:84px;
-    background:linear-gradient(135deg, rgba(212,177,109,.18), transparent 70%); border-radius:0 0 0 100%; pointer-events:none;
-  }
-  .profile-scope .profile-card-title{ color:#0a5c33 !important; font-weight:950 !important; }
-  .profile-scope .profile-card-title i{ color:#b9975b !important; }
-  [data-theme="dark"] .profile-scope .profile-card-title{ color:var(--id-gold) !important; }
-
-  .profile-scope .profile-school-item{
-    border:1px solid #ece7da !important; border-radius:14px !important;
-    background:#faf7ef !important; transition:transform .15s, box-shadow .15s;
-  }
-  .profile-scope .profile-school-item:hover{ transform:translateX(-3px); box-shadow:0 10px 22px -16px rgba(10,92,51,.5); }
-  .profile-scope .profile-school-badge{
-    background:linear-gradient(135deg,#0b6238,#063d22) !important; color:#e6cf9a !important; border:none !important;
-  }
-  [data-theme="dark"] .profile-scope .profile-school-item{ background:var(--id-surface) !important; border-color:var(--id-line) !important; }
-
   .profile-school-copy{ display:flex; flex:1; min-width:0; flex-direction:column; gap:3px; }
   .profile-school-role{ color:var(--prof-text-light); font-size:.8rem; font-weight:750; }
 
@@ -982,13 +929,6 @@
     .deputy-profile-summary{ padding:20px 16px; }
   }
 
-  /* أزرار الحفظ بلمسة ملكية */
-  .profile-scope .profile-form button[type="submit"],
-  .profile-scope .profile-btn-primary,
-  .profile-scope button.profile-submit{
-    background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important;
-    box-shadow:0 10px 22px -12px rgba(10,92,51,.6) !important;
-  }
 </style>
 {% endblock %}
 

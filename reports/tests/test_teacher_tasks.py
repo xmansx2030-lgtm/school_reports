@@ -308,7 +308,12 @@ class TeacherScreenPolishTests(TestCase):
 
     def test_report_row_actions_name_the_report(self):
         """«تعديل» عشر مرات لا تقول لقارئ الشاشة: تعديلَ أيّها."""
-        source = self._source("reports/templates/reports/my_reports.html")
+        source = "\n".join(
+            (
+                self._source("reports/templates/reports/my_reports.html"),
+                self._source("reports/templates/reports/partials/report_actions_menu.html"),
+            )
+        )
 
         for label in (
             'aria-label="تعديل تقرير:',

@@ -198,7 +198,7 @@
   function registrationReady() {
     return navigator.serviceWorker.getRegistration("/").then(function (registration) {
       if (registration) return registration;
-      return navigator.serviceWorker.register("/sw.js?v=9", { scope: "/", updateViaCache: "none" });
+      return navigator.serviceWorker.register("/sw.js?v=12", { scope: "/", updateViaCache: "none" });
     }).then(function () { return navigator.serviceWorker.ready; });
   }
 

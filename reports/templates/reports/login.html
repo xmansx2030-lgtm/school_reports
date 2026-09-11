@@ -440,10 +440,14 @@
   <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}">
 <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260911.3">
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
-<body>
+<body class="auth-page">
+  <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
 
-  <div class="auth-wrapper">
+  <main class="auth-wrapper" id="mainContent">
     <div class="auth-card">
       <div class="brand-stripe"></div>
       
@@ -512,7 +516,7 @@
               <input type="password" name="password" id="password" class="form-input" 
                      placeholder="••••••••" required autocomplete="current-password">
               <i class="fa-solid fa-lock input-icon"></i>
-              <button type="button" class="password-toggle" id="togglePass" title="إظهار كلمة المرور">
+              <button type="button" class="password-toggle" id="togglePass" title="إظهار كلمة المرور" aria-label="إظهار كلمة المرور">
                 <i class="fa-regular fa-eye-slash"></i>
               </button>
             </div>
@@ -557,7 +561,7 @@
         </form>
       </div>
     </div>
-  </div>
+  </main>
 
   <footer class="auth-footer">
     &copy; {% now "Y" %} جميع الحقوق محفوظة — منصة توثيق
@@ -573,6 +577,8 @@
         const isPass = passInput.type === 'password';
         passInput.type = isPass ? 'text' : 'password';
         toggleBtn.innerHTML = isPass ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
+        toggleBtn.setAttribute('aria-label', isPass ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+        toggleBtn.title = toggleBtn.getAttribute('aria-label');
       });
     }
 

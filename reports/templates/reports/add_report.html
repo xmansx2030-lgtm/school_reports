@@ -939,46 +939,6 @@
     outline-offset: 3px;
   }
 
-  /* ============================================================
-     👑 ROYAL OVERLAY — هوية فخمة (زمرّدي + ذهبي)
-     ============================================================ */
-  .add-report-page .ar-header{
-    background:
-      radial-gradient(120% 150% at 92% -20%, rgba(212,177,109,.22), transparent 48%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:24px !important;
-    box-shadow:0 26px 60px -24px rgba(5,46,26,.7) !important;
-    padding-top:20px !important;
-  }
-  .add-report-page .ar-header::before{
-    content:"\f521" !important; font-family:"Font Awesome 6 Free" !important; font-weight:900 !important;
-    width:auto !important; height:auto !important; background:none !important; opacity:1 !important;
-    top:14px !important; right:auto !important; left:22px !important; transform:none !important;
-    font-size:1.6rem !important; color:rgba(212,177,109,.18) !important;
-  }
-  .add-report-page .ar-header::after{
-    content:"" !important; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .add-report-page .ar-title-box h1{
-    background:linear-gradient(90deg,#ffffff 0%, #fbf3df 60%, #e6cf9a 100%) !important;
-    -webkit-background-clip:text !important; background-clip:text !important; -webkit-text-fill-color:transparent !important;
-    font-weight:950 !important;
-  }
-  .add-report-page .ar-title-box p{ color:rgba(255,255,255,.82) !important; font-weight:800 !important; }
-  .add-report-page .ar-back-btn{
-    background:rgba(212,177,109,.16) !important; color:#fdf6e6 !important;
-    border:1px solid rgba(212,177,109,.5) !important; font-weight:900 !important;
-  }
-  .add-report-page .ar-back-btn:hover{ background:#d4b16d !important; color:#063d22 !important; }
-
-  /* لمسة ذهبية على البطاقات */
-  .add-report-page .ar-card{
-    border:1px solid rgba(185,151,91,.20) !important;
-    box-shadow:0 14px 34px -22px rgba(10,92,51,.4) !important;
-  }
-
   /* بنود التقرير القابلة للاختيار */
   .ar-section-builder{margin-top:26px;padding-top:26px;border-top:2px dashed var(--ar-border);}
   .ar-builder-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:16px;}
@@ -1152,7 +1112,7 @@
                    <span id="reportDayEcho" class="ar-date-day"></span>
                    <span id="reportDateHijri" aria-live="polite" class="xs-add-report-4"></span>
                  </div>
-                 <div class="ar-visually-hidden">{{ form.day_name }}</div>
+                 <div class="ar-visually-hidden" aria-hidden="true">{{ form.day_name }}</div>
                  {% if form.report_date.errors %}<div class="ar-error-msg">{{ form.report_date.errors.0 }}</div>{% endif %}
                  <div class="ar-error-msg u-hidden" id="futureDateErr">تاريخ مستقبلي غير مسموح</div>
                </div>

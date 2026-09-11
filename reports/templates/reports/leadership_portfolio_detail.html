@@ -17,7 +17,7 @@
 </style>
 {% endblock %}
 {% block content %}
-<main class="lp-work">
+<div class="lp-work">
   <header class="lp-head">
     <div><span class="lp-kicker">منصة توثيق · سجل القيادة المدرسية</span><h1>ملف الأداء القيادي</h1><div class="lp-school">{{ current_school.name }}</div><div>{{ portfolio.academic_year }} هـ · {{ manager_label }}: <bdi>{{ portfolio.manager_name }}</bdi></div></div>
     <div class="lp-head__meta"><img class="lp-seal" src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق"><div class="lp-head__actions"><a class="lp-btn lp-btn--gold" href="{% url 'reports:leadership_portfolio_pdf' portfolio.pk %}"><i class="fa-solid fa-file-pdf"></i> تنزيل PDF</a><a class="lp-btn" target="_blank" href="{% url 'reports:leadership_portfolio_print' portfolio.pk %}"><i class="fa-solid fa-print"></i> معاينة الطباعة</a><a class="lp-btn" href="{% url 'reports:leadership_portfolio_list' %}"><i class="fa-solid fa-arrow-right"></i> كل السنوات</a></div></div>
@@ -39,5 +39,5 @@
   </section>
 
   <section class="lp-complete"><div><h2>حالة الملف: {{ portfolio.get_status_display }}</h2><p>يمكن متابعة التحرير بعد تغيير الحالة؛ الحالة علامة تنظيمية وليست قفلًا.</p></div><form method="post">{% csrf_token %}<input type="hidden" name="action" value="set_status">{% if portfolio.status == 'completed' %}<input type="hidden" name="status" value="draft"><button class="lp-btn" type="submit">إعادة إلى قيد الإعداد</button>{% else %}<input type="hidden" name="status" value="completed"><button class="lp-btn lp-btn--gold" type="submit"><i class="fa-solid fa-medal"></i> تعليم الملف كمكتمل</button>{% endif %}</form></section>
-</main>
+</div>
 {% endblock %}

@@ -6,7 +6,14 @@
   <meta name="theme-color" content="#006c35">
   <title>لا يوجد اتصال | منصة توثيق</title>
   <style>
-    :root { color-scheme: light; font-family: Tahoma, Arial, sans-serif; }
+    @font-face {
+      font-family: "Cairo";
+      font-style: normal;
+      font-weight: 200 1000;
+      font-display: swap;
+      src: url("/static/vendor/fonts/cairo/cairo-arabic.woff2") format("woff2-variations");
+    }
+    :root { color-scheme: light; font-family: "Cairo", Tahoma, Arial, sans-serif; }
     * { box-sizing: border-box; }
     body {
       min-height: 100vh;
@@ -20,6 +27,7 @@
         radial-gradient(circle at 8% 8%, rgba(184, 147, 68, .15), transparent 24rem),
         radial-gradient(circle at 90% 92%, rgba(0, 108, 53, .12), transparent 28rem),
         #f3f7f4;
+      font-family: inherit;
     }
     main {
       width: min(100%, 480px);
@@ -56,8 +64,11 @@
       box-shadow: 0 12px 25px rgba(7, 61, 43, .2);
       font-weight: 700;
       text-decoration: none;
+      transition: background-color .18s ease, box-shadow .18s ease;
     }
+    a:hover { background: #075b3a; box-shadow: 0 8px 18px rgba(7, 61, 43, .18); }
     a:focus-visible { outline: 3px solid rgba(185, 151, 91, .75); outline-offset: 4px; }
+    @media (prefers-reduced-motion: reduce) { a { transition: none; } }
   </style>
 </head>
 <body>

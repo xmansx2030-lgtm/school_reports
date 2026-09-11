@@ -365,9 +365,13 @@
   </style>
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260911.3">
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
-<body>
-  <main class="registration-shell">
+<body class="registration-page">
+  <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
+  <main class="registration-shell" id="mainContent">
     <aside class="experience-panel" aria-label="مزايا التجربة المجانية">
       <a class="brand" href="{% url 'reports:landing' %}">
         <img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44">

@@ -13,7 +13,7 @@
     </div>
   </header>
 
-  <main class="mail-thread">
+  <div class="mail-thread">
     {% for item in thread %}
     <article class="mail-message {% if item.pk == email.pk %}is-current{% endif %}">
       <header><span class="mail-row__avatar">{% if item.direction == 'inbound' %}{{ item.display_sender|slice:':1'|upper }}{% else %}<i class="fa-solid fa-check"></i>{% endif %}</span><div><strong>{{ item.display_sender }}</strong><span>{% if item.direction == 'inbound' %}إلى {{ item.primary_recipient }}{% else %}إلى {{ item.to_emails|join:', ' }}{% endif %}</span></div><time>{{ item.activity_at|date:'Y-m-d H:i' }}</time></header>
@@ -23,7 +23,7 @@
       {% if item.direction == 'outbound' %}<footer class="mail-delivery"><span><i class="fa-solid fa-paper-plane"></i> {{ item.get_status_display }}</span>{% if item.delivered_at %}<span><i class="fa-solid fa-check-double"></i> {{ item.delivered_at|date:'Y-m-d H:i' }}</span>{% endif %}{% if item.opened_count %}<span><i class="fa-regular fa-eye"></i> فتح {{ item.opened_count }}</span>{% endif %}{% if item.clicked_count %}<span><i class="fa-solid fa-arrow-pointer"></i> نقر {{ item.clicked_count }}</span>{% endif %}</footer>{% endif %}
     </article>
     {% endfor %}
-  </main>
+  </div>
 
   {% if email.direction == 'inbound' %}
   <form class="mail-reply" method="post">{% csrf_token %}<input type="hidden" name="action" value="reply"><label for="{{ reply_form.body.id_for_label }}">الرد على {{ email.display_sender }}</label>{{ reply_form.body }}{{ reply_form.body.errors }}<footer><span>سيصل الرد من هوية منصة توثيق الرسمية.</span><button class="mail-button is-primary" type="submit"><i class="fa-solid fa-reply"></i> إرسال الرد</button></footer></form>

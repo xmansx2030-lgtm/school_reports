@@ -6,7 +6,7 @@
 {% block head %}<link rel="stylesheet" href="{% static 'css/billing-invoice.css' %}?v=20260822.1">{% endblock %}
 
 {% block content %}
-<main class="invoice-page">
+<div class="invoice-page">
   <nav class="invoice-toolbar" aria-label="إجراءات الفاتورة">
     <a href="{% url 'reports:my_subscription' %}{{ school_query }}" class="invoice-toolbar__button">
       <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
@@ -105,5 +105,5 @@
       فاتورة اشتراك إلكترونية صادرة آليًا من منصة توثيق ولا تتطلب توقيعًا. هذا المستند ليس فاتورة ضريبية.
     </footer>
   </article>
-</main>
+</div>
 {% endblock %}

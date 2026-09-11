@@ -418,9 +418,13 @@
   </style>
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260911.3">
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
-<body>
-  <main class="maintenance-shell" aria-labelledby="maintenance-title">
+<body class="maintenance-page">
+  <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
+  <main class="maintenance-shell" id="mainContent" aria-labelledby="maintenance-title">
     <section class="main-panel">
       <div class="brand-row">
         <div class="brand-copy">

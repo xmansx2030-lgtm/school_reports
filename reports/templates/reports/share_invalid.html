@@ -2,25 +2,6 @@
 {% block title %}رابط غير صالح{% endblock %}
 
 {% block content %}
-<div class="royal-page royal-page--narrow">
-  <section class="royal-panel">
-    <span class="royal-kicker">
-      <i class="fa-solid fa-link-slash" aria-hidden="true"></i>
-      تعذر الوصول
-    </span>
-    <h1 class="royal-title">الرابط غير صالح</h1>
-    <p class="royal-subtitle">قد يكون الرابط منتهي الصلاحية أو تم إلغاؤه من الجهة المرسلة.</p>
-
-    <div class="royal-actions u-mt-6">
-      <a href="{% url 'reports:home' %}" class="btn btn-primary">
-        <i class="fa-solid fa-house" aria-hidden="true"></i>
-        العودة للرئيسية
-      </a>
-      <a href="javascript:history.back();" class="btn btn-outline">
-        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-        رجوع
-      </a>
-    </div>
-  </section>
-</div>
+{% url 'reports:home' as home_url %}
+{% include "reports/partials/ui_state.html" with variant="warning" role="alert" icon="fa-link-slash" eyebrow="تعذر الوصول" title="الرابط غير صالح" message="قد يكون الرابط منتهي الصلاحية أو تم إلغاؤه من الجهة المرسلة." primary_url=home_url allow_back=True %}
 {% endblock %}

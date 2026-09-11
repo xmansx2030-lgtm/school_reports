@@ -859,36 +859,6 @@ html[data-theme="dark"] .notif-scope .time-badge{
     }
   }
 
-  /* 👑 ROYAL OVERLAY — إشعاراتي */
-  .notif-scope .page-head{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 150% at 92% -20%, rgba(212,177,109,.22), transparent 48%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:22px !important; box-shadow:0 24px 56px -26px rgba(5,46,26,.7) !important;
-    padding:24px 22px !important; color:#fff !important;
-  }
-  .notif-scope .page-head::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .notif-scope .page-title{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .notif-scope .page-title i{ -webkit-text-fill-color:#e6cf9a !important; color:#e6cf9a !important; }
-  .notif-scope .page-head .chip{
-    background:rgba(212,177,109,.2) !important; border:1px solid rgba(212,177,109,.5) !important; color:#fdf6e6 !important;
-  }
-  .notif-scope .notif-card,
-  .notif-scope .notification-item,
-  .notif-scope .n-card{
-    border:1px solid rgba(185,151,91,.20) !important;
-    box-shadow:0 12px 30px -22px rgba(10,92,51,.38) !important;
-  }
-
   /* ===== بحث داخل الإشعارات ===== */
   .notif-scope .notif-search {
     position: relative;
@@ -984,7 +954,7 @@ html[data-theme="dark"] .notif-scope .time-badge{
         <h1 class="page-title">
           <i class="fa-solid fa-bell" aria-hidden="true"></i>
           الإشعارات والنشرات
-
+        </h1>
         {% with unread=NAV_NOTIFICATIONS_UNREAD|default_if_none:"0"|add:"0" %}
           <span class="chip" id="unreadCount" aria-live="polite" {% if unread == 0 %}style="display:none"{% endif %} data-initial="{{ unread }}">
             <i class="fa-solid fa-envelope" aria-hidden="true"></i>
@@ -992,7 +962,6 @@ html[data-theme="dark"] .notif-scope .time-badge{
             غير مقروءة
           </span>
         {% endwith %}
-        </h1>
         <p class="page-subtitle">تابع رسائل الإدارة والنشرات المرفقة، وأكمل التوقيع عندما تطلبه النشرة.</p>
         <div class="head-summary">
           <span><i class="fa-solid fa-bell" aria-hidden="true"></i> تواصل المدرسة</span>
@@ -1142,9 +1111,11 @@ html[data-theme="dark"] .notif-scope .time-badge{
       {% endif %}
 
     {% else %}
-      <div class="empty">
+      <div class="empty empty-state" data-empty-state role="status">
         <i class="fa-regular fa-bell" aria-hidden="true"></i>
-        لا توجد إشعارات أو نشرات حتى الآن.
+        <h2>لا توجد إشعارات أو نشرات حتى الآن</h2>
+        <p>ستظهر هنا رسائل الإدارة والنشرات الجديدة فور إرسالها.</p>
+        <a class="btn btn-secondary" href="{% url 'reports:my_circulars' %}">عرض التعاميم</a>
       </div>
     {% endif %}
   </div>

@@ -37,7 +37,6 @@
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
 
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260812.1" />
   <link rel="stylesheet" href="{% static 'css/app-shell.css' %}?v=20260812.1" />
 
   <!-- Icons (محليًا لضمان ظهورها بالجوال حتى لو تعطل CDN) -->
@@ -63,6 +62,9 @@
   <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1" />
   <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1" />
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10" />
+  {% comment %}رموز الهوية تأتي بعد كل الأوراق القديمة كي تبقى هي المصدر الحاكم للقيم الدلالية.{% endcomment %}
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3" />
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260911.7" />
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/progress-bars.js' %}?v=20260812.1" defer></script>
   {% if request.user.is_authenticated %}<script src="{% static 'js/global-search.js' %}?v=20260812.1" defer></script>{% endif %}
@@ -1827,6 +1829,7 @@
   <script src="{% static 'js/notifications-ws-manager.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   <script src="{% static 'js/pwa-form-draft.js' %}?v=20260813.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   <script src="{% static 'js/pwa-runtime.js' %}?v=20260813.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   {% if request.user.is_authenticated and AI_INTERNAL_HELP_ENABLED %}
     <script src="{% static 'js/mansour-assistant.js' %}?v=20260801.3" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   {% endif %}

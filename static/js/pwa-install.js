@@ -4,7 +4,7 @@
   if (window.__tawtheeqPwaInstallerLoaded) return;
   window.__tawtheeqPwaInstallerLoaded = true;
 
-  var SW_URL = "/sw.js?v=11";
+  var SW_URL = "/sw.js?v=12";
   var INSTALLED_KEY = "tawtheeq_pwa_installed_v1";
   var SESSION_DISMISSED_KEY = "tawtheeq_pwa_install_dismissed_session_v1";
   var TASK_COMPLETE_KEY = "tawtheeq_pwa_task_completed_v1";

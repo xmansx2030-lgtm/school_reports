@@ -1,0 +1,38 @@
+<section class="ui-state ui-state--{{ variant|default:'info' }}" role="{{ role|default:'status' }}" aria-labelledby="uiStateTitle">
+  <div class="ui-state__content">
+    <span class="ui-state__icon" aria-hidden="true">
+      <i class="fa-solid {{ icon|default:'fa-circle-info' }}"></i>
+    </span>
+    {% if eyebrow %}<p class="ui-state__eyebrow">{{ eyebrow }}</p>{% endif %}
+    {% if code %}<p class="ui-state__code" aria-hidden="true">{{ code }}</p>{% endif %}
+    <h1 class="ui-state__title" id="uiStateTitle">{{ title }}</h1>
+    <p class="ui-state__message">{{ message }}</p>
+
+    {% if debug and request.user.is_superuser %}
+      <pre class="ui-state__debug" dir="ltr">{{ debug }}</pre>
+    {% endif %}
+
+    {% if primary_url or allow_retry or allow_back %}
+      <div class="ui-state__actions">
+        {% if primary_url %}
+          <a href="{{ primary_url }}" class="btn btn-primary">
+            <i class="fa-solid {{ primary_icon|default:'fa-house' }}" aria-hidden="true"></i>
+            {{ primary_label|default:'العودة للرئيسية' }}
+          </a>
+        {% endif %}
+        {% if allow_retry %}
+          <button type="button" class="btn btn-outline" data-page-reload>
+            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+            تحديث الصفحة
+          </button>
+        {% endif %}
+        {% if allow_back %}
+          <button type="button" class="btn btn-ghost" data-history-back>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            رجوع
+          </button>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>

@@ -1,4 +1,70 @@
 {% extends "base.html" %}
+
 {% block title %}طلبات إضافة المدارس{% endblock %}
-{% block head %}<style nonce="{{ CSP_NONCE }}">.psar{max-width:1180px;margin:0 auto;padding:30px 18px 60px;direction:rtl}.psar-head{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:22px}.psar-head h1{margin:0;color:#0f172a}.psar-tabs{display:flex;gap:8px;flex-wrap:wrap}.psar-tabs a{padding:8px 12px;border-radius:999px;background:#f1f5f9;color:#334155;text-decoration:none;font-weight:800}.psar-tabs a.active{background:#087443;color:#fff}.psar-search{display:flex;gap:8px;margin-bottom:18px}.psar-search input{min-width:260px;border:1px solid #cbd5e1;border-radius:11px;padding:10px}.psar-search button{border:0;border-radius:11px;background:#0f172a;color:#fff;padding:10px 16px}.psar-list{display:grid;gap:14px}.psar-item{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;box-shadow:0 7px 24px rgba(15,23,42,.05)}.psar-top{display:flex;justify-content:space-between;gap:14px}.psar-meta{display:flex;gap:10px;flex-wrap:wrap;color:#64748b;font-size:.88rem;margin:8px 0}.psar-badge{padding:5px 9px;border-radius:999px;background:#fff7ed;color:#9a3412;font-weight:900;font-size:.78rem}.psar-review{display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-top:14px}.psar-review textarea{border:1px solid #cbd5e1;border-radius:10px;padding:10px;min-height:45px}.psar-review button{border:0;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer}.approve{background:#087443;color:#fff}.reject{background:#fee2e2;color:#991b1b}@media(max-width:700px){.psar-head{align-items:flex-start;flex-direction:column}.psar-review{grid-template-columns:1fr}.psar-search input{min-width:0;flex:1}}</style>{% endblock %}
-{% block content %}<main class="psar"><div class="psar-head"><div><h1>سجل إضافات المدارس</h1><p>تُنشأ مدارس المديرين وتُربط بحساباتهم تلقائيًا، وتبقى هذه الصفحة للمتابعة ومعالجة الطلبات القديمة فقط.</p></div><div class="psar-tabs"><a class="{% if current_status == 'pending' %}active{% endif %}" href="?status=pending">طلبات قديمة {{ counts.pending }}</a><a class="{% if current_status == 'approved' %}active{% endif %}" href="?status=approved">تم إنشاؤها {{ counts.approved }}</a><a class="{% if current_status == 'rejected' %}active{% endif %}" href="?status=rejected">مرفوضة {{ counts.rejected }}</a><a class="{% if current_status == 'all' %}active{% endif %}" href="?status=all">الكل</a></div></div><form class="psar-search" method="get"><input type="hidden" name="status" value="{{ current_status }}"><input name="q" value="{{ query }}" placeholder="المدرسة أو المدير أو الجوال"><button>بحث</button></form><section class="psar-list">{% for item in addition_requests %}<article class="psar-item"><div class="psar-top"><div><strong>{{ item.school_name }}</strong><div class="psar-meta"><span>{{ item.get_stage_display }}</span><span>{{ item.get_gender_display }}</span><span>{{ item.city|default:'—' }}</span></div></div><span class="psar-badge">{{ item.get_status_display }}</span></div><div class="psar-meta"><span>المدير: {{ item.requested_by.name }}</span><span dir="ltr">{{ item.requested_by.phone }}</span>{% if item.email %}<span>{{ item.email }}</span>{% endif %}</div>{% if item.manager_notes %}<p>{{ item.manager_notes }}</p>{% endif %}{% if item.status == 'pending' %}<form method="post" action="{% url 'reports:platform_school_addition_request_review' item.id %}" class="psar-review">{% csrf_token %}<textarea name="review_notes" placeholder="ملاحظة اختيارية عند الاعتماد، وإلزامية عند الرفض"></textarea><button class="approve" name="action" value="approve">اعتماد وإنشاء المدرسة</button><button class="reject" name="action" value="reject">رفض</button></form>{% elif item.review_notes %}<p><strong>ملاحظة السجل:</strong> {{ item.review_notes }}</p>{% endif %}</article>{% empty %}<article class="psar-item">لا توجد إضافات مطابقة.</article>{% endfor %}</section></main>{% endblock %}
+
+{% block content %}
+<div class="psar" dir="rtl">
+  <header class="psar-head">
+    <div>
+      <p class="page-eyebrow">إدارة المنصة</p>
+      <h1>سجل إضافات المدارس</h1>
+      <p>تُنشأ مدارس المديرين وتُربط بحساباتهم تلقائيًا، وتبقى هذه الصفحة للمتابعة ومعالجة الطلبات القديمة فقط.</p>
+    </div>
+    <nav class="psar-tabs" aria-label="تصفية إضافات المدارس">
+      <a class="{% if current_status == 'pending' %}active{% endif %}" href="?status=pending">طلبات قديمة {{ counts.pending }}</a>
+      <a class="{% if current_status == 'approved' %}active{% endif %}" href="?status=approved">تم إنشاؤها {{ counts.approved }}</a>
+      <a class="{% if current_status == 'rejected' %}active{% endif %}" href="?status=rejected">مرفوضة {{ counts.rejected }}</a>
+      <a class="{% if current_status == 'all' %}active{% endif %}" href="?status=all">الكل</a>
+    </nav>
+  </header>
+
+  <form class="psar-search" method="get" role="search">
+    <input type="hidden" name="status" value="{{ current_status }}">
+    <label class="sr-only" for="schoolAdditionSearch">ابحث باسم المدرسة أو المدير أو رقم الجوال</label>
+    <input id="schoolAdditionSearch" type="search" name="q" value="{{ query }}" placeholder="المدرسة أو المدير أو الجوال">
+    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> بحث</button>
+  </form>
+
+  <section class="psar-list" aria-label="إضافات المدارس">
+    {% for item in addition_requests %}
+      <article class="psar-item">
+        <div class="psar-top">
+          <div>
+            <h2>{{ item.school_name }}</h2>
+            <div class="psar-meta">
+              <span>{{ item.get_stage_display }}</span>
+              <span>{{ item.get_gender_display }}</span>
+              <span>{{ item.city|default:'—' }}</span>
+            </div>
+          </div>
+          <span class="psar-badge">{{ item.get_status_display }}</span>
+        </div>
+        <div class="psar-meta">
+          <span>المدير: {{ item.requested_by.name }}</span>
+          <span dir="ltr">{{ item.requested_by.phone }}</span>
+          {% if item.email %}<span>{{ item.email }}</span>{% endif %}
+        </div>
+        {% if item.manager_notes %}<p>{{ item.manager_notes }}</p>{% endif %}
+
+        {% if item.status == 'pending' %}
+          <form method="post" action="{% url 'reports:platform_school_addition_request_review' item.id %}" class="psar-review">
+            {% csrf_token %}
+            <label class="sr-only" for="reviewNotes{{ item.id }}">ملاحظة المراجعة</label>
+            <textarea id="reviewNotes{{ item.id }}" name="review_notes" placeholder="ملاحظة اختيارية عند الاعتماد، وإلزامية عند الرفض"></textarea>
+            <button class="btn btn-primary" name="action" value="approve">اعتماد وإنشاء المدرسة</button>
+            <button class="btn btn-danger" name="action" value="reject">رفض</button>
+          </form>
+        {% elif item.review_notes %}
+          <p><strong>ملاحظة السجل:</strong> {{ item.review_notes }}</p>
+        {% endif %}
+      </article>
+    {% empty %}
+      <article class="empty-state" data-empty-state>
+        <i class="fa-regular fa-building" aria-hidden="true"></i>
+        <h2>لا توجد إضافات مطابقة</h2>
+        <p>غيّر حالة التصفية أو عبارة البحث لعرض نتائج أخرى.</p>
+      </article>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

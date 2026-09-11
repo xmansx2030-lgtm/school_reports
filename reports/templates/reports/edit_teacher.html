@@ -270,37 +270,6 @@
     .teacher-edit-scope .te-btn{ width: 100%; }
   }
 
-  /* 👑 ROYAL OVERLAY — تعديل معلم */
-  .teacher-edit-scope .te-card{
-    border:1px solid rgba(185,151,91,.18) !important;
-    box-shadow:0 18px 44px -28px rgba(10,92,51,.4) !important;
-  }
-  .teacher-edit-scope .te-header{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 170% at 92% -30%, rgba(212,177,109,.20), transparent 50%),
-      linear-gradient(135deg,#0b6238,#063d22) !important;
-    border:1px solid rgba(212,177,109,.4) !important;
-    border-radius:18px !important; padding:22px 22px !important; color:#fff !important;
-    box-shadow:0 16px 34px -22px rgba(5,46,26,.6) !important;
-  }
-  .teacher-edit-scope .te-header::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .teacher-edit-scope .te-title{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .teacher-edit-scope .te-title i{ -webkit-text-fill-color:#e6cf9a; color:#e6cf9a; }
-  .teacher-edit-scope .te-subtitle{ color:rgba(255,255,255,.82) !important; font-weight:800 !important; }
-  .teacher-edit-scope .btn-primary,
-  .teacher-edit-scope .te-btn.primary,
-  .teacher-edit-scope button[type="submit"]{
-    background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important;
-    box-shadow:0 10px 22px -12px rgba(10,92,51,.6) !important;
-  }
 </style>
 {% endblock %}
 
@@ -309,10 +278,10 @@
   <div class="te-wrap" dir="rtl">
     <div class="te-card">
       <div class="te-header">
-        <h2 class="te-title">
+        <h1 class="te-title">
           <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
           تعديل بيانات المستخدم
-        </h2>
+        </h1>
         <p class="te-subtitle">
           عدّل بيانات الحساب الأساسية لهذا المنسوب، بصرف النظر عن دوره الحالي.
           {% firstof teacher.name form.initial.name "" %}

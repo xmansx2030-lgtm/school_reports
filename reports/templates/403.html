@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}غير مصرح بالدخول (403){% endblock %}
+
+{% block content %}
+{% url 'reports:home' as home_url %}
+{% include "reports/partials/ui_state.html" with variant="danger" role="alert" icon="fa-shield-halved" eyebrow="صلاحيات الوصول" code="403" title="لا تملك صلاحية فتح هذه الصفحة" message="ارجع إلى مساحة عملك، أو تواصل مع مدير المدرسة إذا كنت تحتاج هذه الصلاحية." primary_url=home_url allow_back=True %}
+{% endblock %}

@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container data-rights" id="mainContent">
+<div class="container data-rights">
   <section class="dr-hero" aria-labelledby="dataRightsTitle">
     <div class="dr-hero__glow" aria-hidden="true"></div>
     <div class="dr-hero__content">
@@ -98,5 +98,5 @@
   </section>
 
   <footer class="dr-footer-note"><i class="fa-regular fa-circle-question" aria-hidden="true"></i><span>لتصحيح بياناتك أو الاعتراض أو طلب الاطلاع على ملاحظة إدارية، استخدم <a href="{% url 'reports:complaints_policy' %}">مركز الشكاوى والحقوق</a>.</span></footer>
-</main>
+</div>
 {% endblock %}

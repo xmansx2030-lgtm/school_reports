@@ -120,7 +120,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="archive-page">
+<div class="archive-page">
   <header class="ar-hero">
     <div>
       <span class="ar-kicker"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> ذاكرة المدرسة الموثقة</span>
@@ -590,7 +590,7 @@
   {% elif not can_manage_archive %}
     <div class="ar-alert ar-alert--warn"><i class="fa-solid fa-lock" aria-hidden="true"></i><div>ميزة الأرشفة غير مفعلة لهذه المدرسة.</div></div>
   {% endif %}
-</main>
+</div>
 {% endblock %}
 
 {% block scripts %}

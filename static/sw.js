@@ -1,4 +1,4 @@
-const CACHE_NAME = "tawtheeq-v11";
+const CACHE_NAME = "tawtheeq-v12";
 const OFFLINE_URL = "/static/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -12,7 +12,9 @@ const CORE_ASSETS = [
   "/static/img/pwa/apple-touch-icon-180.png",
   // The badge is drawn by the OS while the device may be offline.
   "/static/img/pwa/badge-96.png",
-  "/static/img/pwa/badge-72.png"
+  "/static/img/pwa/badge-72.png",
+  "/static/css/fonts.css",
+  "/static/vendor/fonts/cairo/cairo-arabic.woff2"
 ];
 
 self.addEventListener("install", (event) => {

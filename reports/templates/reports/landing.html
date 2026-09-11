@@ -44,6 +44,7 @@
     <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260801.2">
   {% endif %}
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <noscript><style nonce="{{ CSP_NONCE }}">.reveal{opacity:1!important;transform:none!important}</style></noscript>
   <script type="application/ld+json" nonce="{{ CSP_NONCE }}" data-cfasync="false">
@@ -582,5 +583,6 @@
   {% if AI_MANSOUR_PUBLIC_ENABLED %}
     <script src="{% static 'js/mansour-assistant.js' %}?v=20260801.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   {% endif %}
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 </body>
 </html>

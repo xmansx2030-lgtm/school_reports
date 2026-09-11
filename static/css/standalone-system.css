@@ -1,0 +1,228 @@
+/* Shared foundation for authentication, onboarding, recovery, maintenance,
+   and the public guide. Kept separate from the authenticated app shell. */
+
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) {
+  color: var(--text-primary);
+  background-color: var(--canvas);
+  font-family: var(--font-base);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) *,
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) *::before,
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) *::after {
+  box-sizing: border-box;
+}
+
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) .skip-link {
+  position: fixed;
+  inset-block-start: var(--space-3);
+  inset-inline-start: var(--space-3);
+  z-index: 1000;
+  translate: 0 calc(-100% - var(--space-6));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: var(--shadow-md);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  transition: translate var(--duration-fast) var(--ease-standard);
+}
+
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) .skip-link:focus {
+  translate: 0;
+}
+
+body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page)
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+body:is(.auth-page, .registration-page, .recovery-page)
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: var(--control-lg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface);
+  box-shadow: none;
+  font: inherit;
+  transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+body:is(.auth-page, .registration-page, .recovery-page)
+  :where(input, select, textarea):focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: var(--focus-shadow);
+  transform: none;
+}
+
+body:is(.auth-page, .registration-page, .recovery-page)
+  :where(button[type="submit"], .login-btn, .submit-btn, .primary-action) {
+  min-height: var(--control-lg);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 20%, transparent);
+  font: inherit;
+  font-weight: var(--weight-bold);
+  transition: background var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+body:is(.auth-page, .registration-page, .recovery-page)
+  :where(button[type="submit"], .login-btn, .submit-btn, .primary-action):hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 24%, transparent);
+  transform: none;
+}
+
+body.auth-page {
+  background:
+    radial-gradient(circle at 86% 4%, color-mix(in srgb, var(--primary-soft) 72%, transparent), transparent 31rem),
+    var(--canvas);
+}
+
+body.auth-page .auth-card {
+  max-width: 29rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation-duration: var(--duration-slow);
+}
+
+body.auth-page .password-toggle {
+  inline-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
+  block-size: var(--tap-target);
+  min-block-size: var(--tap-target);
+}
+
+body.auth-page .auth-card::before {
+  height: 3px;
+  background: var(--primary);
+}
+
+body.auth-page :where(.auth-header, .auth-body, .auth-footer) {
+  padding-inline: clamp(1.25rem, 5vw, 2rem);
+}
+
+body.auth-page :where(.auth-title, h1) {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+body.auth-page :where(.auth-subtitle, .auth-hint, .muted) {
+  color: var(--text-muted);
+}
+
+body.registration-page {
+  padding: clamp(.75rem, 2.5vw, 1.75rem);
+  background: var(--canvas);
+}
+
+body.registration-page .registration-shell {
+  min-height: calc(100dvh - clamp(1.5rem, 5vw, 3.5rem));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+body.registration-page .experience-panel {
+  background: linear-gradient(155deg, #0b4b34, #072d20);
+}
+
+body.registration-page :where(.form-panel, .registration-form) {
+  background: var(--surface);
+}
+
+body.registration-page :where(.field-error, .errorlist) {
+  color: var(--danger);
+}
+
+body.registration-success-page {
+  padding: clamp(.75rem, 2.5vw, 1.75rem);
+  background: var(--canvas);
+}
+
+body.registration-success-page .success-shell {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+body.registration-success-page .success-head {
+  background: linear-gradient(150deg, #0b4b34, #072d20);
+}
+
+body.recovery-page {
+  background: var(--canvas);
+}
+
+body.recovery-page .recovery-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+body.maintenance-page {
+  background: var(--canvas);
+}
+
+body.maintenance-page :where(.main-panel, .status-panel) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+body.guide-page {
+  background: var(--canvas);
+}
+
+body.guide-page :where(.guide-header, .guide-sidebar, .guide-topic, .guide-card) {
+  border-color: var(--border);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (max-width: 48rem) {
+  body.registration-page .registration-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.registration-page .experience-panel {
+    padding: var(--space-6);
+  }
+}
+
+@media (display-mode: standalone) {
+  body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) {
+    padding-block-start: max(env(safe-area-inset-top), var(--space-3));
+    padding-block-end: max(env(safe-area-inset-bottom), var(--space-3));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) *,
+  body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) *::before,
+  body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) *::after {
+    scroll-behavior: auto;
+    animation-duration: .01ms;
+    animation-iteration-count: 1;
+    transition-duration: .01ms;
+  }
+}
