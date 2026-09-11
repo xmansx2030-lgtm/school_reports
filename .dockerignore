@@ -1,5 +1,6 @@
 .git
 .github
+.claude
 .pytest_cache
 .ruff_cache
 .venv
@@ -13,6 +14,9 @@ __pycache__
 db.sqlite3
 media
 staticfiles
+# The Flutter client has its own release pipeline. Including its local Gradle,
+# Dart and APK outputs once inflated the Django image context by gigabytes.
+operations_mobile
 tmp
 output
 test_evidence_*.txt
