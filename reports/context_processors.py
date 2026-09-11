@@ -123,61 +123,6 @@ def _teacher_role_values(membership_model) -> Iterable:
     return values
 
 
-def _detect_officer_departments(user, active_school: Optional[School] = None) -> List[Department]:
-    """أقسام المسؤول/رئيس القسم (OFFICER) لعرض تقارير القسم."""
-    Membership = _get_membership_model()
-    if Membership is None:
-        return []
-    try:
-        officer_values = list(_officer_role_values(Membership))
-        membs = (
-            Membership.objects.select_related("department")
-            .filter(teacher=user, role_type__in=officer_values, department__is_active=True)
-        )
-        # عزل حسب المدرسة النشطة إن وُجدت
-        with soft_fail("nav.department_school_filter", school=getattr(active_school, "pk", None)):
-            if active_school is not None and "school" in _model_fields(Department):
-                membs = membs.filter(department__school=active_school)
-        seen, unique = set(), []
-        for m in membs:
-            d = m.department
-            if d and d.pk not in seen:
-                seen.add(d.pk)
-                unique.append(d)
-        return unique
-    except Exception:
-        _degraded("nav.officer_departments", user_id=getattr(user, "pk", None))
-        return []
-
-
-def _detect_member_departments(user, active_school: Optional[School] = None) -> List[Department]:
-    """أقسام العضو (TEACHER) لعرض/طباعة تقارير القسم فقط."""
-    Membership = _get_membership_model()
-    if Membership is None:
-        return []
-    try:
-        teacher_values = list(_teacher_role_values(Membership))
-        membs = (
-            Membership.objects.select_related("department")
-            .filter(teacher=user, role_type__in=teacher_values, department__is_active=True)
-        )
-        # عزل حسب المدرسة النشطة إن وُجدت
-        with soft_fail("nav.department_school_filter", school=getattr(active_school, "pk", None)):
-            if active_school is not None and "school" in _model_fields(Department):
-                membs = membs.filter(department__school=active_school)
-
-        seen, unique = set(), []
-        for m in membs:
-            d = m.department
-            if d and d.pk not in seen:
-                seen.add(d.pk)
-                unique.append(d)
-        return unique
-    except Exception:
-        _degraded("nav.member_departments", user_id=getattr(user, "pk", None))
-        return []
-
-
 def _user_department_codes(user, active_school: Optional[School] = None) -> List[str]:
     """رموزُ أقسام المستخدم — استعلامٌ واحد لكل طلب لا واحدٌ لكل نداء.
 

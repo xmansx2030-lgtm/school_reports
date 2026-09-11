@@ -16,7 +16,7 @@ from django.core.validators import MinValueValidator, FileExtensionValidator
 from django.db import models, transaction
 from django.db.models.signals import post_migrate, post_save
 from django.dispatch import receiver
-from django.utils.text import get_valid_filename, slugify
+from django.utils.text import slugify
 from django.utils import timezone
 
 # تخزين المرفقات (R2 أو محلي)
@@ -60,15 +60,6 @@ def _validate_academic_year_hijri(value: str) -> None:
         raise ValidationError("صيغة السنة الدراسية غير صحيحة") from exc
     if e != s + 1:
         raise ValidationError("السنة الدراسية يجب أن تكون مثل 1447-1448 (فرق سنة واحدة)")
-
-
-def _safe_unique_filename(filename: str, *, fallback: str = "file") -> str:
-    base = os.path.basename(filename or fallback)
-    base = get_valid_filename(base) or fallback
-    stem, ext = os.path.splitext(base)
-    stem = (stem or fallback)[:80].strip("._-") or fallback
-    ext = (ext or "").lower()[:12]
-    return f"{stem}_{secrets.token_hex(8)}{ext}"
 
 
 def _achievement_pdf_upload_to(instance: "TeacherAchievementFile", filename: str) -> str:

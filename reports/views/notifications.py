@@ -9,7 +9,7 @@ from ..coverage import pending_documenters
 from ._helpers import *
 from ._helpers import (
     _is_staff, _is_staff_or_officer, _is_manager_in_school,
-    _role_display_map, _school_manager_label,
+    _school_manager_label,
     _get_active_school, _canonical_sender_name, _canonical_role_label,
     effective_user_role_label, _safe_next_url,
 )
@@ -255,10 +255,6 @@ def _recipient_is_read(rec) -> tuple[bool, str | None]:
             if st in {"read", "seen", "opened", "done"}:
                 return (True, None)
     return (False, None)
-
-def _arabic_role_label(role_slug: str, active_school: Optional[School] = None) -> str:
-    return _role_display_map(active_school).get((role_slug or "").lower(), role_slug or "")
-
 
 def _digits_only(val: str) -> str:
     return "".join(ch for ch in str(val or "") if ch.isdigit())

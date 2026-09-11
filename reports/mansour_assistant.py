@@ -2210,37 +2210,6 @@ def _prompt_cache_options(model: str, *, audience: str) -> dict[str, Any]:
     }
 
 
-def _rewrite_instructions(
-    draft_answer: str,
-    knowledge: list[KnowledgeItem],
-    plans: list[dict[str, Any]],
-    *,
-    audience: str = AUDIENCE_GENERAL,
-    page_context: str = "",
-    personal_context: str = "",
-    intent: str = INTENT_GENERAL,
-    question: str = "",
-    confidence: int = MIN_CONFIDENT_RETRIEVAL_SCORE,
-) -> str:
-    """Second-pass instruction to upgrade weak drafts without adding new facts."""
-    return "\n\n".join(
-        (
-            _static_instructions(),
-            _rewrite_context(
-                draft_answer,
-                knowledge,
-                plans,
-                audience=audience,
-                page_context=page_context,
-                personal_context=personal_context,
-                intent=intent,
-                question=question,
-                confidence=confidence,
-            ),
-        )
-    )
-
-
 def _rewrite_context(
     draft_answer: str,
     knowledge: list[KnowledgeItem],

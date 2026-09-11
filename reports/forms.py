@@ -64,7 +64,6 @@ from .models import (
     DiscountCode,
     TeacherAchievementFile,
     AchievementSection,
-    AchievementEvidenceImage,
     SchoolLeadershipPortfolio,
     LeadershipPortfolioSection,
 )
@@ -454,34 +453,6 @@ def _teachers_for_dept(dept_slug: str, school: Optional["School"] = None):
 
     teacher_ids = DepartmentMembership.objects.filter(department=dep).values_list("teacher_id", flat=True)
     return base_qs.filter(id__in=teacher_ids).only("id", "name").order_by("name").distinct()
-
-
-def _is_teacher_in_dept(teacher: Teacher, dept_slug: str, school: Optional["School"] = None) -> bool:
-    """هل المعلّم ينتمي للقسم؟"""
-    if not teacher or not dept_slug:
-        return False
-
-    # في وضع تعدد المدارس لا نسمح بحل قسم عبر slug بدون تحديد school
-    if school is None and hasattr(Department, "school") and _has_multi_active_schools():
-        return False
-
-    dept_slug_norm = (dept_slug or "").strip().lower()
-    dep_qs = Department.objects.filter(slug__iexact=dept_slug_norm)
-    if school is not None and hasattr(Department, "school"):
-        dep_qs = dep_qs.filter(school=school)
-    dep = dep_qs.first()
-    if not dep:
-        return False
-
-    return DepartmentMembership.objects.filter(department=dep, teacher=teacher).exists()
-
-
-def _is_teacher_in_department(teacher: Teacher, department: Optional[Department]) -> bool:
-    """هل المعلّم ينتمي لكائن قسم محدد (بدون lookup بالـ slug)؟"""
-    if not teacher or not department:
-        return False
-
-    return DepartmentMembership.objects.filter(department=department, teacher=teacher).exists()
 
 
 def _compress_image_upload(f, *, max_px: int = 1600, quality: int = 85) -> InMemoryUploadedFile:

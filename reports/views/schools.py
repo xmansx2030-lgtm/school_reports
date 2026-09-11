@@ -10,12 +10,12 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncWeek
 from django.urls import reverse
 
-from core.observability import report_degraded as _degraded, soft_call, soft_fail
+from core.observability import report_degraded as _degraded
 
 from ._helpers import *
 from ._helpers import (
     _is_staff, _role_display_map, _filter_by_school,
-    _model_has_field, _get_active_school, _user_manager_schools,
+    _get_active_school, _user_manager_schools,
     _clean_query_params, _clean_query_value, _parse_date_safe,
 )
 from ..academic_years import hijri_academic_year_options
@@ -755,17 +755,6 @@ def _user_department_codes(user, active_school: Optional[School] = None) -> list
 
     return list(codes)
 
-def _tickets_stats_for_department(dept_code: str, school: Optional[School] = None) -> dict:
-    from django.db.models import Count, Q as _Q
-    qs = Ticket.objects.filter(department__slug=dept_code)
-    qs = _filter_by_school(qs, school)
-    stats = qs.aggregate(
-        open=Count("id", filter=_Q(status="open")),
-        in_progress=Count("id", filter=_Q(status="in_progress")),
-        done=Count("id", filter=_Q(status="done")),
-    )
-    return stats
-
 def _all_departments(active_school: Optional[School] = None):
     if Department is None:
         return []
@@ -779,8 +768,6 @@ def _all_departments(active_school: Optional[School] = None):
         return []
 
     department_ids = [d.pk for d in departments if getattr(d, "pk", None) is not None]
-    department_codes = [_dept_code_for(d) for d in departments]
-
     ticket_stats_map = defaultdict(lambda: {"open": 0, "in_progress": 0, "done": 0})
     if Ticket is not None and department_ids:
         try:
