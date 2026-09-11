@@ -1,5 +1,9 @@
 import os
+import logging
+
 from celery import Celery
+
+logger = logging.getLogger(__name__)
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
@@ -20,4 +24,5 @@ from core import celery_metrics  # noqa: F401
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
-    print(f'Request: {self.request!r}')
+    # Do not dump the whole request: task arguments may contain personal data.
+    logger.debug("Celery debug task received task_id=%s", self.request.id)
