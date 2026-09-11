@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from config.settings import _media_querystring_auth_enabled, _validated_site_url
-from core.client_ip import client_ip_for_ratelimit
+from core.client_ip import client_ip, client_ip_for_ratelimit
 from core.views import healthz, ops_metrics
 
 
@@ -82,6 +82,19 @@ class ClientIpTests(SimpleTestCase):
             "HTTP_X_REAL_IP": "203.0.113.15",
         })
         self.assertEqual(client_ip_for_ratelimit(request), "198.51.100.22")
+
+    @override_settings(TRUSTED_PROXY_CIDRS=["172.16.0.0/12"])
+    def test_audit_address_ignores_untrusted_forwarded_for(self):
+        request = SimpleNamespace(META={
+            "REMOTE_ADDR": "198.51.100.22",
+            "HTTP_X_FORWARDED_FOR": "203.0.113.15",
+        })
+        self.assertEqual(client_ip(request), "198.51.100.22")
+
+    def test_audit_address_uses_none_but_ratelimit_keeps_stable_fallback(self):
+        request = SimpleNamespace(META={"REMOTE_ADDR": "not-an-ip"})
+        self.assertIsNone(client_ip(request))
+        self.assertEqual(client_ip_for_ratelimit(request), "0.0.0.0")  # noqa: S104 - sentinel, not a bind.
 
 
 class OpsMetricsAuthorizationTests(SimpleTestCase):

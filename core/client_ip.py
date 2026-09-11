@@ -31,11 +31,21 @@ def _is_trusted_proxy(value: str) -> bool:
     return False
 
 
-def client_ip_for_ratelimit(request) -> str:
-    """Return the client address, trusting proxy headers only from known peers."""
+def client_ip(request) -> str | None:
+    """Return a validated client address for logs and persisted audit records.
+
+    Proxy-supplied addresses are accepted only when the direct peer belongs to
+    ``TRUSTED_PROXY_CIDRS``. In particular, an arbitrary
+    ``X-Forwarded-For`` value is never treated as provenance.
+    """
     remote_addr = _valid_ip(request.META.get("REMOTE_ADDR"))
     forwarded_addr = _valid_ip(request.META.get("HTTP_X_REAL_IP"))
 
     if remote_addr and forwarded_addr and _is_trusted_proxy(remote_addr):
         return forwarded_addr
-    return remote_addr or "0.0.0.0"
+    return remote_addr or None
+
+
+def client_ip_for_ratelimit(request) -> str:
+    """Return a stable rate-limit key when no valid address is available."""
+    return client_ip(request) or "0.0.0.0"

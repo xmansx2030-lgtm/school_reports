@@ -7,7 +7,6 @@ from typing import Optional
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 
 from .models import (
@@ -17,6 +16,20 @@ from .models import (
     School,
     TeacherAchievementFile,
 )
+
+
+def ensure_achievement_sections(achievement_file: TeacherAchievementFile) -> None:
+    """Create only the missing canonical sections for an achievement file."""
+    existing_codes = set(
+        AchievementSection.objects.filter(file=achievement_file).values_list("code", flat=True)
+    )
+    missing_sections = [
+        AchievementSection(file=achievement_file, code=int(code), title=str(title))
+        for code, title in AchievementSection.Code.choices
+        if int(code) not in existing_codes
+    ]
+    if missing_sections:
+        AchievementSection.objects.bulk_create(missing_sections)
 
 
 def achievement_picker_reports_qs(*, teacher, active_school: Optional[School], q: str):

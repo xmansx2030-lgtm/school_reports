@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Shared imports, helpers and constants for all view modules."""
 from __future__ import annotations
-
 from datetime import date, timedelta
 from functools import wraps
 import logging
@@ -224,6 +223,7 @@ from ..services_archive import (
 from ..services_achievement import (
     achievement_picker_reports_qs,
     add_report_evidence,
+    ensure_achievement_sections as _ensure_achievement_sections,
     freeze_achievement_report_evidences,
     remove_report_evidence,
 )
@@ -470,13 +470,6 @@ def _school_manager_label(school: Optional[School]) -> str:
     return str(school_gender_labels(school)["manager"])
 
 
-def _school_teacher_label(school: Optional[School]) -> str:
-    """مسمى معلم/معلمة حسب نوع المدرسة."""
-    from ..gender_labels import school_gender_labels
-
-    return str(school_gender_labels(school)["teacher"])
-
-
 def _school_teachers_obj_label(school: Optional[School]) -> str:
     """صيغة جمع منصوبة/مجرورة (المعلمين/المعلمات) حسب نوع المدرسة."""
     from ..gender_labels import school_gender_labels
@@ -550,6 +543,15 @@ def _get_active_school(request: HttpRequest) -> Optional[School]:
     return None
 
 
+def active_school_or_redirect(request: HttpRequest) -> tuple[Optional[School], Optional[HttpResponse]]:
+    """Resolve the active school or return the standard school-picker redirect."""
+    school = _get_active_school(request)
+    if school is None:
+        messages.error(request, "فضلاً اختر مدرسة أولاً.")
+        return None, redirect("reports:select_school")
+    return school, None
+
+
 def _set_active_school(request: HttpRequest, school: Optional[School]) -> None:
     """تحديث المدرسة المختارة في الجلسة للمستخدم الحالي."""
     if school is None:
@@ -613,19 +615,3 @@ def _user_department_codes(user, active_school: Optional[School] = None) -> list
             logger.exception("Failed to fetch user department codes")
 
     return list(codes)
-
-
-def _ensure_achievement_sections(ach_file: TeacherAchievementFile) -> None:
-    """يضمن وجود 11 محورًا ثابتًا داخل الملف."""
-    existing = set(
-        AchievementSection.objects.filter(file=ach_file).values_list("code", flat=True)
-    )
-    to_create = []
-    for code, title in AchievementSection.Code.choices:
-        if int(code) in existing:
-            continue
-        to_create.append(
-            AchievementSection(file=ach_file, code=int(code), title=str(title))
-        )
-    if to_create:
-        AchievementSection.objects.bulk_create(to_create)

@@ -14,8 +14,7 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
-from django.http import Http404
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -23,7 +22,6 @@ from django.views.decorators.http import require_http_methods
 from ..audit_labels import attach_views
 from ..model_parts.approvals import ApprovalState, PENDING_REVIEW_STATES
 from ..models import (
-    Assignment,
     AssignmentTarget,
     AuditLog,
     Document,
@@ -41,11 +39,8 @@ from ..models import (
 )
 from ..services_approval import available_actions
 from ..services_archive import attach_school_consumption_rows
-from ..permissions import (
-    executive_director_groups,
-    executive_director_schools_qs,
-    is_executive_director,
-)
+from ..permissions import executive_director_schools_qs
+from ..view_access import executive_director_groups_or_404 as _director_groups
 
 __all__ = [
     "group_school_detail",
@@ -54,15 +49,6 @@ __all__ = [
     "group_archive",
     "group_approval_inbox",
 ]
-
-
-def _director_groups(request):
-    if not is_executive_director(request.user):
-        raise Http404
-    groups = list(executive_director_groups(request.user))
-    if not groups:
-        raise Http404
-    return groups
 
 
 def _selected_group(request, groups):

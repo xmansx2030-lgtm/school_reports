@@ -20,7 +20,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -28,17 +27,14 @@ from django.views.decorators.http import require_http_methods
 from ..forms_assignments import GroupAssignmentForm
 from ..model_parts.approvals import ApprovalState, PENDING_REVIEW_STATES
 from ..models import Assignment, AssignmentTarget
-from ..permissions import (
-    executive_director_groups,
-    executive_director_schools_qs,
-    is_executive_director,
-)
+from ..permissions import executive_director_schools_qs
 from ..services_approval import (
     ACTION_DISPATCH,
     ApprovalError,
     available_actions,
     transitions_for,
 )
+from ..view_access import executive_director_groups_or_404 as _director_groups
 
 __all__ = [
     "group_assignment_board",
@@ -51,16 +47,6 @@ __all__ = [
     "group_report_pdf",
     "group_practices",
 ]
-
-
-def _director_groups(request):
-    """مجموعات المستخدم، أو 404 إن لم يكن مديراً تنفيذياً."""
-    if not is_executive_director(request.user):
-        raise Http404
-    groups = list(executive_director_groups(request.user))
-    if not groups:
-        raise Http404
-    return groups
 
 
 def _selected_group(request, groups):

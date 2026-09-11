@@ -36,19 +36,11 @@ from ..services_documents import (
     visible_documents,
 )
 from ._helpers import *  # noqa: F401,F403
-from ._helpers import _clean_query_params, _get_active_school
+from ._helpers import _clean_query_params, active_school_or_redirect as _school_or_redirect
 
 __all__ = ["document_archive", "document_detail", "document_action"]
 
 PAGE_SIZE = 24
-
-
-def _school_or_redirect(request):
-    school = _get_active_school(request)
-    if school is None:
-        messages.error(request, "فضلاً اختر مدرسة أولاً.")
-        return None, redirect("reports:select_school")
-    return school, None
 
 
 @login_required(login_url="reports:login")

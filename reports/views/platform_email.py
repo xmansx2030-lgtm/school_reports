@@ -7,7 +7,6 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
@@ -17,6 +16,8 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
+
+from core.client_ip import client_ip
 
 from ..models import AuditLog, PlatformEmail, PlatformEmailAttachment, PlatformEmailConfiguration
 from ..platform_email_forms import PlatformEmailComposeForm, PlatformEmailConfigurationForm, PlatformEmailReplyForm
@@ -31,20 +32,7 @@ from ..resend_email import (
     verify_webhook_signature,
     webhook_is_configured,
 )
-
-
-def _superuser_required(view):
-    return login_required(login_url="reports:platform_login")(
-        user_passes_test(
-            lambda user: getattr(user, "is_superuser", False),
-            login_url="reports:platform_login",
-        )(view)
-    )
-
-
-def _client_ip(request: HttpRequest) -> str | None:
-    forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",", 1)[0].strip()
-    return forwarded or request.META.get("REMOTE_ADDR") or None
+from ..view_access import platform_superuser_required
 
 
 def _audit(request: HttpRequest, action: str, email: PlatformEmail, changes: dict) -> None:
@@ -55,7 +43,7 @@ def _audit(request: HttpRequest, action: str, email: PlatformEmail, changes: dic
         object_id=email.pk,
         object_repr=email.subject[:255],
         changes=changes,
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
         user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:500],
     )
 
@@ -120,7 +108,7 @@ def _system_email_configured() -> bool:
     return False
 
 
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET"])
 def platform_email_inbox(request: HttpRequest) -> HttpResponse:
     folder = (request.GET.get("folder") or "inbox").strip().lower()
@@ -204,7 +192,7 @@ def _uploaded_attachments(files) -> list[dict]:
     return output
 
 
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET", "POST"])
 def platform_email_compose(request: HttpRequest) -> HttpResponse:
     initial = {}
@@ -244,7 +232,7 @@ def platform_email_compose(request: HttpRequest) -> HttpResponse:
     )
 
 
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET", "POST"])
 def platform_email_detail(request: HttpRequest, pk: int) -> HttpResponse:
     email = get_object_or_404(_visible_mail_queryset().prefetch_related("attachments", "events"), pk=pk)
@@ -288,7 +276,7 @@ def platform_email_detail(request: HttpRequest, pk: int) -> HttpResponse:
     )
 
 
-@_superuser_required
+@platform_superuser_required
 @require_POST
 def platform_email_action(request: HttpRequest, pk: int) -> HttpResponse:
     email = get_object_or_404(_visible_mail_queryset(), pk=pk)
@@ -314,7 +302,7 @@ def platform_email_action(request: HttpRequest, pk: int) -> HttpResponse:
     return redirect(next_url)
 
 
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET", "POST"])
 def platform_email_settings(request: HttpRequest) -> HttpResponse:
     config = PlatformEmailConfiguration.load()
@@ -337,7 +325,7 @@ def platform_email_settings(request: HttpRequest) -> HttpResponse:
     )
 
 
-@_superuser_required
+@platform_superuser_required
 @require_POST
 def platform_email_sync(request: HttpRequest) -> HttpResponse:
     try:
@@ -351,7 +339,7 @@ def platform_email_sync(request: HttpRequest) -> HttpResponse:
     return redirect("reports:platform_email_inbox")
 
 
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET"])
 def platform_email_attachment_download(request: HttpRequest, pk: int, attachment_pk: int) -> HttpResponse:
     email = get_object_or_404(_visible_mail_queryset(), pk=pk)

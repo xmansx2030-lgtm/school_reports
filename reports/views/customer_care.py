@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
@@ -10,25 +9,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+from core.client_ip import client_ip
+
 from ..customer_care_forms import CustomerComplaintUpdateForm
 from ..models import AuditLog, CustomerComplaint
+from ..view_access import platform_superuser_required
 
 
-def _superuser_required(view):
-    return login_required(login_url="reports:platform_login")(
-        user_passes_test(
-            lambda user: getattr(user, "is_superuser", False),
-            login_url="reports:platform_login",
-        )(view)
-    )
-
-
-def _client_ip(request: HttpRequest) -> str | None:
-    forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",", 1)[0].strip()
-    return forwarded or request.META.get("REMOTE_ADDR") or None
-
-
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET"])
 def platform_complaints_list(request: HttpRequest) -> HttpResponse:
     query = (request.GET.get("q") or "").strip()
@@ -78,7 +66,7 @@ def platform_complaints_list(request: HttpRequest) -> HttpResponse:
     )
 
 
-@_superuser_required
+@platform_superuser_required
 @require_http_methods(["GET", "POST"])
 def platform_complaint_detail(request: HttpRequest, pk: int) -> HttpResponse:
     complaint = get_object_or_404(CustomerComplaint, pk=pk)
@@ -128,7 +116,7 @@ def platform_complaint_detail(request: HttpRequest, pk: int) -> HttpResponse:
                     object_id=updated.pk,
                     object_repr=f"{updated.reference} — {updated.subject}"[:255],
                     changes=changes,
-                    ip_address=_client_ip(request),
+                    ip_address=client_ip(request),
                     user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:500],
                 )
                 messages.success(

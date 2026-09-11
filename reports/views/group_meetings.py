@@ -19,17 +19,12 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Max
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from ..forms_meetings import AgendaItemForm, DecisionForm, GroupMeetingForm, MinutesForm
 from ..models import Meeting, MeetingAgendaItem, MeetingAttendee
-from ..permissions import (
-    executive_director_groups,
-    executive_director_schools_qs,
-    is_executive_director,
-)
+from ..permissions import executive_director_schools_qs
 from ..services_approval import (
     ACTION_DISPATCH,
     ApprovalError,
@@ -45,6 +40,7 @@ from ..services_meetings import (
     mark_held,
     set_attendance,
 )
+from ..view_access import executive_director_groups_or_404 as _director_groups
 
 __all__ = [
     "council_list",
@@ -53,15 +49,6 @@ __all__ = [
     "council_action",
     "council_minutes_action",
 ]
-
-
-def _director_groups(request):
-    if not is_executive_director(request.user):
-        raise Http404
-    groups = list(executive_director_groups(request.user))
-    if not groups:
-        raise Http404
-    return groups
 
 
 def _selected_group(request, groups):

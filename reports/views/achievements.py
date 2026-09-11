@@ -5,10 +5,10 @@ from __future__ import annotations
 from ._helpers import *
 from ._helpers import (
     _is_staff, _is_manager_in_school, _private_comment_role_label,
-    _model_has_field, _get_active_school, _school_manager_label,
-    _school_teachers_obj_label, _user_manager_schools,
+    _get_active_school, _school_manager_label,
 )
 from ..gender_labels import school_gender_labels, school_gender_template_context
+from ..services_achievement import ensure_achievement_sections as _ensure_achievement_sections
 
 
 def _notify_achievement_submitted(ach_file, active_school):
@@ -66,22 +66,6 @@ def _notify_achievement_decided(ach_file, decision, active_school):
         )
     except Exception:
         logger.exception("Failed to send achievement decision notification")
-
-
-def _ensure_achievement_sections(ach_file: TeacherAchievementFile) -> None:
-    """يضمن وجود 11 محورًا ثابتًا داخل الملف."""
-    existing = set(
-        AchievementSection.objects.filter(file=ach_file).values_list("code", flat=True)
-    )
-    to_create = []
-    for code, title in AchievementSection.Code.choices:
-        if int(code) in existing:
-            continue
-        to_create.append(
-            AchievementSection(file=ach_file, code=int(code), title=str(title))
-        )
-    if to_create:
-        AchievementSection.objects.bulk_create(to_create)
 
 
 def _can_manage_achievement(user, active_school: Optional[School]) -> bool:

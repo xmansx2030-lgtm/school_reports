@@ -76,6 +76,8 @@ class PlatformComplaintsTests(TestCase):
                 "status": CustomerComplaint.Status.RESOLVED,
                 "internal_notes": "تم التواصل مع العميل وإغلاق السبب.",
             },
+            REMOTE_ADDR="198.51.100.22",
+            HTTP_X_FORWARDED_FOR="203.0.113.15",
         )
 
         self.assertRedirects(response, detail_url)
@@ -95,6 +97,7 @@ class PlatformComplaintsTests(TestCase):
             object_id=self.new_complaint.pk,
         )
         self.assertEqual(audit.teacher, self.admin)
+        self.assertEqual(audit.ip_address, "198.51.100.22")
         self.assertEqual(audit.changes["status"]["from"], CustomerComplaint.Status.NEW)
         self.assertEqual(
             audit.changes["status"]["to"],

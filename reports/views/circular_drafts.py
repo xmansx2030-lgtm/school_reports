@@ -27,7 +27,7 @@ from ..services_approval import (
 )
 from ..services_circular_drafts import draft_recipients, publish_draft
 from ._helpers import *  # noqa: F401,F403
-from ._helpers import _get_active_school
+from ._helpers import active_school_or_redirect as _school_or_redirect
 
 __all__ = ["circular_draft_list", "circular_draft_detail", "circular_draft_action"]
 
@@ -54,14 +54,6 @@ class CircularDraftForm(forms.ModelForm):
         self.fields["signature_deadline_at"].help_text = (
             "اختياري — يظهر للمستلمين في صفحة التوقيع ويُستعمل في تقرير الاطّلاع."
         )
-
-
-def _school_or_redirect(request):
-    school = _get_active_school(request)
-    if school is None:
-        messages.error(request, "فضلاً اختر مدرسة أولاً.")
-        return None, redirect("reports:select_school")
-    return school, None
 
 
 def _may_draft(user, school) -> bool:

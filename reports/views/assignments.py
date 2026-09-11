@@ -18,7 +18,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -50,6 +49,7 @@ from ..services_assignments import (
 )
 from ._helpers import *  # noqa: F401,F403
 from ._helpers import _get_active_school
+from ._helpers import active_school_or_redirect as _school_or_redirect
 
 __all__ = [
     "my_assignments",
@@ -62,14 +62,6 @@ __all__ = [
     "assignment_approval_action",
     "assignment_cancel",
 ]
-
-
-def _school_or_redirect(request):
-    school = _get_active_school(request)
-    if school is None:
-        messages.error(request, "فضلاً اختر مدرسة أولاً.")
-        return None, redirect("reports:select_school")
-    return school, None
 
 
 def _may_issue(user, school) -> bool:

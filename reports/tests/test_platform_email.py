@@ -148,6 +148,8 @@ class PlatformEmailTests(TestCase):
                 "subject": "رسالة تشغيلية",
                 "body": "مرحبًا،\nهذه رسالة من منصة توثيق.",
             },
+            REMOTE_ADDR="198.51.100.22",
+            HTTP_X_FORWARDED_FOR="203.0.113.15",
         )
 
         email = PlatformEmail.objects.get(provider_id="resend_sent_001")
@@ -155,7 +157,8 @@ class PlatformEmailTests(TestCase):
         self.assertEqual(email.status, PlatformEmail.Status.SENT)
         self.assertEqual(email.to_emails, ["first@example.com", "second@example.com"])
         self.assertEqual(email.reply_to_emails, [self.config.reply_to_email])
-        self.assertTrue(AuditLog.objects.filter(model_name="PlatformEmail", object_id=email.pk).exists())
+        audit = AuditLog.objects.get(model_name="PlatformEmail", object_id=email.pk)
+        self.assertEqual(audit.ip_address, "198.51.100.22")
         sent_payload = api_request.call_args.kwargs["payload"]
         self.assertEqual(sent_payload["from"], f"{self.config.sender_name} <{self.config.sender_email}>")
         self.assertIn("منصة توثيق", sent_payload["html"])
