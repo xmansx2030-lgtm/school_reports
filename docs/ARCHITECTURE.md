@@ -18,10 +18,62 @@
 | ملفات الإنجاز | `model_parts/achievements.py` | `views/achievements.py`, `services_achievement.py` |
 | التذاكر | `model_parts/tickets.py` | `views/tickets.py` |
 | الإشعارات | `model_parts/notifications.py` | `views/notifications.py`, `tasks.py` |
-| الاشتراكات | `model_parts/billing.py` | `views/subscriptions.py` |
+| الاشتراكات والدفع | `model_parts/billing.py` | `views/billing_*.py`, `views/subscriptions.py` |
+| التكليفات والخطط | `model_parts/assignments.py`, `model_parts/plans.py` | `views/assignments.py`, `services_assignments.py`, `services_plans.py` |
+| الاجتماعات والوثائق | `model_parts/meetings.py`, `model_parts/documents.py` | `views/meetings.py`, `views/documents.py` |
+| عمليات المنصة | `operations/models.py` | `operations/views.py`, تطبيق `operations_mobile/` |
 | الصيانة | `maintenance/models.py` | `maintenance/services.py` |
 
 يظل `reports/models.py` واجهة التوافق الوحيدة التي تستورد منها بقية المنصة.
+
+## نقاط الدخول والعقود العامة
+
+- `manage.py` و`config/wsgi.py` و`config/asgi.py`: تشغيل Django؛ ASGI هو مدخل
+  HTTP وWebSocket في الإنتاج.
+- `config/urls.py` ثم `reports/urls.py`: عقد المسارات للويب وPWA والعملاء.
+- `reports/api_urls.py` و`operations/urls.py`: واجهات JSON المستخدمة خارجيًا؛
+  لا تغيّر الحقول أو حالات HTTP دون اختبار توافق العميل.
+- `config/celery.py` و`reports/tasks.py`: تنفيذ المهام، بينما يحدد
+  `CELERY_BEAT_SCHEDULE` في الإعدادات الجدولة.
+- `reports/consumers.py` و`reports/routing.py`: تحديثات WebSocket.
+- `reports/static/manifest.json` وservice worker: عقد تثبيت PWA والتخزين المؤقت.
+
+## اتجاه الاعتماديات
+
+الاتجاه المستهدف هو:
+
+```text
+HTTP/API views -> permissions/forms/serializers -> domain services -> models
+background tasks -------------------------------> domain services -> models
+templates/static <- context/view models (لا منطق أعمال أو ORM داخل القالب)
+```
+
+يجوز للخدمة استدعاء client خارجي محدد (`*_gateway.py`, `email_backends.py`,
+`web_push.py`) بمهلة ورسالة خطأ سياقية. لا ينبغي للخدمة أن تستورد view، ولا
+للنموذج أن يستورد task. واجهتا التوافق `reports/models.py` و
+`reports/views/_helpers.py` قديمتان؛ لا توسّع wildcard imports فيهما.
+
+## رحلات الأعمال الحرجة
+
+- الهوية: login/passkey/TOTP ثم اختيار المدرسة النشطة والتحقق منها في
+  middleware. أي إعادة هيكلة تحتاج اختبارات auth، rate limits، وعزل الجلسة.
+- المدفوعات: إنشاء طلب محلي، إنشاء فاتورة المزود، تحقق callback من المزود، ثم
+  تطبيق الآثار مرة واحدة داخل transaction. لا تعتمد على redirect نجاح العميل.
+- التقارير/الإنجاز: تحقق الدور والمدرسة، حفظ الأصل والشواهد، ثم توليد PDF/export
+  محليًا أو عبر job. عقود أسماء الملفات وJSON مستخدمة من الواجهة.
+- الإشعارات: إنشاء السجل والمستلمين أولًا، ثم dispatch عبر Celery/Web Push/FCM؛
+  retry لا يجوز أن يكرر المستلمين أو يسرب بيانات مدرسة أخرى.
+- الأرشفة والصيانة: preview أولًا، ثم تنفيذ صريح مسجل audit؛ النسخ السنوية لها
+  سعة مستقلة عن مساحة العمل.
+
+## المعاملات وإعادة التنفيذ
+
+- ضع تحديثات الاشتراك والدفع متعددة الجداول داخل `transaction.atomic` مع قفل
+  السجل المناسب.
+- callbacks والمهام تستخدم مفاتيح provider/dedup وحالة `effects_applied_at` أو
+  ما يعادلها؛ أعد الاختبار بطلب مكرر قبل تعديلها.
+- شغّل المهام بعد commit عند اعتمادها على صف جديد (`transaction.on_commit`).
+- لا تجعل Redis مصدر صحة وحيدًا؛ الأقفال تقلل العمل المكرر، والـDB يحفظ العقد.
 
 ## ثوابت العزل والصلاحيات
 
@@ -49,6 +101,26 @@
 - Redis DB 1: كاش Django والجلسات والأقفال.
 - الطوابير: `default`, `notifications`, `images`, `periodic`.
 - يجب حماية المهام الدورية بقفل قصير، وجعل المهام قابلة لإعادة التنفيذ بأمان.
+
+## استراتيجية الاختبار
+
+- اختبارات characterization تحمي السلوك القديم قبل النقل أو التقسيم.
+- اختبارات الصلاحيات يجب أن تغطي السماح والمنع والعزل بين مدرستين.
+- اختبارات الدفع تغطي callback مكررًا، mismatch، وحالة فشل المزود.
+- اختبارات القوالب/الرحلات تتحقق من endpoints والنصوص الأساسية، لكن لا تستبدل
+  فحص DOM والـviewport والـconsole للواجهة.
+- `config/test_settings.py` يعزل الخدمات الخارجية ويستخدم SQLite؛ لذلك تبقى
+  خصائص PostgreSQL/Redis وPDF الأصلية ضمن CI/Docker والاختبارات التكاملية.
+
+## أين يضاف الكود الجديد
+
+- نموذج مجال: ملفه داخل `reports/model_parts/` مع تصدير توافق إن لزم.
+- قراءة مركبة/استعلام reusable: selector أو service المجال، لا نسخة داخل views.
+- تغيير حالة/سير عمل: service مع transaction واختبارات مباشرة.
+- حارس وصول متكرر: `reports/permissions.py` أو `reports/view_access.py`.
+- تكامل HTTP خارجي: client/gateway واحد يملك timeout والتحقق والتسجيل.
+- markup متكرر: include داخل `reports/templates/reports/includes/`.
+- سلوك متصفح متكرر: module مستقل داخل `reports/static/reports/js/`.
 
 ## قواعد التطوير
 
