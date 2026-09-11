@@ -115,10 +115,8 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _collect(args: argparse.Namespace) -> dict[str, str]:
-    """Build the key set, validating every value before anything is written."""
-    values: dict[str, str] = {}
-
+def _collect_scalar_values(args: argparse.Namespace, values: dict[str, str]) -> None:
+    """Collect non-secret command-line values and validate their ranges."""
     if getattr(args, "tamara_enabled", None):
         values["TAMARA_ENABLED"] = args.tamara_enabled
     if getattr(args, "tamara_environment", None):
@@ -149,6 +147,8 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
     if args.web_push_enabled:
         values["WEB_PUSH_ENABLED"] = args.web_push_enabled
 
+
+def _collect_tamara_config(args: argparse.Namespace, values: dict[str, str]) -> None:
     if getattr(args, "tamara_config_from_stdin", False):
         lines = sys.stdin.read().splitlines()
         if len(lines) != 2:
@@ -169,6 +169,8 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
             }
         )
 
+
+def _collect_moyasar_key(args: argparse.Namespace, values: dict[str, str]) -> None:
     if args.moyasar_key_from_stdin:
         key = sys.stdin.read().strip()
         if key:
@@ -184,6 +186,17 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
                 )
             values["MOYASAR_SECRET_KEY"] = key
 
+
+def _decode_base64url(value: str, label: str) -> bytes:
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        raise SystemExit(f"{label} is not base64url without padding.")
+    try:
+        return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    except Exception as exc:
+        raise SystemExit(f"{label} is not valid base64url.") from exc
+
+
+def _collect_web_push_config(args: argparse.Namespace, values: dict[str, str]) -> None:
     if args.web_push_config_from_stdin:
         lines = sys.stdin.read().splitlines()
         if len(lines) != 3:
@@ -191,17 +204,8 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
                 "Web Push configuration requires exactly three stdin lines: private, public, subject."
             )
         private_key, public_key, subject = (line.strip() for line in lines)
-
-        def _decode_key(value: str, label: str) -> bytes:
-            if not re.fullmatch(r"[A-Za-z0-9_-]+", value):
-                raise SystemExit(f"{label} is not base64url without padding.")
-            try:
-                return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
-            except Exception as exc:
-                raise SystemExit(f"{label} is not valid base64url.") from exc
-
-        private_raw = _decode_key(private_key, "WEB_PUSH_VAPID_PRIVATE_KEY")
-        public_raw = _decode_key(public_key, "WEB_PUSH_VAPID_PUBLIC_KEY")
+        private_raw = _decode_base64url(private_key, "WEB_PUSH_VAPID_PRIVATE_KEY")
+        public_raw = _decode_base64url(public_key, "WEB_PUSH_VAPID_PUBLIC_KEY")
         if len(private_raw) != 32:
             raise SystemExit("WEB_PUSH_VAPID_PRIVATE_KEY must decode to 32 bytes.")
         if len(public_raw) != 65 or public_raw[:1] != b"\x04":
@@ -217,6 +221,8 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
             }
         )
 
+
+def _collect_resend_config(args: argparse.Namespace, values: dict[str, str]) -> None:
     if args.resend_config_from_stdin:
         lines = sys.stdin.read().splitlines()
         if len(lines) != 2:
@@ -239,6 +245,8 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
     if getattr(args, "resend_system_backend", False):
         values["EMAIL_BACKEND"] = "reports.email_backends.ResendEmailBackend"
 
+
+def _collect_email_flags(args: argparse.Namespace, values: dict[str, str]) -> None:
     for arg_name, env_name in (
         ("password_change_email_enabled", "PASSWORD_CHANGE_EMAIL_ENABLED"),
         ("subscription_activation_email_enabled", "SUBSCRIPTION_ACTIVATION_EMAIL_ENABLED"),
@@ -251,6 +259,8 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
         if value:
             values[env_name] = value
 
+
+def _collect_fcm_service_account(args: argparse.Namespace, values: dict[str, str]) -> None:
     if getattr(args, "fcm_service_account_from_stdin", False):
         try:
             account = json.loads(sys.stdin.read())
@@ -274,6 +284,18 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
                 "GOOGLE_APPLICATION_CREDENTIALS": "/run/secrets/firebase-service-account.json",
             }
         )
+
+
+def _collect(args: argparse.Namespace) -> dict[str, str]:
+    """Build the key set, validating every value before anything is written."""
+    values: dict[str, str] = {}
+    _collect_scalar_values(args, values)
+    _collect_tamara_config(args, values)
+    _collect_moyasar_key(args, values)
+    _collect_web_push_config(args, values)
+    _collect_resend_config(args, values)
+    _collect_email_flags(args, values)
+    _collect_fcm_service_account(args, values)
 
     if not values and not getattr(args, "configure_redis_limits", False):
         raise SystemExit("Nothing to apply — pass at least one option.")
