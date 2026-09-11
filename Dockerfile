@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
     PIP_NO_CACHE_DIR=1 \
+    XDG_CACHE_HOME=/app/.cache \
     DEBIAN_FRONTEND=noninteractive \
     SERVICE_TYPE=web
 
@@ -60,7 +61,7 @@ COPY . /app/
 # The application does not need root privileges at runtime.
 RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --home-dir /nonexistent --shell /usr/sbin/nologin app \
-    && mkdir -p /app/staticfiles /app/media \
+    && mkdir -p /app/.cache /app/staticfiles /app/media \
     && chown -R app:app /app
 
 USER app
