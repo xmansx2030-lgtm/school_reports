@@ -75,7 +75,9 @@ jobs:
 
       # قفلٌ لا يواكب requirements.txt يعني أن ما يُفحص ليس ما يُبنى.
       - name: Dependency lock is in sync
-        run: python scripts/check_requirements_lock.py
+        run: |
+          python scripts/check_requirements_lock.py
+          python scripts/check_env_example.py
 
       - name: Django checks and migration drift
         run: |
