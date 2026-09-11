@@ -6,7 +6,7 @@ from django.conf import settings
 
 
 WEASYPRINT_PDF_OPTIONS: dict[str, bool] = {
-    # WeasyPrint 69 may corrupt Arabic text when a variable webfont is subset.
+    # WeasyPrint font subsetting can corrupt Arabic text with a variable webfont.
     # Embedding the complete static system font preserves the shaped glyphs and
     # the PDF text map used by viewers, search, and copy/paste.
     "full_fonts": True,
