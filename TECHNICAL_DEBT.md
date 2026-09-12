@@ -1,6 +1,6 @@
 # سجل الدين التقني
 
-آخر مراجعة: 2026-09-11. لا يحتوي هذا السجل على أسرار أو بيانات إنتاج. كل بند
+آخر مراجعة: 2026-09-12. لا يحتوي هذا السجل على أسرار أو بيانات إنتاج. كل بند
 لم يُصلح في هذه المرحلة لأن إصلاحه يحتاج اختبارًا/قرارًا/تحققًا خارج المستودع،
 لا لأنه مقبول دائمًا.
 
@@ -23,7 +23,7 @@
 |---|---|---|---|
 | ملفات Python كبيرة ومتعددة المسؤوليات | `reports/forms.py`, `reports/views/reports.py`, `reports/views/schools.py`, `reports/services_export.py`, `reports/tasks.py`, `config/settings.py` | مراجعة بطيئة وتعقيد مرتفع وتعارضات دمج | تقسيم مجال واحد كل مرة بعد characterization tests، مع واجهات توافق مؤقتة ومقياس حجم/تعقيد بعدي |
 | قوالب ضخمة تحمل CSS/JS داخليًا | `my_subscription.html`, `admin_dashboard.html` وقوالب الإدارة الكبيرة | صعوبة اختبار الواجهة وتكرار السلوك/التنسيق | نقل السلوك إلى modules والأجزاء المتكررة إلى includes؛ فحص RTL و390x844 وdesktop وconsole بعد كل شريحة |
-| دين CSS و`!important` مرتفع | `reports/static/reports/css/app.css`, `design-system.css` والقوالب | specificity غير متوقعة وتكلفة تعديل التصميم | جرد selectors فعلي عبر coverage بصري، توحيد tokens والمكوّنات، ثم حذف القواعد غير المستخدمة تدريجيًا |
+| دين CSS و`!important` مرتفع | `static/css/app.css`, `static/css/design-system.css` والقوالب | specificity غير متوقعة وتكلفة تعديل التصميم | جرد selectors فعلي عبر coverage بصري، توحيد tokens والمكوّنات، ثم حذف القواعد غير المستخدمة تدريجيًا |
 | لا توجد بوابة typecheck للمشروع | Python وJavaScript غير TypeScript | عقود الدوال المركبة لا تُفحص ساكنًا | ابدأ بخدمات جديدة/حرجة عبر type hints وpyright/mypy في نطاق صغير؛ لا تفعل strict على 100k سطر دفعة واحدة |
 | مسارات تكامل لا يثبتها SQLite المحلي | PostgreSQL، Redis locks/rate limits، R2، WeasyPrint، مزودو الدفع | نجاح unit tests لا يثبت سلوك البيئة الفعلية | تشغيل integration gates في Linux/Docker بخدمات معزولة، وsandbox للمزود، وعدم استعمال أسرار الإنتاج |
 | عدة خيارات stdin سرية في أمر الإعداد | `deploy/hetzner/apply_runtime_config.py` | جمع أكثر من `--*-from-stdin` في استدعاء واحد غير محدد لأن كل قارئ يستهلك stdin | منع الجمع في argparse أو اعتماد envelope JSON واضح؛ أضف اختبار CLI قبل تغيير العقد التشغيلي |
