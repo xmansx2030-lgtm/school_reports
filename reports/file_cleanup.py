@@ -23,6 +23,9 @@ from django.db import transaction
 from django.db.models import FileField
 from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 
+from .task_dispatch import run_named_task_safe
+from .task_names import DELETE_ORPHANED_STORAGE_FILE_TASK
+
 logger = logging.getLogger(__name__)
 
 _connected = False
@@ -150,9 +153,6 @@ def _delete_after_commit(model_label: str, field_name: str, name: str) -> None:
             name,
         )
         try:
-            from .task_names import DELETE_ORPHANED_STORAGE_FILE_TASK
-            from .utils import run_named_task_safe
-
             run_named_task_safe(
                 DELETE_ORPHANED_STORAGE_FILE_TASK,
                 delete_file_if_unreferenced,

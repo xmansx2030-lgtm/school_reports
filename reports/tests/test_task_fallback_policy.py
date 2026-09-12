@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 
-from reports.task_dispatch import enqueue_named_task
+from core.task_dispatch import enqueue_named_task
 from reports.utils import run_named_task_safe, run_task_safe
 
 
@@ -77,7 +77,7 @@ class TaskFallbackPolicyTests(TestCase):
         fallback_calls = []
 
         with (
-            patch("reports.utils.enqueue_named_task") as enqueue,
+            patch("core.task_dispatch.enqueue_named_task") as enqueue,
             self.captureOnCommitCallbacks(execute=True),
         ):
             run_named_task_safe(
@@ -99,7 +99,7 @@ class TaskFallbackPolicyTests(TestCase):
 
         with (
             patch(
-                "reports.utils.enqueue_named_task",
+                "core.task_dispatch.enqueue_named_task",
                 side_effect=_BrokerDown("broker unreachable"),
             ),
             self.captureOnCommitCallbacks(execute=True),
@@ -147,6 +147,14 @@ class TaskFallbackPolicyTests(TestCase):
             args=[42],
             queue="images",
         )
+
+    def test_legacy_dispatch_imports_remain_compatible(self):
+        from reports import task_dispatch
+        from reports import utils
+
+        self.assertIs(task_dispatch.enqueue_named_task, enqueue_named_task)
+        self.assertIs(utils.run_task_safe, run_task_safe)
+        self.assertIs(utils.run_named_task_safe, run_named_task_safe)
 
     def test_image_compression_does_not_run_inline_on_report_save(self):
         """Compression is an optimisation — the uploaded images stay valid

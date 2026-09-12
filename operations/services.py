@@ -13,7 +13,10 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from core.task_dispatch import enqueue_named_task
+
 from .models import HealthCheck, Incident, ManagedProject, ManagedServer, ManagedService, ServerMetricSnapshot
+from .task_names import SEND_INCIDENT_PUSH_TASK
 
 logger = logging.getLogger(__name__)
 
@@ -245,9 +248,7 @@ def probe_project(project: ManagedProject) -> HealthCheck:
             open_incident.save(update_fields=("status", "resolved_at"))
             new_incident = open_incident
     if new_incident is not None and project.alerts_enabled:
-        from .tasks import send_incident_push_task
-
-        send_incident_push_task.delay(new_incident.pk)
+        enqueue_named_task(SEND_INCIDENT_PUSH_TASK, args=(new_incident.pk,))
     return check
 
 
@@ -313,7 +314,5 @@ def capture_server_metrics(server: ManagedServer, report: dict) -> ServerMetricS
         open_incident.save(update_fields=("status", "resolved_at"))
         notify_incident = open_incident
     if notify_incident is not None:
-        from .tasks import send_incident_push_task
-
-        send_incident_push_task.delay(notify_incident.pk)
+        enqueue_named_task(SEND_INCIDENT_PUSH_TASK, args=(notify_incident.pk,))
     return snapshot

@@ -15,6 +15,7 @@ from .models import (
 )
 from .push import send_incident_push
 from .services import capture_server_metrics, probe_all_projects
+from .task_names import SEND_INCIDENT_PUSH_TASK
 
 
 @shared_task(ignore_result=True)
@@ -82,7 +83,13 @@ def monitor_deployment_state_task() -> dict[str, object]:
     }
 
 
-@shared_task(ignore_result=True, autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 3})
+@shared_task(
+    name=SEND_INCIDENT_PUSH_TASK,
+    ignore_result=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_kwargs={"max_retries": 3},
+)
 def send_incident_push_task(incident_id: int) -> dict[str, int]:
     incident = Incident.objects.filter(pk=incident_id).first()
     return send_incident_push(incident) if incident is not None else {"sent": 0, "failed": 0, "disabled": 0}

@@ -10,7 +10,7 @@ from django.core.management import call_command
 from django.db import transaction
 from django.test import TransactionTestCase
 
-from reports.file_cleanup import _model_file_fields
+from reports.file_cleanup import _model_file_fields, delete_file_if_unreferenced
 from reports.models import (
     AchievementEvidenceImage,
     AchievementEvidenceReport,
@@ -155,16 +155,21 @@ class StorageObjectCleanupTests(TransactionTestCase):
         name = report.image1.name
         with (
             patch.object(self.storage, "delete", side_effect=OSError("R2 unavailable")),
-            patch("reports.utils.run_task_safe") as run_task,
+            patch("reports.file_cleanup.run_named_task_safe") as run_task,
         ):
             report.delete()
 
         run_task.assert_called_once()
         args = run_task.call_args.args
-        self.assertEqual(args[1:], ("reports.Report", "image1", name))
         self.assertEqual(
-            args[0].name,
-            "reports.tasks.delete_orphaned_storage_file_task",
+            args,
+            (
+                "reports.tasks.delete_orphaned_storage_file_task",
+                delete_file_if_unreferenced,
+                "reports.Report",
+                "image1",
+                name,
+            ),
         )
         self.assertTrue(self.storage.exists(name))
 

@@ -77,6 +77,15 @@ class OperationsApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         return response.json()["token"]
 
+    def test_incident_push_task_name_is_stable(self):
+        from operations.task_names import SEND_INCIDENT_PUSH_TASK
+        from operations.tasks import send_incident_push_task
+
+        self.assertEqual(
+            send_incident_push_task.name,
+            SEND_INCIDENT_PUSH_TASK,
+        )
+
     def test_login_is_restricted_to_operations_members(self):
         response = self.client.post(
             reverse("operations:login"),
@@ -327,8 +336,8 @@ class OperationsApiTests(TestCase):
         self.assertEqual(incident.acknowledged_by, self.admin)
 
     @override_settings(OPERATIONS_CAPACITY_SUSTAINED_SAMPLES=3, CPU_ALERT_PERCENT=80)
-    @patch("operations.tasks.send_incident_push_task.delay")
-    def test_capacity_alert_requires_sustained_pressure(self, push_delay):
+    @patch("operations.services.enqueue_named_task")
+    def test_capacity_alert_requires_sustained_pressure(self, enqueue_task):
         for cpu_percent in (95, 20, 95):
             capture_server_metrics(
                 self.server,
@@ -342,15 +351,15 @@ class OperationsApiTests(TestCase):
             )
 
         self.assertFalse(Incident.objects.filter(dedupe_key=f"server:{self.server.pk}:capacity").exists())
-        push_delay.assert_not_called()
+        enqueue_task.assert_not_called()
 
     @override_settings(
         OPERATIONS_CAPACITY_SUSTAINED_SAMPLES=3,
         CPU_ALERT_PERCENT=80,
         CELERY_QUEUE_ALERT_LENGTH=10,
     )
-    @patch("operations.tasks.send_incident_push_task.delay")
-    def test_capacity_alert_includes_recommended_action(self, push_delay):
+    @patch("operations.services.enqueue_named_task")
+    def test_capacity_alert_includes_recommended_action(self, enqueue_task):
         for _ in range(3):
             capture_server_metrics(
                 self.server,
@@ -367,7 +376,10 @@ class OperationsApiTests(TestCase):
         self.assertIn("CPU مرتفع بشكل مستمر", incident.message)
         self.assertIn("الإجراء المناسب", incident.message)
         self.assertIn("worker إضافي", incident.message)
-        push_delay.assert_called_once_with(incident.pk)
+        enqueue_task.assert_called_once_with(
+            "operations.tasks.send_incident_push_task",
+            args=(incident.pk,),
+        )
 
     @patch("operations.views.all_deployment_states")
     def test_deployment_status_reports_repository_drift(self, all_states):
