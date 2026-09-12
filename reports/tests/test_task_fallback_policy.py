@@ -6,10 +6,12 @@ requests and cascade a broker outage into a site-wide slowdown.
 """
 from __future__ import annotations
 
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 
+from reports.task_dispatch import enqueue_named_task
 from reports.utils import run_named_task_safe, run_task_safe
 
 
@@ -75,7 +77,7 @@ class TaskFallbackPolicyTests(TestCase):
         fallback_calls = []
 
         with (
-            patch("reports.utils.current_app.send_task") as send_task,
+            patch("reports.utils.enqueue_named_task") as enqueue,
             self.captureOnCommitCallbacks(execute=True),
         ):
             run_named_task_safe(
@@ -84,9 +86,9 @@ class TaskFallbackPolicyTests(TestCase):
                 42,
             )
 
-        send_task.assert_called_once()
-        _, call_kwargs = send_task.call_args
-        self.assertEqual(send_task.call_args.args, ("reports.tasks.example",))
+        enqueue.assert_called_once()
+        _, call_kwargs = enqueue.call_args
+        self.assertEqual(enqueue.call_args.args, ("reports.tasks.example",))
         self.assertEqual(call_kwargs["args"], (42,))
         self.assertEqual(call_kwargs["kwargs"], {})
         self.assertIn("trace_id", call_kwargs["headers"])
@@ -97,7 +99,7 @@ class TaskFallbackPolicyTests(TestCase):
 
         with (
             patch(
-                "reports.utils.current_app.send_task",
+                "reports.utils.enqueue_named_task",
                 side_effect=_BrokerDown("broker unreachable"),
             ),
             self.captureOnCommitCallbacks(execute=True),
@@ -109,6 +111,42 @@ class TaskFallbackPolicyTests(TestCase):
             )
 
         self.assertEqual(fallback_calls, [42])
+
+    def test_named_dispatch_uses_registered_task_and_preserves_options(self):
+        task = Mock()
+        app = SimpleNamespace(
+            tasks={"reports.tasks.example": task},
+            send_task=Mock(),
+        )
+
+        enqueue_named_task(
+            "reports.tasks.example",
+            args=[42],
+            queue="images",
+            app=app,
+        )
+
+        task.apply_async.assert_called_once_with(
+            args=[42],
+            queue="images",
+        )
+        app.send_task.assert_not_called()
+
+    def test_named_dispatch_can_publish_an_unregistered_task(self):
+        app = SimpleNamespace(tasks={}, send_task=Mock())
+
+        enqueue_named_task(
+            "reports.tasks.example",
+            args=[42],
+            queue="images",
+            app=app,
+        )
+
+        app.send_task.assert_called_once_with(
+            "reports.tasks.example",
+            args=[42],
+            queue="images",
+        )
 
     def test_image_compression_does_not_run_inline_on_report_save(self):
         """Compression is an optimisation — the uploaded images stay valid

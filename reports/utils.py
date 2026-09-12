@@ -5,11 +5,11 @@ from django.conf import settings
 from django.apps import apps
 import logging
 
-from celery import current_app
-
 from core.observability import report_degraded as _degraded, soft_fail
 
 from core.trace_context import get_trace_id
+
+from .task_dispatch import enqueue_named_task
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ class _NamedTaskProxy:
         self._fallback = fallback
 
     def apply_async(self, *, args=None, kwargs=None, headers=None):
-        return current_app.send_task(
+        return enqueue_named_task(
             self.name,
             args=args,
             kwargs=kwargs,

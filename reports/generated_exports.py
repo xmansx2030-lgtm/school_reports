@@ -13,6 +13,9 @@ from django.utils.dateparse import parse_datetime
 
 from .cache_utils import redis_cache_lock
 from .models import GeneratedExportJob
+from .services_generated_exports import build_generated_export_job
+from .task_dispatch import enqueue_named_task
+from .task_names import BUILD_GENERATED_EXPORT_TASK
 
 logger = logging.getLogger(__name__)
 CORE_RECOVERY_MODE = "inline-v1"
@@ -73,9 +76,11 @@ def enqueue_generated_export(*, school, requested_by, kind: str, parameters: dic
 
         def _enqueue():
             try:
-                from .tasks import build_generated_export_task
-
-                build_generated_export_task.apply_async(args=[job.pk], queue="images")
+                enqueue_named_task(
+                    BUILD_GENERATED_EXPORT_TASK,
+                    args=[job.pk],
+                    queue="images",
+                )
             except Exception as exc:
                 logger.exception("Unable to queue generated export job=%s", job.pk)
                 GeneratedExportJob.objects.filter(pk=job.pk).update(
@@ -183,9 +188,7 @@ def recover_stale_generated_exports(*, limit: int = 1) -> int:
             )
 
         try:
-            from .tasks import build_generated_export_task
-
-            build_generated_export_task.run(job.pk)
+            build_generated_export_job(job.pk)
         except Exception as exc:
             logger.exception("Unable to build recovered generated export job=%s", job.pk)
             GeneratedExportJob.objects.filter(pk=job.pk).update(

@@ -232,8 +232,16 @@ class GeneratedExportJobTests(TestCase):
         sql = " ".join(query["sql"] for query in captured.captured_queries).upper()
         self.assertNotIn(" JOIN ", sql)
 
+    def test_generated_export_task_name_remains_backward_compatible(self):
+        from reports.tasks import build_generated_export_task
+
+        self.assertEqual(
+            build_generated_export_task.name,
+            "reports.tasks.build_generated_export_task",
+        )
+
     @override_settings(GENERATED_EXPORT_QUEUE_STALE_SECONDS=30)
-    @patch("reports.tasks.build_generated_export_task.run")
+    @patch("reports.generated_exports.build_generated_export_job")
     def test_stale_media_export_is_built_in_core_worker_once(self, build):
         from datetime import timedelta
 
@@ -266,7 +274,7 @@ class GeneratedExportJobTests(TestCase):
         GENERATED_EXPORT_RECOVERY_RETRY_SECONDS=60,
         GENERATED_EXPORT_RECOVERY_MAX_ATTEMPTS=1,
     )
-    @patch("reports.tasks.build_generated_export_task.run")
+    @patch("reports.generated_exports.build_generated_export_job")
     def test_exhausted_export_recovery_becomes_a_clear_failure(self, build):
         from datetime import timedelta
 
