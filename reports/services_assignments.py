@@ -14,9 +14,9 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.utils import timezone
 
+from .approval_errors import ApprovalError
 from .model_parts.approvals import ApprovalState
 from .model_parts.assignments import AssignmentEvidence, AssignmentTarget
-from .services_approval import ApprovalError
 
 __all__ = [
     "accept_target",
@@ -133,11 +133,7 @@ def remove_evidence(evidence: AssignmentEvidence, user) -> None:
 
 def ensure_submittable(target: AssignmentTarget) -> None:
     """يتحقق من استيفاء شرط الشواهد قبل الإرسال للمراجعة."""
-    shortfall = target.evidence_shortfall()
-    if shortfall:
-        raise ApprovalError(
-            f"هذا التكليف يتطلب شواهد — ينقصك {shortfall} شاهد على الأقل قبل الإرسال."
-        )
+    target.assert_ready_for_submission()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

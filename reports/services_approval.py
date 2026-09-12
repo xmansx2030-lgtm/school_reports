@@ -20,11 +20,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
 from . import capabilities as caps
+from .approval_errors import ApprovalError
 from .model_parts.approvals import (
     FINAL_STATES,
     ApprovalRoute,
@@ -51,10 +52,6 @@ __all__ = [
     "transitions_for",
     "route_for",
 ]
-
-
-class ApprovalError(ValidationError):
-    """انتقال غير مسموح — في الحالة أو في الصلاحية."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────

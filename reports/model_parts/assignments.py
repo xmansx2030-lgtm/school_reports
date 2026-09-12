@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..approval_errors import ApprovalError
 from .approvals import ApprovalMixin, ApprovalState
 from .base import *
 from .schools import Department, School, SchoolGroup, Teacher
@@ -317,9 +318,11 @@ class AssignmentTarget(ApprovalMixin):
 
     def assert_ready_for_submission(self) -> None:
         """يفحصه مكوّن الاعتماد قبل الإرسال — فلا يمر تكليف ناقص الشواهد."""
-        from ..services_assignments import ensure_submittable
-
-        ensure_submittable(self)
+        shortfall = self.evidence_shortfall()
+        if shortfall:
+            raise ApprovalError(
+                f"هذا التكليف يتطلب شواهد — ينقصك {shortfall} شاهد على الأقل قبل الإرسال."
+            )
 
     def _is_issuer(self, user) -> bool:
         return (
