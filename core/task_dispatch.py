@@ -23,6 +23,23 @@ from core.trace_context import get_trace_id
 logger = logging.getLogger(__name__)
 
 
+def _registered_task(celery_app: Any, task_name: str) -> Any:
+    task = celery_app.tasks.get(task_name)
+    if task is not None:
+        return task
+
+    # Celery deliberately ignores ``task_always_eager`` in ``send_task``. A
+    # test/development process may reach a producer before autodiscovery has
+    # imported every app's tasks, so load the configured task modules once and
+    # retry the registry. This is framework discovery, not a producer import of
+    # its task module, and therefore does not recreate a static dependency.
+    config = getattr(celery_app, "conf", None)
+    if bool(getattr(config, "task_always_eager", False)):
+        celery_app.loader.import_default_modules()
+        return celery_app.tasks.get(task_name)
+    return None
+
+
 def enqueue_named_task(
     task_name: str,
     *,
@@ -38,7 +55,7 @@ def enqueue_named_task(
         call_options["args"] = args
     if kwargs is not None:
         call_options["kwargs"] = kwargs
-    task = celery_app.tasks.get(task_name)
+    task = _registered_task(celery_app, task_name)
     if task is not None:
         return task.apply_async(**call_options)
     return celery_app.send_task(task_name, **call_options)

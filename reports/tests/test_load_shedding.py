@@ -176,6 +176,34 @@ class InfrastructureCapacityMonitorTests(TestCase):
 
         return monitor_infrastructure_capacity_task.apply().get()
 
+    def test_monitor_task_contract_is_stable(self):
+        from reports.task_names import MONITOR_INFRASTRUCTURE_CAPACITY_TASK
+        from reports.tasks import monitor_infrastructure_capacity_task
+
+        self.assertEqual(
+            monitor_infrastructure_capacity_task.name,
+            MONITOR_INFRASTRUCTURE_CAPACITY_TASK,
+        )
+        self.assertEqual(
+            settings.CELERY_TASK_ROUTES[MONITOR_INFRASTRUCTURE_CAPACITY_TASK]["queue"],
+            "periodic",
+        )
+
+    @patch("reports.tasks.enqueue_named_task")
+    @patch("reports.tasks.collect_infrastructure_capacity_report")
+    def test_monitor_task_delegates_collection_and_snapshot(self, collect, enqueue):
+        from operations.task_names import STORE_CAPACITY_SNAPSHOT_TASK
+        from reports.tasks import monitor_infrastructure_capacity_task
+
+        report = {"alerts": [], "queue_lengths": {"default": 0}}
+        collect.return_value = report
+
+        result = monitor_infrastructure_capacity_task.apply().get()
+
+        self.assertEqual(result, report)
+        collect.assert_called_once_with()
+        enqueue.assert_called_once_with(STORE_CAPACITY_SNAPSHOT_TASK, args=(report,))
+
     def test_healthy_infrastructure_raises_no_alert(self):
         report = self._run()
 

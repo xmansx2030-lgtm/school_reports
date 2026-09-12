@@ -64,6 +64,12 @@ class TelegramAlertTests(TestCase):
             password="secret-password",
         )
 
+    def test_telegram_task_name_is_stable(self):
+        from reports.task_names import SEND_TELEGRAM_ALERT_TASK
+        from reports.tasks import send_telegram_alert_task
+
+        self.assertEqual(send_telegram_alert_task.name, SEND_TELEGRAM_ALERT_TASK)
+
     def test_alert_builders_never_include_phone_password_body_or_receipt(self):
         registration = build_school_registration_alert(self.school)
         ticket = Ticket.objects.create(
@@ -95,7 +101,7 @@ class TelegramAlertTests(TestCase):
         self.assertNotIn("500", payment_alert.text)
 
     def test_school_creation_is_queued_only_after_commit(self):
-        with patch("reports.tasks.send_telegram_alert_task.apply_async") as mocked:
+        with patch("reports.telegram_alerts.enqueue_named_task") as mocked:
             with self.captureOnCommitCallbacks(execute=True):
                 school = School.objects.create(
                     name="مدرسة تسجيل جديدة",
@@ -103,13 +109,18 @@ class TelegramAlertTests(TestCase):
                 )
 
         mocked.assert_called_once()
+        self.assertEqual(
+            mocked.call_args.args,
+            ("reports.tasks.send_telegram_alert_task",),
+        )
+        self.assertEqual(mocked.call_args.kwargs["queue"], "notifications")
         payload = mocked.call_args.kwargs["args"][0]
         self.assertEqual(payload["category"], "registration")
         self.assertIn(str(school.pk), payload["event_key"])
         self.assertNotIn("phone", json.dumps(payload))
 
     def test_customer_complaint_is_queued_without_personal_details(self):
-        with patch("reports.tasks.send_telegram_alert_task.apply_async") as mocked:
+        with patch("reports.telegram_alerts.enqueue_named_task") as mocked:
             with self.captureOnCommitCallbacks(execute=True):
                 complaint = CustomerComplaint.objects.create(
                     name="اسم خاص",
@@ -160,7 +171,7 @@ class TelegramAlertTests(TestCase):
             created_by=self.manager,
         )
 
-        with patch("reports.tasks.send_telegram_alert_task.apply_async") as mocked:
+        with patch("reports.telegram_alerts.enqueue_named_task") as mocked:
             with self.captureOnCommitCallbacks(execute=True):
                 payment.status = Payment.Status.APPROVED
                 payment.save(update_fields=["status", "updated_at"])

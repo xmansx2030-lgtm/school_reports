@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
-import time as time_module
 from datetime import datetime, time as dt_time, timedelta
 from celery import shared_task
 from django.apps import apps
@@ -16,11 +14,25 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from core.observability import report_degraded as _degraded, soft_fail
+from core.task_dispatch import enqueue_named_task
+
+from operations.task_names import STORE_CAPACITY_SNAPSHOT_TASK
 
 from .email_branding import email_brand_context, platform_url, render_branded_email
+from .services_capacity import collect_infrastructure_capacity_report
 from .storage import _compress_image_file
-from .task_names import BUILD_GENERATED_EXPORT_TASK, DELETE_ORPHANED_STORAGE_FILE_TASK
-from .telegram_alerts import TelegramDeliveryError, deliver_telegram_alert
+from .task_names import (
+    BUILD_GENERATED_EXPORT_TASK,
+    DELETE_ORPHANED_STORAGE_FILE_TASK,
+    MONITOR_INFRASTRUCTURE_CAPACITY_TASK,
+    SEND_TELEGRAM_ALERT_TASK,
+)
+from .telegram_alerts import (
+    TelegramAlert,
+    TelegramDeliveryError,
+    deliver_telegram_alert,
+    queue_telegram_alert,
+)
 from .web_push import WebPushTransientError
 
 logger = logging.getLogger(__name__)
@@ -36,6 +48,7 @@ def _locked_generated_export_job(job_id: int):
 
 
 @shared_task(
+    name=SEND_TELEGRAM_ALERT_TASK,
     bind=True,
     ignore_result=True,
     autoretry_for=(TelegramDeliveryError,),
@@ -238,7 +251,11 @@ def cleanup_ai_usage_task(self, days: int | None = None, chunk_size: int = 2000)
     return deleted_total
 
 
-@shared_task(bind=True, ignore_result=True)
+@shared_task(
+    name=MONITOR_INFRASTRUCTURE_CAPACITY_TASK,
+    bind=True,
+    ignore_result=True,
+)
 def monitor_infrastructure_capacity_task(self) -> dict:
     """Warn before Redis or the session table runs the platform into trouble.
 
@@ -248,168 +265,10 @@ def monitor_infrastructure_capacity_task(self) -> dict:
     so the memory ratio needs to be visible *before* it gets there.
     """
     task_id, retries, trace_id = _task_ctx(self)
-    report: dict = {
-        "redis_used_percent": None,
-        "expired_sessions": None,
-        "cpu_percent": None,
-        "memory_percent": None,
-        "disk_percent": None,
-        "queue_lengths": {},
-        "http_5xx_percent": None,
-        "http_average_ms": None,
-        "alerts": [],
-    }
-
-    def _threshold(name: str, default: int) -> int:
-        # Deliberately not `value or default`: a configured 0 means "always
-        # alert" and must survive, not fall back to the default.
-        value = getattr(settings, name, default)
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-
-    threshold = _threshold("REDIS_MEMORY_ALERT_PERCENT", 80)
-
-    try:
-        from django_redis import get_redis_connection
-
-        info = get_redis_connection("default").info(section="memory")
-        used = int(info.get("used_memory") or 0)
-        limit = int(info.get("maxmemory") or 0)
-        if limit > 0 and used > 0:
-            percent = round((used / limit) * 100, 1)
-            report["redis_used_percent"] = percent
-            if percent >= threshold:
-                message = (
-                    f"Redis memory at {percent}% of its limit "
-                    f"({round(used / (1024 * 1024), 1)} MB of {round(limit / (1024 * 1024), 1)} MB)."
-                )
-                report["alerts"].append(message)
-                logger.error("Infrastructure capacity warning: %s", message)
-                opmetrics.increment("infra.redis.memory_high")
-    except Exception:
-        # A missing Redis (local/dev) must not fail the periodic job.
-        logger.debug("Redis memory probe unavailable", exc_info=True)
-
-    try:
-        Session = apps.get_model("sessions", "Session")
-        expired = Session.objects.filter(expire_date__lt=timezone.now()).count()
-        report["expired_sessions"] = expired
-        if expired > _threshold("EXPIRED_SESSION_ALERT_THRESHOLD", 100_000):
-            message = f"{expired} expired session rows are still pending cleanup."
-            report["alerts"].append(message)
-            logger.error("Infrastructure capacity warning: %s", message)
-            opmetrics.increment("infra.sessions.backlog_high")
-    except Exception:
-        logger.debug("Session backlog probe failed", exc_info=True)
-
-    # Host/container resource pressure. psutil sees host resources on the
-    # current Docker deployment; disk_usage('/') observes the same backing
-    # filesystem whose exhaustion would stop uploads and PostgreSQL writes.
-    try:
-        def _cpu_sample():
-            with open("/proc/stat", "r", encoding="ascii") as proc_stat:
-                fields = [int(value) for value in proc_stat.readline().split()[1:]]
-            idle = fields[3] + (fields[4] if len(fields) > 4 else 0)
-            return sum(fields), idle
-
-        total_before, idle_before = _cpu_sample()
-        time_module.sleep(0.15)
-        total_after, idle_after = _cpu_sample()
-        total_delta = max(1, total_after - total_before)
-        cpu_percent = round(
-            max(0.0, min(100.0, (1 - ((idle_after - idle_before) / total_delta)) * 100)),
-            1,
-        )
-
-        meminfo = {}
-        with open("/proc/meminfo", "r", encoding="ascii") as proc_mem:
-            for line in proc_mem:
-                key, raw = line.split(":", 1)
-                meminfo[key] = int(raw.strip().split()[0])
-        total_memory = int(meminfo.get("MemTotal") or 0)
-        available_memory = int(meminfo.get("MemAvailable") or 0)
-        memory_percent = round(
-            ((total_memory - available_memory) / total_memory) * 100,
-            1,
-        ) if total_memory else 0.0
-        report["cpu_percent"] = cpu_percent
-        report["memory_percent"] = memory_percent
-        if cpu_percent >= _threshold("CPU_ALERT_PERCENT", 85):
-            report["alerts"].append(f"CPU usage at {cpu_percent}%.")
-            opmetrics.increment("infra.cpu.high")
-        if memory_percent >= _threshold("MEMORY_ALERT_PERCENT", 85):
-            report["alerts"].append(f"Memory usage at {memory_percent}%.")
-            opmetrics.increment("infra.memory.high")
-    except Exception:
-        logger.debug("CPU/memory capacity probe failed", exc_info=True)
-
-    try:
-        disk = shutil.disk_usage("/")
-        disk_percent = round((disk.used / disk.total) * 100, 1) if disk.total else 0.0
-        report["disk_percent"] = disk_percent
-        if disk_percent >= _threshold("DISK_ALERT_PERCENT", 80):
-            report["alerts"].append(
-                f"Disk usage at {disk_percent}% ({round(disk.free / (1024 ** 3), 1)} GB free)."
-            )
-            opmetrics.increment("infra.disk.high")
-    except Exception:
-        logger.debug("Disk capacity probe failed", exc_info=True)
-
-    try:
-        import redis as redis_client
-
-        broker_url = str(getattr(settings, "CELERY_BROKER_URL", "") or "")
-        broker = redis_client.from_url(broker_url, socket_connect_timeout=2, socket_timeout=2)
-        queue_limit = _threshold("CELERY_QUEUE_ALERT_LENGTH", 200)
-        for queue_name in ("default", "notifications", "images", "periodic"):
-            length = int(broker.llen(queue_name) or 0)
-            report["queue_lengths"][queue_name] = length
-            if length >= queue_limit:
-                report["alerts"].append(
-                    f"Celery queue '{queue_name}' contains {length} pending tasks."
-                )
-                opmetrics.increment(f"infra.queue.high.{queue_name}")
-    except Exception:
-        logger.debug("Celery queue probe failed", exc_info=True)
-
-    # Application health from the current UTC-hour bucket. Minimum samples keep
-    # one isolated failure/slow request from producing a misleading percentage.
-    try:
-        metric_snapshot = opmetrics.snapshot()
-        request_count = int(metric_snapshot.get("http.requests.total") or 0)
-        error_count = int(metric_snapshot.get("http.responses.5xx") or 0)
-        timing_count = int(metric_snapshot.get("http.response.duration.count") or 0)
-        timing_sum = int(metric_snapshot.get("http.response.duration.sum_ms") or 0)
-        min_samples = _threshold("HTTP_ALERT_MIN_SAMPLES", 20)
-        if request_count:
-            error_percent = round(error_count * 100 / request_count, 2)
-            report["http_5xx_percent"] = error_percent
-            if request_count >= min_samples and error_percent >= float(
-                getattr(settings, "HTTP_5XX_ALERT_PERCENT", 2.0) or 2.0
-            ):
-                report["alerts"].append(
-                    f"HTTP 5xx rate at {error_percent}% ({error_count}/{request_count})."
-                )
-                opmetrics.increment("infra.http.5xx_high")
-        if timing_count:
-            average_ms = round(timing_sum / timing_count, 1)
-            report["http_average_ms"] = average_ms
-            if timing_count >= min_samples and average_ms >= _threshold(
-                "HTTP_LATENCY_ALERT_MS", 2000
-            ):
-                report["alerts"].append(
-                    f"Average HTTP response time at {average_ms} ms ({timing_count} samples)."
-                )
-                opmetrics.increment("infra.http.latency_high")
-    except Exception:
-        logger.debug("HTTP operational metrics probe failed", exc_info=True)
+    report = collect_infrastructure_capacity_report()
 
     if report["alerts"]:
         try:
-            from .telegram_alerts import TelegramAlert, queue_telegram_alert
-
             queue_telegram_alert(
                 TelegramAlert(
                     # One alert per hour while a condition persists: prompt
@@ -426,9 +285,7 @@ def monitor_infrastructure_capacity_task(self) -> dict:
             logger.exception("Unable to queue infrastructure capacity alert")
 
     try:
-        from operations.tasks import store_capacity_snapshot_task
-
-        store_capacity_snapshot_task.delay(report)
+        enqueue_named_task(STORE_CAPACITY_SNAPSHOT_TASK, args=(report,))
     except Exception:
         logger.exception("Unable to queue operations capacity snapshot")
 

@@ -15,6 +15,10 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
+from core.task_dispatch import enqueue_named_task
+
+from .task_names import SEND_TELEGRAM_ALERT_TASK
+
 logger = logging.getLogger(__name__)
 
 
@@ -255,9 +259,11 @@ def queue_telegram_alert(alert: TelegramAlert) -> bool:
 
     def _enqueue() -> None:
         try:
-            from .tasks import send_telegram_alert_task
-
-            send_telegram_alert_task.apply_async(args=[payload], queue="notifications")
+            enqueue_named_task(
+                SEND_TELEGRAM_ALERT_TASK,
+                args=(payload,),
+                queue="notifications",
+            )
         except Exception:
             logger.exception(
                 "Unable to enqueue Telegram alert event=%s category=%s",

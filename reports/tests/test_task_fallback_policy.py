@@ -133,7 +133,11 @@ class TaskFallbackPolicyTests(TestCase):
         app.send_task.assert_not_called()
 
     def test_named_dispatch_can_publish_an_unregistered_task(self):
-        app = SimpleNamespace(tasks={}, send_task=Mock())
+        app = SimpleNamespace(
+            tasks={},
+            send_task=Mock(),
+            conf=SimpleNamespace(task_always_eager=False),
+        )
 
         enqueue_named_task(
             "reports.tasks.example",
@@ -147,6 +151,28 @@ class TaskFallbackPolicyTests(TestCase):
             args=[42],
             queue="images",
         )
+
+    def test_eager_dispatch_loads_registered_tasks_before_send_task(self):
+        task = Mock()
+        app = SimpleNamespace(
+            tasks={},
+            send_task=Mock(),
+            conf=SimpleNamespace(task_always_eager=True),
+        )
+
+        def load_default_modules():
+            app.tasks["reports.tasks.example"] = task
+
+        app.loader = SimpleNamespace(import_default_modules=load_default_modules)
+
+        enqueue_named_task(
+            "reports.tasks.example",
+            args=[42],
+            app=app,
+        )
+
+        task.apply_async.assert_called_once_with(args=[42])
+        app.send_task.assert_not_called()
 
     def test_legacy_dispatch_imports_remain_compatible(self):
         from reports import task_dispatch

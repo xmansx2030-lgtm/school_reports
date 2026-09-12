@@ -15,7 +15,7 @@ from .models import (
 )
 from .push import send_incident_push
 from .services import capture_server_metrics, probe_all_projects
-from .task_names import SEND_INCIDENT_PUSH_TASK
+from .task_names import SEND_INCIDENT_PUSH_TASK, STORE_CAPACITY_SNAPSHOT_TASK
 
 
 @shared_task(ignore_result=True)
@@ -24,7 +24,7 @@ def run_operations_monitor_task() -> dict[str, int]:
     return {"checked": len(checks), "failed": sum(1 for check in checks if not check.ok)}
 
 
-@shared_task(ignore_result=True)
+@shared_task(name=STORE_CAPACITY_SNAPSHOT_TASK, ignore_result=True)
 def store_capacity_snapshot_task(report: dict) -> None:
     server = ManagedServer.objects.filter(is_active=True).order_by("id").first()
     if server is not None:
