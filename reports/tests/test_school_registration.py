@@ -177,7 +177,11 @@ class SchoolRegistrationFlowTests(TestCase):
             html,
         )
         self.assertIn("function () { receiptPreserved = true; }", html)
-        self.assertIn("if (!receiptPreserved && !window.confirm(", html)
+        self.assertIn('id="leaveConfirmation" role="alertdialog"', html)
+        self.assertIn('data-leave-cancel', html)
+        self.assertIn('data-leave-confirm', html)
+        self.assertIn("pendingDashboardUrl = event.currentTarget.href;", html)
+        self.assertNotIn("window.confirm(", html)
         self.assertIn('html[data-theme="dark"] .credential {', html)
         self.assertIn('html[data-theme="dark"] .login-address {', html)
         self.assertIn('html[data-theme="dark"] .toast {', html)

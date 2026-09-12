@@ -352,6 +352,30 @@
       transition: opacity .2s, transform .2s;
     }
     .toast.show { opacity: 1; transform: none; }
+    .leave-confirmation[hidden] { display: none; }
+    .leave-confirmation {
+      position: fixed;
+      z-index: 1100;
+      inset: 0;
+      display: grid;
+      padding: 20px;
+      place-items: center;
+      background: rgba(4, 28, 19, .58);
+    }
+    .leave-confirmation__card {
+      width: min(430px, 100%);
+      padding: 24px;
+      color: var(--ink);
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 24px 70px rgba(4, 28, 19, .3);
+    }
+    .leave-confirmation__card h2 { margin: 0 0 8px; color: var(--forest); font-size: 1.05rem; }
+    .leave-confirmation__card p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.85; }
+    .leave-confirmation__actions { display: flex; margin-block-start: 20px; justify-content: flex-start; gap: 10px; }
+    .leave-confirmation__actions button { min-height: 44px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font: inherit; font-weight: 800; }
+    .leave-confirmation__actions [data-leave-confirm] { color: var(--white); background: var(--green); border-color: var(--green); }
     @media (max-width: 900px) {
       .next-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .next-steps li:last-child { grid-column: 1 / -1; min-height: auto; }
@@ -380,7 +404,7 @@
     @media print {
       body { padding: 0; color: #000; background: #fff; }
       .success-shell { box-shadow: none; }
-      .launch-panel, .receipt-actions, .security-note, .toast { display: none !important; }
+      .launch-panel, .receipt-actions, .security-note, .toast, .leave-confirmation { display: none !important; }
       .credential-row input, .credential-row .icon-button { display: none !important; }
       .credential-print-value { display: block !important; }
     }
@@ -522,12 +546,26 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <section class="leave-confirmation" id="leaveConfirmation" role="alertdialog" aria-modal="true" aria-labelledby="leaveConfirmationTitle" aria-describedby="leaveConfirmationText" hidden>
+    <div class="leave-confirmation__card">
+      <h2 id="leaveConfirmationTitle">هل تحفظ بيانات الدخول أولًا؟</h2>
+      <p id="leaveConfirmationText">تظهر بيانات الدخول في هذه الصفحة مرة واحدة. انسخها أو اطبع الإيصال قبل الانتقال إلى لوحة المدرسة.</p>
+      <div class="leave-confirmation__actions">
+        <button type="button" data-leave-cancel>البقاء لنسخ البيانات</button>
+        <button type="button" data-leave-confirm>المتابعة إلى اللوحة</button>
+      </div>
+    </div>
+  </section>
 
   <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
     (function () {
       var toast = document.getElementById("toast");
       var toastTimer;
       var receiptPreserved = false;
+      var pendingDashboardUrl = "";
+      var leaveConfirmation = document.getElementById("leaveConfirmation");
+      var leaveCancel = leaveConfirmation.querySelector("[data-leave-cancel]");
+      var leaveConfirm = leaveConfirmation.querySelector("[data-leave-confirm]");
       var copiedCredentialTargets = {
         loginPhone: false,
         loginPassword: false
@@ -603,9 +641,19 @@
       });
 
       document.getElementById("launchDashboard").addEventListener("click", function (event) {
-        if (!receiptPreserved && !window.confirm("بيانات الدخول تظهر مرة واحدة. هل تريد المغادرة قبل نسخها أو طباعتها؟")) {
-          event.preventDefault();
-        }
+        if (receiptPreserved) return;
+        event.preventDefault();
+        pendingDashboardUrl = event.currentTarget.href;
+        leaveConfirmation.hidden = false;
+        leaveCancel.focus();
+      });
+
+      leaveCancel.addEventListener("click", function () {
+        leaveConfirmation.hidden = true;
+        document.getElementById("launchDashboard").focus();
+      });
+      leaveConfirm.addEventListener("click", function () {
+        if (pendingDashboardUrl) window.location.assign(pendingDashboardUrl);
       });
 
       var visibility = document.getElementById("passwordVisibility");
