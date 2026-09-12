@@ -61,10 +61,14 @@ class SchoolDashboardCacheTests(SimpleTestCase):
         from reports.model_parts.signals import invalidate_dashboard_after_school_activity
 
         old_version = school_dashboard_version(24)
-        invalidate_dashboard_after_school_activity(
-            sender=object,
-            instance=SimpleNamespace(school_id=24),
-        )
+        with patch(
+            "reports.model_parts.signals.transaction.on_commit",
+            side_effect=lambda callback: callback(),
+        ):
+            invalidate_dashboard_after_school_activity(
+                sender=object,
+                instance=SimpleNamespace(school_id=24),
+            )
         self.assertGreater(school_dashboard_version(24), old_version)
 
     @override_settings(SCHOOL_DASHBOARD_LOCK_WAIT_SECONDS=1.5)
