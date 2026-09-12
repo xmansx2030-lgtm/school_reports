@@ -28,18 +28,20 @@ def record_task_start(sender=None, task_id=None, task=None, **kwargs):
     try:
         cache.set(key, time.monotonic(), timeout=7200)
     except Exception:
-        pass
+        # Metrics are best effort and must never alter task execution.
+        logger.debug("Unable to record Celery task start", exc_info=True)
 
 
 @task_postrun.connect
 def record_task_finish(sender=None, task_id=None, task=None, state=None, **kwargs):
     key = _start_key(task_id)
-    started = cache.get(key) if key else None
-    if key:
-        try:
+    started = None
+    try:
+        if key:
+            started = cache.get(key)
             cache.delete(key)
-        except Exception:
-            pass
+    except Exception:
+        logger.debug("Unable to finish Celery timing metric", exc_info=True)
 
     task_name = getattr(sender, "name", None) or getattr(task, "name", None) or "unknown"
     opmetrics.increment(f"celery.task.postrun.{state or 'unknown'}")

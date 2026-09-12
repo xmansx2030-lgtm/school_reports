@@ -48,7 +48,8 @@ def _register_metric(metric: str, bucket: str) -> None:
         updated = list(current) + [metric]
         cache.set(key, updated, timeout=_BUCKET_SECONDS * 2)
     except Exception:
-        pass
+        # Observability cannot be allowed to fail the operation it observes.
+        logger.debug("Unable to register operational metric %s", metric, exc_info=True)
 
 
 def increment(metric: str, amount: int = 1) -> None:
@@ -65,7 +66,7 @@ def increment(metric: str, amount: int = 1) -> None:
         cache.add(key, 0, timeout=_BUCKET_SECONDS * 2)
         cache.incr(key, amount)
     except Exception:
-        pass
+        logger.debug("Unable to increment operational metric %s", metric, exc_info=True)
 
 
 def read_current(metric: str) -> int:
@@ -98,7 +99,7 @@ def timing(metric: str, duration_ms: float) -> None:
         cache.add(sum_key, 0, timeout=_BUCKET_SECONDS * 2)
         cache.incr(sum_key, int(duration_ms))
     except Exception:
-        pass
+        logger.debug("Unable to record operational timing %s", metric, exc_info=True)
 
 
 def snapshot() -> dict[str, int]:

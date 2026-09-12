@@ -6,25 +6,11 @@ class ReportsConfig(AppConfig):
     name = 'reports'
 
     def ready(self):
-        # Register auth/session signals (single-session enforcement, etc.)
-        try:
-            from . import signals  # noqa: F401
-        except Exception:
-            pass
+        # These receivers enforce authentication, storage accounting and
+        # physical-file lifecycle. A broken import must fail application boot;
+        # silently starting without them corrupts security or accounting.
+        from . import signals  # noqa: F401
+        from . import file_cleanup, storage_tracking
 
-        # Register incremental storage-usage tracking signals.
-        try:
-            from . import storage_tracking
-
-            storage_tracking.connect_all()
-        except Exception:
-            pass
-
-        # Delete replaced/deleted FileField objects from local storage or R2
-        # only after the surrounding database transaction commits.
-        try:
-            from . import file_cleanup
-
-            file_cleanup.connect_all()
-        except Exception:
-            pass
+        storage_tracking.connect_all()
+        file_cleanup.connect_all()

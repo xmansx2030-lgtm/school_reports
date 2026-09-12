@@ -15,7 +15,7 @@ def normalize_trace_id(value: str | None) -> str:
     return safe[:64]
 
 
-def set_trace_id(trace_id: str | None):
+def set_trace_id(trace_id: str | None) -> contextvars.Token[str | None]:
     return _trace_id_ctx.set(normalize_trace_id(trace_id) or None)
 
 
@@ -23,8 +23,10 @@ def get_trace_id() -> str | None:
     return _trace_id_ctx.get()
 
 
-def reset_trace_id(token) -> None:
+def reset_trace_id(token: contextvars.Token[str | None]) -> None:
     try:
         _trace_id_ctx.reset(token)
-    except Exception:
-        pass
+    except (RuntimeError, ValueError):
+        # A token may already have been reset or may belong to another context
+        # during cancellation cleanup. The typed API rejects unrelated values.
+        return

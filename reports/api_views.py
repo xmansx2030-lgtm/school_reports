@@ -7,6 +7,8 @@ active school stored in the user's session.
 """
 from __future__ import annotations
 
+import logging
+
 from rest_framework import mixins, viewsets, permissions, status  # noqa: F401
 from rest_framework.decorators import (
     action,
@@ -46,6 +48,8 @@ from .serializers import (
     TicketListSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 # ── Helpers ──────────────────────────────────────────────────────────
 def _active_school(request) -> School | None:
@@ -64,7 +68,9 @@ def _active_school(request) -> School | None:
             request.active_school = school
             return school
     except Exception:
-        pass
+        # Tenant isolation fails closed, but the data/session failure must be
+        # observable instead of looking like a user with no selected school.
+        logger.exception("Unable to resolve active school for API request")
     return None
 
 

@@ -7,8 +7,11 @@ features without rebuilding or restarting the application.
 
 from __future__ import annotations
 
+import logging
+
 from django.core.cache import cache
 
+logger = logging.getLogger(__name__)
 
 FEATURE_MANSOUR_PUBLIC = "mansour_public"
 FEATURE_REPORT_IMPROVEMENT = "report_improvement"
@@ -42,7 +45,7 @@ def clear_platform_ai_feature_cache() -> None:
     try:
         cache.delete(CACHE_KEY)
     except Exception:
-        pass
+        logger.debug("Unable to clear AI feature cache", exc_info=True)
 
 
 def get_platform_ai_feature_toggles() -> dict[str, bool]:
@@ -53,7 +56,7 @@ def get_platform_ai_feature_toggles() -> dict[str, bool]:
         if isinstance(cached, dict) and all(key in cached for key in _DEFAULTS):
             return {key: bool(cached[key]) for key in _DEFAULTS}
     except Exception:
-        pass
+        logger.debug("Unable to read AI feature cache", exc_info=True)
 
     toggles = dict(_DEFAULTS)
     try:
@@ -75,7 +78,7 @@ def get_platform_ai_feature_toggles() -> dict[str, bool]:
     try:
         cache.set(CACHE_KEY, toggles, CACHE_TIMEOUT_SECONDS)
     except Exception:
-        pass
+        logger.debug("Unable to write AI feature cache", exc_info=True)
     return toggles
 
 
