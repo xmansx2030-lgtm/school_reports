@@ -33,8 +33,11 @@
 - `config/urls.py` ثم `reports/urls.py`: عقد المسارات للويب وPWA والعملاء.
 - `reports/api_urls.py` و`operations/urls.py`: واجهات JSON المستخدمة خارجيًا؛
   لا تغيّر الحقول أو حالات HTTP دون اختبار توافق العميل.
-- `config/celery.py` و`reports/tasks.py`: تنفيذ المهام، بينما يحدد
-  `CELERY_BEAT_SCHEDULE` في الإعدادات الجدولة.
+- `config/celery.py` و`reports/tasks.py`: أغلفة تنفيذ المهام، بينما تحفظ
+  `reports/task_names.py` الأسماء العامة الثابتة، ويرسل المنتجون المستقلون عبر
+  `reports/task_dispatch.py`. منطق إنشاء التصدير في
+  `reports/services_generated_exports.py`، وتحدد الإعدادات الجدولة في
+  `CELERY_BEAT_SCHEDULE`.
 - `reports/consumers.py` و`reports/routing.py`: تحديثات WebSocket.
 - `reports/static/manifest.json` وservice worker: عقد تثبيت PWA والتخزين المؤقت.
 
@@ -45,6 +48,7 @@
 ```text
 HTTP/API views -> permissions/forms/serializers -> domain services -> models
 background tasks -------------------------------> domain services -> models
+work producers -> task dispatch -> background task -> domain service
 templates/static <- context/view models (لا منطق أعمال أو ORM داخل القالب)
 ```
 
@@ -73,6 +77,9 @@ templates/static <- context/view models (لا منطق أعمال أو ORM دا�
 - callbacks والمهام تستخدم مفاتيح provider/dedup وحالة `effects_applied_at` أو
   ما يعادلها؛ أعد الاختبار بطلب مكرر قبل تعديلها.
 - شغّل المهام بعد commit عند اعتمادها على صف جديد (`transaction.on_commit`).
+- عند عدم حاجة المنتج إلى كائن المهمة نفسه، استخدم الاسم الثابت و
+  `task_dispatch.enqueue_named_task` بدل استيراد `reports.tasks`؛ أبقِ غلاف
+  Celery رقيقًا وانقل منطق العمل إلى service قابلة للاختبار المباشر.
 - لا تجعل Redis مصدر صحة وحيدًا؛ الأقفال تقلل العمل المكرر، والـDB يحفظ العقد.
 
 ## ثوابت العزل والصلاحيات

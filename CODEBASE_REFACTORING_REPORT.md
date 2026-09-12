@@ -84,8 +84,9 @@ P2 في `TECHNICAL_DEBT.md` بدل تنفيذ big-bang rewrite يخالف شرط
   `python scripts/codebase_inventory.py --output docs/CODEBASE_INVENTORY.md`.
 - وُثقت نقاط الدخول والطبقات والمسارات الحرجة والمعاملات وidempotency ومكان
   إضافة كل نوع من الميزات في `docs/ARCHITECTURE.md`.
-- بقيت أربع دورات import وواجهات wildcard التوافقية معلنة كدين P1؛ لم تُكسر
-  public import surfaces المستعملة.
+- بدأ تفكيك دورات import دون كسر public surfaces: أُغلق الاعتماد العكسي من
+  `file_cleanup.py` و`generated_exports.py` إلى `tasks.py`، وبقيت المسارات
+  الأخرى وواجهات wildcard التوافقية معلنة كدين P1.
 
 ## Naming Improvements
 
@@ -202,7 +203,8 @@ dashboard عند 1440×900 بلا overflow أو أخطاء console. هذا دل�
 ## Technical Debt Remaining
 
 - P1: تدوير أسرار Git التاريخية وإثباته خارجيًا؛ إزالة wildcard import hubs؛
-  فك import cycles؛ وتنظيف قائمة broad-exception المتبقية ملفًا ملفًا.
+  استكمال فك import cycles بعد إغلاق مساري تنظيف الملفات والتصدير؛ وتنظيف
+  قائمة broad-exception المتبقية ملفًا ملفًا.
 - P2: تقسيم god files والقوالب، تقليل 1,090 استخدامًا لـ`!important` مع visual
   regression coverage، إضافة typecheck تدريجي، وتشغيل تكامل PostgreSQL/Redis/R2
   ومزودي الدفع المعزول.
@@ -213,7 +215,7 @@ dashboard عند 1440×900 بلا overflow أو أخطاء console. هذا دل�
 | المجال | التقييم | المبرر |
 |---|---:|---|
 | Code readability | 8/10 | dead code/imports والتكرار المؤكد انخفض؛ god files باقية ومعلنة |
-| Architecture clarity | 8/10 | خريطة وحدود ومسارات حرجة موثقة؛ import cycles باقية |
+| Architecture clarity | 8/10 | خريطة وحدود ومسارات حرجة موثقة؛ دورتان مباشرتان أُغلقتا ومسارات أخرى باقية |
 | Testability | 9/10 | أكثر من 2.3k اختبار وcharacterization tests وبوابات مستقلة |
 | Documentation | 9/10 | setup/architecture/inventory/audit/debt متاحة من الجذر |
 | Maintainability | 8/10 | lint/env/dependency/build contracts أقوى؛ CSS/type debt باقٍ |
@@ -222,6 +224,28 @@ dashboard عند 1440×900 بلا overflow أو أخطاء console. هذا دل�
 يمكن لمطور جديد تشغيل المشروع وتتبع business logic والـAPIs والـjobs ومسار
 النشر خلال ساعات. يلزمه الرجوع إلى سجل الدين قبل لمس import hubs أو الملفات
 الضخمة، وإلى اختبارات العقود قبل أي تغيير في الدفع أو الصلاحيات.
+
+## Architecture hardening follow-up — 2026-09-12
+
+- `74ad0e1b`: فصل جدولة إعادة محاولة حذف ملفات التخزين عن استيراد
+  `reports.tasks`، مع إبقاء fallback المتزامن عند تعطل broker وتثبيت اسم المهمة.
+- `780d89d2`: نقل بناء التصدير من مهمة Celery ضخمة إلى
+  `services_generated_exports.py`، وإضافة حد dispatch بالاسم يحافظ على eager
+  mode، والـqueue المسماة `images`، وعقد اسم المهمة.
+- انخفض `reports/tasks.py` من 2,164 إلى 1,994 سطرًا. أصبحت مهمة التصدير غلافًا
+  رقيقًا، والخدمة المركزة الجديدة 243 سطرًا، وملف dispatch العام 34 سطرًا.
+- أضيفت ستة اختبارات characterization/contract لمساري retry والdispatch وأسماء
+  المهام والاسترداد، ونجحت المجموعة المركزة 27/27.
+- نجح الاختبار الشامل الحالي: 2,356 اختبارًا، حالة واحدة skipped، خلال
+  503.453 ثانية. كما نجحت Ruff وcompileall وDjango check وmigration drift و
+  env/lock contracts وBandit وpip-audit.
+- نجح `check --deploy` بإعداد sandbox صريح، و`collectstatic` (279 ملفًا و1,177
+  post-processed)، وبناء `school-reports:architecture-refactor-qa`. أكد Linux
+  smoke العمل بالـUID 10001 وثبات اسمي مهمتي التنظيف والتصدير وقابلية استيراد
+  الخدمة الجديدة.
+- بقيت استيرادات مهمة أخرى داخل forms/signals/views وnotification integrations؛
+  لذلك يظل الحكم العام `PARTIALLY COMPLETE` ولا تُسوّى هذه المسارات بلا
+  characterization tests خاصة بكل مجال.
 
 ## Final QA boundary
 

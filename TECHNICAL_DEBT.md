@@ -14,7 +14,7 @@
 |---|---|---|---|
 | أسرار قديمة في تاريخ Git | تاريخ `.env` (الملف الحالي غير متتبع) | حذف الملف من الرأس لا يبطل credentials التي ظهرت تاريخيًا | تدوير كل قيمة ظهرت، التحقق من سجلات المزودين، ثم إعادة كتابة التاريخ في نافذة منسقة وإبطال النسخ القديمة |
 | import hubs وwildcard imports | `reports/views/_helpers.py`, `reports/model_parts/base.py`, `reports/views/billing_*.py` | تخفي الاعتماديات، توسع أثر التعديل، وتمنع F401 من تحليل هذه الملفات فقط | نقل كل وحدة إلى imports صريحة على دفعات مع اختبارات المجال؛ إزالة استثناء F401 لكل ملف عند اكتماله |
-| دورات استيراد بين الأعمال والمهام | `reports/tasks.py`, `services_export.py`, `generated_exports.py`, `file_cleanup.py` ووحدات billing/realtime | صعوبة الاختبار واحتمال فشل import جزئي أو الحاجة إلى imports داخل الدوال | استخراج عقود queue/notification صغيرة واتجاه أحادي، ثم تشغيل full suite وworker smoke test |
+| دورات استيراد متبقية بين منتجي العمل والمهام | `reports/forms.py`, `model_parts/signals.py`, `web_push.py`, `telegram_alerts.py` وبعض `views/` وnotification/realtime paths | صعوبة الاختبار واحتمال فشل import جزئي أو الحاجة إلى imports داخل الدوال | أُغلق مسارا `file_cleanup ↔ tasks` و`generated_exports ↔ tasks` في `74ad0e1b` و`780d89d2` مع full suite وLinux worker smoke؛ أكمل منتجًا واحدًا كل مرة عبر `task_dispatch.py` وخدمة مجال محمية باختبارات |
 | استثناءات عامة/ابتلاع متبقٍ | الملفات المسجلة في `pyproject.toml` تحت S110/S112 | قد يخفي تعطل بطاقة أو تكامل ويقلل قابلية الرصد | التقاط نوع محدد أو استخدام `core.observability` بسياق؛ حذف الاستثناء من القائمة عند تنظيف الملف |
 
 ## P2 — متوسط
