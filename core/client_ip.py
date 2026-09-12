@@ -4,6 +4,7 @@ from __future__ import annotations
 from ipaddress import ip_address, ip_network
 
 from django.conf import settings
+from django.http import HttpRequest
 
 
 def _valid_ip(value: object) -> str:
@@ -31,7 +32,7 @@ def _is_trusted_proxy(value: str) -> bool:
     return False
 
 
-def client_ip(request) -> str | None:
+def client_ip(request: HttpRequest) -> str | None:
     """Return a validated client address for logs and persisted audit records.
 
     Proxy-supplied addresses are accepted only when the direct peer belongs to
@@ -46,6 +47,6 @@ def client_ip(request) -> str | None:
     return remote_addr or None
 
 
-def client_ip_for_ratelimit(request) -> str:
+def client_ip_for_ratelimit(request: HttpRequest) -> str:
     """Return a stable rate-limit key when no valid address is available."""
     return client_ip(request) or "0.0.0.0"

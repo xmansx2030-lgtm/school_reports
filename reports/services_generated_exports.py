@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
+from typing import Any
 
 from django.conf import settings
 from django.core.files import File
@@ -19,7 +20,7 @@ from .models import GeneratedExportJob, School, SchoolYearArchive, Teacher
 logger = logging.getLogger(__name__)
 
 
-def locked_generated_export_job(job_id: int):
+def locked_generated_export_job(job_id: int) -> GeneratedExportJob | None:
     """Lock only the job row; nullable joins make PostgreSQL reject FOR UPDATE."""
     return GeneratedExportJob.objects.select_for_update().filter(pk=job_id).first()
 
@@ -58,8 +59,9 @@ def build_generated_export_job(job_id: int) -> bool:
             job.error_message = ""
             job.save(update_fields=["status", "started_at", "error_message"])
 
-        zip_file = None
-        archive = None
+        zip_file: Any | None = None
+        archive: SchoolYearArchive | None = None
+        metadata: dict[str, Any] | None = None
         try:
             school = School.objects.get(pk=job.school_id)
             requested_by = Teacher.objects.filter(pk=job.requested_by_id).first()
@@ -92,6 +94,8 @@ def build_generated_export_job(job_id: int) -> bool:
                 size_bytes = int((metadata or {}).get("archive_size_bytes") or 0)
 
             if job.kind == GeneratedExportJob.Kind.ARCHIVE_SNAPSHOT:
+                if metadata is None:
+                    raise RuntimeError("Archive export metadata is missing.")
                 capacity_error = archive_snapshot_capacity_error(school, size_bytes)
                 if capacity_error:
                     raise ValueError(capacity_error)
@@ -216,7 +220,7 @@ def build_generated_export_job(job_id: int) -> bool:
                 completed_at=timezone.now(),
             )
             opmetrics.increment("generated_export.failed")
-            if archive is not None and getattr(archive.archive_file, "name", ""):
+            if archive is not None and archive.archive_file.name:
                 try:
                     persisted = bool(
                         archive.pk

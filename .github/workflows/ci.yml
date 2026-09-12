@@ -50,6 +50,7 @@ jobs:
       - name: Static correctness checks
         run: |
           ruff check .
+          python -m mypy
           python -m compileall -q config core reports maintenance operations manage.py
           python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"
 

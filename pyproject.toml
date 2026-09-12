@@ -131,3 +131,21 @@ ignore = [
 "reports/views/billing_gateways.py" = ["F401"]
 "reports/views/billing_platform.py" = ["F401"]
 "reports/views/billing_school.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.12"
+files = [
+  "core/client_ip.py",
+  "core/task_dispatch.py",
+  "operations/task_names.py",
+  "reports/services_capacity.py",
+  "reports/services_generated_exports.py",
+  "reports/task_names.py",
+]
+# Progressive boundary: dependencies outside this explicit list are not yet
+# treated as typed. Expanding the list requires making that module pass first.
+follow_imports = "skip"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
