@@ -73,8 +73,11 @@ def send_incident_push(incident: Incident) -> dict[str, int]:
                 result["sent"] += 1
             else:
                 result["failed"] += 1
-                body = response.text[:500]
-                if response.status_code in (400, 404) and ("UNREGISTERED" in body or "registration-token-not-registered" in body):
+                failure_body = response.text[:500]
+                if response.status_code in (400, 404) and (
+                    "UNREGISTERED" in failure_body
+                    or "registration-token-not-registered" in failure_body
+                ):
                     MobileDevice.objects.filter(pk=device.pk).update(is_active=False, fcm_token="")
                 logger.warning("FCM incident delivery failed device=%s status=%s", device.pk, response.status_code)
         except requests.RequestException:
