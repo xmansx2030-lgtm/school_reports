@@ -17,7 +17,7 @@
 | التقارير | `model_parts/reports.py` | `views/reports.py`, `services_reports.py` |
 | ملفات الإنجاز | `model_parts/achievements.py` | `views/achievements.py`, `services_achievement.py` |
 | التذاكر | `model_parts/tickets.py` | `views/tickets.py` |
-| الإشعارات | `model_parts/notifications.py` | `views/notifications.py`, `tasks.py` |
+| الإشعارات | `model_parts/notifications.py` | `views/notifications.py`, `services_notifications.py`, `tasks.py` |
 | الاشتراكات والدفع | `model_parts/billing.py` | `views/billing_*.py`, `views/subscriptions.py` |
 | التكليفات والخطط | `model_parts/assignments.py`, `model_parts/plans.py` | `views/assignments.py`, `services_assignments.py`, `services_plans.py` |
 | الاجتماعات والوثائق | `model_parts/meetings.py`, `model_parts/documents.py` | `views/meetings.py`, `views/documents.py` |
@@ -35,8 +35,10 @@
   لا تغيّر الحقول أو حالات HTTP دون اختبار توافق العميل.
 - `config/celery.py` و`reports/tasks.py`: أغلفة تنفيذ المهام، بينما تحفظ
   `reports/task_names.py` الأسماء العامة الثابتة، ويرسل المنتجون المستقلون عبر
-  `reports/task_dispatch.py`. منطق إنشاء التصدير في
-  `reports/services_generated_exports.py`، وتحدد الإعدادات الجدولة في
+  `core/task_dispatch.py` (مع واجهة توافق في `reports/task_dispatch.py`). منطق
+  إنشاء التصدير في `reports/services_generated_exports.py`، ومنطق الإشعار في
+  `reports/services_notifications.py`، وحساب ضغط الموارد في
+  `reports/services_capacity.py`. تحدد الإعدادات الجدولة في
   `CELERY_BEAT_SCHEDULE`.
 - `reports/consumers.py` و`reports/routing.py`: تحديثات WebSocket.
 - `reports/static/manifest.json` وservice worker: عقد تثبيت PWA والتخزين المؤقت.
@@ -136,3 +138,12 @@ templates/static <- context/view models (لا منطق أعمال أو ORM دا�
 - لا تستخدم `|safe` لبيانات المستخدم؛ استخدم `json_script` أو JSON موثوقًا.
 - أضف اختبار عزل لكل مسار يقرأ بيانات مدرسة أو مستخدم.
 - شغّل CI المحلي الموضح في `README.md` قبل الدمج.
+
+## قرارات معمارية مسجلة
+
+- [ADR-001: task dispatch boundary](adr/001-task-dispatch-boundary.md)
+- [ADR-002: progressive type checking](adr/002-progressive-typechecking.md)
+- [ADR-003: compatibility import surfaces](adr/003-compatibility-import-surfaces.md)
+
+تشرح هذه ADRs سبب إبقاء أسماء Celery وواجهات التوافق ثابتة، ولماذا لا يستخدم
+المشروع strict typing أو إزالة wildcard شاملة دفعة واحدة.

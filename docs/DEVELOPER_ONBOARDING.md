@@ -18,6 +18,25 @@
 - R2 والدفع وFCM والبريد لا تُختبر بمفاتيح إنتاج محليًا. استخدم sandbox أو
   العقود المmocked الموجودة.
 
+مثال PowerShell لخدمات محلية معزولة (غيّر كلمات المرور المحلية ولا تنسخها إلى
+Git؛ اختر أسماء/منافذ لا تصطدم بحاويات أخرى):
+
+```powershell
+docker run --rm --name school-reports-postgres -e POSTGRES_DB=school_reports_dev -e POSTGRES_USER=school_reports_dev -e POSTGRES_PASSWORD=local-only-password -p 55432:5432 postgres:16
+docker run --rm --name school-reports-redis -p 56379:6379 redis:7.4-alpine
+```
+
+بعد ضبط `DATABASE_URL`, `REDIS_URL` و`REDIS_CACHE_URL` في shell آخر:
+
+```powershell
+python manage.py migrate
+python -m celery -A config worker --loglevel=info --pool=solo -Q default,notifications,images,periodic
+python -m celery -A config beat --loglevel=info
+```
+
+`--pool=solo` مناسب لفحص Windows المحلي فقط؛ حدود الإنتاج/concurrency موثقة
+في `compose.hetzner.yaml`. لا تستخدم قاعدة أو Redis مشتركين مع production.
+
 ## أوامر البوابات
 
 ```powershell
@@ -80,4 +99,3 @@ flutter build apk --debug
 - شغّل البوابات كاملة وسجل العدد والبيئة والنتيجة النهائية، لا بداية stream.
 - راجع diff وstatus واستبعد ملفات debug والـartifacts والأسرار.
 - لا تخلط commit refactor مع تغييرات واجهة أو عمل مطور آخر.
-

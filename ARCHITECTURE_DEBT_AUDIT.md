@@ -34,6 +34,28 @@ import hubs واسعة ودورات اعتماد تجعل أخطاء الاست�
 بعضها يقع في properties دفاعية أو optional instrumentation. أي إزالة تتطلب
 فهم الـboundary واختبار السلوك.
 
+## Result after the hardening slices
+
+أُعيد القياس بالأداة القابلة للتكرار `scripts/architecture_metrics.py` بعد
+آخر شريحة برمجية. أرقام baseline محفوظة من جرد بداية المرحلة؛ رقم ملفات
+الإنتاج وحده لا يستخدم كمؤشر تحسن لأن تعريف الاستبعاد صُقل عند تحويل الجرد إلى
+سكربت، أما مقاييس graph/import/AST فبقي نطاقها كود الإنتاج نفسه.
+
+| Metric | Before | After | Change |
+|---|---:|---:|---:|
+| Circular strongly connected components | 5 | 3 | -2 |
+| Modules participating in cycles | 35 | 24 | -11 |
+| Wildcard import statements | 124 | 122 | -2 |
+| Ruff C901 findings | 34 | 32 | -2 |
+| Broad `Exception` handlers | 686 | 671 | -15 |
+| Syntactically silent broad handlers | 80 | 62 | -18 |
+| `reports/tasks.py` physical lines | 1,995 | 1,782 | -213 |
+| Largest function lines | 587 | 587 | 0 |
+
+ملفات الإنتاج التي يعرضها السكربت الحالي: 268. أكبر ملف ما زال
+`reports/forms.py` (AST end line 3,467)، ولذلك لم يُدّعَ إغلاق دين God files
+كله.
+
 ## Dependency map
 
 الاتجاه المستهدف:
@@ -146,3 +168,29 @@ fallback وreport printing (50/48). تُقدّم الدوال ذات اختبا�
 
 تعاد هذه القياسات في التقرير النهائي من نفس النطاق. أي انخفاض نتج عن dirty UI
 work يُعرض منفصلًا ولا ينسب إلى commits هذه المرحلة.
+
+## Implemented boundaries
+
+- `core.task_dispatch` صار boundary محايدًا لنشر المهام بالاسم؛ أُغلقت دورة
+  `operations.services ↔ operations.tasks` ودورات file cleanup/generated export
+  الناتجة عن استيراد task module من المنتج.
+- نُقل حساب capacity والتنبيه إلى `reports.services_capacity` وبقيت مهمة
+  Celery thin orchestrator مع الاسم والـqueue والـretry contract الحالي.
+- نُقل إنشاء الإشعار وتحديد المستلمين والقنوات إلى
+  `reports.services_notifications`؛ بقي `send_notification_task` غلاف تنسيق.
+- أصبحت أخطاء اعتماد التكليف مملوكة لـ`reports.approval_errors`، وصار model
+  يملك readiness validation بدل الدوران إلى application service.
+- لم تعد `reports.forms` تستورد view helper للتحقق من مدير المدرسة؛ تستخدم
+  canonical permission helper مباشرةً.
+
+## Remaining measured cycles
+
+يعرض السكربت حاليًا ثلاث SCCs، ولا يجوز اعتبارها مغلقة:
+
+1. تسع وحدات حول `reports.models`, `permissions`, `signals`, cache/realtime وweb
+   push. مركزها واجهة model compatibility والـsignals.
+2. ثماني وحدات model parts حول wildcard hub في `reports.model_parts.base`.
+3. سبع وحدات billing/views مع `reports.tasks` و`reports.views._helpers`.
+
+هذه P1 معمارية متبقية. تفكيكها يحتاج تحويل المستهلكين إلى imports صريحة وعقود
+public compatibility على دفعات؛ حذف الـhubs دفعة واحدة غير آمن.

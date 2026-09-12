@@ -80,6 +80,9 @@ docs/                   المعمارية والتشغيل والتسليم و�
 راجع [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) لتدفق الطلب وحدود المجالات
 ومواضع منطق الأعمال، و[CODEBASE_AUDIT_REPORT.md](CODEBASE_AUDIT_REPORT.md)
 لخط الأساس التفصيلي، و[TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) للدين المتبقي.
+مسار التسليم العملي موجود في
+[docs/DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md)، ونتائج الخدمات
+المعزولة في [INTEGRATION_QA_REPORT.md](INTEGRATION_QA_REPORT.md).
 
 ## قاعدة البيانات والهجرات
 
@@ -133,6 +136,20 @@ GitHub Actions يفحص lint، والأسرار، والاعتماديات، و�
 
 نجاح CI أو نشر image لا يثبت وحده أن الإنتاج محدث؛ تحقق من SHA/وسم الإصدار
 داخل الخدمة، والهجرات، وreadiness، والأصول العامة بعد النشر.
+
+## بوابات الدين المعماري
+
+- القياس المتكرر: `python scripts/architecture_metrics.py`.
+- typecheck التدريجي: `python -m mypy`؛ نطاقه وأسباب حدوده في
+  [TYPECHECK_BASELINE.md](TYPECHECK_BASELINE.md).
+- جرد CSS وخطة خفض specificity في
+  [docs/CSS_DEBT_AUDIT.md](docs/CSS_DEBT_AUDIT.md).
+- تعامل الأسرار التاريخية وإجراء المسؤول البشري في
+  [SECURITY_SECRET_ROTATION_PLAN.md](SECURITY_SECRET_ROTATION_PLAN.md).
+
+لا تُشغّل `check --deploy` من shell يحمل `.env` محلية دون ضبط switches الخاصة
+بالمزودين صراحةً؛ استخدم environment معزولة مثل CI حتى لا تختلط قيم التطوير
+بعقد production.
 
 ## إضافة ميزة بأمان
 
