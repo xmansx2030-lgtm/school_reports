@@ -2331,8 +2331,11 @@ class NotificationCreateForm(forms.Form):
         return cleaned
 
     def save(self, creator, default_school=None, force_requires_signature: Optional[bool] = None):
-        from .tasks import send_notification_task
+        from core.task_dispatch import enqueue_named_task
         from django.db import transaction
+
+        from .services_notifications import dispatch_notification_recipients
+        from .task_names import SEND_NOTIFICATION_TASK
 
         cleaned = self.cleaned_data
 
@@ -2501,7 +2504,7 @@ class NotificationCreateForm(forms.Form):
 
                 ok = False
                 try:
-                    send_notification_task.apply(args=(n.pk, teacher_ids), throw=True)
+                    dispatch_notification_recipients(n.pk, teacher_ids)
                     ok = True
                 except Exception as exc:
                     if is_debug:
@@ -2619,7 +2622,8 @@ class NotificationCreateForm(forms.Form):
                 if not _tid:
                     import secrets
                     _tid = secrets.token_hex(8)
-                send_notification_task.apply_async(
+                enqueue_named_task(
+                    SEND_NOTIFICATION_TASK,
                     args=[n.pk, teacher_ids],
                     headers={"trace_id": _tid},
                 )

@@ -85,6 +85,12 @@ class NotificationDispatchTests(TransactionTestCase):
             .values_list("teacher_id", flat=True)
         )
 
+    def test_notification_task_name_is_stable(self):
+        from reports.task_names import SEND_NOTIFICATION_TASK
+        from reports.tasks import send_notification_task
+
+        self.assertEqual(send_notification_task.name, SEND_NOTIFICATION_TASK)
+
     def test_school_manager_notification_selected_teachers_dispatches_without_broker(self):
         form = NotificationCreateForm(
             data={

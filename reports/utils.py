@@ -3,6 +3,7 @@ from django.apps import apps
 import logging
 
 from core.observability import report_degraded as _degraded
+from core.task_dispatch import named_task_proxy
 
 from .task_dispatch import run_named_task_safe as run_named_task_safe
 from .task_dispatch import run_task_safe as run_task_safe
@@ -103,7 +104,8 @@ def create_system_notification(title, message, school=None, teacher_ids=None, is
     Helper to create a notification and trigger the background task to send it.
     """
     from .models import Notification
-    from .tasks import send_notification_task
+    from .services_notifications import dispatch_notification_recipients
+    from .task_names import SEND_NOTIFICATION_TASK
 
     n = Notification.objects.create(
         title=title,
@@ -112,5 +114,9 @@ def create_system_notification(title, message, school=None, teacher_ids=None, is
         is_important=is_important
     )
     
-    run_task_safe(send_notification_task, n.pk, teacher_ids)
+    run_task_safe(
+        named_task_proxy(SEND_NOTIFICATION_TASK, dispatch_notification_recipients),
+        n.pk,
+        teacher_ids,
+    )
     return n

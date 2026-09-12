@@ -13,18 +13,20 @@ from django.db.models import Count, Q
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from core.observability import report_degraded as _degraded, soft_fail
+from core.observability import soft_fail
 from core.task_dispatch import enqueue_named_task
 
 from operations.task_names import STORE_CAPACITY_SNAPSHOT_TASK
 
 from .email_branding import email_brand_context, platform_url, render_branded_email
 from .services_capacity import collect_infrastructure_capacity_report
+from .services_notifications import dispatch_notification_recipients
 from .storage import _compress_image_file
 from .task_names import (
     BUILD_GENERATED_EXPORT_TASK,
     DELETE_ORPHANED_STORAGE_FILE_TASK,
     MONITOR_INFRASTRUCTURE_CAPACITY_TASK,
+    SEND_NOTIFICATION_TASK,
     SEND_TELEGRAM_ALERT_TASK,
     SEND_WEB_PUSH_NOTIFICATION_TASK,
 )
@@ -470,11 +472,19 @@ def process_ticket_image(self, ticket_image_id: int) -> bool:
         return False
 
 
-@shared_task(bind=True, ignore_result=True, autoretry_for=(Exception,), retry_backoff=True, retry_jitter=True, retry_kwargs={"max_retries": 3}, soft_time_limit=600, time_limit=900)
+@shared_task(
+    name=SEND_NOTIFICATION_TASK,
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 3},
+    soft_time_limit=600,
+    time_limit=900,
+)
 def send_notification_task(self, notification_id: int, teacher_ids=None) -> bool:
-    """
-    Task to create NotificationRecipient objects in the background.
-    """
+    """Thin Celery boundary for idempotent recipient materialization."""
     task_id, retries, trace_id = _task_ctx(self)
     logger.info(
         "Task start name=send_notification_task task_id=%s trace_id=%s retries=%s notification_id=%s explicit_recipients=%s",
@@ -485,101 +495,20 @@ def send_notification_task(self, notification_id: int, teacher_ids=None) -> bool
         0 if not teacher_ids else len(teacher_ids),
     )
 
-    Notification = apps.get_model("reports", "Notification")
-    NotificationRecipient = apps.get_model("reports", "NotificationRecipient")
-    Teacher = apps.get_model("reports", "Teacher")
-
-    try:
-        n = Notification.objects.get(pk=notification_id)
-    except Notification.DoesNotExist:
-        logger.error("Notification %s not found.", notification_id)
+    dispatched = dispatch_notification_recipients(
+        notification_id,
+        teacher_ids,
+        trace_id=trace_id,
+    )
+    if not dispatched:
         opmetrics.increment("celery.task.failure.send_notification_task")
         return False
 
-    if teacher_ids:
-        teachers = Teacher.objects.filter(pk__in=teacher_ids, is_active=True).only("id")
-    else:
-        qs = (
-            Teacher.objects.filter(is_active=True)
-            .filter(
-                school_memberships__school__is_active=True,
-            )
-            .distinct()
-            .only("id")
-        )
-        _role_types = ["teacher"]
-        if getattr(n, "school", None):
-            qs = qs.filter(
-                school_memberships__school=n.school,
-                school_memberships__is_active=True,
-                school_memberships__role_type__in=_role_types,
-            ).distinct()
-        else:
-            qs = qs.filter(
-                school_memberships__is_active=True,
-                school_memberships__role_type__in=_role_types,
-            ).distinct()
-
-        teachers = qs
-
-    batch_size = 500
-
-    try:
-        from .realtime_notifications import push_new_notification_to_teachers
-    except Exception:
-        push_new_notification_to_teachers = None
-
-    # Stream teachers in chunks via values_list to avoid loading all objects
-    # into memory.  At 50K schools × 25 teachers = 1.25M users, the old
-    # `list(teachers)` would consume gigabytes of RAM.
-    teacher_id_qs = teachers.values_list("id", flat=True)
-    total_recipients = 0
-
-    batch_ids: list[int] = []
-    for tid in teacher_id_qs.iterator(chunk_size=batch_size):
-        batch_ids.append(tid)
-        if len(batch_ids) >= batch_size:
-            NotificationRecipient.objects.bulk_create(
-                [NotificationRecipient(notification=n, teacher_id=t) for t in batch_ids],
-                ignore_conflicts=True,
-            )
-            if push_new_notification_to_teachers is not None:
-                try:
-                    push_new_notification_to_teachers(
-                        notification=n,
-                        teacher_ids=batch_ids,
-                        trace_id=trace_id,
-                    )
-                except Exception:
-                    # الإشعار حُفظ فعلاً؛ ما فشل هو الدفع اللحظي. المستلم يراه
-                    # عند التحديث التالي — لكن «لا يصل فوراً» عطلٌ يجب أن يُقاس.
-                    _degraded("realtime.push_batch", count=len(batch_ids))
-            total_recipients += len(batch_ids)
-            batch_ids = []
-
-    # Flush remaining
-    if batch_ids:
-        NotificationRecipient.objects.bulk_create(
-            [NotificationRecipient(notification=n, teacher_id=t) for t in batch_ids],
-            ignore_conflicts=True,
-        )
-        if push_new_notification_to_teachers is not None:
-            try:
-                push_new_notification_to_teachers(
-                    notification=n,
-                    teacher_ids=batch_ids,
-                    trace_id=trace_id,
-                )
-            except Exception:
-                _degraded("realtime.push_batch_tail", count=len(batch_ids))
-        total_recipients += len(batch_ids)
-
     logger.info(
-        "Task success name=send_notification_task task_id=%s trace_id=%s notification_id=%s recipients=%s",
+        "Task success name=send_notification_task task_id=%s trace_id=%s notification_id=%s",
         task_id,
         trace_id,
         notification_id,
-        total_recipients,
     )
     opmetrics.increment("celery.task.success.send_notification_task")
     return True

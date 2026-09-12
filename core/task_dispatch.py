@@ -209,6 +209,11 @@ class _NamedTaskProxy:
         return self._fallback(*args, **kwargs)
 
 
+def named_task_proxy(task_name: str, fallback: Callable[..., Any]) -> Any:
+    """Build a task-like adapter for legacy callers of :func:`run_task_safe`."""
+    return _NamedTaskProxy(task_name, fallback)
+
+
 def run_named_task_safe(
     task_name: str,
     fallback: Callable[..., Any],
@@ -227,4 +232,9 @@ def run_named_task_safe(
     )
 
 
-__all__ = ("enqueue_named_task", "run_named_task_safe", "run_task_safe")
+__all__ = (
+    "enqueue_named_task",
+    "named_task_proxy",
+    "run_named_task_safe",
+    "run_task_safe",
+)
