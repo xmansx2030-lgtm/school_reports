@@ -8,11 +8,13 @@ credentials أو object أو عملية دفع إنتاجية.
 - شُغّلت كل migrations حتى `reports.0135` على container معزول.
 - نجحت 5 عقود PostgreSQL الخاصة بـJSON/timezone، `select_for_update`، قيد
   uniqueness، rollback، ووجود indexes.
-- نجحت 4 اختبارات query characterization في التشغيل المجمع مع Redis.
+- نجحت 8 اختبارات query characterization في التشغيل النهائي المجمع مع Redis.
 - نجحت 92/92 من عقود Moyasar/Tamara/discount/unified payment على PostgreSQL؛
   تشمل callback المكرر، mismatch، failure، abandoned payment، recovery
   وidempotent effects.
 - `makemigrations --check --dry-run`: لا drift في القياس المرحلي.
+- البوابة النهائية المختصرة: 16/16 (خمسة PostgreSQL، ثلاثة Redis، وثمانية
+  query-count contracts) خلال 59.454 ثانية.
 
 ## Redis / Celery
 
