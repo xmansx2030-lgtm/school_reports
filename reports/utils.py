@@ -5,6 +5,8 @@ from django.conf import settings
 from django.apps import apps
 import logging
 
+from celery import current_app
+
 from core.observability import report_degraded as _degraded, soft_fail
 
 from core.trace_context import get_trace_id
@@ -123,6 +125,52 @@ def run_task_safe(
 
     # تنفيذ العملية بعد التأكد من حفظ البيانات في قاعدة البيانات
     transaction.on_commit(_execute)
+
+
+class _NamedTaskProxy:
+    """Queue a Celery task by its stable name and keep a local fallback."""
+
+    def __init__(self, task_name, fallback):
+        self.name = task_name
+        self.__name__ = task_name
+        self._fallback = fallback
+
+    def apply_async(self, *, args=None, kwargs=None, headers=None):
+        return current_app.send_task(
+            self.name,
+            args=args,
+            kwargs=kwargs,
+            headers=headers,
+        )
+
+    def apply(self, *, args=None, kwargs=None, throw=False):
+        return self._fallback(*(args or ()), **(kwargs or {}))
+
+    def __call__(self, *args, **kwargs):
+        return self._fallback(*args, **kwargs)
+
+
+def run_named_task_safe(
+    task_name,
+    fallback,
+    *args,
+    force_thread: bool = False,
+    inline_fallback: bool = True,
+    **kwargs,
+):
+    """Run a named Celery task without importing its task module.
+
+    ``fallback`` preserves :func:`run_task_safe` semantics when the broker is
+    unavailable, while the stable task name removes producer-to-task-module
+    imports that otherwise create circular dependencies.
+    """
+    return run_task_safe(
+        _NamedTaskProxy(task_name, fallback),
+        *args,
+        force_thread=force_thread,
+        inline_fallback=inline_fallback,
+        **kwargs,
+    )
 
 def _resolve_department_for_category(cat, school=None):
     """يستخرج كائن القسم المرتبط بالتصنيف (إن وُجد) مع مراعاة عزل المدارس.

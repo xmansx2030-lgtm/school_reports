@@ -162,7 +162,19 @@ class StorageObjectCleanupTests(TransactionTestCase):
         run_task.assert_called_once()
         args = run_task.call_args.args
         self.assertEqual(args[1:], ("reports.Report", "image1", name))
+        self.assertEqual(
+            args[0].name,
+            "reports.tasks.delete_orphaned_storage_file_task",
+        )
         self.assertTrue(self.storage.exists(name))
+
+    def test_cleanup_retry_task_name_remains_backward_compatible(self):
+        from reports.tasks import delete_orphaned_storage_file_task
+
+        self.assertEqual(
+            delete_orphaned_storage_file_task.name,
+            "reports.tasks.delete_orphaned_storage_file_task",
+        )
 
     def test_cascade_delete_removes_ticket_attachment_and_images(self):
         attachment_field = Ticket._meta.get_field("attachment")

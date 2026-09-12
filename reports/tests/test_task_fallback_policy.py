@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
-from reports.utils import run_task_safe
+from reports.utils import run_named_task_safe, run_task_safe
 
 
 class _BrokerDown(Exception):
@@ -70,6 +70,45 @@ class TaskFallbackPolicyTests(TestCase):
 
         recorded = {call.args[0] for call in increment.call_args_list}
         self.assertIn("celery.enqueue.failed", recorded)
+
+    def test_named_task_is_queued_without_importing_its_task_module(self):
+        fallback_calls = []
+
+        with (
+            patch("reports.utils.current_app.send_task") as send_task,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            run_named_task_safe(
+                "reports.tasks.example",
+                fallback_calls.append,
+                42,
+            )
+
+        send_task.assert_called_once()
+        _, call_kwargs = send_task.call_args
+        self.assertEqual(send_task.call_args.args, ("reports.tasks.example",))
+        self.assertEqual(call_kwargs["args"], (42,))
+        self.assertEqual(call_kwargs["kwargs"], {})
+        self.assertIn("trace_id", call_kwargs["headers"])
+        self.assertEqual(fallback_calls, [])
+
+    def test_named_task_keeps_inline_fallback_when_broker_is_down(self):
+        fallback_calls = []
+
+        with (
+            patch(
+                "reports.utils.current_app.send_task",
+                side_effect=_BrokerDown("broker unreachable"),
+            ),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            run_named_task_safe(
+                "reports.tasks.example",
+                fallback_calls.append,
+                42,
+            )
+
+        self.assertEqual(fallback_calls, [42])
 
     def test_image_compression_does_not_run_inline_on_report_save(self):
         """Compression is an optimisation — the uploaded images stay valid

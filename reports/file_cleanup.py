@@ -150,11 +150,12 @@ def _delete_after_commit(model_label: str, field_name: str, name: str) -> None:
             name,
         )
         try:
-            from .tasks import delete_orphaned_storage_file_task
-            from .utils import run_task_safe
+            from .task_names import DELETE_ORPHANED_STORAGE_FILE_TASK
+            from .utils import run_named_task_safe
 
-            run_task_safe(
-                delete_orphaned_storage_file_task,
+            run_named_task_safe(
+                DELETE_ORPHANED_STORAGE_FILE_TASK,
+                delete_file_if_unreferenced,
                 model_label,
                 field_name,
                 name,

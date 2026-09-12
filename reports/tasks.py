@@ -21,6 +21,7 @@ from core.observability import report_degraded as _degraded, soft_fail
 
 from .email_branding import email_brand_context, platform_url, render_branded_email
 from .storage import _compress_image_file
+from .task_names import DELETE_ORPHANED_STORAGE_FILE_TASK
 from .telegram_alerts import TelegramDeliveryError, deliver_telegram_alert
 from .web_push import WebPushTransientError
 
@@ -64,6 +65,7 @@ def send_web_push_notification_task(self, notification_id: int, teacher_ids: lis
 
 
 @shared_task(
+    name=DELETE_ORPHANED_STORAGE_FILE_TASK,
     bind=True,
     ignore_result=True,
     autoretry_for=(Exception,),
