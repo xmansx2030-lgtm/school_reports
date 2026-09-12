@@ -69,6 +69,7 @@ from .models import (
 )
 from .model_parts.approvals import ApprovalRoute
 from .lab_kinds import LabKind
+from .permissions import is_school_manager
 
 logger = logging.getLogger(__name__)
 
@@ -2116,12 +2117,9 @@ class NotificationCreateForm(forms.Form):
         teachers_plural = str(labels["teachers"])
         teachers_obj = str(labels["teachers_object"])
         
-        # التحقق مما إذا كان المستخدم مديراً ضمن المدرسة النشطة (عزل مدارس)
-        try:
-            from .views._helpers import _is_manager_in_school
-            is_manager = bool(_is_manager_in_school(user, active_school))
-        except Exception:
-            is_manager = False
+        # Canonical permission service owns manager detection; forms must not
+        # import the view compatibility hub and recreate a reverse dependency.
+        is_manager = is_school_manager(user, active_school=active_school)
 
         # إعداد حقول نطاق الإرسال/المدرسة حسب نوع المستخدم
         if is_superuser:
