@@ -449,36 +449,45 @@ body {
 .drawer-overlay { z-index: 1100 !important; }
 .drawer { z-index: 1200 !important; }
 
-/* --- TOAST MESSAGES (Luxury) --- */
+/* --- TOAST MESSAGES --- */
 .messages {
   position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(var(--header-bottom, var(--header-h, 72px)) + 12px);
+  right: max(16px, env(safe-area-inset-right, 0px));
+  left: auto;
+  transform: none;
   z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: 12px;
   pointer-events: none;
-  width: 100%;
-  max-width: 420px;
-  padding: 20px;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - var(--header-h, 72px) - 32px);
+  overflow-y: auto;
+  padding: 0;
+}
+
+.messages:empty {
+  display: none;
 }
 
 /* Mobile: toasts sit directly under the header, never on top of it.
    The header carries the menu button; a warning toast does not auto-hide, so
    covering it locked the user out of navigation until they hit a 33px close
-   button. ``--header-h`` is published by base.html because the height changes
-   with breakpoint, scroll state and standalone mode. */
+   button. ``--header-bottom`` is published by base.html because the header
+   height and top offset change with breakpoint, scroll state and standalone
+   mode. */
 @media (max-width: 768px) {
   .messages {
     inset-inline: 12px;
-    top: calc(var(--header-h, 56px) + 8px);
+    top: calc(var(--header-bottom, var(--header-h, 72px)) + 8px);
     left: auto;
+    right: auto;
     transform: none;
     display: grid;
     width: auto;
     max-width: 520px;
+    max-height: calc(100dvh - var(--header-h, 72px) - 5.5rem);
     margin-inline: auto;
     padding: 0;
   }
@@ -490,7 +499,8 @@ body {
   border-radius: var(--r-lg);
   padding: 16px 20px;
   box-shadow: var(--shadow-glass), var(--shadow-xl);
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: flex-start;
   gap: 12px;
   animation: msgSlideIn 0.5s var(--ease-out) forwards;

@@ -291,14 +291,6 @@
       <form method="post" class="te-form" novalidate id="teacherEditForm">
         {% csrf_token %}
 
-        {% if messages %}
-          <div id="flash">
-            {% for m in messages %}
-              <div class="te-alert {{ m.tags }}">{{ m }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
         {% if form.non_field_errors %}
           <div class="te-alert error" role="alert">
             {% for e in form.non_field_errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}

@@ -126,6 +126,75 @@ body.auth-page :where(.auth-subtitle, .auth-hint, .muted) {
   color: var(--text-muted);
 }
 
+body.auth-page .messages-area,
+body.registration-page .messages {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+body.auth-page .messages-area .msg,
+body.registration-page .messages li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--info);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+
+body.auth-page .messages-area .msg i,
+body.registration-page .messages li i {
+  margin-block-start: .2rem;
+  color: var(--info);
+}
+
+body.auth-page .messages-area .msg.success,
+body.registration-page .messages li.success {
+  border-inline-start-color: var(--success);
+}
+
+body.auth-page .messages-area .msg.success i,
+body.registration-page .messages li.success i {
+  color: var(--success);
+}
+
+body.auth-page .messages-area .msg.warning,
+body.registration-page .messages li.warning {
+  border-inline-start-color: var(--warning);
+}
+
+body.auth-page .messages-area .msg.warning i,
+body.registration-page .messages li.warning i {
+  color: var(--warning);
+}
+
+body.auth-page .messages-area .msg.error,
+body.registration-page .messages li.error,
+body.auth-page .messages-area .msg.danger,
+body.registration-page .messages li.danger {
+  border-inline-start-color: var(--danger);
+}
+
+body.auth-page .messages-area .msg.error i,
+body.registration-page .messages li.error i,
+body.auth-page .messages-area .msg.danger i,
+body.registration-page .messages li.danger i {
+  color: var(--danger);
+}
+
 body.registration-page {
   padding: clamp(.75rem, 2.5vw, 1.75rem);
   background: var(--canvas);

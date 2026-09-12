@@ -55,6 +55,7 @@ body.page a {
 }
 
 body.page .skip-link {
+  position: absolute;
   inset-block-start: var(--space-3);
   inset-inline-start: var(--space-3);
   z-index: 20000;
@@ -65,6 +66,21 @@ body.page .skip-link {
   background: var(--primary);
   box-shadow: var(--shadow-md);
   font-weight: var(--weight-bold);
+  transform: translateY(-140%);
+}
+
+body.page .skip-link:focus {
+  transform: none;
+}
+
+body.page .progress-bar {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 20000;
+  block-size: 3px;
+  inline-size: 0;
+  pointer-events: none;
 }
 
 /* App shell */
@@ -722,15 +738,32 @@ body.page :where(.info, .status-info, .badge-info) {
 
 body.page .messages {
   position: fixed;
-  inset-block-start: 5.25rem;
-  inset-inline-end: max(var(--space-4), env(safe-area-inset-right));
+  right: auto;
+  left: auto;
+  transform: none;
+  inset-block-start: calc(var(--header-bottom, var(--header-h, 4.5rem)) + var(--space-3));
+  inset-inline-start: max(var(--space-4), env(safe-area-inset-right, 0px));
+  inset-inline-end: auto;
+  inset-block-end: auto;
   z-index: 12000;
   display: grid;
-  width: min(26rem, calc(100vw - 2rem));
+  width: min(30rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - var(--header-h, 4.5rem) - var(--space-8));
+  overflow-y: auto;
+  padding: 0;
   gap: var(--space-3);
+  pointer-events: none;
+}
+
+body.page .messages:empty {
+  display: none;
 }
 
 body.page .msg {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--border);
   border-inline-start: 4px solid var(--info);
@@ -738,6 +771,40 @@ body.page .msg {
   color: var(--text-primary);
   background: var(--surface-elevated);
   box-shadow: var(--shadow-md);
+  line-height: var(--leading-normal);
+  pointer-events: auto;
+  overflow-wrap: anywhere;
+}
+
+body.page .msg-icon {
+  margin-block-start: .15rem;
+}
+
+body.page .msg-content {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-align: start;
+}
+
+body.page .msg-close {
+  inline-size: var(--tap-target);
+  block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
+  min-block-size: var(--tap-target);
+  margin: calc(var(--space-2) * -1);
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+body.page .msg-close:hover,
+body.page .msg-close:focus-visible {
+  color: var(--text-primary);
+  background: var(--surface-subtle);
 }
 
 body.page .msg.success { border-inline-start-color: var(--success); }
@@ -2400,10 +2467,11 @@ body.page .profile-scope :where(.profile-form button[type="submit"], .profile-bt
   }
 
   body.page .messages {
-    inset-block-start: auto;
-    inset-inline: var(--space-3);
-    inset-block-end: calc(4.5rem + env(safe-area-inset-bottom));
+    inset-block-start: calc(var(--header-bottom, var(--header-h, 72px)) + var(--space-2));
+    inset-inline: max(var(--space-3), env(safe-area-inset-right, 0px)) max(var(--space-3), env(safe-area-inset-left, 0px));
+    inset-block-end: auto;
     width: auto;
+    max-height: calc(100dvh - var(--header-h, 72px) - 5.5rem);
   }
 
   body.page .ss-grid,

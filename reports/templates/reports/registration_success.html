@@ -280,22 +280,25 @@
     }
     .toast {
       position: fixed;
-      z-index: 20;
-      inset-block-end: 24px;
-      inset-inline-start: 50%;
-      padding: 10px 16px;
-      color: var(--white);
-      background: var(--forest);
-      border-radius: 11px;
-      box-shadow: var(--shadow);
-      font-size: .74rem;
+      z-index: 1000;
+      inset-block-start: max(24px, env(safe-area-inset-top));
+      inset-inline-start: max(24px, env(safe-area-inset-right));
+      width: min(340px, calc(100vw - 48px));
+      padding: 12px 15px;
+      color: var(--ink);
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-inline-start: 4px solid var(--green);
+      border-radius: 13px;
+      box-shadow: 0 18px 48px rgba(4, 28, 19, .16);
+      font-size: .8rem;
       font-weight: 800;
       opacity: 0;
       pointer-events: none;
-      transform: translate(-50%, 18px);
+      transform: translateY(-8px);
       transition: opacity .2s, transform .2s;
     }
-    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.show { opacity: 1; transform: none; }
     @media (max-width: 680px) {
       body { padding: 0; background: var(--paper); }
       .success-shell { min-height: 100vh; border: 0; border-radius: 0; }
@@ -308,6 +311,11 @@
       .trial-summary > div:first-child { border-block-start: 0; }
       .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; }
       .quiet-button { justify-content: center; }
+      .toast {
+        inset-block-start: max(14px, env(safe-area-inset-top));
+        inset-inline: 14px;
+        width: auto;
+      }
     }
     @media print {
       body { padding: 0; color: #000; background: #fff; }
@@ -321,7 +329,7 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
-  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260911.3">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
 <body class="registration-success-page">

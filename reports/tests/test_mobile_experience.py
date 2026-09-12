@@ -130,13 +130,17 @@ class ToastLayerTests(SimpleTestCase):
     def test_toasts_are_offset_below_the_header_on_phones(self):
         source = _source("static/css/app-shell.css")
 
-        self.assertIn("top: calc(var(--header-h, 56px) + 8px);", source)
+        self.assertIn(
+            "top: calc(var(--header-bottom, var(--header-h, 72px)) + 8px);",
+            source,
+        )
         self.assertNotIn("top: calc(12px + var(--safe-top));", source)
 
     def test_header_height_is_published_for_the_floating_layers(self):
         source = _source("reports/templates/base.html")
 
         self.assertIn("--header-h", source)
+        self.assertIn("--header-bottom", source)
         self.assertIn("ResizeObserver", source)
 
     def test_toast_close_button_meets_the_touch_minimum(self):

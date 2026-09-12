@@ -496,12 +496,6 @@
       </div>
 
       <div class="er-body">
-        {% if messages %}
-          {% for message in messages %}
-            <div class="msg err u-mb-3">{{ message }}</div>
-          {% endfor %}
-        {% endif %}
-
         {% if form.non_field_errors %}
           <div class="msg err u-mb-3">
             {% for e in form.non_field_errors %}• {{ e }}<br>{% endfor %}

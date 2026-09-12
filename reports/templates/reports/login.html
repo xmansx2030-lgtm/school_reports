@@ -441,7 +441,7 @@
 <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
-  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260911.3">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
 <body class="auth-page">
@@ -470,12 +470,16 @@
 
         <!-- Messages -->
         {% if messages %}
-          <div class="messages-area">
+          <div class="messages-area" role="region" aria-label="رسائل النظام" aria-live="polite" aria-atomic="false">
             {% for message in messages %}
-              <div class="msg {{ message.tags|default:'info' }}">
-                {% if message.tags == 'error' %}<i class="fa-solid fa-circle-exclamation"></i>
-                {% elif message.tags == 'success' %}<i class="fa-solid fa-circle-check"></i>
-                {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+              <div
+                class="msg {{ message.tags|default:'info' }}"
+                role="{% if 'error' in message.tags or 'danger' in message.tags or 'warning' in message.tags %}alert{% else %}status{% endif %}"
+              >
+                {% if 'success' in message.tags %}<i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                {% elif 'error' in message.tags or 'danger' in message.tags %}<i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                {% elif 'warning' in message.tags %}<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                {% else %}<i class="fa-solid fa-circle-info" aria-hidden="true"></i>{% endif %}
                 <span>{{ message }}</span>
               </div>
             {% endfor %}
@@ -483,9 +487,9 @@
         {% endif %}
 
         {% if form.errors %}
-          <div class="messages-area">
-            <div class="msg error">
-                <i class="fa-solid fa-circle-xmark"></i>
+          <div class="messages-area" role="region" aria-label="أخطاء تسجيل الدخول" aria-live="polite" aria-atomic="false">
+            <div class="msg error" role="alert">
+                <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
                 <span>اسم المستخدم أو كلمة المرور غير صحيحة.</span>
             </div>
           </div>
@@ -581,16 +585,6 @@
         toggleBtn.title = toggleBtn.getAttribute('aria-label');
       });
     }
-
-    // Auto-hide messages
-    setTimeout(() => {
-      const msgs = document.querySelectorAll('.msg');
-        msgs.forEach(m => {
-            m.style.transition = 'opacity 0.5s';
-            m.style.opacity = '0';
-            setTimeout(()=>m.remove(), 500);
-        });
-    }, 5000);
 
     // Prevent double-submit that can cause duplicate POST and stale CSRF failures.
     (function(){

@@ -24,8 +24,8 @@
   {% include "reports/partials/theme_bootstrap.html" %}
 
   <!-- Performance -->
-  <link rel="preload" href="{% static 'css/app.css' %}?v=20260810.3" as="style">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260810.3" />
+  <link rel="preload" href="{% static 'css/app.css' %}?v=20260912.1" as="style">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260912.1" />
   {% if request.user.is_authenticated %}
   {% if request.user.is_authenticated and AI_INTERNAL_HELP_ENABLED %}
     <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260801.3" />
@@ -37,14 +37,14 @@
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
 
-  <link rel="stylesheet" href="{% static 'css/app-shell.css' %}?v=20260812.1" />
+  <link rel="stylesheet" href="{% static 'css/app-shell.css' %}?v=20260912.4" />
 
   <!-- Icons (محليًا لضمان ظهورها بالجوال حتى لو تعطل CDN) -->
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/v4-shims.min.css' %}">
 
   <link rel="stylesheet" href="{% static 'css/mobile-professional.css' %}?v=20260813.1" />
-  <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}?v=20260802.1" />
+  <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}?v=20260912.1" />
 
   {% comment %}
     جذر الهوية قبل قوالب الصفحات: الرموز تكون متاحة لها، وتبقى لها الكلمة
@@ -64,7 +64,7 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10" />
   {% comment %}رموز الهوية تأتي بعد كل الأوراق القديمة كي تبقى هي المصدر الحاكم للقيم الدلالية.{% endcomment %}
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3" />
-  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260911.7" />
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260912.5" />
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/progress-bars.js' %}?v=20260812.1" defer></script>
   {% if request.user.is_authenticated %}<script src="{% static 'js/global-search.js' %}?v=20260812.1" defer></script>{% endif %}
@@ -1020,15 +1020,24 @@
     {% endwith %}
   </aside>
 
-  {% if messages %}
-    <div class="messages" id="messages-container" aria-live="polite" aria-atomic="false">
+  <div
+    class="messages"
+    id="messages-container"
+    role="region"
+    aria-label="رسائل النظام"
+    aria-live="polite"
+    aria-atomic="false"
+    aria-relevant="additions removals"
+  >
+    {% if messages %}
       {% for message in messages %}
         <div
           class="msg {% if message.tags %}{{ message.tags }}{% else %}info{% endif %}"
           role="{% if 'error' in message.tags or 'danger' in message.tags or 'warning' in message.tags %}alert{% else %}status{% endif %}"
           data-autohide="{% if 'error' in message.tags or 'danger' in message.tags or 'warning' in message.tags %}false{% else %}true{% endif %}"
+          data-flash-message
         >
-          <div class="msg-icon">
+          <div class="msg-icon" aria-hidden="true">
              {% if 'success' in message.tags %}
                <i class="fa-solid fa-check-circle"></i>
              {% elif 'error' in message.tags or 'danger' in message.tags %}
@@ -1043,8 +1052,8 @@
           <button class="msg-close" aria-label="إغلاق" type="button"><i class="fa-solid fa-xmark"></i></button>
         </div>
       {% endfor %}
-    </div>
-  {% endif %}
+    {% endif %}
+  </div>
 
   <main class="container page-main" id="mainContent">
     {% block content %}{% endblock %}
@@ -1311,13 +1320,16 @@
     (function(){
       const bar = document.getElementById('scrollProgress');
       const header = document.getElementById('siteHeader');
-      // ارتفاع الترويسة يتغيّر بالمقاس وبالتمرير وبوضع التطبيق المثبَّت، فلا
-      // يمكن تثبيته في CSS. تنشره الصفحة رمزاً لتتموضع تحته الطبقات العائمة
+      // ارتفاع الترويسة وموضعها يتغيران بالمقاس وبوضع التطبيق المثبَّت، فلا
+      // يمكن تثبيتهما في CSS. تنشرهما الصفحة لتتموضع تحتهما الطبقات العائمة
       // — التنبيهات أولاً — بدل أن تغطّي زر القائمة.
-      const publishHeaderHeight = ()=>{
+      const publishHeaderMetrics = ()=>{
         if(!header) return;
-        const height = Math.round(header.getBoundingClientRect().height);
+        const rect = header.getBoundingClientRect();
+        const height = Math.round(rect.height);
+        const bottom = Math.round(rect.bottom);
         if(height > 0) document.documentElement.style.setProperty('--header-h', height + 'px');
+        if(bottom > 0) document.documentElement.style.setProperty('--header-bottom', bottom + 'px');
       };
       const onScroll = ()=>{
         const h = document.documentElement;
@@ -1325,12 +1337,12 @@
         const max = h.scrollHeight - h.clientHeight;
         if(bar) bar.style.width = (max ? (sc/max)*100 : 0) + '%';
         if(header) header.classList.toggle('scrolled', window.scrollY > 4);
-        publishHeaderHeight();
+        publishHeaderMetrics();
       };
       window.addEventListener('scroll', onScroll, {passive:true});
-      window.addEventListener('resize', publishHeaderHeight, {passive:true});
-      window.addEventListener('orientationchange', publishHeaderHeight, {passive:true});
-      if(header && 'ResizeObserver' in window) new ResizeObserver(publishHeaderHeight).observe(header);
+      window.addEventListener('resize', publishHeaderMetrics, {passive:true});
+      window.addEventListener('orientationchange', publishHeaderMetrics, {passive:true});
+      if(header && 'ResizeObserver' in window) new ResizeObserver(publishHeaderMetrics).observe(header);
       onScroll();
     })();
 
@@ -1341,23 +1353,40 @@
 
       const AUTOHIDE_MS = 5000;
       const HIDE_ANIM_MS = 250;
+      const TYPE_CONFIG = {
+        success: { icon: 'fa-check-circle', role: 'status', autohide: true },
+        error: { icon: 'fa-circle-exclamation', role: 'alert', autohide: false },
+        danger: { icon: 'fa-circle-exclamation', role: 'alert', autohide: false },
+        warning: { icon: 'fa-triangle-exclamation', role: 'alert', autohide: false },
+        info: { icon: 'fa-circle-info', role: 'status', autohide: true }
+      };
 
-      container.querySelectorAll('.msg').forEach((el)=>{
+      const normalizeType = (type)=>{
+        const value = String(type || 'info').split(/\s+/).find((item)=>TYPE_CONFIG[item]);
+        return value || 'info';
+      };
+
+      const dismiss = (el)=>{
+        if(!el || !el.parentNode || el.dataset.hiding === 'true') return;
+        el.dataset.hiding = 'true';
+        el.classList.add('is-hiding');
+        setTimeout(()=>{ if(el && el.parentNode) el.remove(); }, HIDE_ANIM_MS);
+      };
+
+      const bindMessage = (el)=>{
+        if(!el || el.dataset.flashReady === 'true') return;
+        el.dataset.flashReady = 'true';
         const closeBtn = el.querySelector('.msg-close');
         let timer = null;
 
-        const remove = ()=>{
-          if(!el || !el.parentNode) return;
-          el.classList.add('is-hiding');
-          setTimeout(()=>{ if(el && el.parentNode) el.remove(); }, HIDE_ANIM_MS);
-        };
-        const start = ()=>{
-          if(el.dataset.autohide === 'false') return;
-          timer = setTimeout(remove, AUTOHIDE_MS);
-        };
         const stop = ()=>{ if(timer){ clearTimeout(timer); timer = null; } };
+        const start = ()=>{
+          stop();
+          if(el.dataset.autohide === 'false') return;
+          timer = setTimeout(()=>dismiss(el), AUTOHIDE_MS);
+        };
 
-        if(closeBtn) closeBtn.addEventListener('click', remove);
+        if(closeBtn) closeBtn.addEventListener('click', ()=>dismiss(el));
         el.addEventListener('mouseenter', stop);
         el.addEventListener('mouseleave', start);
         el.addEventListener('focusin', stop);
@@ -1367,7 +1396,45 @@
           else start();
         });
         start();
-      });
+      };
+
+      window.showAppToast = function(message, type, options){
+        const normalized = normalizeType(type);
+        const config = TYPE_CONFIG[normalized];
+        const opts = options || {};
+        const toast = document.createElement('div');
+        toast.className = 'msg ' + normalized;
+        toast.setAttribute('role', opts.role || config.role);
+        toast.dataset.autohide = String(opts.autohide !== undefined ? opts.autohide : config.autohide);
+        toast.dataset.flashMessage = 'true';
+
+        const icon = document.createElement('div');
+        icon.className = 'msg-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        const iconNode = document.createElement('i');
+        iconNode.className = 'fa-solid ' + config.icon;
+        icon.appendChild(iconNode);
+
+        const content = document.createElement('div');
+        content.className = 'msg-content';
+        content.textContent = String(message || '');
+
+        const close = document.createElement('button');
+        close.className = 'msg-close';
+        close.setAttribute('aria-label', 'إغلاق');
+        close.type = 'button';
+        const closeIcon = document.createElement('i');
+        closeIcon.className = 'fa-solid fa-xmark';
+        closeIcon.setAttribute('aria-hidden', 'true');
+        close.appendChild(closeIcon);
+
+        toast.append(icon, content, close);
+        container.appendChild(toast);
+        bindMessage(toast);
+        return toast;
+      };
+
+      container.querySelectorAll('.msg').forEach(bindMessage);
     })();
 
     // ===== Drawer =====

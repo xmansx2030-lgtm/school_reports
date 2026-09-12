@@ -5,39 +5,17 @@
 المدرسة. فالمشاركة هنا توصيل عنوان لمن يملك الدخول أصلاً، لا فتحُ الاجتماع
 لمن لا يحق له الاطلاع عليه — ومن يحتاج نسخة خارج المنصة يأخذ المحضر المطبوع.
 {% endcomment %}
-<style nonce="{{ CSP_NONCE }}">
-  .mtg-copy-toast {
-    position: fixed; z-index: 1200; inset-block-end: 1.1rem; inset-inline: 0;
-    width: max-content; max-width: calc(100% - 2rem); margin-inline: auto;
-    padding: .65rem 1.1rem; border-radius: 999px;
-    background: #10231a; color: #fff; font-size: .82rem; font-weight: 800;
-    box-shadow: 0 18px 40px -20px rgba(0,0,0,.8);
-    opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease;
-    pointer-events: none;
-  }
-  .mtg-copy-toast.is-shown { opacity: 1; transform: none; }
-  @media (prefers-reduced-motion: reduce) { .mtg-copy-toast { transition: none; } }
-</style>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function () {
     var triggers = document.querySelectorAll('[data-copy-link]');
     if (!triggers.length) return;
 
-    var toast = null;
-    var timer = null;
-
     function notify(message) {
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.className = 'mtg-copy-toast';
-        toast.setAttribute('role', 'status');
-        toast.setAttribute('aria-live', 'polite');
-        document.body.appendChild(toast);
+      if (window.showAppToast) {
+        window.showAppToast(message, 'success');
+      } else if (window.rcAlert) {
+        window.rcAlert(message, { type: 'info' });
       }
-      toast.textContent = message;
-      toast.classList.add('is-shown');
-      window.clearTimeout(timer);
-      timer = window.setTimeout(function () { toast.classList.remove('is-shown'); }, 2600);
     }
 
     async function copy(text) {

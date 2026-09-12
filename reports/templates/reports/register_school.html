@@ -366,7 +366,7 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
-  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260911.3">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
 <body class="registration-page">
@@ -412,8 +412,19 @@
       </header>
 
       {% if messages %}
-        <ul class="messages">
-          {% for msg in messages %}<li class="{{ msg.tags }}">{{ msg }}</li>{% endfor %}
+        <ul class="messages" role="region" aria-label="رسائل النظام" aria-live="polite" aria-atomic="false">
+          {% for msg in messages %}
+            <li
+              class="{{ msg.tags|default:'info' }}"
+              role="{% if 'error' in msg.tags or 'danger' in msg.tags or 'warning' in msg.tags %}alert{% else %}status{% endif %}"
+            >
+              <i
+                class="fa-solid {% if 'success' in msg.tags %}fa-check-circle{% elif 'error' in msg.tags or 'danger' in msg.tags %}fa-circle-exclamation{% elif 'warning' in msg.tags %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"
+                aria-hidden="true"
+              ></i>
+              <span>{{ msg }}</span>
+            </li>
+          {% endfor %}
         </ul>
       {% endif %}
 

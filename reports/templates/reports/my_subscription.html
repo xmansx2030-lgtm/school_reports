@@ -1626,37 +1626,6 @@
   }
   .mobile-checkout-continue:disabled { cursor: not-allowed; color: var(--id-muted); background: var(--id-line-soft); }
 
-  /* ── التنبيهات المنبثقة ──────────────────────────────────────────── */
-  .toast-container {
-    position: fixed;
-    inset-block-start: 84px;
-    inset-inline-end: 18px;
-    z-index: 1400;
-    display: grid;
-    gap: 9px;
-  }
-  .toast {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    max-width: 340px;
-    padding: 13px 16px;
-    border: 1px solid var(--id-line);
-    border-radius: var(--id-r2);
-    background: var(--id-surface);
-    color: var(--id-ink);
-    font-size: .84rem;
-    font-weight: 850;
-    box-shadow: var(--id-e3);
-    animation: toastIn .3s var(--id-ease);
-  }
-  .toast.success { border-inline-start: 4px solid var(--id-tone-approved); }
-  .toast.success i { color: var(--id-tone-approved); }
-  .toast.error { border-inline-start: 4px solid var(--id-tone-danger); }
-  .toast.error i { color: var(--id-tone-danger); }
-  @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
-  @keyframes toastOut { to { opacity: 0; transform: translateY(-10px); } }
-
   /* ── الاستجابة ───────────────────────────────────────────────────── */
   @media (max-width: 1180px) {
     .subx-order-grid { grid-template-columns: minmax(0, 1fr); }
@@ -1686,8 +1655,6 @@
     .payment-method-step { margin-inline-start: 0; }
     .mobile-checkout-bar { display: flex; }
     .subx { padding-bottom: 150px; }
-    .toast-container { inset-inline: 14px auto; }
-    .toast { max-width: none; }
 
     /* الجدول يتحوّل بطاقات: العنوان يأتي من `data-label` */
     .custom-table { min-width: 0; }
@@ -2767,7 +2734,6 @@
   </button>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
 {% endblock %}
 
 {% block scripts %}
@@ -3057,20 +3023,8 @@
   });
 
   /* ── 5. التنبيهات المنبثقة ── */
-  const toastContainer = document.getElementById('toastContainer');
   function showToast(msg, type = 'success') {
-    if (!toastContainer) return;
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    const icon = type === 'success'
-      ? '<i class="fa-solid fa-circle-check"></i>'
-      : '<i class="fa-solid fa-circle-exclamation"></i>';
-    toast.innerHTML = `${icon} ${msg}`;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-      toast.style.animation = 'toastOut .3s ease forwards';
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    if (window.showAppToast) window.showAppToast(msg, type);
   }
   window._showToast = showToast; // expose globally
 
