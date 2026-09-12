@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from django.apps import apps
 
@@ -87,14 +89,17 @@ def dispatch_notification_recipients(
 
 
 def _persist_recipient_batch(
-    notification,
+    notification: Any,
     teacher_ids: list[int],
-    recipient_model,
-    realtime_dispatch,
+    recipient_model: Any,
+    realtime_dispatch: Callable[..., object] | None,
     trace_id: str | None,
     *,
     metric: str,
 ) -> None:
+    # These model classes come from Django's dynamic app registry. Keeping Any
+    # at this single adapter boundary avoids pretending their runtime type is a
+    # concrete imported model and reintroducing the dependency cycle.
     recipient_model.objects.bulk_create(
         [recipient_model(notification=notification, teacher_id=teacher_id) for teacher_id in teacher_ids],
         ignore_conflicts=True,

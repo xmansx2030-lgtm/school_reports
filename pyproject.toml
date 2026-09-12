@@ -133,6 +133,7 @@ files = [
   "operations/task_names.py",
   "reports/services_capacity.py",
   "reports/services_generated_exports.py",
+  "reports/services_notifications.py",
   "reports/task_names.py",
 ]
 # Progressive boundary: dependencies outside this explicit list are not yet

@@ -14,8 +14,8 @@
 
 | Metric | Before fixes | Enabled gate |
 |---|---:|---:|
-| Files checked | 6 | 6 |
-| Errors | 22 | 0 |
+| Files checked | 7 | 7 |
+| Errors | 23 | 0 |
 | Warnings | 0 | 0 |
 | Ignored error codes | 0 | 0 |
 | `# type: ignore` suppressions in scope | 0 | 0 |
@@ -28,6 +28,7 @@
 - `operations/task_names.py`
 - `reports/services_capacity.py`
 - `reports/services_generated_exports.py`
+- `reports/services_notifications.py`
 - `reports/task_names.py`
 
 ## Boundary rationale
@@ -43,12 +44,14 @@ modules خارج القائمة لا تُفحص كجزء من هذه البوا�
 - صار row-lock selector يعيد `GeneratedExportJob | None` صراحةً.
 - صارت metadata الخاصة بالأرشيف typed ومتحققًا من وجودها قبل indexing.
 - أزيل `getattr` غامض النوع على اسم ملف الأرشيف.
+- ضُبط adapter الإشعارات الديناميكي: الـcallable typed، وحُصر `Any` في model
+  classes القادمة من Django app registry حتى لا تعود دورة import.
 
 ## Next scope
 
 1. `reports/view_access.py` وpermission selectors.
 2. payment/integration service modules بعد إخراج reconciliation من views.
-3. notification service بعد فصل dispatch business logic عن form/task.
+3. payment/integration gateway contracts بعد إخراج reconciliation من views.
 
 لا يوسّع CI النطاق قبل جعل الوحدة الجديدة نظيفة؛ ولا تُضاف suppressions إلا
 لموضع واحد مع سبب قابل للحذف.
