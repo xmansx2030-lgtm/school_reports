@@ -12,7 +12,10 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
+from core.task_dispatch import enqueue_named_task
+
 from .models import Notification, NotificationRecipient, WebPushDelivery, WebPushSubscription
+from .task_names import SEND_WEB_PUSH_NOTIFICATION_TASK
 
 logger = logging.getLogger(__name__)
 
@@ -271,13 +274,12 @@ def queue_notification_web_push(*, notification, teacher_ids: Iterable[int]) -> 
         return
 
     def _dispatch() -> None:
-        from .tasks import send_web_push_notification_task
-
         broker = str(getattr(settings, "CELERY_BROKER_URL", "") or "").strip()
         if broker:
             try:
-                send_web_push_notification_task.apply_async(
-                    args=[notification_id, ids],
+                enqueue_named_task(
+                    SEND_WEB_PUSH_NOTIFICATION_TASK,
+                    args=(notification_id, ids),
                     queue="notifications",
                 )
                 return

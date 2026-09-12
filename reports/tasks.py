@@ -26,6 +26,7 @@ from .task_names import (
     DELETE_ORPHANED_STORAGE_FILE_TASK,
     MONITOR_INFRASTRUCTURE_CAPACITY_TASK,
     SEND_TELEGRAM_ALERT_TASK,
+    SEND_WEB_PUSH_NOTIFICATION_TASK,
 )
 from .telegram_alerts import (
     TelegramAlert,
@@ -62,6 +63,7 @@ def send_telegram_alert_task(self, payload: dict[str, str]) -> str:
 
 
 @shared_task(
+    name=SEND_WEB_PUSH_NOTIFICATION_TASK,
     bind=True,
     ignore_result=True,
     autoretry_for=(WebPushTransientError,),

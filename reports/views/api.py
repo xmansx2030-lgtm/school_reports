@@ -1,10 +1,32 @@
-# reports/views/api.py
-from ._helpers import *
+"""Small JSON endpoints backing department and notification selectors."""
+
+import logging
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.views.decorators.http import require_http_methods
+
+from ..forms import NotificationCreateForm
+from ..models import Department, School, SchoolMembership
 from ._helpers import (
-    _is_staff_or_officer, _is_manager_in_school,
+    access_required,
     _get_active_school,
+    _is_manager_in_school,
+    _is_staff_or_officer,
 )
 from .schools import _members_for_department, _resolve_department_by_code_or_pk
+
+logger = logging.getLogger(__name__)
+
+
+def _active_schools_exist() -> bool:
+    """Fail closed when tenant-scope state cannot be read."""
+    try:
+        return School.objects.filter(is_active=True).exists()
+    except Exception:
+        logger.exception("Unable to verify active-school isolation state")
+        return True
 
 
 @login_required(login_url="reports:login")
@@ -27,10 +49,7 @@ def api_department_members(request: HttpRequest) -> HttpResponse:
             selected_school = None
 
     # عزل صارم: في وضع تعدد المدارس يجب أن تكون هناك مدرسة نشطة لغير السوبر.
-    try:
-        has_active_schools = School.objects.filter(is_active=True).exists()
-    except Exception:
-        has_active_schools = False
+    has_active_schools = _active_schools_exist()
 
     if has_active_schools and selected_school is None and not is_superuser:
         return JsonResponse({"detail": "active_school_required", "results": []}, status=403)
@@ -45,6 +64,11 @@ def api_department_members(request: HttpRequest) -> HttpResponse:
             ).exists():
                 return JsonResponse({"detail": "forbidden", "results": []}, status=403)
         except Exception:
+            logger.exception(
+                "Unable to verify department-member school membership user=%s school=%s",
+                getattr(request.user, "pk", None),
+                getattr(selected_school, "pk", None),
+            )
             return JsonResponse({"detail": "forbidden", "results": []}, status=403)
 
     users = _members_for_department(dept, selected_school).values("id", "name")
@@ -69,10 +93,7 @@ def api_school_departments(request: HttpRequest) -> HttpResponse:
     is_superuser = bool(getattr(request.user, "is_superuser", False))
 
     # عزل صارم: في وضع تعدد المدارس يجب أن تكون هناك مدرسة نشطة لغير السوبر.
-    try:
-        has_active_schools = School.objects.filter(is_active=True).exists()
-    except Exception:
-        has_active_schools = False
+    has_active_schools = _active_schools_exist()
 
     if has_active_schools and active_school is None and not is_superuser:
         return JsonResponse({"detail": "active_school_required", "results": []}, status=403)
@@ -98,6 +119,11 @@ def api_school_departments(request: HttpRequest) -> HttpResponse:
                 ).exists():
                     return JsonResponse({"detail": "forbidden", "results": []}, status=403)
             except Exception:
+                logger.exception(
+                    "Unable to verify department-list school membership user=%s school=%s",
+                    getattr(request.user, "pk", None),
+                    getattr(selected_school, "pk", None),
+                )
                 return JsonResponse({"detail": "forbidden", "results": []}, status=403)
 
     qs = Department.objects.filter(is_active=True)
@@ -126,10 +152,7 @@ def api_notification_teachers(request: HttpRequest) -> HttpResponse:
     is_superuser = bool(getattr(request.user, "is_superuser", False))
 
     # عزل صارم: في وضع تعدد المدارس يجب أن تكون هناك مدرسة نشطة لغير السوبر.
-    try:
-        has_active_schools = School.objects.filter(is_active=True).exists()
-    except Exception:
-        has_active_schools = False
+    has_active_schools = _active_schools_exist()
 
     if has_active_schools and active_school is None and not is_superuser:
         return JsonResponse({"detail": "active_school_required", "results": []}, status=403)
@@ -144,6 +167,11 @@ def api_notification_teachers(request: HttpRequest) -> HttpResponse:
             ).exists():
                 return JsonResponse({"detail": "forbidden", "results": []}, status=403)
         except Exception:
+            logger.exception(
+                "Unable to verify notification-recipient school membership user=%s school=%s",
+                getattr(request.user, "pk", None),
+                getattr(active_school, "pk", None),
+            )
             return JsonResponse({"detail": "forbidden", "results": []}, status=403)
 
     data = request.GET.copy()
@@ -190,12 +218,11 @@ def api_notification_teachers(request: HttpRequest) -> HttpResponse:
             if dept_obj is None and selected_school is None:
                 dept_obj, dept_code, _dept_label = _resolve_department_by_code_or_pk(dept_val, None)
 
-            dept_school = selected_school
-            try:
-                if dept_obj is not None and hasattr(dept_obj, "school"):
-                    dept_school = getattr(dept_obj, "school", None)
-            except Exception:
-                pass
+            dept_school = (
+                getattr(dept_obj, "school", None)
+                if dept_obj is not None
+                else selected_school
+            )
 
             department_member_ids.update(
                 _members_for_department(dept_code, dept_school).values_list("pk", flat=True)

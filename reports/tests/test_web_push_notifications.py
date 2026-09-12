@@ -16,7 +16,11 @@ from reports.models import (
     WebPushDelivery,
     WebPushSubscription,
 )
-from reports.web_push import deliver_notification_web_push, save_browser_subscription
+from reports.web_push import (
+    deliver_notification_web_push,
+    queue_notification_web_push,
+    save_browser_subscription,
+)
 
 
 PUSH_SETTINGS = {
@@ -154,6 +158,28 @@ class WebPushDeliveryTests(TestCase):
         NotificationRecipient.objects.create(notification=other_notification, teacher=self.user)
         queue_mock.assert_called_once()
         self.assertEqual(queue_mock.call_args.kwargs["teacher_ids"], [self.user.pk])
+
+    @override_settings(CELERY_BROKER_URL="memory://")
+    @patch("reports.web_push.enqueue_named_task")
+    def test_queue_uses_stable_task_name_and_notification_queue(self, enqueue):
+        from reports.task_names import SEND_WEB_PUSH_NOTIFICATION_TASK
+        from reports.tasks import send_web_push_notification_task
+
+        with self.captureOnCommitCallbacks(execute=True):
+            queue_notification_web_push(
+                notification=self.notification,
+                teacher_ids=[self.user.pk, self.user.pk],
+            )
+
+        self.assertEqual(
+            send_web_push_notification_task.name,
+            SEND_WEB_PUSH_NOTIFICATION_TASK,
+        )
+        enqueue.assert_called_once_with(
+            SEND_WEB_PUSH_NOTIFICATION_TASK,
+            args=(self.notification.pk, [self.user.pk]),
+            queue="notifications",
+        )
 
 
 class WebPushFrontendContractTests(TestCase):
