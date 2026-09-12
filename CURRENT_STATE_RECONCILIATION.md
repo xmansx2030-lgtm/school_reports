@@ -91,3 +91,20 @@ CSS/Template سيبدأ بجرد read-only، ويتجنب الملفات الم�
 ابدأ بقياسات dependency/complexity/exception/CSS/type الحالية، ثم أصلح شريحة
 Backend لا تتداخل مع الملفات الـ18، وتسبق كل عملية نقل اختبارات characterization.
 تبقى الاختبارات والبناء محلية/Sandbox، ولا تنفذ عمليات production.
+
+## Phase-end reconciliation
+
+أُعيد الفحص بعد آخر implementation/evidence commit:
+
+- Ending implementation/evidence HEAD:
+  `9494eb43d539fe14be718d5ee1c105e0600b185b`.
+- `origin/main`: بقي
+  `27e09c061edcc0a87013d3fb4a2de1c2d9a31980`؛ الحالة `+23/-0` قبل commit
+  التقرير النهائي.
+- commits الجديدة في هذه المرحلة: 18 قبل commit التقرير.
+- الملفات الخارجية نفسها بقيت 18، بلا staged files أو untracked artifacts.
+- لا يوجد push/deploy/history rewrite، ولا نُسب أي من عمل الواجهة إلى commits
+  hardening.
+
+التقرير النهائي والحدود الدقيقة موجودة في
+`ARCHITECTURE_TECHNICAL_DEBT_HARDENING_REPORT.md`.
