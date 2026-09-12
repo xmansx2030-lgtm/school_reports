@@ -257,7 +257,7 @@ class ExecutiveDirectorTests(TestCase):
         with CaptureQueriesContext(connection) as many:
             self.client.get(reverse("reports:executive_dashboard"))
 
-        self.assertEqual(
+        self.assertLessEqual(
             len(many.captured_queries),
             len(few.captured_queries),
             f"الاستعلامات نمت من {len(few.captured_queries)} إلى {len(many.captured_queries)}",

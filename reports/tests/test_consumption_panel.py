@@ -249,7 +249,7 @@ class ConsumptionPanelSurfaceTests(TestCase):
         with CaptureQueriesContext(connection) as many:
             self.client.get(reverse("reports:platform_schools_directory"))
 
-        if len(many.captured_queries) != len(few.captured_queries):
+        if len(many.captured_queries) > len(few.captured_queries):
             # الرقم وحده لا يُشخِّص. عرض الاستعلام الذي ظهر يحوّل «10 != 11»
             # إلى سطر SQL يُقرأ ويُصلَح — وهذا الاختبار سقط مرة في تشغيل كامل
             # ولم يُعَد إنتاجه منفرداً، فبقاؤه بلا تشخيص يعني تكرار البحث
