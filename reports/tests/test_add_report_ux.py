@@ -60,6 +60,14 @@ class EvidenceFormsetShapeTests(SimpleTestCase):
         self.assertIn("data-evidence-remove", card)
         self.assertIn("data-evidence-delete", card)
 
+    def test_mobile_action_stack_publishes_clearance_for_shared_floating_layers(self):
+        styles = _template("static/css/report-mobile-actions.css")
+
+        self.assertIn("--mobile-fixed-bottom-clearance: 132px", styles)
+        self.assertIn("var(--mobile-tabbar-height, 66px)", styles)
+        self.assertIn("env(safe-area-inset-right, 0px)", styles)
+        self.assertIn("env(safe-area-inset-left, 0px)", styles)
+
 
 class AddReportPageTests(TestCase):
     def setUp(self):
@@ -131,6 +139,28 @@ class AddReportPageTests(TestCase):
 
     def test_marketing_copy_is_gone_from_the_hero(self):
         self.assertNotContains(self._page(), "مساحتك الإبداعية لتوثيق الإنجازات")
+
+    def test_manager_without_report_types_is_sent_to_setup_and_save_is_disabled(self):
+        SchoolMembership.objects.filter(
+            school=self.school,
+            teacher=self.teacher,
+        ).update(role_type=SchoolMembership.RoleType.MANAGER)
+        self.category.delete()
+
+        response = self._page()
+
+        self.assertFalse(response.context["has_report_types"])
+        self.assertContains(response, 'data-has-report-types="false"')
+        self.assertContains(response, "إعداد أنواع التقارير الآن")
+        self.assertContains(response, f'href="{reverse("reports:reporttypes_list")}"')
+        self.assertContains(
+            response,
+            'id="submitBtn" class="ar-submit-btn" disabled aria-disabled="true"',
+        )
+        self.assertContains(
+            response,
+            'class="rma-save" form="report-form" disabled aria-disabled="true"',
+        )
 
 
 class AddReportSubmissionTests(TestCase):

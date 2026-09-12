@@ -8,6 +8,7 @@
   data-config-url="{% url 'reports:web_push_config' %}"
   data-subscribe-url="{% url 'reports:web_push_subscribe' %}"
   data-unsubscribe-url="{% url 'reports:web_push_unsubscribe' %}"
+  data-auto-prompt="{% if request.resolver_match.url_name == 'registration_success' %}false{% else %}true{% endif %}"
   aria-hidden="true"
   hidden
 >

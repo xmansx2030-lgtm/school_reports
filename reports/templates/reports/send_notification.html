@@ -447,6 +447,8 @@
   .notify-prefill strong { font-size: .95rem; font-weight: 900; }
   .notify-prefill span { color: #4a5a52; font-size: .82rem; font-weight: 700; }
   .notify-prefill .btn { flex: 0 0 auto; }
+  .notify-setup-required { border-color: rgba(185,151,91,.45); border-inline-start-color: var(--royal-gold, #b9975b); background: rgba(185,151,91,.09); }
+  .notify-setup-required > i { color: var(--royal-gold, #8a6a31); }
   @media (max-width: 620px) {
     .notify-prefill { flex-wrap: wrap; }
   }
@@ -890,11 +892,23 @@
           {% if form %}
             {% if form.media %}{{ form.media }}{% endif %}
 
-            <form method="post" enctype="multipart/form-data" action="" id="notifyForm" novalidate>
+            <form method="post" enctype="multipart/form-data" action="" id="notifyForm" novalidate
+                  data-has-recipients="{% if IS_SCHOOL_MANAGER and not form.teachers.field.queryset %}false{% else %}true{% endif %}">
               {% csrf_token %}
 
               {% if form.non_field_errors %}
                 <div class="errors">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              {% if IS_SCHOOL_MANAGER and not form.teachers.field.queryset %}
+                <div class="notify-prefill notify-setup-required" id="notificationTeamSetupNotice" role="status">
+                  <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+                  <div>
+                    <strong>أضف فردًا واحدًا على الأقل قبل إرسال أول إشعار.</strong>
+                    <span>بعد إضافة فريق المدرسة سيظهر المستلمون هنا مباشرة.</span>
+                  </div>
+                  <a class="btn btn-primary" id="notificationTeamSetupLink" href="{% url 'reports:bulk_import_teachers' %}">إضافة فريق المدرسة الآن</a>
+                </div>
               {% endif %}
 
               <div class="form-grid">
@@ -1024,7 +1038,7 @@
               </div>
 
               <div class="actions">
-                <button class="btn btn-primary" type="submit">
+                <button class="btn btn-primary" id="notificationSubmit" type="submit"{% if IS_SCHOOL_MANAGER and not form.teachers.field.queryset %} disabled aria-disabled="true" aria-describedby="notificationTeamSetupNotice"{% endif %}>
                   <i class="fa-solid fa-paper-plane"></i> <span id="submitLabel">إرسال الإشعار</span>
                 </button>
                 <a class="btn" href="{% if IS_SCHOOL_MANAGER %}{% url 'reports:admin_dashboard' %}{% else %}{% url 'reports:home' %}{% endif %}">
@@ -1437,7 +1451,18 @@
     // ===== Prevent double submit =====
     const form = document.getElementById('notifyForm');
     if(form){
-      form.addEventListener('submit', function(){
+      form.addEventListener('submit', function(event){
+        if(form.getAttribute('data-has-recipients') === 'false'){
+          event.preventDefault();
+          const setupLink = document.getElementById('notificationTeamSetupLink');
+          const setupNotice = document.getElementById('notificationTeamSetupNotice');
+          const setupTarget = setupLink || setupNotice;
+          if(setupTarget){
+            setupTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if(setupLink) window.setTimeout(() => setupLink.focus({ preventScroll: true }), 220);
+          }
+          return;
+        }
         const btns = Array.from(form.querySelectorAll('button[type="submit"]'));
         btns.forEach(btn => {
           btn.disabled = true;

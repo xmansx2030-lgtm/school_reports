@@ -39,6 +39,7 @@ class GuidanceStep:
     complete: bool
     impact: str = ""
     severity: str = "normal"
+    applicable: bool = True
 
     def as_dict(self) -> dict:
         return {
@@ -49,13 +50,15 @@ class GuidanceStep:
             "complete": self.complete,
             "impact": self.impact,
             "severity": self.severity,
+            "applicable": self.applicable,
         }
 
 
 def _summary(steps: Iterable[GuidanceStep]) -> dict:
     items = list(steps)
-    completed = sum(1 for step in items if step.complete)
-    total = len(items)
+    applicable_items = [step for step in items if step.applicable]
+    completed = sum(1 for step in applicable_items if step.complete)
+    total = len(applicable_items)
     percent = round((completed / total) * 100) if total else 100
     return {
         "steps": [step.as_dict() for step in items],
@@ -63,7 +66,14 @@ def _summary(steps: Iterable[GuidanceStep]) -> dict:
         "total": total,
         "percent": percent,
         "ready": completed == total,
-        "next_step": next((step.as_dict() for step in items if not step.complete), None),
+        "next_step": next(
+            (
+                step.as_dict()
+                for step in applicable_items
+                if not step.complete
+            ),
+            None,
+        ),
     }
 
 
@@ -76,8 +86,7 @@ def school_readiness(school: School) -> dict:
         end_date__gte=today,
     ).exists()
     profile_ready = bool(
-        (school.city or "").strip()
-        and (school.phone or "").strip()
+        (school.phone or "").strip()
         and (school.current_academic_year or "").strip()
     )
     team_count = (
@@ -144,7 +153,7 @@ def school_readiness(school: School) -> dict:
         GuidanceStep(
             "profile",
             "بيانات المدرسة والسنة الحالية",
-            "أكمل المدينة والجوال والسنة الدراسية لتظهر البيانات الرسمية صحيحة.",
+            "حدّد السنة الدراسية وراجع رقم الجوال لتظهر بيانات المدرسة الأساسية صحيحة.",
             reverse("reports:school_settings"),
             profile_ready,
             "تؤثر في الطباعة والتصنيف والتقارير التنفيذية.",
@@ -191,6 +200,7 @@ def school_readiness(school: School) -> dict:
             reverse("reports:staff_roles"),
             scoped_role_count == configured_scope_count,
             "النطاق غير المضبوط يمنع العمل الإشرافي والإداري المقصود.",
+            applicable=scoped_role_count > 0,
         ),
     )
     summary = _summary(steps)

@@ -813,7 +813,15 @@ class VisitSnapshotTests(SimpleTestCase):
         source = _source("reports/templates/reports/admin_dashboard.html")
         self.assertIn("manager-print-head", source)
         self.assertIn("{{ active_school.current_academic_year", source)
-        self.assertIn("الفترة: {{ selected_period_label }}", source)
+        self.assertIn(
+            'الفترة: <span id="managerPrintPeriodLabel">'
+            "{{ selected_period_label }}</span>",
+            source,
+        )
+        self.assertNotIn(
+            'class="manager-print-head" aria-hidden="true"',
+            source,
+        )
         self.assertIn("{{ today_hijri }} هـ", source)
 
     def test_the_snapshot_header_never_shows_on_screen(self):

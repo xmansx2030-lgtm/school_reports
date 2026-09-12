@@ -280,8 +280,11 @@ body.guide-page :where(.guide-header, .guide-sidebar, .guide-topic, .guide-card)
 
 @media (display-mode: standalone) {
   body:is(.auth-page, .registration-page, .registration-success-page, .recovery-page, .maintenance-page, .guide-page) {
-    padding-block-start: max(env(safe-area-inset-top), var(--space-3));
-    padding-block-end: max(env(safe-area-inset-bottom), var(--space-3));
+    min-block-size: 100dvh;
+    padding-block-start: max(env(safe-area-inset-top, 0px), var(--space-3));
+    padding-block-end: max(env(safe-area-inset-bottom, 0px), var(--space-3));
+    padding-inline-start: max(env(safe-area-inset-right, 0px), var(--space-3));
+    padding-inline-end: max(env(safe-area-inset-left, 0px), var(--space-3));
   }
 }
 

@@ -105,6 +105,8 @@
   }
   .new-bar__count { font-size: .82rem; font-weight: 800; color: var(--asg-muted); margin-inline-end: auto; }
   .new-bar__count strong { color: var(--asg-green); font-size: 1rem; }
+  .asg-empty__action { justify-content: center; margin-top: 1rem; }
+  .asg-btn:disabled { opacity: .55; cursor: not-allowed; }
 
   @media (max-width: 640px) {
     .pick-bulk { margin-inline-start: 0; }
@@ -125,7 +127,8 @@
     <p class="asg-hero__meta">حدّد المطلوب والموعد والشواهد اللازمة، ثم اختر المكلَّفين.</p>
   </header>
 
-  <form method="post" novalidate id="asgForm">
+  <form method="post" novalidate id="asgForm"
+        data-has-assignees="{% if form.assignee_options %}true{% else %}false{% endif %}">
     {% csrf_token %}
 
     {# ═══ ١ · المطلوب ══════════════════════════════════════ #}
@@ -265,13 +268,17 @@
 
           <p class="pick-note" id="pickEmpty" hidden>لا أحد يطابق بحثك.</p>
         {% else %}
-          <div class="asg-empty">
+          <div class="asg-empty" id="assignmentTeamSetupNotice" role="status">
             <div class="asg-empty__icon"><i class="fa-solid fa-user-slash" aria-hidden="true"></i></div>
             <h2>لا يوجد من يمكن تكليفه</h2>
             <p>
               التكليف يصل منسوبي المدرسة: المعلمين والوكلاء والموظفين الإداريين.
               أضف منسوبيك إلى المدرسة أولاً ليظهروا هنا.
             </p>
+            <a class="asg-btn asg-btn--primary asg-empty__action" id="assignmentTeamSetupLink" href="{% url 'reports:bulk_import_teachers' %}">
+              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+              إضافة فريق المدرسة الآن
+            </a>
           </div>
         {% endif %}
       {% endwith %}
@@ -287,7 +294,7 @@
       <div class="new-bar__count">
         <strong id="pickCount">0</strong> مكلَّف مختار
       </div>
-      <button type="submit" class="asg-btn asg-btn--primary">
+      <button type="submit" id="assignmentSubmit" class="asg-btn asg-btn--primary"{% if not form.assignee_options %} disabled aria-disabled="true" aria-describedby="assignmentTeamSetupNotice"{% endif %}>
         <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
         إصدار التكليف
       </button>
@@ -342,6 +349,18 @@
       countBox.hidden = !requires.checked;
     }
     if (requires) { requires.addEventListener('change', paintEvidence); paintEvidence(); }
+
+    form.addEventListener('submit', function (event) {
+      if (form.getAttribute('data-has-assignees') !== 'false') return;
+      event.preventDefault();
+      var setupLink = document.getElementById('assignmentTeamSetupLink');
+      var setupNotice = document.getElementById('assignmentTeamSetupNotice');
+      var setupTarget = setupLink || setupNotice;
+      if (setupTarget) {
+        setupTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (setupLink) window.setTimeout(function () { setupLink.focus({ preventScroll: true }); }, 220);
+      }
+    });
 
     // ── اختيار المكلَّفين ──────────────────────────────────────────
     var grid = document.getElementById('pickGrid');

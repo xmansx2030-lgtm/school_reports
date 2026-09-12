@@ -12,13 +12,17 @@
     right: 0;
     /* ‎66px‎ ارتفاع شريط التنقّل، و‎1px‎ حدُّه العلوي — بدونها يتراكبان بمقدار
        بكسل واحد فيظهر خطٌّ مزدوج. */
-    bottom: calc(67px + env(safe-area-inset-bottom));
+    bottom: calc(var(--mobile-tabbar-height, 66px) + 1px + env(safe-area-inset-bottom, 0px));
     left: 0;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 9px;
-    padding: 9px 12px;
+    padding:
+      9px
+      max(12px, env(safe-area-inset-right, 0px))
+      9px
+      max(12px, env(safe-area-inset-left, 0px));
     border-top: 1px solid var(--line-2, #d8e2dc);
     background: color-mix(in srgb, var(--card, #fff) 96%, transparent);
     box-shadow: 0 -10px 26px rgba(16, 35, 26, .12);
@@ -28,7 +32,12 @@
   /* الشريط يغطّي آخر المحتوى ما لم يُفسح له. ‎76px‎ لشريط التنقّل أصلاً،
      و‎62px‎ لهذا الشريط. */
   body.page:has(.report-mobile-actions) {
-    padding-bottom: calc(138px + env(safe-area-inset-bottom));
+    --mobile-fixed-bottom-clearance: 132px;
+    padding-bottom: calc(
+      var(--mobile-fixed-bottom-clearance)
+      + 10px
+      + env(safe-area-inset-bottom, 0px)
+    );
   }
 
   .rma-check,
@@ -70,13 +79,8 @@
   /* زرّ الحفظ في العمود الجانبي يصير مكرّراً على الجوال. */
   .ar-rail .ar-submit-btn { display: none; }
 
-  /* مشغّل «اسأل منصور» ثابتٌ عند ‎bottom: 82px‎ ليعلو شريط التنقّل وحده، وهذا
-     الشريط يحتلّ الشريحة نفسها فيغطّيه تماماً: قياسُ ``elementFromPoint`` في
-     مركز المشغّل كان يعيد ``rma-save`` — أي أن نقرة «اسأل منصور» تحفظ التقرير.
-     فيُرفع فوق الشريطين معاً حيث توجد اللوحة. */
-  body:has(.report-mobile-actions) .mansour-launcher {
-    bottom: calc(146px + env(safe-area-inset-bottom));
-  }
+  /* ``--mobile-fixed-bottom-clearance`` ترفعه كل الطبقات العائمة المشتركة
+     (التثبيت، الإشعارات، منصور، وحالة PWA) فوق شريطي الإجراءات والتنقل معاً. */
 }
 
 @media (max-width: 768px) {

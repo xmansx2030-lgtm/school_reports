@@ -210,6 +210,19 @@ class WebPushFrontendContractTests(TestCase):
         self.assertIn('show({ explicit: true })', script)
         self.assertNotIn('!isStandalone()) return', script)
 
+    def test_sensitive_registration_receipt_never_auto_opens_push_prompt(self):
+        template = self._source(
+            "reports/templates/reports/partials/web_push_prompt.html"
+        )
+        script = self._source("static/js/web-push.js")
+
+        self.assertIn("request.resolver_match.url_name == 'registration_success'", template)
+        self.assertIn('var autoPromptAllowed = root.getAttribute("data-auto-prompt")', script)
+        self.assertIn(
+            'autoPromptAllowed && currentPermission() === "default"',
+            script,
+        )
+
     def test_mobile_drawer_has_persistent_install_and_push_actions(self):
         template = self._source("reports/templates/base.html")
 
@@ -225,7 +238,13 @@ class WebPushFrontendContractTests(TestCase):
         for source in (push_css, install_css):
             self.assertIn("env(safe-area-inset-top, 0px)", source)
             self.assertIn("env(safe-area-inset-bottom, 0px)", source)
+            self.assertIn("env(safe-area-inset-right, 0px)", source)
+            self.assertIn("env(safe-area-inset-left, 0px)", source)
+            self.assertIn("var(--header-bottom, var(--header-h, 72px))", source)
             self.assertIn("@media (max-height: 520px)", source)
+
+        self.assertIn("var(--web-push-bottom-clearance, 0px)", push_css)
+        self.assertIn("var(--pwa-install-bottom-clearance, 0px)", install_css)
 
     def test_authenticated_base_page_exposes_the_opt_in_panel(self):
         user = Teacher.objects.create_user(phone="0500000031", name="مثبت", password="pass-12345")

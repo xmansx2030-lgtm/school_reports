@@ -46,6 +46,17 @@
     button, input { font: inherit; }
     a { color: inherit; text-decoration: none; }
     :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
     .success-shell {
       width: min(980px, 100%);
       margin: 0 auto;
@@ -109,11 +120,12 @@
       justify-content: space-between;
       gap: 22px;
     }
-    .receipt-intro h2 { margin: 0 0 4px; font-size: 1.12rem; }
-    .receipt-intro p { margin: 0; color: var(--muted); font-size: .72rem; }
+    .receipt-intro h2 { margin: 0 0 4px; font-size: 1.18rem; }
+    .receipt-intro p { margin: 0; color: var(--muted); font-size: .8rem; }
     .once-badge {
       display: inline-flex;
-      padding: 6px 10px;
+      min-height: 32px;
+      padding: 6px 11px;
       flex: 0 0 auto;
       align-items: center;
       gap: 6px;
@@ -121,9 +133,23 @@
       background: #fff7e8;
       border: 1px solid #f1dfbb;
       border-radius: 99px;
-      font-size: .64rem;
+      font-size: .72rem;
       font-weight: 900;
     }
+    .launch-panel {
+      display: flex;
+      margin-block-end: 20px;
+      padding: 16px 18px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      background: linear-gradient(135deg, rgba(10,105,70,.09), rgba(197,163,101,.12));
+      border: 1px solid rgba(10,105,70,.18);
+      border-radius: 16px;
+    }
+    .launch-panel__copy { min-width: 0; }
+    .launch-panel__copy strong { display: block; margin-block-end: 2px; color: var(--forest); font-size: .95rem; }
+    .launch-panel__copy span { display: block; color: var(--muted); font-size: .78rem; }
     .credentials {
       display: grid;
       padding: 20px;
@@ -146,7 +172,7 @@
       align-items: center;
       gap: 7px;
       color: var(--muted);
-      font-size: .67rem;
+      font-size: .76rem;
       font-weight: 800;
     }
     .credential-row { display: flex; align-items: center; gap: 8px; direction: ltr; }
@@ -162,10 +188,20 @@
       font-size: 1rem;
       font-weight: 800;
     }
+    .credential-print-value {
+      display: none;
+      width: 100%;
+      color: var(--forest);
+      direction: ltr;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 1rem;
+      font-weight: 800;
+      text-align: left;
+    }
     .icon-button {
       display: grid;
-      width: 36px;
-      height: 36px;
+      width: 44px;
+      height: 44px;
       flex: 0 0 auto;
       color: var(--green);
       background: var(--green-light);
@@ -174,6 +210,7 @@
       cursor: pointer;
       place-items: center;
     }
+    .icon-button:hover { background: #d7ebdf; }
     .receipt-actions { display: flex; margin-block-start: 12px; justify-content: flex-end; gap: 8px; }
     .login-address {
       display: flex;
@@ -184,12 +221,21 @@
       color: var(--muted);
       background: rgba(255,255,255,.55);
       border-radius: 10px;
-      font-size: .67rem;
+      flex-wrap: wrap;
+      font-size: .74rem;
     }
-    .login-address a { color: var(--green); font-weight: 900; direction: ltr; }
+    .login-address a {
+      display: inline-flex;
+      min-height: 44px;
+      padding-inline: 4px;
+      align-items: center;
+      color: var(--green);
+      font-weight: 900;
+      direction: ltr;
+    }
     .quiet-button {
       display: inline-flex;
-      min-height: 40px;
+      min-height: 44px;
       padding: 8px 13px;
       align-items: center;
       gap: 7px;
@@ -198,7 +244,7 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       cursor: pointer;
-      font-size: .68rem;
+      font-size: .76rem;
       font-weight: 800;
     }
     .trial-summary {
@@ -219,34 +265,36 @@
       color: rgba(255,255,255,.68);
       border-inline-start: 1px solid rgba(255,255,255,.1);
       text-align: center;
-      font-size: .68rem;
+      font-size: .76rem;
     }
     .trial-summary > div:first-child { border-inline-start: 0; }
     .trial-summary i { color: var(--gold-light); font-size: 1.08rem; }
     .trial-summary strong, .trial-summary small { display: block; }
-    .trial-summary strong { color: var(--white); font-size: .78rem; }
-    .trial-summary small { color: rgba(255,255,255,.5); }
+    .trial-summary strong { color: var(--white); font-size: .86rem; }
+    .trial-summary small { color: rgba(255,255,255,.62); font-size: .7rem; }
     .next-section { margin-block-start: 27px; }
-    .next-section h2 { margin: 0 0 14px; font-size: 1rem; }
+    .next-section h2 { margin: 0 0 3px; font-size: 1.08rem; }
+    .next-section > p { margin: 0 0 14px; color: var(--muted); font-size: .78rem; }
     .next-steps {
       display: grid;
       margin: 0;
       padding: 0;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       list-style: none;
     }
     .next-steps li {
-      padding: 15px;
+      min-height: 142px;
+      padding: 16px;
       background: var(--white);
       border: 1px solid var(--line);
       border-radius: 13px;
-      font-size: .7rem;
+      font-size: .78rem;
     }
     .next-steps span {
       display: grid;
-      width: 27px;
-      height: 27px;
+      width: 32px;
+      height: 32px;
       margin-block-end: 9px;
       color: var(--green);
       background: var(--green-light);
@@ -254,11 +302,15 @@
       font-weight: 900;
       place-items: center;
     }
+    .next-steps strong { display: block; margin-block-end: 4px; color: var(--forest); font-size: .82rem; line-height: 1.55; }
+    .next-steps small { display: block; color: var(--muted); font-size: .7rem; line-height: 1.75; }
     .primary-action {
       display: flex;
       min-height: 56px;
-      margin-block-start: 27px;
+      min-width: 255px;
+      margin: 0;
       padding: 12px 22px;
+      flex: 0 0 auto;
       align-items: center;
       justify-content: center;
       gap: 10px;
@@ -266,6 +318,7 @@
       background: var(--green);
       border-radius: 13px;
       box-shadow: 0 14px 32px rgba(10,105,70,.2);
+      font-size: .9rem;
       font-weight: 900;
     }
     .security-note {
@@ -275,7 +328,7 @@
       justify-content: center;
       gap: 7px;
       color: var(--muted);
-      font-size: .64rem;
+      font-size: .72rem;
       text-align: center;
     }
     .toast {
@@ -291,7 +344,7 @@
       border-inline-start: 4px solid var(--green);
       border-radius: 13px;
       box-shadow: 0 18px 48px rgba(4, 28, 19, .16);
-      font-size: .8rem;
+      font-size: .85rem;
       font-weight: 800;
       opacity: 0;
       pointer-events: none;
@@ -299,13 +352,20 @@
       transition: opacity .2s, transform .2s;
     }
     .toast.show { opacity: 1; transform: none; }
+    @media (max-width: 900px) {
+      .next-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .next-steps li:last-child { grid-column: 1 / -1; min-height: auto; }
+    }
     @media (max-width: 680px) {
       body { padding: 0; background: var(--paper); }
       .success-shell { min-height: 100vh; border: 0; border-radius: 0; }
       .success-head { padding: 34px 20px 30px; }
       .success-body { padding: 25px 14px 32px; }
       .receipt-intro { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .launch-panel { align-items: stretch; flex-direction: column; }
+      .primary-action { width: 100%; min-width: 0; }
       .credentials, .next-steps { grid-template-columns: 1fr; }
+      .next-steps li, .next-steps li:last-child { min-height: auto; grid-column: auto; }
       .trial-summary { grid-template-columns: 1fr; }
       .trial-summary > div { min-height: 70px; justify-content: flex-start; border: 0; border-block-start: 1px solid rgba(255,255,255,.1); text-align: right; }
       .trial-summary > div:first-child { border-block-start: 0; }
@@ -320,7 +380,9 @@
     @media print {
       body { padding: 0; color: #000; background: #fff; }
       .success-shell { box-shadow: none; }
-      .primary-action, .receipt-actions, .security-note, .toast { display: none !important; }
+      .launch-panel, .receipt-actions, .security-note, .toast { display: none !important; }
+      .credential-row input, .credential-row .icon-button { display: none !important; }
+      .credential-print-value { display: block !important; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition: none !important; }
@@ -330,6 +392,53 @@
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3">
   <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
+  <style nonce="{{ CSP_NONCE }}">
+    html[data-theme="dark"] .launch-panel {
+      background: linear-gradient(135deg, rgba(111,211,172,.12), rgba(197,163,101,.11));
+      border-color: rgba(111,211,172,.24);
+    }
+    html[data-theme="dark"] .launch-panel__copy strong,
+    html[data-theme="dark"] .next-steps strong { color: #edf6f1; }
+    html[data-theme="dark"] .credentials {
+      background: #0a2119 !important;
+      border-color: rgba(205,225,216,.18) !important;
+    }
+    html[data-theme="dark"] .credential {
+      color: #edf6f1 !important;
+      background: #102920 !important;
+      border-color: rgba(205,225,216,.18) !important;
+    }
+    html[data-theme="dark"] .credential-row { background: transparent !important; }
+    html[data-theme="dark"] .credential-label,
+    html[data-theme="dark"] .login-address { color: #c8dbd1 !important; }
+    html[data-theme="dark"] .login-address {
+      background: rgba(205,225,216,.08) !important;
+      border: 1px solid rgba(205,225,216,.14);
+    }
+    html[data-theme="dark"] .login-address a { color: #7ce2b8 !important; }
+    html[data-theme="dark"] .toast {
+      color: #edf6f1 !important;
+      background: #102920 !important;
+      border-color: rgba(205,225,216,.2) !important;
+      border-inline-start-color: #6fd3ac !important;
+    }
+    html[data-theme="dark"] .icon-button:hover { background: rgba(111,211,172,.2); }
+    @media print {
+      html[data-theme="dark"] body,
+      html[data-theme="dark"] .success-shell,
+      html[data-theme="dark"] .success-body,
+      html[data-theme="dark"] .credentials,
+      html[data-theme="dark"] .credential,
+      html[data-theme="dark"] .credential-row,
+      html[data-theme="dark"] .next-steps li {
+        color: #000 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+      }
+      html[data-theme="dark"] .credential-label,
+      html[data-theme="dark"] .credential-print-value { color: #000 !important; }
+    }
+  </style>
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
 </head>
 <body class="registration-success-page">
@@ -350,20 +459,33 @@
         <span class="once-badge"><i class="fa-solid fa-eye-slash"></i> تظهر في هذه الصفحة مرة واحدة</span>
       </div>
 
+      <div class="launch-panel" aria-label="الانتقال إلى لوحة المدرسة">
+        <div class="launch-panel__copy">
+          <strong>بعد حفظ بيانات الدخول: ابدأ من لوحة المدرسة</strong>
+          <span id="launchHint">ستجد بيانات المدرسة والسنة الدراسية أولًا، ثم بقية خطوات الإعداد بالترتيب.</span>
+        </div>
+        <a class="primary-action" href="{% url 'reports:admin_dashboard' %}" id="launchDashboard" aria-describedby="launchHint">
+          دخول لوحة المدرسة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        </a>
+      </div>
+
       <div class="credentials" id="credentials">
         <div class="credential">
           <span class="credential-label"><i class="fa-solid fa-mobile-screen-button"></i> اسم المستخدم — رقم الجوال</span>
           <div class="credential-row">
             <input id="loginPhone" type="text" value="{{ receipt.phone }}" readonly aria-label="رقم الجوال المستخدم للدخول">
-            <button class="icon-button" type="button" data-copy-target="loginPhone" aria-label="نسخ رقم الجوال"><i class="fa-regular fa-copy"></i></button>
+            <span class="credential-print-value">{{ receipt.phone }}</span>
+            <button class="icon-button" type="button" data-copy-target="loginPhone" aria-label="نسخ رقم الجوال"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
           </div>
         </div>
         <div class="credential">
           <span class="credential-label"><i class="fa-solid fa-key"></i> كلمة المرور</span>
           <div class="credential-row">
-            <input id="loginPassword" type="text" value="{{ receipt.password }}" readonly aria-label="كلمة المرور">
-            <button class="icon-button" type="button" id="passwordVisibility" aria-label="إخفاء كلمة المرور"><i class="fa-regular fa-eye-slash"></i></button>
-            <button class="icon-button" type="button" data-copy-target="loginPassword" aria-label="نسخ كلمة المرور"><i class="fa-regular fa-copy"></i></button>
+            <input id="loginPassword" type="password" value="{{ receipt.password }}" readonly aria-label="كلمة المرور، مخفية افتراضيًا" aria-describedby="passwordVisibilityHint">
+            <span class="credential-print-value">{{ receipt.password }}</span>
+            <button class="icon-button" type="button" id="passwordVisibility" aria-label="إظهار كلمة المرور" aria-controls="loginPassword"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+            <button class="icon-button" type="button" data-copy-target="loginPassword" aria-label="نسخ كلمة المرور"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+            <span class="visually-hidden" id="passwordVisibilityHint">استخدم زر إظهار كلمة المرور لمراجعتها، ثم أخفها قبل مغادرة الجهاز.</span>
           </div>
         </div>
       </div>
@@ -377,6 +499,7 @@
         <span>للدخول لاحقًا استخدم:</span>
         <a href="{% url 'reports:login' %}">{{ request.get_host }}{% url 'reports:login' %}</a>
       </div>
+      <p class="security-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> كلمة المرور مخفية افتراضيًا، ولن نعرض بيانات هذا الإيصال مرة أخرى بعد مغادرة الصفحة.</p>
 
       <div class="trial-summary" aria-label="تفاصيل التجربة">
         <div><i class="fa-regular fa-calendar-check"></i><span><strong>{{ receipt.trial_days }} يومًا كاملة</strong><small>تنتهي في {{ receipt.trial_end_date }}</small></span></div>
@@ -385,27 +508,30 @@
       </div>
 
       <section class="next-section">
-        <h2>ابدأ بهذه الخطوات الثلاث</h2>
+        <h2>مسار الإعداد المقترح</h2>
+        <p>نفّذ الخطوات بهذا الترتيب حتى تصبح أدوات الفريق والتوثيق جاهزة للاستخدام.</p>
         <ol class="next-steps">
-          <li><span>1</span>راجع بيانات المدرسة وأضف شعارها وهويتها.</li>
-          <li><span>2</span>أضف حسابًا أو حسابين من الكادر لتجربة التقارير والطلبات.</li>
-          <li><span>3</span>أنشئ أول تقرير وشاهد ملف PDF النهائي.</li>
+          <li><span aria-hidden="true">1</span><strong>بيانات المدرسة والسنة</strong><small>راجع بيانات المدرسة وحدد السنة الدراسية الحالية أولًا.</small></li>
+          <li><span aria-hidden="true">2</span><strong>فريق المدرسة</strong><small>أضف حسابًا أو حسابين من الكادر لبدء العمل.</small></li>
+          <li><span aria-hidden="true">3</span><strong>الأقسام ومسؤولوها</strong><small>أنشئ الأقسام، وعيّن مسؤولًا لكل قسم، ووزّع أعضاء الفريق عليها.</small></li>
+          <li><span aria-hidden="true">4</span><strong>أنواع التقارير</strong><small>حدد الأنواع التي سيستخدمها الفريق في التوثيق.</small></li>
+          <li><span aria-hidden="true">5</span><strong>أول تقرير</strong><small>أنشئ تقريرك الأول وراجع ملف PDF النهائي.</small></li>
         </ol>
       </section>
-
-      <a class="primary-action" href="{% url 'reports:admin_dashboard' %}">
-        دخول لوحة المدرسة <i class="fa-solid fa-arrow-left"></i>
-      </a>
-      <p class="security-note"><i class="fa-solid fa-shield-halved"></i> لأمانك، لن نعرض كلمة المرور بهذه الصورة مرة أخرى بعد مغادرة الصفحة.</p>
     </section>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite">تم النسخ</div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
     (function () {
       var toast = document.getElementById("toast");
       var toastTimer;
+      var receiptPreserved = false;
+      var copiedCredentialTargets = {
+        loginPhone: false,
+        loginPassword: false
+      };
 
       function showToast(message) {
         toast.textContent = message;
@@ -414,26 +540,48 @@
         toastTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 1800);
       }
 
-      function copyText(value, message) {
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(value).then(function () { showToast(message); });
-          return;
-        }
+      function legacyCopy(value) {
+        var copied = false;
         var temporary = document.createElement("textarea");
         temporary.value = value;
+        temporary.setAttribute("readonly", "");
+        temporary.setAttribute("aria-hidden", "true");
         temporary.style.position = "fixed";
         temporary.style.opacity = "0";
         document.body.appendChild(temporary);
         temporary.select();
-        document.execCommand("copy");
+        try { copied = document.execCommand("copy"); } catch (error) { copied = false; }
         temporary.remove();
-        showToast(message);
+        return copied;
+      }
+
+      function copyText(value, message, onCopied) {
+        function copied() {
+          showToast(message);
+          if (onCopied) onCopied();
+        }
+        function failed() { showToast("تعذّر النسخ تلقائيًا؛ حدّد البيانات وانسخها يدويًا."); }
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(value).then(copied).catch(function () {
+            if (legacyCopy(value)) copied(); else failed();
+          });
+          return;
+        }
+        if (legacyCopy(value)) copied(); else failed();
       }
 
       document.querySelectorAll("[data-copy-target]").forEach(function (button) {
         button.addEventListener("click", function () {
-          var input = document.getElementById(button.getAttribute("data-copy-target"));
-          if (input) copyText(input.value, 'تم النسخ');
+          var targetId = button.getAttribute("data-copy-target");
+          var input = document.getElementById(targetId);
+          if (input) {
+            copyText(input.value, "تم النسخ", function () {
+              if (Object.prototype.hasOwnProperty.call(copiedCredentialTargets, targetId)) {
+                copiedCredentialTargets[targetId] = true;
+                receiptPreserved = copiedCredentialTargets.loginPhone && copiedCredentialTargets.loginPassword;
+              }
+            });
+          }
         });
       });
 
@@ -442,20 +590,32 @@
         var phone = document.getElementById("loginPhone").value;
         var password = document.getElementById("loginPassword").value;
         var loginUrl = window.location.origin + "{% url 'reports:login' %}";
-        copyText("منصة توثيق\nرابط الدخول: " + loginUrl + "\nرقم الجوال: " + phone + "\nكلمة المرور: " + password, "تم نسخ بيانات الدخول");
+        copyText(
+          "منصة توثيق\nرابط الدخول: " + loginUrl + "\nرقم الجوال: " + phone + "\nكلمة المرور: " + password,
+          "تم نسخ بيانات الدخول",
+          function () { receiptPreserved = true; }
+        );
       });
 
       document.getElementById("printReceipt").addEventListener("click", function () {
+        receiptPreserved = true;
         window.print();
+      });
+
+      document.getElementById("launchDashboard").addEventListener("click", function (event) {
+        if (!receiptPreserved && !window.confirm("بيانات الدخول تظهر مرة واحدة. هل تريد المغادرة قبل نسخها أو طباعتها؟")) {
+          event.preventDefault();
+        }
       });
 
       var visibility = document.getElementById("passwordVisibility");
       visibility.addEventListener("click", function () {
         var input = document.getElementById("loginPassword");
-        var hide = input.type === "text";
-        input.type = hide ? "password" : "text";
-        visibility.setAttribute("aria-label", hide ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور');
-        visibility.querySelector("i").className = hide ? "fa-regular fa-eye" : "fa-regular fa-eye-slash";
+        var show = input.type === "password";
+        input.type = show ? "text" : "password";
+        input.setAttribute("aria-label", show ? "كلمة المرور، ظاهرة الآن" : "كلمة المرور، مخفية الآن");
+        visibility.setAttribute("aria-label", show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+        visibility.querySelector("i").className = show ? "fa-regular fa-eye-slash" : "fa-regular fa-eye";
       });
     }());
   </script>

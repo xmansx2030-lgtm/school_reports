@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260912.1" />
   {% if request.user.is_authenticated %}
   {% if request.user.is_authenticated and AI_INTERNAL_HELP_ENABLED %}
-    <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260801.3" />
+    <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260912.1" />
   {% endif %}
   {% endif %}
 
@@ -43,7 +43,7 @@
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/v4-shims.min.css' %}">
 
-  <link rel="stylesheet" href="{% static 'css/mobile-professional.css' %}?v=20260813.1" />
+  <link rel="stylesheet" href="{% static 'css/mobile-professional.css' %}?v=20260912.2" />
   <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}?v=20260912.1" />
 
   {% comment %}
@@ -64,7 +64,7 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10" />
   {% comment %}رموز الهوية تأتي بعد كل الأوراق القديمة كي تبقى هي المصدر الحاكم للقيم الدلالية.{% endcomment %}
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3" />
-  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260912.5" />
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260912.7" />
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/progress-bars.js' %}?v=20260812.1" defer></script>
   {% if request.user.is_authenticated %}<script src="{% static 'js/global-search.js' %}?v=20260812.1" defer></script>{% endif %}
@@ -1081,6 +1081,14 @@
         {% if request.user.is_superuser %}
           <a href="{% url 'reports:platform_operations' %}" class="mobile-tabbar__primary {% if active == 'platform_operations' %}is-active{% endif %}" {% if active == 'platform_operations' %}aria-current="page"{% endif %} aria-label="مراقبة المنصة">
             <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i><span>التشغيل</span>
+          </a>
+        {% elif IS_SCHOOL_MANAGER and active == 'admin_dashboard' and manager_onboarding and setup_next_step %}
+          <a href="{{ setup_next_step.url }}" class="mobile-tabbar__primary" aria-label="إكمال الإعداد: {{ setup_next_step.title }}">
+            <i class="fa-solid fa-route" aria-hidden="true"></i><span>إكمال الإعداد</span>
+          </a>
+        {% elif IS_SCHOOL_MANAGER and not HAS_REPORT_TYPES %}
+          <a href="{% url 'reports:reporttypes_list' %}" class="mobile-tabbar__primary" aria-label="إعداد أنواع التقارير">
+            <i class="fa-solid fa-tags" aria-hidden="true"></i><span>إعداد التقارير</span>
           </a>
         {% elif not IS_GROUP_ONLY_DIRECTOR %}
           <a href="{% url 'reports:add_report' %}" class="mobile-tabbar__primary {% if active == 'add_report' %}is-active{% endif %}" {% if active == 'add_report' %}aria-current="page"{% endif %} aria-label="إضافة تقرير">

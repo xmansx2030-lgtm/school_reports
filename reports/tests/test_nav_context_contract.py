@@ -23,6 +23,7 @@ from reports.context_processors import nav_context
 from reports.models import (
     Department,
     DepartmentMembership,
+    ReportType,
     School,
     SchoolMembership,
     SchoolSubscription,
@@ -42,7 +43,8 @@ from reports.models import (
 #     البارز ومرة لعدّاد غير المقروء — لنتيجةٍ لا تتغيّر داخل الطلب. (‑2 إلى ‑3)
 MAX_QUERIES = {
     "teacher": 23,
-    "manager": 19,
+    # +1 مقصود عن القياس السابق: ``EXISTS`` لحالة إعداد أنواع التقارير.
+    "manager": 20,
     "officer": 24,
     "anonymous": 0,
 }
@@ -59,6 +61,7 @@ EXPECTED_KEYS = {
     "SHOW_DEPARTMENT_REPORTS_LINK",
     "SHOW_SCHOOL_REPORTS_LINK",
     "SHOW_ARCHIVE_LINK",
+    "HAS_REPORT_TYPES",
     "DEPARTMENT_REPORTS_URLNAME",
     "NAV_OFFICER_REPORTS",
     "SHOW_ADMIN_DASHBOARD_LINK",
@@ -176,6 +179,15 @@ class NavContextContractTests(TestCase):
         # المدير خارج مجموعة «الإشراف»: مجموعاته تغطّيها.
         self.assertFalse(context["SHOW_SUPERVISION_GROUP"])
         self.assertEqual(context["SCHOOL_NAME"], self.school.name)
+        self.assertFalse(context["HAS_REPORT_TYPES"])
+
+        ReportType.objects.create(
+            school=self.school,
+            code="nav-ready",
+            name="نوع جاهز",
+        )
+        context = nav_context(self._request(self.manager))
+        self.assertTrue(context["HAS_REPORT_TYPES"])
 
     def test_teacher_flags(self):
         context = nav_context(self._request(self.teacher))
@@ -185,6 +197,7 @@ class NavContextContractTests(TestCase):
         self.assertTrue(context["HAS_TEACHER_ROLE"])
         self.assertTrue(context["SHOW_PERSONAL_ACHIEVEMENT"])
         self.assertFalse(context["CAN_SEND_NOTIFICATIONS"])
+        self.assertFalse(context["HAS_REPORT_TYPES"])
 
     def test_officer_flags(self):
         context = nav_context(self._request(self.officer))
@@ -204,6 +217,8 @@ class NavContextContractTests(TestCase):
             nav_context(self._request(self.teacher))
 
     def test_query_budget_manager(self):
+        # استعلام ``EXISTS`` واحد خاص بالمدير يمنع زر «تقرير جديد» المسدود على
+        # كل الصفحات، ولا يحمّل قائمة الأنواع أو يضيف كلفةً لبقية الأدوار.
         with self.assertNumQueries(MAX_QUERIES["manager"]):
             nav_context(self._request(self.manager))
 

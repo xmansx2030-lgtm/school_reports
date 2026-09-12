@@ -1890,6 +1890,10 @@ body.page .manager-hero__intro {
 body.page .manager-hero h1 {
   color: var(--text-primary);
   font-size: var(--text-3xl);
+  background: none;
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
 }
 
 body.page .manager-school-meta span {
@@ -1900,6 +1904,12 @@ body.page .manager-school-meta span {
 
 body.page .manager-school-meta i {
   color: var(--primary);
+}
+
+body.page .manager-school-meta .manager-school-meta__trial {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+  background: var(--primary-soft);
 }
 
 body.page .manager-hero__button {
@@ -1963,6 +1973,31 @@ body.page .manager-hero__pulse span {
 
 body.page .manager-hero__summary-value {
   color: var(--text-primary);
+}
+
+body.page .manager-onboarding-next > span,
+body.page .manager-onboarding-progress b {
+  color: var(--primary);
+}
+
+body.page .manager-setup__percent strong {
+  color: var(--primary);
+  background: none;
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+}
+
+body.page .manager-setup__primary,
+body.page .manager-analytics-empty a {
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+body.page .manager-setup__primary:hover,
+body.page .manager-analytics-empty a:hover {
+  color: var(--primary-foreground);
+  background: var(--primary-hover);
 }
 
 body.page .manager-hero__pulse a {
@@ -2398,6 +2433,12 @@ body.page .profile-scope :where(.profile-form button[type="submit"], .profile-bt
     padding-block-end: calc(5.5rem + env(safe-area-inset-bottom));
   }
 
+  body.page .site-header .container.hdr,
+  body.page .page-main {
+    padding-inline-start: max(var(--space-4), env(safe-area-inset-right, 0px));
+    padding-inline-end: max(var(--space-4), env(safe-area-inset-left, 0px));
+  }
+
   body.page .bottom-nav {
     padding-block-end: env(safe-area-inset-bottom);
   }
@@ -2425,6 +2466,17 @@ body.page .profile-scope :where(.profile-form button[type="submit"], .profile-bt
 
   body.page .page-main {
     padding-inline: var(--space-4);
+  }
+
+  /* ``body`` already reserves the fixed navigation stack. Repeating its full
+     height in both the main container and the manager page creates a large,
+     apparently empty tail after the final dashboard section. */
+  body.page:has(.mobile-tabbar) .page-main {
+    padding-block-end: var(--space-5);
+  }
+
+  body.page:has(.mobile-tabbar) .manager-page {
+    padding-block-end: 0;
   }
 
   body.page :where(.card, .app-card, .royal-panel, .panel) {

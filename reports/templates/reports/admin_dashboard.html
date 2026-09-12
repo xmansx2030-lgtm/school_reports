@@ -238,6 +238,37 @@
     font-weight: 700;
     line-height: 1.8;
   }
+  .manager-onboarding-next {
+    display: grid;
+    width: 100%;
+    gap: 5px;
+    margin-block: 14px 10px;
+    text-align: start;
+  }
+  .manager-onboarding-next > span {
+    color: var(--mg-green);
+    font-size: .76rem;
+    font-weight: 900;
+  }
+  .manager-onboarding-next strong { font-size: 1rem; font-weight: 950; }
+  .manager-onboarding-next p {
+    margin: 0;
+    color: var(--mg-muted);
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1.75;
+  }
+  .manager-onboarding-progress {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+    margin-bottom: 7px;
+    color: var(--mg-muted);
+    font-size: .78rem;
+    font-weight: 800;
+  }
+  .manager-onboarding-progress b { color: var(--mg-green); }
 
   /* ── الأقسام ────────────────────────────────────────────────────── */
   .manager-section { margin-bottom: 26px; }
@@ -500,6 +531,14 @@
   .manager-now__clear span { display: grid; gap: 3px; }
   .manager-now__clear strong { font-size: .95rem; font-weight: 900; }
   .manager-now__clear small { color: var(--mg-muted); font-size: .82rem; font-weight: 700; }
+  .manager-now__setup-link {
+    width: fit-content;
+    margin-top: 7px;
+    color: var(--mg-green);
+    font-size: .82rem;
+    font-weight: 900;
+    text-underline-offset: 3px;
+  }
 
   /* الأرقام التي لا تنتظر قراراً: سطرٌ واحد لا أربع بطاقات. */
   .manager-now__stats {
@@ -898,6 +937,13 @@
     font-weight: 700;
     line-height: 1.8;
   }
+  .manager-setup__kicker {
+    display: inline-flex;
+    margin-bottom: 7px;
+    color: var(--mg-green);
+    font-size: .76rem;
+    font-weight: 950;
+  }
   .manager-setup__percent {
     display: flex;
     align-items: baseline;
@@ -928,6 +974,25 @@
     background: linear-gradient(90deg, var(--id-green-700), var(--id-green-500) 62%, var(--id-gold-400));
     transition: width var(--id-slow) var(--id-ease);
   }
+  .manager-setup__summary .manager-setup__next { margin: 16px 0 8px; }
+  .manager-setup__primary,
+  .manager-setup__details {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 9px 15px;
+    border-radius: var(--id-r2);
+    font-size: .84rem;
+    font-weight: 900;
+    text-decoration: none;
+  }
+  .manager-setup__primary {
+    gap: 8px;
+    color: #fff;
+    background: var(--mg-green);
+  }
+  .manager-setup__details { color: var(--mg-green); }
   .manager-setup__steps { display: grid; gap: 10px; align-content: start; }
   .manager-setup__step {
     display: flex;
@@ -1163,6 +1228,40 @@
     grid-template-columns: minmax(0, 1.35fr) minmax(0, .65fr);
     gap: 16px;
   }
+  .manager-analytics-empty {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: clamp(20px, 3vw, 30px);
+    border: 1px dashed var(--mg-line);
+    border-radius: var(--id-r3);
+    background: var(--mg-soft);
+  }
+  .manager-analytics-empty__icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--id-r2);
+    color: var(--mg-green);
+    background: var(--id-accent-wash);
+  }
+  .manager-analytics-empty h3 { margin: 0 0 5px; font-size: .98rem; font-weight: 950; }
+  .manager-analytics-empty p { margin: 0; color: var(--mg-muted); font-size: .84rem; font-weight: 700; line-height: 1.75; }
+  .manager-analytics-empty a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 9px 15px;
+    border-radius: var(--id-r2);
+    color: #fff;
+    background: var(--mg-green);
+    font-size: .82rem;
+    font-weight: 900;
+    text-decoration: none;
+  }
   .manager-chart, .manager-insight {
     padding: 17px;
     border: 1px solid var(--id-line-soft);
@@ -1176,6 +1275,9 @@
   }
   .manager-chart__canvas { position: relative; height: 300px; }
   .manager-chart__canvas canvas { max-width: 100%; }
+  /* بديلٌ دلالي للـ canvas: يبقى متاحاً لقارئ الشاشة، ويظهر كجدولٍ دقيق
+     في اللقطة المطبوعة حيث لا تكفي صورة الرسم وحدها لنقل القيم. */
+  .manager-chart-data { direction: rtl; }
   /* يُنشئه JS حين يتعذّر تحميل مكتبة الرسم. بلا تنسيقٍ له يظهر نصاً عارياً
      في منتصف بطاقة فارغة، فيُقرأ عطلاً في الصفحة لا في الرسم وحده. */
   .manager-chart-fallback {
@@ -1380,7 +1482,7 @@
   }
   .manager-jumpbar a:hover { color: var(--mg-green); background: var(--id-accent-wash); transform: translateY(-1px); }
   .manager-jumpbar a.is-current { color: var(--id-accent-ink); background: var(--id-accent); box-shadow: var(--id-e1); }
-  #managerToday, #managerCoverage, #managerWorkspaces, #managerPerformance, #managerResources { scroll-margin-top: 132px; }
+  #managerSetup, #managerToday, #managerCoverage, #managerWorkspaces, #managerPerformance, #managerResources { scroll-margin-top: calc(var(--header-bottom, var(--header-h, 72px)) + 80px); }
 
   .manager-command-grid {
     display: grid;
@@ -1462,7 +1564,7 @@
   @media (max-width: 860px) {
     .manager-hero { grid-template-columns: 1fr; }
     .manager-hero__summary { justify-items: start; text-align: start; }
-    .manager-jumpbar { top: 58px; margin-inline: -4px; border-radius: var(--id-r3); }
+    .manager-jumpbar { top: calc(var(--header-bottom, var(--header-h, 72px)) + 8px); margin-inline: -4px; border-radius: var(--id-r3); }
     .manager-command-grid .manager-kpis { grid-template-columns: 1fr 1fr; }
     .manager-workspaces { grid-template-columns: 1fr; }
     .manager-section__head { flex-direction: column; align-items: stretch; }
@@ -1490,6 +1592,8 @@
     .manager-hero__actions { display: grid; }
     .manager-hero__button { justify-content: center; }
     .manager-chart__canvas { height: 240px; }
+    .manager-analytics-empty { grid-template-columns: auto minmax(0, 1fr); }
+    .manager-analytics-empty a { grid-column: 1 / -1; width: 100%; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1550,8 +1654,34 @@
     .manager-coverage__actions { display: none !important; }
 
     /* الرسوم تبقى: صورة النشاط الأسبوعي حجّةٌ على الورق لا زينة. لكنها
-       تُقصّ ارتفاعاً حتى لا تبتلع صفحةً كاملة. */
+       تُقصّ ارتفاعاً حتى لا تبتلع صفحةً كاملة، ويظهر معها جدول القيم كي
+       تبقى اللقطة قابلة للقراءة والوسم في ملف PDF. */
     .manager-chart__canvas { max-height: 200px; }
+    .manager-chart-data.sr-only {
+      position: static !important;
+      width: 100% !important;
+      height: auto !important;
+      margin: 10px 0 0 !important;
+      overflow: visible !important;
+      clip: auto !important;
+      clip-path: none !important;
+      white-space: normal !important;
+      border-collapse: collapse;
+      font-size: .75rem;
+    }
+    .manager-chart-data caption {
+      padding: 0 0 6px;
+      color: #10251f;
+      font-weight: 800;
+      text-align: right;
+    }
+    .manager-chart-data th,
+    .manager-chart-data td {
+      padding: 4px 7px;
+      border: 1px solid #9daaa3;
+      color: #10251f;
+      text-align: right;
+    }
 
     /* التدرّجات الزخرفية تنجو من ‎background-color‎ لأنها ‎background-image‎،
        فتبقى «متابعة اليوم» خضراءَ داكنة وحبرُها أبيضُ على ورقٍ أبيض. */
@@ -1592,49 +1722,82 @@
 
       لا يظهر على الشاشة إطلاقاً: مكانه ‎@media print‎ وحده.
     {% endcomment %}
-    <div class="manager-print-head" aria-hidden="true">
+    <div class="manager-print-head">
       <strong>{{ active_school.name }}</strong>
       <span>
         السنة الدراسية {{ active_school.current_academic_year|default:"—" }}
-        · الفترة: {{ selected_period_label }}
+        · الفترة: <span id="managerPrintPeriodLabel">{{ selected_period_label }}</span>
         · طُبعت في {{ today_hijri }} هـ
       </span>
     </div>
-    <section class="manager-hero" aria-labelledby="managerDashboardTitle">
+    <section class="manager-hero{% if manager_onboarding %} manager-hero--onboarding{% endif %}"
+             aria-labelledby="managerDashboardTitle"
+             data-manager-mode="{% if manager_onboarding %}setup{% else %}operations{% endif %}">
       <div>
         <div class="manager-eyebrow">
-          <i class="fa-solid fa-compass" aria-hidden="true"></i>
-          مركز إدارة المدرسة
-          <span aria-hidden="true">•</span>
-          <span id="managerTodayLabel">اليوم</span>
+          {% if manager_onboarding %}
+            <i class="fa-solid fa-route" aria-hidden="true"></i>
+            إعداد المدرسة
+            <span aria-hidden="true">•</span>
+            {{ setup_completed }} من {{ setup_total }} مكتمل
+          {% else %}
+            <i class="fa-solid fa-compass" aria-hidden="true"></i>
+            مركز إدارة المدرسة
+            <span aria-hidden="true">•</span>
+            <span id="managerTodayLabel">اليوم</span>
+          {% endif %}
         </div>
         <p class="manager-hero__welcome">مرحبًا {{ request.user.name|default:SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</p>
         <h1 id="managerDashboardTitle">{{ active_school.name }}</h1>
         <p class="manager-hero__intro">
-          القرارات التي تنتظرك، أعمال الفريق، ومؤشرات المدرسة في مساحة واحدة مرتبة حسب الأولوية.
+          {% if manager_onboarding %}
+            جهّز المدرسة بخطوات قصيرة ومرتبة؛ سنقودك في كل مرة إلى الإعداد التالي المطلوب.
+          {% else %}
+            القرارات التي تنتظرك، أعمال الفريق، ومؤشرات المدرسة في مساحة واحدة مرتبة حسب الأولوية.
+          {% endif %}
         </p>
         <div class="manager-school-meta" aria-label="معلومات المدرسة">
           <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ active_school.current_academic_year|default:"السنة الحالية" }}</span>
           <span><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> {{ active_school.get_stage_display }}</span>
           <span><i class="fa-solid fa-users" aria-hidden="true"></i> {{ teachers_count|intcomma }} من {{ SCHOOL_TEACHERS_OBJ_LABEL|default:"المعلمين" }}</span>
+          {% if is_trial_subscription and not subscription_warning %}
+            <span class="manager-school-meta__trial"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> التجربة مفعّلة · {{ subscription_days_inclusive }} يومًا شاملة اليوم</span>
+          {% endif %}
         </div>
         <div class="manager-hero__actions">
-          <a class="manager-hero__button manager-hero__button--primary" href="{% url 'reports:approval_inbox' %}">
-            <i class="fa-solid fa-gavel" aria-hidden="true"></i>
-            صندوق الاعتماد{% if pending_approvals %} ({{ pending_approvals }}){% endif %}
-          </a>
-          <a class="manager-hero__button" href="{% url 'reports:assignment_create' %}">
-            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-            إنشاء تكليف
-          </a>
-          <a class="manager-hero__button" href="{% url 'reports:notifications_create' %}">
-            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-            إشعار أو نشرة
-          </a>
-          <a class="manager-hero__button" href="{% url 'reports:school_settings' %}">
-            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-            إعدادات المدرسة
-          </a>
+          {% if manager_onboarding %}
+            {% if setup_next_step %}
+              <a class="manager-hero__button manager-hero__button--primary" href="{{ setup_next_step.url }}">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                ابدأ بـ {{ setup_next_step.title }}
+              </a>
+            {% endif %}
+            <a class="manager-hero__button" href="#managerSetup">
+              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+              عرض جميع خطوات الإعداد
+            </a>
+            <a class="manager-hero__button" href="{% url 'reports:school_health' %}">
+              <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+              تفاصيل جاهزية المدرسة
+            </a>
+          {% else %}
+            <a class="manager-hero__button manager-hero__button--primary" href="{% url 'reports:approval_inbox' %}">
+              <i class="fa-solid fa-gavel" aria-hidden="true"></i>
+              صندوق الاعتماد{% if pending_approvals %} ({{ pending_approvals }}){% endif %}
+            </a>
+            <a class="manager-hero__button" href="{% url 'reports:assignment_create' %}">
+              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+              إنشاء تكليف
+            </a>
+            <a class="manager-hero__button" href="{% url 'reports:notifications_create' %}">
+              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+              إشعار أو نشرة
+            </a>
+            <a class="manager-hero__button" href="{% url 'reports:school_settings' %}">
+              <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+              إعدادات المدرسة
+            </a>
+          {% endif %}
           {% if USER_SCHOOLS|length > 1 %}
             <a class="manager-hero__button" href="{% url 'reports:select_school' %}">
               <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
@@ -1643,31 +1806,55 @@
           {% endif %}
         </div>
       </div>
-      <div class="manager-hero__summary" aria-label="ملخص المتابعة">
-        <div class="manager-hero__summary-head">
-          <span class="manager-hero__summary-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span>
-          <span>
-            <span class="manager-hero__summary-label">مركز القرار اليومي</span>
-            <small>{% if attention_total %}ابدأ بما ينتظر قرارك الآن{% else %}لا توجد أعمال معلّقة{% endif %}</small>
-          </span>
-        </div>
-        <div class="manager-hero__attention">
-          <strong class="manager-hero__summary-value" id="managerAttentionTotal">{{ attention_total|intcomma }}</strong>
-          {# الصيغة تتبع العدد: «عنصران يحتاجان» لا «2 عنصر يحتاج». #}
-          <span id="managerAttentionLabel"
-                data-count-forms="عنصر يحتاج متابعة,عنصران يحتاجان متابعة,عناصر تحتاج متابعة,عنصراً يحتاج متابعة">{{ attention_total|arabic_plural:"عنصر يحتاج متابعة,عنصران يحتاجان متابعة,عناصر تحتاج متابعة,عنصراً يحتاج متابعة" }}</span>
-        </div>
-        <div class="manager-hero__pulse" aria-label="مؤشرات سريعة">
-          <a href="{% url 'reports:manager_school_tickets' %}?status=attention">
-            <strong id="heroTicketsOpen">{{ tickets_open|intcomma }}</strong><span>طلبات</span>
-          </a>
-          <a href="{% url 'reports:approval_inbox' %}">
-            <strong>{{ pending_approvals|intcomma }}</strong><span>بانتظار الاعتماد</span>
-          </a>
-          <a href="{% url 'reports:admin_reports' %}">
-            <strong id="heroReportsCount">{{ reports_count|intcomma }}</strong><span>تقارير {{ selected_period_label }}</span>
-          </a>
-        </div>
+      <div class="manager-hero__summary" aria-label="{% if manager_onboarding %}ملخص إعداد المدرسة{% else %}ملخص المتابعة{% endif %}">
+        {% if manager_onboarding %}
+          <div class="manager-hero__summary-head">
+            <span class="manager-hero__summary-icon"><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i></span>
+            <span>
+              <span class="manager-hero__summary-label">مسار الإعداد الأول</span>
+              <small>خطوة واحدة واضحة في كل مرة</small>
+            </span>
+          </div>
+          {% if setup_next_step %}
+            <div class="manager-onboarding-next">
+              <span>خطوتك التالية</span>
+              <strong>{{ setup_next_step.title }}</strong>
+              <p>{{ setup_next_step.description }}</p>
+            </div>
+          {% endif %}
+          <div class="manager-onboarding-progress">
+            <span><b>{{ setup_percent }}%</b> من الجاهزية التشغيلية</span>
+            <span>{{ setup_completed }} من {{ setup_total }}</span>
+          </div>
+          <div class="manager-setup__track" role="progressbar" aria-label="نسبة اكتمال إعداد المدرسة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ setup_percent }}">
+            <span data-progress="{{ setup_percent }}"></span>
+          </div>
+        {% else %}
+          <div class="manager-hero__summary-head">
+            <span class="manager-hero__summary-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span>
+            <span>
+              <span class="manager-hero__summary-label">مركز القرار اليومي</span>
+              <small>{% if attention_total %}ابدأ بما ينتظر قرارك الآن{% else %}لا توجد أعمال معلّقة{% endif %}</small>
+            </span>
+          </div>
+          <div class="manager-hero__attention">
+            <strong class="manager-hero__summary-value" id="managerAttentionTotal">{{ attention_total|intcomma }}</strong>
+            {# الصيغة تتبع العدد: «عنصران يحتاجان» لا «2 عنصر يحتاج». #}
+            <span id="managerAttentionLabel"
+                  data-count-forms="عنصر يحتاج متابعة,عنصران يحتاجان متابعة,عناصر تحتاج متابعة,عنصراً يحتاج متابعة">{{ attention_total|arabic_plural:"عنصر يحتاج متابعة,عنصران يحتاجان متابعة,عناصر تحتاج متابعة,عنصراً يحتاج متابعة" }}</span>
+          </div>
+          <div class="manager-hero__pulse" aria-label="مؤشرات سريعة">
+            <a href="{% url 'reports:manager_school_tickets' %}?status=attention">
+              <strong id="heroTicketsOpen">{{ tickets_open|intcomma }}</strong><span>طلبات</span>
+            </a>
+            <a href="{% url 'reports:approval_inbox' %}">
+              <strong>{{ pending_approvals|intcomma }}</strong><span>بانتظار الاعتماد</span>
+            </a>
+            <a href="{% url 'reports:admin_reports' %}">
+              <strong id="heroReportsCount">{{ reports_count|intcomma }}</strong><span>تقارير <span id="managerHeroPeriodLabel">{{ selected_period_label }}</span></span>
+            </a>
+          </div>
+        {% endif %}
       </div>
     </section>
   {% else %}
@@ -1766,12 +1953,50 @@
 
   {% if active_school %}
     <nav class="manager-jumpbar" aria-label="التنقل داخل لوحة المدرسة">
-      <a href="#managerToday" data-manager-jump="managerToday" class="is-current"><i class="fa-solid fa-bolt" aria-hidden="true"></i> ما يحتاجك الآن</a>
+      {% if setup_incomplete %}
+        <a href="#managerSetup" data-manager-jump="managerSetup"{% if manager_onboarding %} class="is-current" aria-current="location"{% endif %}><i class="fa-solid fa-route" aria-hidden="true"></i> إعداد المدرسة</a>
+      {% endif %}
+      <a href="#managerToday" data-manager-jump="managerToday"{% if not manager_onboarding %} class="is-current" aria-current="location"{% endif %}><i class="fa-solid fa-bolt" aria-hidden="true"></i> ما يحتاجك الآن</a>
       <a href="#managerCoverage" data-manager-jump="managerCoverage"><i class="fa-solid fa-user-check" aria-hidden="true"></i> التغطية</a>
       <a href="#managerWorkspaces" data-manager-jump="managerWorkspaces"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i> مساحات العمل</a>
       <a href="#managerPerformance" data-manager-jump="managerPerformance"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> الأداء</a>
       <a href="#managerResources" data-manager-jump="managerResources"><i class="fa-solid fa-server" aria-hidden="true"></i> الموارد</a>
     </nav>
+
+    {% if setup_incomplete %}
+    <section class="manager-section manager-setup" id="managerSetup" aria-labelledby="setupTitle">
+      <div class="manager-setup__summary">
+        <span class="manager-setup__kicker">ابدأ من هنا</span>
+        <h2 id="setupTitle">إعداد المدرسة خطوة بخطوة</h2>
+        <p>نفّذ الخطوات بالترتيب المقترح لتصبح مساحة العمل جاهزة للفريق.</p>
+        <div class="manager-setup__percent">
+          <strong>{{ setup_percent }}%</strong>
+          <span>{{ setup_completed }} من {{ setup_total }} عناصر مطلوبة</span>
+        </div>
+        <div class="manager-setup__track" role="progressbar" aria-label="نسبة اكتمال الإعداد" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ setup_percent }}">
+          <span data-progress="{{ setup_percent }}"></span>
+        </div>
+        {% if setup_next_step %}
+          <p class="manager-setup__next"><strong>الخطوة التالية:</strong> {{ setup_next_step.title }}</p>
+          <a class="manager-setup__primary" href="{{ setup_next_step.url }}">تنفيذ الخطوة التالية <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+        {% endif %}
+        <a class="manager-setup__details" href="{% url 'reports:school_health' %}">عرض تفاصيل الجاهزية</a>
+      </div>
+      <div class="manager-setup__steps">
+        {% for step in setup_steps %}
+          <a class="manager-setup__step {% if step.complete or not step.applicable %}is-complete{% endif %}" href="{{ step.url }}">
+            <span class="manager-setup__state">
+              <i class="fa-solid {% if not step.applicable %}fa-minus{% elif step.complete %}fa-check{% else %}fa-arrow-left{% endif %}" aria-hidden="true"></i>
+            </span>
+            <span>
+              <strong>{{ step.title }}</strong>
+              <small>{% if not step.applicable %}غير مطلوب حاليًا؛ يظهر عند إضافة وكيل أو موظف إداري.{% elif step.complete %}مكتمل ويمكن مراجعته عند الحاجة.{% else %}{{ step.description }}{% endif %}</small>
+            </span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
     {% comment %}
       ما يحتاجك الآن.
@@ -1865,8 +2090,14 @@
         <div class="manager-now__clear">
           <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
           <span>
-            <strong>لا شيء ينتظرك الآن</strong>
-            <small>لا مواعيد فاتت، ولا قرارات معلّقة، ولا مستحقّ خلال {{ agenda.horizon_days }} يوماً القادمة.</small>
+            {% if manager_onboarding %}
+              <strong>لا توجد مهام تشغيلية معلّقة بعد</strong>
+              <small>ابدأ بإعداد المدرسة، وبعد دخول الفريق ستظهر هنا القرارات والمواعيد التي تحتاج متابعتك.</small>
+              {% if setup_next_step %}<a class="manager-now__setup-link" href="{{ setup_next_step.url }}">متابعة {{ setup_next_step.title }}</a>{% endif %}
+            {% else %}
+              <strong>لا شيء ينتظرك الآن</strong>
+              <small>لا مواعيد فاتت، ولا قرارات معلّقة، ولا مستحقّ خلال {{ agenda.horizon_days }} يوماً القادمة.</small>
+            {% endif %}
           </span>
         </div>
       {% endif %}
@@ -1894,39 +2125,6 @@
     </section>
 
 
-    {% if setup_percent < 100 %}
-    <section class="manager-section manager-setup" aria-labelledby="setupTitle">
-      <div class="manager-setup__summary">
-        <h2 id="setupTitle">جاهزية مساحة المدرسة</h2>
-        <p>فحوص تشغيلية مرتبطة ببيانات المدرسة، توضح أثر كل إعداد على الفريق.</p>
-        <div class="manager-setup__percent">
-          <strong>{{ setup_percent }}%</strong>
-          <span>{{ setup_completed }} من {{ setup_total }}</span>
-        </div>
-        <div class="manager-setup__track" aria-label="نسبة اكتمال الإعداد">
-          <span data-progress="{{ setup_percent }}"></span>
-        </div>
-        {% if setup_next_step %}
-          <p><strong>التالي:</strong> {{ setup_next_step.title }}</p>
-        {% endif %}
-        <a href="{% url 'reports:school_health' %}">عرض صحة المدرسة كاملة</a>
-      </div>
-      <div class="manager-setup__steps">
-        {% for step in setup_steps %}
-          <a class="manager-setup__step {% if step.complete %}is-complete{% endif %}" href="{{ step.url }}">
-            <span class="manager-setup__state">
-              <i class="fa-solid {% if step.complete %}fa-check{% else %}fa-arrow-left{% endif %}" aria-hidden="true"></i>
-            </span>
-            <span>
-              <strong>{{ step.title }}</strong>
-              <small>{% if step.complete %}مكتمل ويمكن مراجعته عند الحاجة.{% else %}{{ step.description }}{% endif %}</small>
-            </span>
-          </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
-
     <section class="manager-section manager-coverage" id="managerCoverage" aria-labelledby="coverageTitle">
       {% comment %}
         تغطية التوثيق.
@@ -1941,7 +2139,7 @@
       <div class="manager-section__head">
         <div>
           <h2 id="coverageTitle">تغطية التوثيق</h2>
-          <p>من وثّق ومن لم يوثّق خلال <strong>{{ selected_period_label }}</strong>.</p>
+          <p>من وثّق ومن لم يوثّق خلال <strong id="managerCoveragePeriodLabel">{{ selected_period_label }}</strong>.</p>
         </div>
         {% include "reports/partials/kpi_trend.html" with trend=trends.coverage_covered dom_id="coverageTrend" %}
       </div>
@@ -2199,11 +2397,12 @@
           <div class="manager-section__head u-m-0">
             <div>
               <h2 id="analyticsTitle">أداء المدرسة</h2>
-              <p>غيّر الفترة لمقارنة النشاط، دون مغادرة الصفحة.</p>
+              <p>{% if has_dashboard_activity or recent_activities_failed %}غيّر الفترة لمقارنة النشاط، دون مغادرة الصفحة.{% else %}ستجد المؤشرات هنا بعد بدء الفريق بأول تقرير أو طلب.{% endif %}</p>
             </div>
           </div>
-          <span class="manager-live-status" id="schoolDashboardStatus" aria-live="polite">آخر تحديث: الآن</span>
+          {% if has_dashboard_activity or recent_activities_failed %}<span class="manager-live-status" id="schoolDashboardStatus" aria-live="polite">آخر تحديث: الآن</span>{% endif %}
         </div>
+        {% if has_dashboard_activity or recent_activities_failed %}
         <div class="u-flex u-wrap u-gap-06 u-items-center">
           <div class="manager-periods" role="group" aria-label="الفترة الزمنية">
             <button class="manager-period {% if initial_period == 'all' %}is-active{% endif %}" type="button" data-school-period="all" aria-pressed="{% if initial_period == 'all' %}true{% else %}false{% endif %}">الكل</button>
@@ -2221,14 +2420,22 @@
             لقطة للطباعة
           </button>
         </div>
+        {% endif %}
       </div>
 
+      {% if has_dashboard_activity or recent_activities_failed %}
       <div class="manager-analytics__grid">
         <div class="manager-chart">
-          <h3>نشاط التقارير أسبوعيًا</h3>
+          <h3 id="reportsChartTitle">نشاط التقارير أسبوعيًا</h3>
           <div class="manager-chart__canvas" id="reportsChartBox">
-            <canvas id="reportsChart" role="img" aria-label="رسم يوضح عدد تقارير المدرسة أسبوعيًا"></canvas>
+            <canvas id="reportsChart" role="img" aria-labelledby="reportsChartTitle" aria-describedby="reportsChartSummary"></canvas>
           </div>
+          <p class="sr-only" id="reportsChartSummary">البديل النصي للرسم هو جدول عدد التقارير لكل أسبوع خلال <span id="reportsChartPeriodLabel">{{ selected_period_label }}</span>.</p>
+          <table class="manager-chart-data sr-only" id="reportsChartTable" aria-labelledby="reportsChartTitle reportsChartSummary">
+            <caption>بيانات نشاط التقارير أسبوعيًا — <span id="reportsChartTablePeriodLabel">{{ selected_period_label }}</span></caption>
+            <thead><tr><th scope="col">الأسبوع</th><th scope="col">عدد التقارير</th></tr></thead>
+            <tbody id="reportsChartTableBody"><tr><td colspan="2">جارٍ تجهيز البيانات…</td></tr></tbody>
+          </table>
         </div>
         <div class="manager-insights">
           <article class="manager-insight">
@@ -2271,10 +2478,16 @@
             {% endif %}
           </article>
           <article class="manager-insight">
-            <h3>توزيع التقارير حسب النوع</h3>
+            <h3 id="categoriesChartTitle">توزيع التقارير حسب النوع</h3>
             <div class="manager-chart__canvas xs-admin-dashboard-1" id="categoriesChartBox">
-              <canvas id="categoriesChart" role="img" aria-label="رسم يوضح توزيع تقارير المدرسة حسب النوع"></canvas>
+              <canvas id="categoriesChart" role="img" aria-labelledby="categoriesChartTitle" aria-describedby="categoriesChartSummary"></canvas>
             </div>
+            <p class="sr-only" id="categoriesChartSummary">البديل النصي للرسم هو جدول أنواع التقارير وأعدادها خلال <span id="categoriesChartPeriodLabel">{{ selected_period_label }}</span>.</p>
+            <table class="manager-chart-data sr-only" id="categoriesChartTable" aria-labelledby="categoriesChartTitle categoriesChartSummary">
+              <caption>بيانات توزيع التقارير حسب النوع — <span id="categoriesChartTablePeriodLabel">{{ selected_period_label }}</span></caption>
+              <thead><tr><th scope="col">نوع التقرير</th><th scope="col">العدد</th></tr></thead>
+              <tbody id="categoriesChartTableBody"><tr><td colspan="2">جارٍ تجهيز البيانات…</td></tr></tbody>
+            </table>
           </article>
           {% comment %}
             القسم يُعرض في ثلاث حالات لا حالتين. «فارغ» و«متعثّر» كانا يظهران
@@ -2307,6 +2520,20 @@
           {% endif %}
         </div>
       </div>
+      {% else %}
+        <div class="manager-analytics-empty" role="status">
+          <span class="manager-analytics-empty__icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span>
+          <div>
+            <h3>لا توجد بيانات أداء بعد — وهذا طبيعي</h3>
+            <p>بعد تجهيز المدرسة وبدء الفريق، عُد إلى هذه اللوحة لتجد مؤشرات وتقارير قابلة للمقارنة.</p>
+          </div>
+          {% if manager_onboarding and setup_next_step %}
+            <a href="{{ setup_next_step.url }}">متابعة الإعداد</a>
+          {% else %}
+            <a href="{% url 'reports:add_report' %}">إنشاء أول تقرير</a>
+          {% endif %}
+        </div>
+      {% endif %}
     </section>
   {% endif %}
 </div>
@@ -2472,6 +2699,8 @@
       const bar = document.getElementById("coverageBar");
       if (bar) {
         bar.setAttribute("data-progress", coverage.percent);
+        const labelledBar = bar.closest(".manager-coverage__bar");
+        if (labelledBar) labelledBar.setAttribute("aria-label", "تغطية التوثيق " + coverage.percent + " بالمئة");
         if (window.applyProgressBars) window.applyProgressBars(bar.parentElement);
       }
 
@@ -2512,6 +2741,61 @@
       box.appendChild(message);
     }
 
+    /* الـ canvas صورةٌ لا تنقل نقاطها إلى قارئ الشاشة أو ملف PDF المعلّم.
+       لذلك يُرسم المصدر نفسه في جدولٍ دلالي، ويُعاد بناؤه مع كل حمولة فترة. */
+    function paintChartTable(bodyId, labels, values, emptyText) {
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+      const safeLabels = Array.isArray(labels) ? labels : [];
+      const safeValues = Array.isArray(values) ? values : [];
+      const rowCount = Math.max(safeLabels.length, safeValues.length);
+      body.replaceChildren();
+
+      if (!rowCount) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 2;
+        cell.textContent = emptyText;
+        row.appendChild(cell);
+        body.appendChild(row);
+        return;
+      }
+
+      for (let index = 0; index < rowCount; index += 1) {
+        const row = document.createElement("tr");
+        const labelCell = document.createElement("th");
+        labelCell.scope = "row";
+        const label = document.createElement("bdi");
+        label.textContent = safeLabels[index] || "غير محدد";
+        labelCell.appendChild(label);
+        const valueCell = document.createElement("td");
+        valueCell.textContent = formatNumber(safeValues[index]);
+        row.append(labelCell, valueCell);
+        body.appendChild(row);
+      }
+    }
+
+    function paintChartAlternatives(charts, periodLabel) {
+      const reportData = charts.reports || {labels: [], data: []};
+      const categoryData = charts.categories || {labels: [], data: []};
+      setText("reportsChartPeriodLabel", periodLabel);
+      setText("reportsChartTablePeriodLabel", periodLabel);
+      setText("categoriesChartPeriodLabel", periodLabel);
+      setText("categoriesChartTablePeriodLabel", periodLabel);
+      paintChartTable(
+        "reportsChartTableBody",
+        reportData.labels,
+        reportData.data,
+        "لا توجد تقارير في الفترة المختارة."
+      );
+      paintChartTable(
+        "categoriesChartTableBody",
+        categoryData.labels,
+        categoryData.data,
+        "لا توجد أنواع تقارير في الفترة المختارة."
+      );
+    }
+
     /* ألوان الرسوم تُقرأ من جذر الهوية لا تُكتب هنا: الرسم المرسوم بأخضرٍ
        خاصٍّ به يفضح نفسه بجوار بطاقةٍ بأخضر الهوية، ولا يتبع الوضع الليلي. */
     function chartColors() {
@@ -2528,6 +2812,7 @@
 
     function renderCharts(nextPayload) {
       const charts = nextPayload.charts || {};
+      paintChartAlternatives(charts, nextPayload.period_label || "الكل");
       if (typeof window.Chart === "undefined") {
         showChartFallback("reportsChartBox", "تعذر تحميل الرسم الآن. الأرقام والروابط ما زالت متاحة.");
         showChartFallback("categoriesChartBox", "لا تتوفر بيانات الرسم حاليًا.");
@@ -2609,8 +2894,11 @@
       setText("schoolTicketsTotal", formatNumber(kpis.tickets_total));
       // العدد ومعدوده يُكتبان معاً، وإلا عادت «1 طلبات» بعد أول تحديثٍ حيّ.
       paintCount("schoolTicketsDone", kpis.tickets_done);
-      setText("managerPeriodLabel", nextPayload.period_label || "الكل");
-      setText("managerReportsScope", nextPayload.period_label || "الكل");
+      const periodLabel = nextPayload.period_label || "الكل";
+      setText("managerPrintPeriodLabel", periodLabel);
+      setText("managerHeroPeriodLabel", periodLabel);
+      setText("managerCoveragePeriodLabel", periodLabel);
+      setText("managerReportsScope", periodLabel);
       paintCoverage(nextPayload.coverage, nextPayload.period_label);
       paintDepartments(nextPayload.departments);
       paintResponsiveness(nextPayload.responsiveness);
@@ -2756,10 +3044,13 @@
             .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; })[0];
           if (!visible) return;
           jumpLinks.forEach(function (link) {
-            link.classList.toggle("is-current", link.dataset.managerJump === visible.target.id);
+            const current = link.dataset.managerJump === visible.target.id;
+            link.classList.toggle("is-current", current);
+            if (current) link.setAttribute("aria-current", "location");
+            else link.removeAttribute("aria-current");
           });
         }, {rootMargin: "-24% 0px -62% 0px", threshold: [0, .1, .35]});
-        ["managerToday", "managerCoverage", "managerWorkspaces", "managerPerformance", "managerResources"].forEach(function (id) {
+        ["managerSetup", "managerToday", "managerCoverage", "managerWorkspaces", "managerPerformance", "managerResources"].forEach(function (id) {
           const section = document.getElementById(id);
           if (section) jumpObserver.observe(section);
         });

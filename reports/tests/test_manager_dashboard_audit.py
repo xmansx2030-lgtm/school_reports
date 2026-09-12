@@ -296,7 +296,7 @@ class ManagerDashboardAuditTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="schoolDashboardPayload"')
-        self.assertContains(response, "مركز إدارة المدرسة")
+        self.assertContains(response, 'data-manager-mode="setup"')
         self.assertEqual(response.context["initial_period"], "all")
         match = re.search(
             r'<script id="schoolDashboardPayload" type="application/json">(.*?)</script>',
@@ -307,6 +307,38 @@ class ManagerDashboardAuditTests(TestCase):
         payload = json.loads(match.group(1))
         self.assertIsInstance(payload, dict)
         self.assertEqual(payload["kpis"]["reports_count"], response.context["reports_count"])
+
+    def test_existing_school_with_activity_keeps_operational_hero_when_readiness_drops(self):
+        self._login()
+        Report.objects.create(
+            school=self.school,
+            teacher=self.teacher,
+            teacher_name=self.teacher.name,
+            title="تقرير يثبت بدء التشغيل",
+            report_date=timezone.localdate(),
+            academic_year=self.school.current_academic_year,
+            category=ReportType.objects.get(school=self.school),
+        )
+
+        response = self.client.get(reverse("reports:admin_dashboard"))
+
+        self.assertFalse(response.context["manager_onboarding"])
+        self.assertTrue(response.context["setup_incomplete"])
+        self.assertContains(response, 'data-manager-mode="operations"')
+        self.assertContains(response, "صندوق الاعتماد")
+        self.assertContains(response, 'id="managerSetup"')
+
+    def test_superuser_sees_the_empty_school_state_without_a_key_error(self):
+        self.manager.is_staff = True
+        self.manager.is_superuser = True
+        self.manager.save(update_fields=["is_staff", "is_superuser"])
+        School.objects.all().delete()
+        self.client.force_login(self.manager)
+
+        response = self.client.get(reverse("reports:admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "اختر مدرسة للبدء")
 
     def test_period_switch_keeps_follow_up_counters_stable(self):
         """Follow-up counters are all-time by design; they must not move with the period."""
@@ -431,7 +463,7 @@ class ManagerDashboardAuditTests(TestCase):
         self.assertEqual(self._attention_card_count(), 0)
         self.assertContains(
             self.client.get(reverse("reports:admin_dashboard")),
-            "لا شيء ينتظرك الآن",
+            "لا توجد مهام تشغيلية معلّقة بعد",
         )
 
         # TestCase keeps the test inside an outer transaction. Execute the

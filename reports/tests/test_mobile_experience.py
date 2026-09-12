@@ -22,7 +22,18 @@ import struct
 from pathlib import Path
 
 from django.conf import settings
-from django.test import SimpleTestCase, override_settings
+from django.core.cache import cache
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
+
+from reports.models import (
+    ReportType,
+    School,
+    SchoolMembership,
+    SchoolSubscription,
+    SubscriptionPlan,
+    Teacher,
+)
 
 TOUCH_MIN_PX = 44
 
@@ -86,7 +97,75 @@ class MobilePwaWorkflowTests(SimpleTestCase):
         self.assertIn('id="pwaNetworkStatus"', template)
         self.assertIn('id="pwaUpdateReady"', template)
         self.assertIn("grid-template-columns: repeat(5", styles)
-        self.assertIn("env(safe-area-inset-bottom)", styles)
+        self.assertIn("env(safe-area-inset-bottom, 0px)", styles)
+
+    def test_install_card_clears_the_mobile_tabbar_and_every_safe_edge(self):
+        template = _source("reports/templates/base.html")
+        mobile_styles = _source("static/css/mobile-professional.css")
+        install_styles = _source("static/css/pwa-install.css")
+        push_styles = _source("static/css/web-push.css")
+        actions_styles = _source("static/css/report-mobile-actions.css")
+        assistant_styles = _source("static/css/mansour-assistant.css")
+
+        self.assertIn(
+            "--mobile-fixed-bottom-clearance: var(--mobile-tabbar-height);",
+            mobile_styles,
+        )
+        self.assertIn(
+            "--pwa-install-bottom-clearance: var(--mobile-fixed-bottom-clearance);",
+            mobile_styles,
+        )
+        self.assertIn(
+            "--web-push-bottom-clearance: var(--mobile-fixed-bottom-clearance);",
+            mobile_styles,
+        )
+        self.assertIn("var(--pwa-install-bottom-clearance, 0px)", install_styles)
+        self.assertIn("var(--web-push-bottom-clearance, 0px)", push_styles)
+        self.assertIn("--mobile-fixed-bottom-clearance: 132px", actions_styles)
+        self.assertIn("var(--mobile-fixed-bottom-clearance, 66px)", assistant_styles)
+        self.assertIn("env(safe-area-inset-right, 0px)", install_styles)
+        self.assertIn("env(safe-area-inset-left, 0px)", install_styles)
+        self.assertIn("env(safe-area-inset-right, 0px)", push_styles)
+        self.assertIn("env(safe-area-inset-left, 0px)", push_styles)
+        self.assertIn("env(safe-area-inset-right, 0px)", mobile_styles)
+        self.assertIn("env(safe-area-inset-left, 0px)", mobile_styles)
+        self.assertNotIn(
+            "bottom: calc(8px + env(safe-area-inset-bottom, 0px));",
+            install_styles,
+        )
+        self.assertIn("mobile-professional.css' %}?v=20260912.2", template)
+
+    def test_manager_mobile_cta_prioritises_onboarding_then_global_report_setup(self):
+        template = _source("reports/templates/base.html")
+
+        onboarding_condition = (
+            "IS_SCHOOL_MANAGER and active == 'admin_dashboard' and manager_onboarding and setup_next_step"
+        )
+        self.assertIn(onboarding_condition, template)
+        self.assertIn("IS_SCHOOL_MANAGER and not HAS_REPORT_TYPES", template)
+        self.assertNotIn("active == 'admin_dashboard' and reporttypes_count == 0", template)
+        self.assertLess(
+            template.index(onboarding_condition),
+            template.index("IS_SCHOOL_MANAGER and not HAS_REPORT_TYPES"),
+        )
+        self.assertIn('aria-label="إكمال الإعداد: {{ setup_next_step.title }}"', template)
+        self.assertIn("إكمال الإعداد", template)
+        self.assertIn("{% url 'reports:reporttypes_list' %}", template)
+        self.assertIn("إعداد التقارير", template)
+
+    def test_manager_dashboard_mobile_rules_keep_its_hierarchy_and_compact_tail(self):
+        template = _source("reports/templates/reports/admin_dashboard.html")
+        mobile_styles = _source("static/css/mobile-professional.css")
+        design_styles = _source("static/css/design-system.css")
+
+        self.assertIn("body.not-home:not(:has(.manager-page)) h1", mobile_styles)
+        self.assertNotIn("body.not-home h1,", mobile_styles)
+        self.assertIn(
+            "scroll-margin-top: calc(var(--header-bottom, var(--header-h, 72px)) + 80px)",
+            template,
+        )
+        self.assertIn("body.page:has(.mobile-tabbar) .page-main", design_styles)
+        self.assertIn("body.page:has(.mobile-tabbar) .manager-page", design_styles)
 
     def test_shared_draft_manager_keeps_fields_and_image_blobs_until_success(self):
         script = _source("static/js/pwa-form-draft.js")
@@ -122,6 +201,87 @@ class MobilePwaWorkflowTests(SimpleTestCase):
         # and the image.  Without an explicit hidden rule they both consume a
         # full frame, pushing the selected image below the clipped viewport.
         self.assertIn('.ree-preview [hidden] { display: none !important; }', styles)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class FreshManagerMobileNavigationTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.school = School.objects.create(
+            name="مدرسة بداية الجوال",
+            code="fresh-manager-mobile",
+        )
+        plan = SubscriptionPlan.objects.create(
+            name="خطة بداية الجوال",
+            price=0,
+            days_duration=30,
+            max_teachers=10,
+        )
+        SchoolSubscription.objects.create(school=self.school, plan=plan)
+        self.manager = Teacher.objects.create_user(
+            phone="500771122",
+            name="مدير بداية الجوال",
+            password="mobile-pass",
+            is_staff=True,
+        )
+        SchoolMembership.objects.create(
+            school=self.school,
+            teacher=self.manager,
+            role_type=SchoolMembership.RoleType.MANAGER,
+        )
+        self.client.force_login(self.manager)
+        session = self.client.session
+        session["active_school_id"] = self.school.pk
+        session.save()
+
+    @staticmethod
+    def _mobile_tabbar(response) -> str:
+        html = response.content.decode("utf-8")
+        return html.split('<nav class="mobile-tabbar"', 1)[1].split("</nav>", 1)[0]
+
+    def test_zero_report_types_routes_the_primary_action_to_setup(self):
+        response = self.client.get(reverse("reports:reporttypes_list"))
+
+        self.assertEqual(response.status_code, 200)
+        tabbar = self._mobile_tabbar(response)
+        self.assertIn(f'href="{reverse("reports:reporttypes_list")}"', tabbar)
+        self.assertIn("إعداد التقارير", tabbar)
+        self.assertNotIn(f'href="{reverse("reports:add_report")}"', tabbar)
+
+    def test_onboarding_dashboard_primary_action_matches_its_next_step(self):
+        response = self.client.get(reverse("reports:admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["manager_onboarding"])
+        next_step = response.context["setup_next_step"]
+        self.assertIsNotNone(next_step)
+        next_url = next_step["url"]
+        next_title = next_step["title"]
+        tabbar = self._mobile_tabbar(response)
+        self.assertIn(f'href="{next_url}"', tabbar)
+        self.assertIn(f'aria-label="إكمال الإعداد: {next_title}"', tabbar)
+        self.assertIn("إكمال الإعداد", tabbar)
+        self.assertNotIn("إعداد التقارير", tabbar)
+
+    def test_report_type_change_invalidates_the_cached_manager_action(self):
+        first_response = self.client.get(reverse("reports:reporttypes_list"))
+        first_tabbar = self._mobile_tabbar(first_response)
+        self.assertIn("إعداد التقارير", first_tabbar)
+
+        ReportType.objects.create(
+            school=self.school,
+            code="mobile-ready",
+            name="نوع جاهز",
+        )
+
+        response = self.client.get(reverse("reports:reporttypes_list"))
+
+        self.assertEqual(response.status_code, 200)
+        tabbar = self._mobile_tabbar(response)
+        self.assertIn(f'href="{reverse("reports:add_report")}"', tabbar)
+        self.assertIn("تقرير جديد", tabbar)
+        self.assertNotIn("إعداد التقارير", tabbar)
 
 
 class ToastLayerTests(SimpleTestCase):
@@ -222,6 +382,18 @@ class ManifestTests(SimpleTestCase):
             with self.subTest(shortcut=shortcut.get("name")):
                 self.assertTrue(shortcut.get("name", "").strip())
                 self.assertTrue(shortcut.get("url", "").startswith("/"))
+
+    def test_manifest_shortcuts_are_role_neutral_and_manager_useful(self):
+        shortcuts = self._manifest().get("shortcuts") or []
+        urls = [shortcut["url"] for shortcut in shortcuts]
+
+        self.assertEqual(
+            urls,
+            ["/home/", "/guide/my-role/", "/notifications/mine/", "/profile/"],
+        )
+        self.assertNotIn("/reports/add/", urls)
+        self.assertNotIn("/reports/my/", urls)
+        self.assertNotIn("/achievement/my/", urls)
 
     def test_shortcut_targets_are_real_routes(self):
         from django.urls import resolve

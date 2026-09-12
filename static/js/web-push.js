@@ -19,6 +19,7 @@
   var statusNode = document.getElementById("webPushPromptStatus");
   var configUrl = root.getAttribute("data-config-url");
   var subscribeUrl = root.getAttribute("data-subscribe-url");
+  var autoPromptAllowed = root.getAttribute("data-auto-prompt") !== "false";
   var DISMISSED_UNTIL_KEY = "tawtheeq_web_push_dismissed_until_v1";
   var DISMISS_DAYS = 30;
   var SHOW_DELAY_MS = 25000;
@@ -299,13 +300,15 @@
     }
     if (supported && Notification.permission === "granted") {
       subscribeCurrentDevice().then(updateTriggerState).catch(function () {});
-    } else if (currentPermission() === "default" && !iosNeedsInstallation()) {
+    } else if (autoPromptAllowed && currentPermission() === "default" && !iosNeedsInstallation()) {
       window.setTimeout(function () { show(); }, SHOW_DELAY_MS);
     }
   }).catch(function () {});
 
   window.addEventListener("appinstalled", function () {
     updateTriggerState();
-    if (currentPermission() === "default") window.setTimeout(function () { show(); }, 4000);
+    if (autoPromptAllowed && currentPermission() === "default") {
+      window.setTimeout(function () { show(); }, 4000);
+    }
   });
 }());

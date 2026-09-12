@@ -408,6 +408,24 @@ class AssignmentScreenTests(AssignmentBase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "جرد المستودع")
 
+    def test_manager_without_staff_is_sent_to_team_setup_and_submit_is_disabled(self):
+        SchoolMembership.objects.filter(
+            school=self.school,
+            teacher=self.staff,
+        ).update(is_active=False)
+        self._enter(self.manager)
+
+        response = self.client.get(reverse("reports:assignment_create"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-has-assignees="false"')
+        self.assertContains(response, "إضافة فريق المدرسة الآن")
+        self.assertContains(response, f'href="{reverse("reports:bulk_import_teachers")}"')
+        self.assertContains(
+            response,
+            'id="assignmentSubmit" class="asg-btn asg-btn--primary" disabled aria-disabled="true"',
+        )
+
     def test_issuing_an_assignment_creates_one_target_per_person(self):
         second = _user("موظف ثانٍ", "0500030021")
         SchoolMembership.objects.create(

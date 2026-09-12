@@ -14,17 +14,17 @@
   "display_override": ["standalone", "minimal-ui"],
   "shortcuts": [
     {
-      "name": "إضافة تقرير",
-      "short_name": "تقرير جديد",
-      "description": "ابدأ تقرير نشاط جديد مباشرة",
-      "url": "/reports/add/",
+      "name": "الرئيسية",
+      "short_name": "الرئيسية",
+      "description": "افتح لوحة العمل المناسبة لدورك",
+      "url": "/home/",
       "icons": [{ "src": "/static/img/pwa/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "تقاريري",
-      "short_name": "تقاريري",
-      "description": "افتح تقاريرك المحفوظة",
-      "url": "/reports/my/",
+      "name": "إرشاد دوري",
+      "short_name": "إرشاد دوري",
+      "description": "اعرف الخطوة التالية المناسبة لصلاحياتك",
+      "url": "/guide/my-role/",
       "icons": [{ "src": "/static/img/pwa/icon-192.png", "sizes": "192x192" }]
     },
     {
@@ -35,10 +35,10 @@
       "icons": [{ "src": "/static/img/pwa/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "ملف الإنجاز",
-      "short_name": "الإنجاز",
-      "description": "افتح ملف إنجازك",
-      "url": "/achievement/my/",
+      "name": "حسابي",
+      "short_name": "حسابي",
+      "description": "افتح ملفك وإعدادات حسابك",
+      "url": "/profile/",
       "icons": [{ "src": "/static/img/pwa/icon-192.png", "sizes": "192x192" }]
     }
   ],

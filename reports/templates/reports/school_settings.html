@@ -151,6 +151,28 @@
     gap: 10px;
   }
 
+  .ss-onboarding-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px;
+    border: 1px solid rgba(0, 108, 53, .24);
+    border-inline-start: 4px solid #006c35;
+    border-radius: 14px;
+    color: var(--ink, #1a202c);
+    background: rgba(0, 108, 53, .07);
+  }
+  .ss-onboarding-note > i { margin-top: 4px; color: #006c35; }
+  .ss-onboarding-note span { display: grid; gap: 4px; }
+  .ss-onboarding-note strong { font-size: .95rem; font-weight: 950; }
+  .ss-onboarding-note small { color: var(--muted, #718096); font-size: .84rem; font-weight: 650; line-height: 1.7; }
+  .ss-group--priority {
+    padding: 16px;
+    border: 1px solid rgba(0, 108, 53, .18);
+    border-radius: 16px;
+    background: rgba(0, 108, 53, .035);
+  }
+
   .ss-label {
     display: flex;
     align-items: center;
@@ -199,10 +221,16 @@
   .ss-body input:not([type="checkbox"]):not([type="file"]):focus,
   .ss-body select:focus,
   .ss-body textarea:focus {
-    outline: none;
     border-color: #006c35;
     box-shadow: 0 0 0 4px rgba(185, 151, 91, 0.18);
     transform: translateY(-1px);
+  }
+
+  .ss-body input:not([type="checkbox"]):not([type="file"]):focus-visible,
+  .ss-body select:focus-visible,
+  .ss-body textarea:focus-visible {
+    outline: 3px solid var(--focus-ring, #b9975b);
+    outline-offset: 2px;
   }
 
   .ss-body textarea {
@@ -211,8 +239,28 @@
     line-height: 1.7;
   }
 
+  /* القيم اللاتينية والسنوات الرقمية تبقى مقروءة داخل الواجهة العربية. */
+  #id_email,
+  #id_current_academic_year {
+    direction: ltr;
+    text-align: left;
+  }
+
+  .ss-save-status {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
   /* ===== الأقسام ===== */
   .ss-section { margin-bottom: 26px; }
+  .ss-section--identity { margin-top: 34px; opacity: .92; }
   .ss-section-head {
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px dashed var(--line, #e2e8f0);
@@ -228,6 +276,11 @@
   }
   .ss-section-note.locked { color: #92400e; background: rgba(217,119,6,.10); border-color: rgba(217,119,6,.24); }
   .ss-section-note.ok { color: #0a5c33; background: rgba(10,92,51,.09); border-color: rgba(10,92,51,.22); }
+  html[data-theme="dark"] .ss-section-note.locked {
+    color: #f6cf87;
+    background: rgba(217,119,6,.16);
+    border-color: rgba(246,207,135,.34);
+  }
 
   /* ===== بطاقات البيانات المقفلة (عرض فقط) ===== */
   .ss-locked {
@@ -401,12 +454,97 @@
         </div>
       {% endif %}
 
-      <form method="post" novalidate>
+      <div class="ss-save-status" id="saveStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+      <form method="post" novalidate aria-busy="false" aria-describedby="saveStatus">
         {% csrf_token %}
 
-        <!-- القسم 1: بيانات أساسية (للعرض فقط) -->
+        <!-- الإعدادات القابلة للتعديل تأتي أولًا لأنها سبب دخول هذه الصفحة. -->
         <section class="ss-section">
+          <div class="ss-section-head">
+            <h2><i class="fa-solid fa-sliders" aria-hidden="true"></i> الإعدادات القابلة للتعديل</h2>
+            <span class="ss-section-note ok"><i class="fa-solid fa-pen" aria-hidden="true"></i> يمكنك تحديثها وحفظها</span>
+          </div>
+          <div class="ss-grid">
+            {% if not school.current_academic_year %}
+              <div class="ss-onboarding-note span-2" role="status">
+                <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
+                <span><strong>ابدأ بالسنة الدراسية الحالية</strong><small>تفتح ملفات الإنجاز والتصنيف الصحيح للتقارير؛ اخترها ثم احفظ التغييرات.</small></span>
+              </div>
+            {% endif %}
 
+            <!-- السنة الحالية أولًا لأنها أول عائق في المدرسة الجديدة. -->
+            <div class="ss-group span-2{% if not school.current_academic_year %} ss-group--priority{% endif %}">
+              <label class="ss-label" for="{{ form.current_academic_year.id_for_label }}">
+                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i> السنة الدراسية الحالية (هجري)
+              </label>
+              {{ form.current_academic_year }}
+              {% if form.current_academic_year.errors %}<div class="field-error" id="{{ form.current_academic_year.id_for_label }}_error">{% for e in form.current_academic_year.errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+              <div class="ss-hint" id="{{ form.current_academic_year.id_for_label }}_helptext">{{ form.current_academic_year.help_text }}</div>
+            </div>
+
+            <!-- البريد الإلكتروني -->
+            <div class="ss-group">
+              <label class="ss-label" for="{{ form.email.id_for_label }}">
+                <i class="fa-solid fa-envelope" aria-hidden="true"></i> البريد الإلكتروني
+              </label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="field-error" id="{{ form.email.id_for_label }}_error">{% for e in form.email.errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+              <div class="ss-hint" id="{{ form.email.id_for_label }}_helptext">{{ form.email.help_text }}</div>
+            </div>
+
+            <!-- الجوال -->
+            <div class="ss-group">
+              <label class="ss-label" for="{{ form.phone.id_for_label }}">
+                <i class="fa-solid fa-phone" aria-hidden="true"></i> رقم الجوال
+              </label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<div class="field-error" id="{{ form.phone.id_for_label }}_error">{% for e in form.phone.errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+              <div class="ss-hint" id="{{ form.phone.id_for_label }}_helptext">{{ form.phone.help_text }}</div>
+            </div>
+
+            <!-- مدة صلاحية الروابط -->
+            <div class="ss-group">
+              <label class="ss-label" for="{{ form.share_link_default_days.id_for_label }}">
+                <i class="fa-solid fa-clock" aria-hidden="true"></i> مدة صلاحية الروابط (أيام)
+              </label>
+              {{ form.share_link_default_days }}
+              {% if form.share_link_default_days.errors %}<div class="field-error" id="{{ form.share_link_default_days.id_for_label }}_error">{% for e in form.share_link_default_days.errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+              <div class="ss-hint" id="{{ form.share_link_default_days.id_for_label }}_helptext">{{ form.share_link_default_days.help_text }}</div>
+            </div>
+
+            <!-- دورة اعتماد التقارير -->
+            <div class="ss-group span-2">
+              <label class="ss-label" for="{{ form.report_approval_enabled.id_for_label }}">
+                <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> دورة اعتماد التقارير
+              </label>
+              <label class="u-flex u-gap-sm u-items-start u-fw-600 u-lh-relaxed">
+                {{ form.report_approval_enabled }}
+                <span>يمر التقرير بالمراجعة والاعتماد قبل أن يصير نهائياً</span>
+              </label>
+              {% if form.report_approval_enabled.errors %}<div class="field-error" id="{{ form.report_approval_enabled.id_for_label }}_error">{% for e in form.report_approval_enabled.errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+              <div class="ss-hint" id="{{ form.report_approval_enabled.id_for_label }}_helptext">{{ form.report_approval_enabled.help_text }}</div>
+            </div>
+          </div>
+        </section>
+
+        <div class="ss-actions">
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+            حفظ التغييرات
+          </button>
+
+          <a href="{% url 'reports:admin_dashboard' %}" class="btn btn-outline">
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            رجوع
+          </a>
+        </div>
+
+        <!-- هوية المدرسة الثابتة: مرجعٌ بعد المهمة الأساسية لا قبلها. -->
+        <section class="ss-section ss-section--identity">
+          <div class="ss-section-head">
+            <h2><i class="fa-solid fa-address-card" aria-hidden="true"></i> هوية المدرسة المسجلة</h2>
+            <span class="ss-section-note locked"><i class="fa-solid fa-lock" aria-hidden="true"></i> للعرض فقط</span>
+          </div>
           <div class="ss-grid">
             <div class="ss-locked span-2">
               <span class="ll"><i class="fa-solid fa-school" aria-hidden="true"></i> اسم المدرسة</span>
@@ -427,82 +565,6 @@
           </div>
         </section>
 
-        <!-- القسم 2: إعدادات قابلة للتعديل -->
-        <section class="ss-section">
-          <div class="ss-section-head">
-            <h2><i class="fa-solid fa-sliders" aria-hidden="true"></i> الإعدادات القابلة للتعديل</h2>
-            <span class="ss-section-note ok"><i class="fa-solid fa-pen" aria-hidden="true"></i> يمكنك تحديثها وحفظها</span>
-          </div>
-          <div class="ss-grid">
-            <!-- البريد الإلكتروني -->
-            <div class="ss-group">
-              <label class="ss-label" for="{{ form.email.id_for_label }}">
-                <i class="fa-solid fa-envelope" aria-hidden="true"></i> البريد الإلكتروني
-              </label>
-              {{ form.email }}
-              {% for e in form.email.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-              <div class="ss-hint">البريد الرسمي المستخدم للتواصل مع المدرسة.</div>
-            </div>
-
-            <!-- الجوال -->
-            <div class="ss-group">
-              <label class="ss-label" for="{{ form.phone.id_for_label }}">
-                <i class="fa-solid fa-phone" aria-hidden="true"></i> رقم الجوال
-              </label>
-              {{ form.phone }}
-              {% for e in form.phone.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-            </div>
-
-            <!-- مدة صلاحية الروابط -->
-            <div class="ss-group">
-              <label class="ss-label" for="{{ form.share_link_default_days.id_for_label }}">
-                <i class="fa-solid fa-clock" aria-hidden="true"></i> مدة صلاحية الروابط (أيام)
-              </label>
-              {{ form.share_link_default_days }}
-              {% for e in form.share_link_default_days.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-              <div class="ss-hint">المدة الافتراضية لروابط المشاركة. المقترح: 7 أيام.</div>
-            </div>
-
-            <!-- السنة الحالية (اختيار من قائمة مركزية) -->
-            <div class="ss-group span-2">
-              <label class="ss-label" for="{{ form.current_academic_year.id_for_label }}">
-                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i> السنة الدراسية الحالية (هجري)
-              </label>
-              {{ form.current_academic_year }}
-              {% for e in form.current_academic_year.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-              <div class="ss-hint">اختر السنة الحالية مرة واحدة؛ ستظهر {{ SCHOOL_TEACHERS_DATIVE_LABEL|default:"للمعلمين" }} عند إنشاء ملف الإنجاز، وتُستخدم أيضًا لتصنيف التقارير والأرشفة.</div>
-            </div>
-
-            <!-- دورة اعتماد التقارير -->
-            <div class="ss-group span-2">
-              <label class="ss-label" for="{{ form.report_approval_enabled.id_for_label }}">
-                <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> دورة اعتماد التقارير
-              </label>
-              <label class="u-flex u-gap-sm u-items-start u-fw-600 u-lh-relaxed">
-                {{ form.report_approval_enabled }}
-                <span>يمر التقرير بالمراجعة والاعتماد قبل أن يصير نهائياً</span>
-              </label>
-              {% for e in form.report_approval_enabled.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-              <div class="ss-hint">
-                عند التفعيل: يُنشئ المنسوب تقريره مسودةً ثم يرسله، فيراجعه الوكيل ويوصي،
-                ويعتمده مدير المدرسة. وعند الإيقاف يبقى التقرير نهائياً بمجرد حفظه كما هو الآن.
-                التقارير القائمة لا تتأثر بالتفعيل — تبقى معتمدة.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div class="ss-actions">
-          <button type="submit" class="btn btn-primary" id="submitBtn">
-            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-            حفظ التغييرات
-          </button>
-
-          <a href="{% url 'reports:admin_dashboard' %}" class="btn btn-outline">
-            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            رجوع
-          </a>
-        </div>
       </form>
     </div>
   </div>
@@ -516,21 +578,43 @@
     var phone = document.getElementById("{{ form.phone.id_for_label }}") || document.getElementById("id_phone");
     if(phone){
       phone.setAttribute("inputmode","tel");
-      phone.setAttribute("pattern","05\\d{8}");
-      phone.setAttribute("maxlength","10");
+      phone.setAttribute("pattern","(?:05\\d{8}|(?:\\+?966)5\\d{8})");
+      phone.setAttribute("maxlength","16");
+      phone.setAttribute("placeholder","05XXXXXXXX أو +9665XXXXXXXX");
       phone.dir="ltr";
       phone.style.textAlign="left";
       phone.autocomplete = "tel";
     }
 
+    [document.getElementById("id_email"), document.getElementById("id_current_academic_year")].forEach(function(field){
+      if(field){
+        field.dir = "ltr";
+        field.style.textAlign = "left";
+      }
+    });
+
     // منع الإرسال المزدوج
     var form = document.querySelector(".school-settings form");
     var btn = document.getElementById("submitBtn");
+    var saveStatus = document.getElementById("saveStatus");
     if(form && btn){
+      var defaultButtonHtml = btn.innerHTML;
+      function restoreSubmitButton(){
+        btn.disabled = false;
+        btn.style.opacity = "";
+        btn.innerHTML = defaultButtonHtml;
+        form.setAttribute("aria-busy", "false");
+        if(saveStatus) saveStatus.textContent = "";
+      }
       form.addEventListener("submit", function(){
         btn.disabled = true;
         btn.style.opacity = ".75";
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> جارٍ الحفظ...';
+        form.setAttribute("aria-busy", "true");
+        if(saveStatus) saveStatus.textContent = "جارٍ حفظ تغييرات إعدادات المدرسة.";
+      });
+      window.addEventListener("pageshow", function(event){
+        if(event.persisted) restoreSubmitButton();
       });
     }
   });

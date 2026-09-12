@@ -91,14 +91,14 @@
     <p>كل فحص يوضح أثره على المستخدمين والمسار الذي يعالجه.</p>
     <div class="health-list">
       {% for step in health.steps %}
-        <div class="health-row {% if step.complete %}is-ok{% endif %}">
-          <span class="health-state"><i class="fa-solid {% if step.complete %}fa-check{% else %}fa-exclamation{% endif %}" aria-hidden="true"></i></span>
+        <div class="health-row {% if step.complete or not step.applicable %}is-ok{% endif %}">
+          <span class="health-state"><i class="fa-solid {% if not step.applicable %}fa-minus{% elif step.complete %}fa-check{% else %}fa-exclamation{% endif %}" aria-hidden="true"></i></span>
           <div>
             <h3>{{ step.title }}</h3>
-            <p>{% if step.complete %}جاهز ويمكن مراجعته عند الحاجة.{% else %}{{ step.description }}{% endif %}</p>
+            <p>{% if not step.applicable %}غير مطلوب حاليًا؛ يظهر عند إضافة وكيل أو موظف إداري.{% elif step.complete %}جاهز ويمكن مراجعته عند الحاجة.{% else %}{{ step.description }}{% endif %}</p>
             {% if step.impact %}<p class="health-impact">الأثر: {{ step.impact }}</p>{% endif %}
           </div>
-          <a class="health-action" href="{{ step.url }}">{% if step.complete %}مراجعة{% else %}معالجة{% endif %}</a>
+          <a class="health-action" href="{{ step.url }}">{% if not step.applicable %}إدارة الأدوار{% elif step.complete %}مراجعة{% else %}معالجة{% endif %}</a>
         </div>
       {% endfor %}
     </div>

@@ -79,16 +79,16 @@
 
   <section class="journey-list" aria-label="خطوات الدور">
     {% for step in journey.steps %}
-      <a class="journey-step {% if step.complete %}is-complete{% endif %}" href="{{ step.url }}">
+      <a class="journey-step {% if step.complete or not step.applicable %}is-complete{% endif %}" href="{{ step.url }}">
         <span class="journey-step__state">
-          <i class="fa-solid {% if step.complete %}fa-check{% else %}fa-arrow-left{% endif %}" aria-hidden="true"></i>
+          <i class="fa-solid {% if not step.applicable %}fa-minus{% elif step.complete %}fa-check{% else %}fa-arrow-left{% endif %}" aria-hidden="true"></i>
         </span>
         <span>
           <h2>{{ step.title }}</h2>
           <p>{{ step.description }}</p>
           {% if step.impact %}<p class="journey-impact">الأثر: {{ step.impact }}</p>{% endif %}
         </span>
-        <span class="journey-step__action">{% if step.complete %}مراجعة{% else %}تنفيذ{% endif %}</span>
+        <span class="journey-step__action">{% if not step.applicable %}غير مطلوب حاليًا{% elif step.complete %}مراجعة{% else %}تنفيذ{% endif %}</span>
       </a>
     {% empty %}
       <div class="journey-empty">

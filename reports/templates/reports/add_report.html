@@ -16,7 +16,7 @@
 {% endif %}
 <link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260903.6">
 <link rel="stylesheet" href="{% static 'css/report-rail.css' %}?v=20260903.1">
-<link rel="stylesheet" href="{% static 'css/report-mobile-actions.css' %}?v=20260903.2">
+<link rel="stylesheet" href="{% static 'css/report-mobile-actions.css' %}?v=20260912.1">
 <style nonce="{{ CSP_NONCE }}">
   /* 
     ═══════════════════════════════════════════════════════════
@@ -989,6 +989,7 @@
     </header>
 
     <form id="report-form" method="POST" enctype="multipart/form-data" autocomplete="off" novalidate
+          data-has-report-types="{{ has_report_types|yesno:'true,false' }}"
           data-pwa-draft-key="report-add-u{{ request.user.id|default:0 }}-s{{ request.session.active_school_id|default:0 }}">
       {% csrf_token %}
       {{ form.section_selection_enabled }}
@@ -1023,6 +1024,10 @@
   /* Shown only when the category list came back empty. */
   .ar-empty-types{display:flex;align-items:flex-start;gap:9px;margin-top:10px;padding:11px 13px;border:1px solid #e6d6a8;border-radius:12px;background:#fdf8ea;color:#6b5416;font-size:.85rem;line-height:1.7;}
   .ar-empty-types i{margin-top:4px;}
+  .ar-empty-types__body{display:grid;gap:7px;}
+  .ar-empty-types__body strong{font-weight:900;}
+  .ar-empty-types__action{justify-self:start;color:inherit;font-weight:900;text-underline-offset:3px;}
+  #report-form[data-has-report-types="false"] .rma-save:disabled{opacity:.55;cursor:not-allowed;}
   [data-theme="dark"] .ar-empty-types{border-color:rgba(212,177,109,.4);background:#2b2719;color:#f0d69d;}
 </style>
 
@@ -1083,9 +1088,17 @@
                 {% if form.category.errors %}<div class="ar-error-msg">{{ form.category.errors.0 }}</div>{% endif %}
                 {# An empty list means school setup is unfinished; saying so beats a silent dead end. #}
                 {% if not has_report_types %}
-                  <div class="ar-empty-types" data-empty-types>
+                  <div class="ar-empty-types" id="reportTypeSetupNotice" data-empty-types role="status">
                     <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                    <span>لا توجد أنواع تقارير متاحة لك بعد. يحددها {{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }} من «أنواع التقارير»، وبعدها تظهر لك هنا مباشرة.</span>
+                    <div class="ar-empty-types__body">
+                      {% if IS_SCHOOL_MANAGER %}
+                        <strong>أضف نوع تقرير واحدًا على الأقل قبل حفظ أول تقرير.</strong>
+                        <span>بعد الإعداد ستظهر الأنواع هنا مباشرة ويمكنك إكمال التقرير.</span>
+                        <a class="ar-empty-types__action" id="reportTypeSetupLink" href="{% url 'reports:reporttypes_list' %}">إعداد أنواع التقارير الآن</a>
+                      {% else %}
+                        <span>لا توجد أنواع تقارير متاحة لك بعد. يحددها {{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }} من «أنواع التقارير»، وبعدها تظهر لك هنا مباشرة.</span>
+                      {% endif %}
+                    </div>
                   </div>
                 {% endif %}
               </div>
@@ -1237,7 +1250,7 @@
 
             {% if report_review_enabled %}{% include "reports/partials/report_review_panel.html" %}{% endif %}
 
-            <button type="submit" id="submitBtn" class="ar-submit-btn">
+            <button type="submit" id="submitBtn" class="ar-submit-btn"{% if not has_report_types %} disabled aria-disabled="true" aria-describedby="reportTypeSetupNotice"{% endif %}>
                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ التقرير
             </button>
 
@@ -1611,6 +1624,16 @@
 
        form.onsubmit = async function(e){
           e.preventDefault();
+          if(form.getAttribute('data-has-report-types') === 'false'){
+            var setupLink = document.getElementById('reportTypeSetupLink');
+            var setupNotice = document.getElementById('reportTypeSetupNotice');
+            var setupTarget = setupLink || setupNotice;
+            if(setupTarget){
+              setupTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              if(setupLink) window.setTimeout(function(){ setupLink.focus({ preventScroll: true }); }, 220);
+            }
+            return;
+          }
           if(!isValid()) { 
             var firstInvalid = form.querySelector('.ar-field.is-invalid input, .ar-field.is-invalid select, .ar-field.is-invalid textarea');
             if(firstInvalid){

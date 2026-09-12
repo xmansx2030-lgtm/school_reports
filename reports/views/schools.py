@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, time as dt_time, timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.functions import TruncWeek
@@ -25,6 +26,7 @@ from ..cache_utils import get_school_dashboard_payload
 from ..gender_labels import school_gender_labels
 from ..guidance import school_readiness
 from ..audit_export import audit_csv_response
+from ..model_parts.schools import normalize_sa_mobile_identity
 from ..models import Assignment, Meeting, Plan
 from ..coverage import documented_teacher_ids, pending_documenters
 
@@ -906,6 +908,19 @@ class _SchoolSettingsForm(forms.ModelForm):
         self.fields["current_academic_year"].initial = (
             getattr(self.instance, "current_academic_year", "") or ""
         ).strip()
+        self.fields["current_academic_year"].help_text = (
+            "اختر السنة الحالية مرة واحدة؛ ستظهر للفريق عند إنشاء ملف الإنجاز، "
+            "وتُستخدم أيضًا لتصنيف التقارير والأرشفة."
+        )
+        self.fields["email"].help_text = "البريد الرسمي المستخدم للتواصل مع المدرسة."
+        self.fields["phone"].help_text = "استخدم 05XXXXXXXX أو الصيغة الدولية +9665XXXXXXXX."
+        self.fields["share_link_default_days"].help_text = (
+            "المدة الافتراضية لروابط المشاركة. المقترح: 7 أيام."
+        )
+        self.fields["report_approval_enabled"].help_text = (
+            "عند التفعيل يُنشئ المنسوب تقريره مسودةً ثم يرسله للمراجعة والاعتماد. "
+            "التقارير القائمة لا تتأثر."
+        )
         # ملاحظة: السنوات المتاحة للمدارس صارت تُدار مركزيًا من لوحة الآدمن
         # (نموذج AcademicYear)، لذا أُزيل حقل اختيارها هنا منعًا للتكرار/الالتباس.
 
@@ -924,6 +939,14 @@ class _SchoolSettingsForm(forms.ModelForm):
 
     def clean_email(self):
         return (self.cleaned_data.get("email") or "").strip().lower()
+
+    def clean_phone(self):
+        value = normalize_sa_mobile_identity(self.cleaned_data.get("phone") or "")
+        if value and (len(value) != 10 or not value.startswith("05")):
+            raise forms.ValidationError(
+                "أدخل رقم جوال سعوديًا صحيحًا بصيغة 05XXXXXXXX أو +9665XXXXXXXX."
+            )
+        return value
 
 
 @login_required(login_url="reports:login")
@@ -1408,9 +1431,8 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
     # بيانات الاشتراك والأنشطة الحديثة فقط. إحصاءات اللوحة والرسوم تُبنى
     # لاحقًا من مصدر واحد (_build_school_dashboard_payload) لتجنب مضاعفة
     # الاستعلامات في الطلب نفسه.
+    recent_activities = []
     if active_school:
-        now = timezone.now()
-
         # بيانات الاشتراك والتنبيهات
         subscription_warning = None
         try:
@@ -1422,15 +1444,27 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
             )
             
             if active_subscription:
-                days_remaining = (active_subscription.end_date - now.date()).days
+                days_remaining = (
+                    active_subscription.end_date - timezone.localdate()
+                ).days
+                trial_plan_name = str(
+                    getattr(settings, "TRIAL_PLAN_NAME", "التجربة المجانية")
+                ).strip()
+                is_trial_subscription = bool(
+                    trial_plan_name
+                    and (active_subscription.plan.name or "").strip() == trial_plan_name
+                    and active_subscription.plan.price == 0
+                )
                 ctx['subscription'] = active_subscription
                 ctx['days_remaining'] = days_remaining
+                ctx['subscription_days_inclusive'] = max(0, days_remaining + 1)
+                ctx['is_trial_subscription'] = is_trial_subscription
                 
                 if active_subscription.is_expired:
                     subscription_warning = 'expired'
                 elif days_remaining <= 7:
                     subscription_warning = 'critical'
-                elif days_remaining <= 30:
+                elif days_remaining <= 30 and not is_trial_subscription:
                     subscription_warning = 'warning'
             else:
                 subscription_warning = 'expired'
@@ -1467,7 +1501,6 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
         # قائمةٌ فارغة تعني في الشاشة «لا نشاط بعد» — وهي رسالةٌ صحيحة لمدرسةٍ
         # جديدة، وكاذبةٌ تماماً لمدرسةٍ نشطة تعثّر استعلامها. والمدير لا يملك ما
         # يفرّق بينهما، فيقرأ الصمت طمأنينة.
-        recent_activities = []
         recent_activities_failed = False
         try:
             recent_reports = _filter_by_school(
@@ -1573,12 +1606,28 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
                 departments_count = 0
 
     setup = school_readiness(active_school) if active_school is not None else {
-        "steps": [], "completed": 0, "total": 0, "percent": 100, "next_step": None
+        "steps": [],
+        "completed": 0,
+        "total": 0,
+        "percent": 100,
+        "ready": True,
+        "next_step": None,
     }
     setup_steps = setup["steps"]
     setup_completed = setup["completed"]
     setup_total = setup["total"]
     setup_percent = setup["percent"]
+    has_dashboard_activity = bool(
+        int(payload_kpis.get("reports_count") or 0)
+        or tickets_total
+        or recent_activities
+    )
+    setup_incomplete = not setup["ready"]
+    # A readiness gap should not throw an established school back into a
+    # first-day interface. The guided hero is reserved for an incomplete
+    # school that has not started operational work yet; established schools
+    # keep their decision shortcuts and still see the readiness section.
+    manager_onboarding = setup_incomplete and not has_dashboard_activity
 
     # The follow-up chips and the headline number must come from one list, or the
     # hero ends up contradicting the section directly beneath it. nav_context is
@@ -1622,6 +1671,9 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
             "setup_total": setup_total,
             "setup_percent": setup_percent,
             "setup_next_step": setup["next_step"],
+            "setup_incomplete": setup_incomplete,
+            "manager_onboarding": manager_onboarding,
+            "has_dashboard_activity": has_dashboard_activity,
             "dashboard_period_payload": dashboard_payload,
             "reports_labels": json.dumps(payload_charts["reports"]["labels"], ensure_ascii=False),
             "reports_data": json.dumps(payload_charts["reports"]["data"]),

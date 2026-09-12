@@ -6,7 +6,7 @@
   role="region"
   aria-labelledby="pwaInstallTitle"
   aria-describedby="pwaInstallDescription"
-  data-auto-prompt="{% if request.user.is_authenticated %}true{% else %}false{% endif %}"
+  data-auto-prompt="{% if request.user.is_authenticated and request.resolver_match.url_name != 'registration_success' %}true{% else %}false{% endif %}"
   aria-hidden="true"
   hidden
 >

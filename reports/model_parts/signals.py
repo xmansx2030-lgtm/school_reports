@@ -45,6 +45,21 @@ def _bump_nav_context_role_version(user_id):
         pass
 
 
+def _bump_nav_context_reporttypes_version(school_id):
+    """Invalidate the manager mobile CTA when report-type readiness changes."""
+    if not school_id:
+        return
+    from django.core.cache import cache
+
+    key = f"navctx:reporttypes-version:s{int(school_id)}"
+    try:
+        cache.incr(key)
+    except (ValueError, TypeError):
+        cache.set(key, 2, timeout=None)
+    except Exception:
+        pass
+
+
 @receiver(post_save, sender=SchoolMembership)
 def invalidate_nav_context_after_membership_save(sender, instance, **kwargs):
     if kwargs.get("raw"):
@@ -98,6 +113,8 @@ def invalidate_dashboard_after_school_activity(sender, instance, **kwargs):
 def invalidate_dashboard_after_department_change(sender, instance, **kwargs):
     if kwargs.get("raw"):
         return
+    if sender is ReportType:
+        _bump_nav_context_reporttypes_version(getattr(instance, "school_id", None))
     _invalidate_dashboard_after_commit(getattr(instance, "school_id", None))
 
 

@@ -24,6 +24,7 @@ from .models import (
     Ticket,
     Department,
     Report,
+    ReportType,
     School,
     SchoolYearArchive,
     school_has_archive_addon,
@@ -904,6 +905,7 @@ def _anonymous_nav_context() -> Dict[str, Any]:
         "SHOW_OFFICER_REPORTS_LINK": False,
         "SHOW_DEPARTMENT_REPORTS_LINK": False,
         "SHOW_SCHOOL_REPORTS_LINK": False,
+        "HAS_REPORT_TYPES": False,
         "SHOW_ARCHIVE_LINK": False,
         "ARCHIVE_ADDON_ACTIVE": False,
         "HAS_SAVED_ARCHIVE": False,
@@ -944,7 +946,7 @@ def _nav_cache_key(request: HttpRequest, user) -> Optional[str]:
     وأعلامُ حسابه، ورقمُ إصدار دوره (يُزاد عند تغيير الصلاحيات)، وبصمةُ كوكيز
     الإخفاء (فإخفاء إشعار يُبطل النسخة فوراً).
 
-    ``v7`` يُزاد مع كل تغيير في **شكل** الناتج لا في قيمته: قيمةٌ مخزَّنة بالشكل
+    ``v8`` يُزاد مع كل تغيير في **شكل** الناتج لا في قيمته: قيمةٌ مخزَّنة بالشكل
     القديم تصل قالباً يقرأ مفاتيح لا وجود لها فيها، فتُقرأ فارغةً بلا خطأ —
     وتختفي روابط لثوانٍ بعد كل نشر.
     """
@@ -967,6 +969,11 @@ def _nav_cache_key(request: HttpRequest, user) -> Optional[str]:
     def _build() -> str:
         uid = int(getattr(user, "id", 0) or 0)
         role_version = int(cache.get(f"navctx:role-version:u{uid}", 1) or 1)
+        reporttypes_version = (
+            int(cache.get(f"navctx:reporttypes-version:s{sid_for_key}", 1) or 1)
+            if sid_raw
+            else 1
+        )
         user_flags = "".join(
             [
                 "s" if getattr(user, "is_superuser", False) else "-",
@@ -975,8 +982,8 @@ def _nav_cache_key(request: HttpRequest, user) -> Optional[str]:
         )
         role_id = int(getattr(user, "role_id", 0) or 0)
         return (
-            f"navctx:v7:u{uid}:s{sid_for_key}:r{role_id}:"
-            f"f{user_flags}:v{role_version}:c{dismissed_sig}"
+            f"navctx:v8:u{uid}:s{sid_for_key}:r{role_id}:"
+            f"f{user_flags}:v{role_version}:t{reporttypes_version}:c{dismissed_sig}"
         )
 
     return soft_call(
@@ -1002,6 +1009,30 @@ def _resolve_active_school(request: HttpRequest) -> Optional[School]:
         return School.objects.filter(pk=sid, is_active=True).first() if sid else None
 
     return soft_call("nav.context_active_school", _load, default=None)
+
+
+def _manager_has_report_types(
+    active_school: Optional[School], *, is_school_manager: bool
+) -> bool:
+    """هل يملك المدير نوعاً نشطاً يمكن اختياره فعلاً في نموذج التقرير؟
+
+    الاستعلام مقصور على مدير المدرسة؛ بقية الأدوار لا تحتاج العلم في شريط
+    الجوال. وهو ``EXISTS`` على المدرسة لا تحميلٌ للقائمة، ثم تحفظه ذاكرة سياق
+    التنقل القصيرة وتبطل الإشارة نسختها عند تغيير الأنواع.
+    """
+    if not is_school_manager or active_school is None:
+        return False
+    return bool(
+        soft_call(
+            "nav.manager_has_report_types",
+            lambda: ReportType.objects.filter(
+                school_id=active_school.pk,
+                is_active=True,
+            ).exists(),
+            default=False,
+            school_id=getattr(active_school, "pk", None),
+        )
+    )
 
 
 def _ticket_counters(user, active_school: Optional[School]) -> Dict[str, int]:
@@ -1414,6 +1445,9 @@ def nav_context(request: HttpRequest) -> Dict[str, Any]:
         "SHOW_OFFICER_REPORTS_LINK": show_officer_link,
         "SHOW_DEPARTMENT_REPORTS_LINK": show_dept_reports_link,
         "SHOW_SCHOOL_REPORTS_LINK": bool(is_school_manager and active_school is not None),
+        "HAS_REPORT_TYPES": _manager_has_report_types(
+            active_school, is_school_manager=is_school_manager
+        ),
         "DEPARTMENT_REPORTS_URLNAME": (
             "reports:officer_reports" if show_officer_link else "reports:department_reports"
         ),

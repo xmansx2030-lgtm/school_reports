@@ -105,6 +105,103 @@ class SchoolRegistrationFlowTests(TestCase):
         archive_page = self.client.get(reverse("reports:school_archive"))
         self.assertEqual(archive_page.status_code, 200)
 
+    @override_settings(PWA_INSTALL_ENABLED=True)
+    def test_success_page_prioritizes_safe_entry_and_truthful_setup_order(self):
+        response = self.client.post(
+            reverse("reports:register_school"),
+            self.registration_payload(),
+        )
+        self.assertEqual(response.status_code, 302)
+
+        success = self.client.get(reverse("reports:registration_success"))
+        self.assertEqual(success.status_code, 200)
+        html = success.content.decode("utf-8")
+
+        dashboard_link = (
+            f'class="primary-action" href="{reverse("reports:admin_dashboard")}"'
+        )
+        self.assertIn(dashboard_link, html)
+        self.assertLess(html.index(dashboard_link), html.index('id="credentials"'))
+
+        ordered_steps = [
+            "بيانات المدرسة والسنة",
+            "فريق المدرسة",
+            "الأقسام",
+            "أنواع التقارير",
+            "أول تقرير",
+        ]
+        steps_html = html.split('<ol class="next-steps">', 1)[1].split("</ol>", 1)[0]
+        positions = [steps_html.index(step) for step in ordered_steps]
+        self.assertEqual(positions, sorted(positions))
+        self.assertContains(
+            success,
+            '<li><span aria-hidden="true">',
+            count=5,
+            html=False,
+        )
+        self.assertNotContains(success, "أضف شعارها")
+
+        self.assertContains(
+            success,
+            'id="loginPassword" type="password"',
+            html=False,
+        )
+        self.assertContains(
+            success,
+            'id="passwordVisibility" aria-label="إظهار كلمة المرور" '
+            'aria-controls="loginPassword"',
+            html=False,
+        )
+        self.assertNotIn('visibility.setAttribute("aria-pressed"', html)
+        self.assertIn(
+            'input.setAttribute("aria-label", show ? "كلمة المرور، ظاهرة الآن"',
+            html,
+        )
+        self.assertIn('navigator.clipboard.writeText(value).then(copied).catch(', html)
+        self.assertIn('copied = document.execCommand("copy")', html)
+        self.assertIn("تعذّر النسخ تلقائيًا", html)
+        self.assertContains(success, 'class="credential-print-value"', count=2, html=False)
+        self.assertNotIn('class="credential-print-value" aria-hidden', html)
+        self.assertIn(".credential-print-value { display: block !important; }", html)
+        self.assertIn(
+            '<div class="toast" id="toast" role="status" aria-live="polite"></div>',
+            html,
+        )
+        self.assertIn('id="launchDashboard"', html)
+        self.assertIn("var receiptPreserved = false;", html)
+        self.assertIn("var copiedCredentialTargets = {", html)
+        self.assertIn("copiedCredentialTargets[targetId] = true;", html)
+        self.assertIn(
+            "receiptPreserved = copiedCredentialTargets.loginPhone && "
+            "copiedCredentialTargets.loginPassword;",
+            html,
+        )
+        self.assertIn("function () { receiptPreserved = true; }", html)
+        self.assertIn("if (!receiptPreserved && !window.confirm(", html)
+        self.assertIn('html[data-theme="dark"] .credential {', html)
+        self.assertIn('html[data-theme="dark"] .login-address {', html)
+        self.assertIn('html[data-theme="dark"] .toast {', html)
+        self.assertIn("الأقسام ومسؤولوها", html)
+        self.assertContains(
+            success,
+            'data-auto-prompt="false"',
+            count=2,
+            html=False,
+        )
+
+        self.assertRegex(
+            html,
+            r'(?s)\.icon-button\s*\{.*?width:\s*44px;.*?height:\s*44px;',
+        )
+        self.assertRegex(
+            html,
+            r'(?s)\.quiet-button\s*\{.*?min-height:\s*44px;',
+        )
+        self.assertRegex(
+            html,
+            r'(?s)\.primary-action\s*\{.*?min-height:\s*56px;',
+        )
+
     def test_invalid_phone_does_not_create_partial_school_data(self):
         response = self.client.post(
             reverse("reports:register_school"),

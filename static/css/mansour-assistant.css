@@ -1,8 +1,8 @@
 .mansour-launcher {
   position: fixed;
   z-index: 96;
-  left: 24px;
-  bottom: 24px;
+  left: max(24px, env(safe-area-inset-left, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   min-height: 62px;
   display: inline-flex;
   align-items: center;
@@ -81,10 +81,18 @@
 .mansour-panel {
   position: fixed;
   z-index: 120;
-  left: 24px;
-  bottom: 92px;
+  left: max(24px, env(safe-area-inset-left, 0px));
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   width: min(410px, calc(100vw - 32px));
-  max-height: min(700px, calc(100dvh - 126px));
+  max-height: min(
+    700px,
+    calc(
+      100dvh
+      - var(--header-bottom, var(--header-h, 72px))
+      - 104px
+      - env(safe-area-inset-bottom, 0px)
+    )
+  );
   display: grid;
   grid-template-rows: auto minmax(190px, 1fr) auto auto;
   overflow: hidden;
@@ -402,10 +410,14 @@
   color: #087443;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .mansour-launcher {
-    left: 12px;
-    bottom: 82px;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    bottom: calc(
+      var(--mobile-fixed-bottom-clearance, 66px)
+      + 16px
+      + env(safe-area-inset-bottom, 0px)
+    );
     min-width: 54px;
     min-height: 54px;
     padding: 7px;
@@ -414,10 +426,24 @@
   .mansour-launcher-copy { display: none; }
 
   .mansour-panel {
-    left: 10px;
-    bottom: 78px;
-    width: calc(100vw - 20px);
-    max-height: min(680px, calc(100dvh - 92px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    left: max(10px, env(safe-area-inset-left, 0px));
+    bottom: calc(
+      var(--mobile-fixed-bottom-clearance, 66px)
+      + 12px
+      + env(safe-area-inset-bottom, 0px)
+    );
+    width: auto;
+    max-height: min(
+      680px,
+      calc(
+        100dvh
+        - var(--header-bottom, var(--header-h, 72px))
+        - var(--mobile-fixed-bottom-clearance, 66px)
+        - 24px
+        - env(safe-area-inset-bottom, 0px)
+      )
+    );
     border-radius: 19px;
   }
 

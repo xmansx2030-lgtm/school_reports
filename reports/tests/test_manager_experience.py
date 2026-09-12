@@ -420,10 +420,10 @@ class ManagerExperienceTests(TestCase):
         response = self.client.get(reverse("reports:admin_dashboard"))
 
         self.assertEqual(response.context["teachers_count"], 1)
-        self.assertEqual(response.context["setup_completed"], 4)
-        self.assertEqual(response.context["setup_total"], 7)
-        self.assertEqual(response.context["setup_percent"], 57)
-        self.assertContains(response, "جاهزية مساحة المدرسة")
+        self.assertEqual(response.context["setup_completed"], 3)
+        self.assertEqual(response.context["setup_total"], 6)
+        self.assertEqual(response.context["setup_percent"], 50)
+        self.assertContains(response, "إعداد المدرسة خطوة بخطوة")
         self.assertContains(response, "بيانات المدرسة والسنة الحالية")
         self.assertContains(response, "الأقسام")
 
@@ -627,6 +627,24 @@ class ManagerExperienceTests(TestCase):
         self.assertEqual(
             set(form.fields["teachers"].queryset.values_list("id", flat=True)),
             {self.teacher.id},
+        )
+
+    def test_manager_without_recipients_is_sent_to_team_setup_and_send_is_disabled(self):
+        SchoolMembership.objects.filter(
+            school=self.school,
+            teacher=self.teacher,
+        ).update(is_active=False)
+        self._login_manager()
+
+        response = self.client.get(reverse("reports:notifications_create"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-has-recipients="false"')
+        self.assertContains(response, "إضافة فريق المدرسة الآن")
+        self.assertContains(response, f'href="{reverse("reports:bulk_import_teachers")}"')
+        self.assertContains(
+            response,
+            'class="btn btn-primary" id="notificationSubmit" type="submit" disabled aria-disabled="true"',
         )
 
     def test_circular_copy_and_required_fields_match_behavior(self):

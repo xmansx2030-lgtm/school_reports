@@ -153,6 +153,7 @@ class PwaInstallExperienceTests(TestCase):
 
         self.assertIn("data-auto-prompt", template)
         self.assertIn("request.user.is_authenticated", template)
+        self.assertIn("request.resolver_match.url_name != 'registration_success'", template)
         self.assertIn("true", template)
         self.assertIn("false", template)
 
@@ -195,6 +196,33 @@ class PwaInstallExperienceTests(TestCase):
         )
         self.assertIn("height: calc(72px + var(--safe-top));", shell)
         self.assertIn("padding-top: var(--safe-top);", shell)
+
+    def test_standalone_entry_pages_respect_every_safe_area_edge(self):
+        styles = self._source("static/css/standalone-system.css")
+
+        self.assertIn("@media (display-mode: standalone)", styles)
+        self.assertIn("env(safe-area-inset-top, 0px)", styles)
+        self.assertIn("env(safe-area-inset-bottom, 0px)", styles)
+        self.assertIn("env(safe-area-inset-right, 0px)", styles)
+        self.assertIn("env(safe-area-inset-left, 0px)", styles)
+        self.assertIn("min-block-size: 100dvh", styles)
+
+    def test_authenticated_standalone_shell_and_assistant_respect_safe_areas(self):
+        design = self._source("static/css/design-system.css")
+        mobile = self._source("static/css/mobile-professional.css")
+        assistant = self._source("static/css/mansour-assistant.css")
+
+        self.assertIn("body.page .site-header .container.hdr", design)
+        self.assertIn("env(safe-area-inset-right, 0px)", design)
+        self.assertIn("env(safe-area-inset-left, 0px)", design)
+        self.assertIn("(display-mode: fullscreen)", mobile)
+        self.assertIn(".page .drawer", mobile)
+        self.assertIn("env(safe-area-inset-right, 0px)", mobile)
+        self.assertIn("env(safe-area-inset-left, 0px)", mobile)
+        self.assertIn("var(--mobile-fixed-bottom-clearance, 66px)", assistant)
+        self.assertIn("var(--header-bottom, var(--header-h, 72px))", assistant)
+        self.assertIn("@media (max-width: 768px)", assistant)
+        self.assertIn("env(safe-area-inset-bottom, 0px)", assistant)
 
     def test_base_template_carries_no_stylesheet_of_its_own(self):
         """القالب يصف البنية، والأنماط في ملفاتها.
