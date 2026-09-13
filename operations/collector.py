@@ -103,6 +103,13 @@ def _release_sha(value) -> str:
     return sha if re.fullmatch(r"[0-9a-f]{40}", sha) else ""
 
 
+def _deployed_image(value) -> str:
+    image = str(value or "").strip()[:300]
+    if not image or any(character.isspace() or ord(character) < 32 for character in image):
+        return ""
+    return image
+
+
 def _sum(containers: list[dict], key: str, *, maximum: Decimal | None = None) -> Decimal | None:
     values = [_decimal(container.get(key)) for container in containers]
     known = [value for value in values if value is not None]
@@ -196,6 +203,9 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
         if known:
             defaults = project_defaults(known, server=server, sort_order=order)
             defaults["compose_project"] = compose_project
+            discovered_repository = _repository(payload.get("repository"))
+            if discovered_repository and not defaults["repository"]:
+                defaults["repository"] = discovered_repository
         else:
             defaults = {
                 "server": server,
@@ -221,6 +231,10 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
         if deployed_sha:
             project.deployed_sha = deployed_sha
             update_fields.append("deployed_sha")
+        deployed_image = _deployed_image(payload.get("deployed_image"))
+        if deployed_image:
+            project.deployed_image = deployed_image
+            update_fields.append("deployed_image")
         project.save(update_fields=update_fields)
         _sync_services(project, containers, captured_at=captured_at)
 

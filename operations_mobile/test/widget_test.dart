@@ -89,6 +89,22 @@ void main() {
     expect(dashboard.agentReady, isFalse);
   });
 
+  test('parses a server-managed deployment release reference', () {
+    final info = DeploymentInfo.fromJson({
+      'project_id': 4,
+      'project_slug': 'mizaan-beta',
+      'project_name': 'Mizaan Beta',
+      'deployed_image': 'mizaan-beta-web:authority-scope-20260905-00b754f',
+      'deployed_reference': 'authority-scope-20260905-00b754f',
+      'monitoring_mode': 'server',
+    });
+
+    expect(info.monitoringMode, 'server');
+    expect(info.deployedReference, 'authority-scope-20260905-00b754f');
+    expect(info.repository, isEmpty);
+    expect(info.canDeploy, isFalse);
+  });
+
   test(
     'keeps legacy superuser access and labels a missing agent as disabled',
     () {

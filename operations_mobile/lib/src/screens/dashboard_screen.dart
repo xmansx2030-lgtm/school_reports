@@ -573,6 +573,7 @@ class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
   }
 
   String _workflowLabel(DeploymentInfo info) {
+    if (info.monitoringMode == 'server') return 'مراقبة خادم';
     if (info.workflowStatus == 'in_progress') return 'قيد التنفيذ';
     if (info.workflowConclusion == 'success') return 'نجح';
     if (info.workflowConclusion == 'failure') return 'فشل';
@@ -633,6 +634,7 @@ class _DeploymentRow extends StatelessWidget {
   final VoidCallback? onDeploy;
 
   Color _workflowColor(OpsPalette ops) {
+    if (info.monitoringMode == 'server') return ops.info;
     if (info.workflowStatus == 'in_progress') return ops.info;
     if (info.workflowConclusion == 'success') return ops.healthy;
     if (info.workflowConclusion == 'failure') return ops.danger;
@@ -642,7 +644,9 @@ class _DeploymentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ops = context.ops;
-    final accent = info.repositoryAhead
+    final accent = info.monitoringMode == 'server'
+        ? ops.info
+        : info.repositoryAhead
         ? ops.gold
         : info.upToDate
         ? ops.healthy
@@ -661,7 +665,9 @@ class _DeploymentRow extends StatelessWidget {
           Row(
             children: [
               Icon(
-                info.repositoryAhead
+                info.monitoringMode == 'server'
+                    ? Icons.dns_outlined
+                    : info.repositoryAhead
                     ? Icons.outbound_outlined
                     : Icons.check_circle_outline,
                 color: accent,
@@ -682,7 +688,9 @@ class _DeploymentRow extends StatelessWidget {
               if (!info.deploymentEnabled) ...[
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: 'النشر اليدوي من التطبيق غير مفعل لهذا المشروع',
+                  message: info.monitoringMode == 'server'
+                      ? 'النشر مُدار مباشرة من الخادم'
+                      : 'النشر اليدوي من التطبيق غير مفعل لهذا المشروع',
                   child: Icon(Icons.lock_outline, size: 19, color: ops.muted),
                 ),
               ],
@@ -694,6 +702,8 @@ class _DeploymentRow extends StatelessWidget {
             deployedSha: info.deployedShortSha,
             latestSha: info.latestShortSha,
             ahead: info.repositoryAhead,
+            monitoringMode: info.monitoringMode,
+            deployedReference: info.deployedReference,
           ),
           if (info.latestMessage.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -707,33 +717,34 @@ class _DeploymentRow extends StatelessWidget {
           const SizedBox(height: 9),
           Text(info.actionRequired, style: TextStyle(color: ops.slate)),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${info.repository} · ${info.branch}',
-                  textDirection: TextDirection.ltr,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: ops.muted, fontSize: 12),
+          if (info.monitoringMode != 'server')
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${info.repository} · ${info.branch}',
+                    textDirection: TextDirection.ltr,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: ops.muted, fontSize: 12),
+                  ),
                 ),
-              ),
-              ElevatedButton.icon(
-                key: ValueKey('deploy-${info.projectId}'),
-                onPressed: onDeploy,
-                icon: isDeploying
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.rocket_launch_outlined),
-                label: Text(isDeploying ? 'جاري التشغيل' : 'نشر الآن'),
-              ),
-            ],
-          ),
+                ElevatedButton.icon(
+                  key: ValueKey('deploy-${info.projectId}'),
+                  onPressed: onDeploy,
+                  icon: isDeploying
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.rocket_launch_outlined),
+                  label: Text(isDeploying ? 'جاري التشغيل' : 'نشر الآن'),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -746,10 +757,14 @@ class _ReleaseLine extends StatelessWidget {
     required this.deployedSha,
     required this.latestSha,
     required this.ahead,
+    required this.monitoringMode,
+    required this.deployedReference,
   });
   final String deployedSha;
   final String latestSha;
   final bool ahead;
+  final String monitoringMode;
+  final String deployedReference;
 
   @override
   Widget build(BuildContext context) {
@@ -763,16 +778,20 @@ class _ReleaseLine extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _sha(ops, Icons.dns_outlined, 'الخادم', deployedSha),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Icon(
-              ahead ? Icons.arrow_back_rounded : Icons.check_rounded,
-              size: 16,
-              color: ahead ? ops.gold : ops.healthy,
+          if (monitoringMode == 'server') ...[
+            _sha(ops, Icons.dns_outlined, 'إصدار الخادم', deployedReference),
+          ] else ...[
+            _sha(ops, Icons.dns_outlined, 'الخادم', deployedSha),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Icon(
+                ahead ? Icons.arrow_back_rounded : Icons.check_rounded,
+                size: 16,
+                color: ahead ? ops.gold : ops.healthy,
+              ),
             ),
-          ),
-          _sha(ops, Icons.commit, 'GitHub', latestSha),
+            _sha(ops, Icons.commit, 'GitHub', latestSha),
+          ],
         ],
       ),
     );

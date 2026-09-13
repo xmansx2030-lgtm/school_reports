@@ -8,7 +8,7 @@ from django.utils import timezone
 from reports.models import Teacher
 
 from .collector import sync_inventory_report
-from .deployments import DeploymentState
+from .deployments import DeploymentState, GitHubDeploymentClient
 from .models import (
     HealthCheck,
     Incident,
@@ -178,6 +178,7 @@ class OperationsApiTests(TestCase):
                 {
                     "compose_project": "tanal",
                     "deployed_sha": "c" * 40,
+                    "deployed_image": "tanal-web:release-20260913",
                     "containers": [
                         {
                             "name": "tanal-web-1",
@@ -213,11 +214,49 @@ class OperationsApiTests(TestCase):
         self.assertEqual(tanal.repository, "xmansx2030-lgtm/tanal")
         self.assertEqual(tanal.deploy_repository, "xmansx2030-lgtm/tanal")
         self.assertEqual(tanal.deployed_sha, "c" * 40)
+        self.assertEqual(tanal.deployed_image, "tanal-web:release-20260913")
         self.assertEqual(tanal.runtime_status, ManagedProject.Status.HEALTHY)
         self.assertEqual(discovered.repository, "owner/new-portal")
         self.assertEqual(discovered.base_url, "")
         self.assertEqual(discovered.metric_snapshots.get().memory_percent, 1)
         self.assertEqual(result["projects"], 2)
+
+    def test_mizaan_is_registered_as_a_server_managed_release(self):
+        report = {
+            "server": {"slug": self.server.slug, "name": self.server.name},
+            "projects": [
+                {
+                    "compose_project": "mizaan-beta",
+                    "deployed_image": "mizaan-beta-web:authority-scope-20260905-00b754f",
+                    "containers": [
+                        {
+                            "name": "mizaan-beta-web",
+                            "service": "web",
+                            "state": "running",
+                            "health": "healthy",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        sync_inventory_report(report)
+
+        mizaan = ManagedProject.objects.get(slug="mizaan-beta")
+        self.assertEqual(mizaan.name, "Mizaan Beta")
+        self.assertEqual(mizaan.health_url, "https://mizaanlegal.com/")
+        self.assertEqual(mizaan.compose_project, "mizaan-beta")
+        self.assertEqual(mizaan.repository, "")
+        self.assertEqual(mizaan.deploy_workflow, "")
+        self.assertFalse(mizaan.deployment_enabled)
+        self.assertEqual(
+            mizaan.deployed_image,
+            "mizaan-beta-web:authority-scope-20260905-00b754f",
+        )
+        state = GitHubDeploymentClient(mizaan).deployment_state().as_dict()
+        self.assertEqual(state["monitoring_mode"], "server")
+        self.assertEqual(state["deployed_reference"], "authority-scope-20260905-00b754f")
+        self.assertIn("مباشرة من الخادم", state["action_required"])
 
     def test_completed_migrate_job_does_not_degrade_project(self):
         report = {

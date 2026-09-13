@@ -99,6 +99,11 @@ def _parse_args() -> argparse.Namespace:
         help="GitHub owner/repository used by the production operations monitor.",
     )
     parser.add_argument(
+        "--operations-github-token-from-stdin",
+        action="store_true",
+        help="Read OPERATIONS_GITHUB_TOKEN from stdin without exposing it in argv.",
+    )
+    parser.add_argument(
         "--configure-redis-limits",
         action="store_true",
         help=(
@@ -286,6 +291,20 @@ def _collect_fcm_service_account(args: argparse.Namespace, values: dict[str, str
         )
 
 
+def _collect_operations_github_token(
+    args: argparse.Namespace, values: dict[str, str]
+) -> None:
+    if not getattr(args, "operations_github_token_from_stdin", False):
+        return
+    token = sys.stdin.read().strip()
+    if not re.fullmatch(
+        r"(?:github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,})",
+        token,
+    ):
+        raise SystemExit("OPERATIONS_GITHUB_TOKEN is empty or malformed.")
+    values["OPERATIONS_GITHUB_TOKEN"] = token
+
+
 def _collect(args: argparse.Namespace) -> dict[str, str]:
     """Build the key set, validating every value before anything is written."""
     values: dict[str, str] = {}
@@ -296,6 +315,7 @@ def _collect(args: argparse.Namespace) -> dict[str, str]:
     _collect_resend_config(args, values)
     _collect_email_flags(args, values)
     _collect_fcm_service_account(args, values)
+    _collect_operations_github_token(args, values)
 
     if not values and not getattr(args, "configure_redis_limits", False):
         raise SystemExit("Nothing to apply — pass at least one option.")

@@ -248,6 +248,8 @@ class DeploymentInfo {
     required this.deployedSha,
     required this.deployedShortSha,
     required this.deployedImage,
+    required this.deployedReference,
+    required this.monitoringMode,
     required this.upToDate,
     required this.repositoryAhead,
     required this.workflowStatus,
@@ -272,6 +274,8 @@ class DeploymentInfo {
   final String deployedSha;
   final String deployedShortSha;
   final String deployedImage;
+  final String deployedReference;
+  final String monitoringMode;
   final bool upToDate;
   final bool repositoryAhead;
   final String workflowStatus;
@@ -296,6 +300,9 @@ class DeploymentInfo {
     deployedSha: '${json['deployed_sha'] ?? ''}',
     deployedShortSha: '${json['deployed_short_sha'] ?? ''}',
     deployedImage: '${json['deployed_image'] ?? ''}',
+    deployedReference:
+        '${json['deployed_reference'] ?? json['deployed_short_sha'] ?? ''}',
+    monitoringMode: '${json['monitoring_mode'] ?? 'repository'}',
     upToDate: json['up_to_date'] == true,
     repositoryAhead: json['repository_ahead'] == true,
     workflowStatus: '${json['workflow_status'] ?? ''}',

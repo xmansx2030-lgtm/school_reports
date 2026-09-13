@@ -37,6 +37,22 @@ PROJECTS: Final = (
         "deploy_container": "tanal-web-1",
     },
     {
+        "slug": "mizaan-beta",
+        "compose_aliases": ("mizaan-beta", "mizaan_beta"),
+        "name": "Mizaan Beta",
+        # Mizaan is deployed from immutable release bundles on this host, not
+        # from a GitHub-owned workflow.  Keep it in the canonical inventory so
+        # the operations UI can describe that real ownership model instead of
+        # presenting the missing repository as a configuration failure.
+        "base_url": "https://mizaanlegal.com",
+        "health_path": "/",
+        "repository": "",
+        "ci_workflow": "",
+        "deploy_workflow": "",
+        "deploy_container": "mizaan-beta-web",
+        "deployment_enabled": False,
+    },
+    {
         "slug": "school-display",
         "compose_aliases": ("school_display", "school-display", "schooldisplay"),
         "name": "لوحة العرض المدرسية",
@@ -72,7 +88,7 @@ def project_defaults(project: dict, *, server, sort_order: int) -> dict:
         "deploy_repository": project["repository"],
         "deploy_workflow": project["deploy_workflow"],
         "deploy_container": project["deploy_container"],
-        "deployment_enabled": True,
+        "deployment_enabled": bool(project.get("deployment_enabled", True)),
         "sort_order": sort_order,
         "is_active": True,
     }

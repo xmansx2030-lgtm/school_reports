@@ -41,6 +41,7 @@ class WebPushRuntimeConfigTests(SimpleTestCase):
             "resend_system_backend": False,
             "fcm_service_account_from_stdin": False,
             "operations_github_repository": None,
+            "operations_github_token_from_stdin": False,
             "configure_redis_limits": False,
         }
         values.update(overrides)
@@ -124,6 +125,28 @@ class WebPushRuntimeConfigTests(SimpleTestCase):
             "xmansx2030-lgtm/school_reports",
         )
 
+    def test_operations_github_token_is_collected_from_stdin(self):
+        token = "github_pat_" + "a" * 40
+        with patch("sys.stdin", io.StringIO(token)):
+            values = _collect(
+                self._args(
+                    web_push_enabled=None,
+                    web_push_config_from_stdin=False,
+                    operations_github_token_from_stdin=True,
+                )
+            )
+        self.assertEqual(values["OPERATIONS_GITHUB_TOKEN"], token)
+
+    def test_operations_github_token_rejects_malformed_value(self):
+        with patch("sys.stdin", io.StringIO("not-a-token")):
+            with self.assertRaisesMessage(SystemExit, "empty or malformed"):
+                _collect(
+                    self._args(
+                        web_push_enabled=None,
+                        web_push_config_from_stdin=False,
+                        operations_github_token_from_stdin=True,
+                    )
+                )
     def test_isolated_limits_store_uses_url_encoded_existing_password(self):
         from tempfile import TemporaryDirectory
 

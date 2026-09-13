@@ -115,6 +115,12 @@ def _repository(labels: dict) -> str:
     workdir = labels.get("com.docker.compose.project.working_dir", "")
     if not workdir or not Path(workdir).is_dir():
         return ""
+    try:
+        return _repository_from_url(
+            _run("git", "-C", workdir, "remote", "get-url", "origin", timeout=4)
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def _deployed_sha(labels: dict) -> str:
@@ -132,10 +138,15 @@ def _deployed_sha(labels: dict) -> str:
         if re.fullmatch(r"[0-9a-f]{40}", candidate):
             return candidate
     return ""
-    try:
-        return _repository_from_url(_run("git", "-C", workdir, "remote", "get-url", "origin", timeout=4))
-    except (OSError, subprocess.SubprocessError):
-        return ""
+
+
+def _image_priority(*, service: str, labels: dict) -> int:
+    """Prefer the application image over Postgres/Redis/other dependencies."""
+    if _deployed_sha(labels) or labels.get("org.opencontainers.image.source"):
+        return 3
+    if any(token in service.lower() for token in ("web", "api", "app", "frontend")):
+        return 2
+    return 1
 
 
 def _docker_inventory(memory_total: float) -> list[dict]:
@@ -171,7 +182,9 @@ def _docker_inventory(memory_total: float) -> list[dict]:
     cpu_count = max(1, os.cpu_count() or 1)
     grouped: dict[str, list[dict]] = defaultdict(list)
     repositories: dict[str, str] = {}
+    repository_checks: set[str] = set()
     deployed_revisions: dict[str, str] = {}
+    deployed_images: dict[str, tuple[int, str]] = {}
     for item in inspections:
         config = item.get("Config") or {}
         labels = config.get("Labels") or {}
@@ -180,6 +193,7 @@ def _docker_inventory(memory_total: float) -> list[dict]:
             # Standalone infrastructure is a service, not an application project.
             continue
         name = str(item.get("Name") or "").lstrip("/")
+        service = str(labels.get("com.docker.compose.service") or name)
         state_payload = item.get("State") or {}
         health = (state_payload.get("Health") or {}).get("Status") or ""
         restart_policy = ((item.get("HostConfig") or {}).get("RestartPolicy") or {}).get("Name") or ""
@@ -192,7 +206,7 @@ def _docker_inventory(memory_total: float) -> list[dict]:
         grouped[compose_project].append(
             {
                 "name": name,
-                "service": str(labels.get("com.docker.compose.service") or name),
+                "service": service,
                 "state": str(state_payload.get("Status") or "unknown"),
                 "health": str(health),
                 # A one-shot job (e.g. migrate) exits 0 and is not restarted; its
@@ -215,10 +229,24 @@ def _docker_inventory(memory_total: float) -> list[dict]:
                 "block_write_mb": _mb(block_write),
             }
         )
-        repositories.setdefault(compose_project, _repository(labels))
+        image_repository = _repository_from_url(
+            labels.get("org.opencontainers.image.source", "")
+        )
+        if image_repository:
+            repositories[compose_project] = image_repository
+        elif compose_project not in repository_checks:
+            repository = _repository(labels)
+            if repository:
+                repositories[compose_project] = repository
+            repository_checks.add(compose_project)
         revision = _deployed_sha(labels)
         if revision:
             deployed_revisions[compose_project] = revision
+        image = str(config.get("Image") or "").strip()
+        if image:
+            candidate = (_image_priority(service=service, labels=labels), image)
+            if candidate[0] > deployed_images.get(compose_project, (0, ""))[0]:
+                deployed_images[compose_project] = candidate
 
     return [
         {
@@ -226,6 +254,7 @@ def _docker_inventory(memory_total: float) -> list[dict]:
             "name": project.replace("_", " ").replace("-", " ").title(),
             "repository": repositories.get(project, ""),
             "deployed_sha": deployed_revisions.get(project, ""),
+            "deployed_image": deployed_images.get(project, (0, ""))[1],
             "containers": containers,
         }
         for project, containers in sorted(grouped.items())

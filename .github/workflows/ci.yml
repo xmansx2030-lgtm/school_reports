@@ -250,6 +250,7 @@ jobs:
           SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
           SOURCE_REPOSITORY: ${{ github.repository }}
+          OPERATIONS_GITHUB_TOKEN: ${{ secrets.OPERATIONS_GITHUB_TOKEN }}
         run: |
           ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
             "set -eu; \
@@ -261,6 +262,20 @@ jobs:
                  'https://github.com/$SOURCE_REPOSITORY.git'; \
                git -C '$DEPLOY_PATH' remote remove upstream 2>/dev/null || true; \
              fi"
+
+          # Private managed repositories (currently TANAL) cannot be inspected
+          # through GitHub's anonymous API.  Install the optional, narrowly
+          # scoped token through stdin only; an unset secret preserves the
+          # current server value so routine deploys never erase credentials.
+          if [ -n "$OPERATIONS_GITHUB_TOKEN" ]; then
+            printf '%s' "$OPERATIONS_GITHUB_TOKEN" \
+            | ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+                "DEPLOY_PATH='$DEPLOY_PATH' python3 \
+                 '$DEPLOY_PATH/deploy/hetzner/apply_runtime_config.py' \
+                 --operations-github-token-from-stdin"
+          else
+            echo "::notice title=Operations GitHub token unchanged::OPERATIONS_GITHUB_TOKEN is not configured in the production environment."
+          fi
 
       - name: Configure isolated rate-limit store
         env:

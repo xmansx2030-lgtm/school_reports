@@ -41,6 +41,10 @@ class DeploymentState:
     generated_note: str
 
     def as_dict(self) -> dict[str, Any]:
+        monitoring_mode = "repository" if self.repository and self.workflow else "server"
+        deployed_reference = self.deployed_sha[:12]
+        if not deployed_reference and self.deployed_image:
+            deployed_reference = self.deployed_image.rsplit(":", 1)[-1][:40]
         return {
             "project_id": self.project_id,
             "project_slug": self.project_slug,
@@ -57,6 +61,8 @@ class DeploymentState:
             "deployed_sha": self.deployed_sha,
             "deployed_short_sha": self.deployed_sha[:12],
             "deployed_image": self.deployed_image,
+            "deployed_reference": deployed_reference,
+            "monitoring_mode": monitoring_mode,
             "up_to_date": self.up_to_date,
             "repository_ahead": self.repository_ahead,
             "workflow_status": self.workflow_status,
@@ -190,7 +196,13 @@ class GitHubDeploymentClient:
         )
         action_required = "لا يلزم إجراء."
         if not self.repository or not self.workflow:
-            action_required = "أضف مستودع وWorkflow لهذا المشروع قبل مراقبة النشر."
+            if deployed_image:
+                action_required = (
+                    "تتم مراقبة هذا المشروع مباشرة من الخادم؛ "
+                    "لا يوجد مسار نشر GitHub مرتبط به."
+                )
+            else:
+                action_required = "تعذر تحديد بصمة الإصدار الجاري على الخادم."
         elif not self.configured:
             action_required = "اضبط OPERATIONS_GITHUB_TOKEN بصلاحية Actions قبل النشر من التطبيق."
         elif not deployed_known:
