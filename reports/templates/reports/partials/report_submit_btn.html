@@ -14,8 +14,9 @@
 {% endcomment %}
 {% if report_approval_enabled and report.is_editable_by_owner %}
   <a href="{% url 'reports:approval_detail' report.pk %}"
-     class="mr-iconbtn mr-send" title="إرسال التقرير للاعتماد"
+     class="report-action report-action--submit"
      aria-label="إرسال التقرير «{{ report.title }}» للاعتماد">
-    <i class="fa-solid fa-paper-plane"></i>
+    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+    <span>إرسال للاعتماد</span>
   </a>
 {% endif %}

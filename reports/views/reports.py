@@ -256,7 +256,9 @@ def _notify_report_created(report, active_school):
 @ratelimit(key="user", rate="30/h", method="POST", block=True)
 @require_http_methods(["GET", "POST"])
 def add_report(request: HttpRequest) -> HttpResponse:
-    active_school = _get_active_school(request)
+    active_school, school_redirect = active_school_or_redirect(request)
+    if school_redirect is not None:
+        return school_redirect
     leadership_section = _leadership_section_for_new_report(request, active_school)
     response_status = 200
 
@@ -699,7 +701,9 @@ def transcribe_report_voice(request: HttpRequest) -> JsonResponse:
 @login_required(login_url="reports:login")
 @require_http_methods(["GET"])
 def my_reports(request: HttpRequest) -> HttpResponse:
-    active_school = _get_active_school(request)
+    active_school, school_redirect = active_school_or_redirect(request)
+    if school_redirect is not None:
+        return school_redirect
     qs = get_teacher_reports_queryset(user=request.user, active_school=active_school)
     start_date = _parse_date_safe(request.GET.get("start_date"))
     end_date = _parse_date_safe(request.GET.get("end_date"))
@@ -1768,6 +1772,10 @@ def report_print(request: HttpRequest, pk: int) -> HttpResponse:
         active_school = _get_active_school(request)
         user = request.user
 
+        if not getattr(user, "is_superuser", False) and active_school is None:
+            messages.error(request, "فضلاً اختر مدرسة أولاً.")
+            return redirect("reports:select_school")
+
         # ✅ المدير/الموظف/السوبر يجب أن يستطيع طباعة أي تقرير ضمن نطاق المدرسة النشطة
         if getattr(user, "is_superuser", False) or _is_staff(user):
             qs = Report.objects.select_related("teacher", "category").prefetch_related("evidences")
@@ -2060,6 +2068,10 @@ def report_share_manage(request: HttpRequest, pk: int) -> HttpResponse:
     """
     active_school = _get_active_school(request)
     user = request.user
+
+    if not getattr(user, "is_superuser", False) and active_school is None:
+        messages.error(request, "فضلاً اختر مدرسة أولاً.")
+        return redirect("reports:select_school")
     
     qs = Report.objects.select_related("school")
     if not getattr(user, "is_superuser", False) and active_school is not None:
@@ -2638,6 +2650,10 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
     user = request.user
     active_school = _get_active_school(request)
 
+    if not getattr(user, "is_superuser", False) and active_school is None:
+        messages.error(request, "فضلاً اختر مدرسة أولاً.")
+        return redirect("reports:select_school")
+
     # جلب التقرير باستخدام restrict_queryset (للتأكد من أن المستخدم يستطيع رؤيته)
     qs = restrict_queryset_for_user(Report.objects.all(), user, active_school)
     qs = _filter_by_school(qs, active_school)
@@ -2740,6 +2756,9 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
 @require_http_methods(["POST"])
 def delete_my_report(request: HttpRequest, pk: int) -> HttpResponse:
     active_school = _get_active_school(request)
+    if not getattr(request.user, "is_superuser", False) and active_school is None:
+        messages.error(request, "فضلاً اختر مدرسة أولاً.")
+        return redirect("reports:select_school")
     qs = Report.objects.filter(teacher=request.user)
     qs = _filter_by_school(qs, active_school)
     r = get_object_or_404(qs, pk=pk)

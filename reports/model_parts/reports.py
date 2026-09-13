@@ -7,7 +7,7 @@ from django.utils.dateparse import parse_date
 
 from .base import *
 from .approvals import ApprovalMixin
-from .schools import School, Teacher
+from .schools import ReportType, School, Teacher
 
 
 class ActiveReportManager(models.Manager):
@@ -181,6 +181,30 @@ class Report(ApprovalMixin):
     def teacher_display_name(self) -> str:
         return (self.teacher_name or getattr(self.teacher, "name", "") or "").strip()
 
+    def _validate_tenant_links(self) -> None:
+        """Reject a school-owned category attached outside its tenant."""
+        if not self.category_id:
+            return
+
+        cached_category = self._state.fields_cache.get("category")
+        category_school_id = (
+            getattr(cached_category, "school_id", None)
+            if cached_category is not None
+            else ReportType.objects.filter(pk=self.category_id)
+            .values_list("school_id", flat=True)
+            .first()
+        )
+        # A null-school ReportType is explicitly global.  A school-owned type
+        # must match exactly; a null Report.school is not a wildcard.
+        if category_school_id is not None and category_school_id != self.school_id:
+            raise ValidationError(
+                {"category": "تصنيف التقرير يجب أن يتبع مدرسة التقرير نفسها."}
+            )
+
+    def clean(self):
+        super().clean()
+        self._validate_tenant_links()
+
     def move_to_trash(self, *, by=None) -> None:
         if self.trashed_at is not None:
             return
@@ -199,6 +223,7 @@ class Report(ApprovalMixin):
         self.save(update_fields=["trashed_at", "trashed_by"])
 
     def save(self, *args, **kwargs):
+        self._validate_tenant_links()
         # اليوم باللغة العربية
         if self.report_date and not self.day_name:
             days = {
@@ -596,4 +621,3 @@ class ShareLink(models.Model):
 # =========================
 MAX_ATTACHMENT_MB = 5
 _MAX_BYTES = MAX_ATTACHMENT_MB * 1024 * 1024
-

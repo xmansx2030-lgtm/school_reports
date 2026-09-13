@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from pathlib import Path
 
 from django.conf import settings
@@ -11,6 +12,7 @@ from reports.models import (
     AcademicYear,
     Department,
     DepartmentMembership,
+    Report,
     School,
     SchoolArchiveAddon,
     SchoolMembership,
@@ -262,6 +264,35 @@ class TeacherExperienceTests(TestCase):
         self.assertEqual(form.fields["title"].label, "عنوان الطلب")
         self.assertEqual(form.fields["body"].label, "تفاصيل الطلب")
         self.assertTrue(form.fields["body"].required)
+
+    def test_my_reports_exposes_each_management_action_without_a_hidden_menu(self):
+        report = Report.objects.create(
+            school=self.school,
+            teacher=self.teacher,
+            teacher_name=self.teacher.name,
+            title="تقرير واضح الإجراءات",
+            idea="وصف التقرير",
+            report_date=date.today(),
+        )
+        self._login_teacher()
+
+        response = self.client.get(reverse("reports:my_reports"))
+        html = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(html.count('class="report-action-list"'), 2)
+        self.assertNotIn("<details class=\"ui-actions-menu\"", html)
+        for label in ("عرض", "تعديل", "مشاركة", "حذف"):
+            with self.subTest(label=label):
+                self.assertEqual(html.count(f"<span>{label}</span>"), 2)
+        for route_name in (
+            "report_print",
+            "edit_my_report",
+            "report_share_manage",
+            "delete_my_report",
+        ):
+            with self.subTest(route_name=route_name):
+                self.assertIn(reverse(f"reports:{route_name}", args=[report.pk]), html)
 
     def test_request_create_wires_external_recipients_loader(self):
         self._login_teacher()

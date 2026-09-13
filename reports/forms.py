@@ -728,6 +728,7 @@ class ReportForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         active_school = kwargs.pop("active_school", None)
+        self.active_school = active_school
         self.gender_labels = school_gender_labels(active_school)
 
         # توافق الطلبات القديمة التي سبقت واجهة اختيار البنود.
@@ -743,6 +744,12 @@ class ReportForm(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
 
+        # The tenant is request context, never user input.  Attaching it to the
+        # instance before ModelForm's model validation also lets Report.clean()
+        # enforce that the selected category belongs to the same school.
+        if active_school is not None and hasattr(self.instance, "school"):
+            self.instance.school = active_school
+
         if not self.is_bound:
             current_key = getattr(self.instance, "submission_key", None)
             self.fields["client_submission_id"].initial = current_key or uuid.uuid4()
@@ -753,6 +760,11 @@ class ReportForm(forms.ModelForm):
         ).order_by("order", "name")
         if active_school is not None and hasattr(ReportType, "school"):
             qs = qs.filter(school=active_school)
+        elif hasattr(ReportType, "school"):
+            # Missing tenant context must narrow the queryset to nothing.  The
+            # previous fallback exposed every school's category to an
+            # unassigned account and accepted those values on POST.
+            qs = qs.none()
 
         self.fields["category"] = forms.ModelChoiceField(
             label="نوع التقرير",
@@ -778,6 +790,16 @@ class ReportForm(forms.ModelForm):
         self.fields["evidence_page_mode"].required = False
         self.fields["evidence_page_mode"].widget = forms.HiddenInput()
         self.fields["evidence_page_mode"].initial = Report.EvidencePageMode.INLINE
+
+    def clean_category(self):
+        category = self.cleaned_data.get("category")
+        school_id = getattr(self.active_school, "pk", None)
+        if school_id is None:
+            raise ValidationError("اختر مدرسة نشطة قبل اختيار تصنيف التقرير.")
+        category_school_id = getattr(category, "school_id", None)
+        if category_school_id != school_id:
+            raise ValidationError("تصنيف التقرير لا يتبع المدرسة النشطة.")
+        return category
 
     def clean_evidence_page_mode(self):
         # صفحة التقرير الرسمية موحّدة: التفاصيل والشواهد والتواقيع في ورقة
@@ -1862,6 +1884,8 @@ class DepartmentForm(forms.ModelForm):
             rt_qs = ReportType.objects.filter(is_active=True).order_by("order", "name")
             if active_school is not None and hasattr(ReportType, "school"):
                 rt_qs = rt_qs.filter(school=active_school)
+            elif hasattr(ReportType, "school"):
+                rt_qs = rt_qs.none()
             self.fields["reporttypes"].queryset = rt_qs
 
 

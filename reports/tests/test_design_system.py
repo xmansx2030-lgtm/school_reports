@@ -148,12 +148,17 @@ class DesignSystemContractTests(SimpleTestCase):
         self.assertIn('body.dataset.displayMode = standalone ? "standalone" : "browser"', runtime)
         self.assertIn('event.key !== "Escape"', runtime)
 
-    def test_report_rows_use_one_accessible_actions_menu(self):
+    def test_report_rows_expose_accessible_named_actions(self):
         reports_page = source("reports/templates/reports/my_reports.html")
         menu = source("reports/templates/reports/partials/report_actions_menu.html")
 
         self.assertEqual(reports_page.count("partials/report_actions_menu.html"), 2)
-        self.assertNotIn('class="mr-iconbtn"', reports_page)
-        self.assertIn("<details", menu)
-        self.assertIn("<summary", menu)
-        self.assertIn("ui-actions-menu__danger", menu)
+        self.assertNotIn("<details", menu)
+        self.assertIn('class="report-action-list"', menu)
+        self.assertIn('role="group"', menu)
+        self.assertIn("report-action--view", menu)
+        self.assertIn("report-action--danger", menu)
+        for visible_label in ("عرض", "تعديل", "مشاركة", "حذف"):
+            with self.subTest(visible_label=visible_label):
+                self.assertIn(f"<span>{visible_label}</span>", menu)
+        self.assertNotIn('target="_blank"', menu)

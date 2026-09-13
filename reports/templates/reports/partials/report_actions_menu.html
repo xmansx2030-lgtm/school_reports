@@ -1,35 +1,30 @@
-<details class="ui-actions-menu">
-  <summary aria-label="إجراءات تقرير: {{ report.title|default:'بلا عنوان' }}">
-    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
-    <span class="sr-only">إجراءات التقرير</span>
-  </summary>
-  <div class="ui-actions-menu__panel" role="group" aria-label="إجراءات تقرير: {{ report.title|default:'بلا عنوان' }}">
-    {% include "reports/partials/report_submit_btn.html" with report=report %}
+<div class="report-action-list" role="group" aria-label="إدارة تقرير: {{ report.title|default:'بلا عنوان' }}">
+  <a class="report-action report-action--view" href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" aria-label="عرض تقرير: {{ report.title|default:'بلا عنوان' }}">
+    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    <span>عرض</span>
+  </a>
 
-    {% if not report_approval_enabled or report.is_editable_by_owner %}
-      <a href="{% url 'reports:edit_my_report' report.pk %}" aria-label="تعديل تقرير: {{ report.title|default:'بلا عنوان' }}">
-        <i class="fa-solid fa-pen" aria-hidden="true"></i>
-        تعديل التقرير
-      </a>
-    {% endif %}
-
-    <a href="{% url 'reports:report_share_manage' report.pk %}" aria-label="مشاركة تقرير: {{ report.title|default:'بلا عنوان' }}">
-      <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-      إدارة المشاركة
+  {% if not report_approval_enabled or report.is_editable_by_owner %}
+    <a class="report-action" href="{% url 'reports:edit_my_report' report.pk %}" aria-label="تعديل تقرير: {{ report.title|default:'بلا عنوان' }}">
+      <i class="fa-solid fa-pen" aria-hidden="true"></i>
+      <span>تعديل</span>
     </a>
-    <a href="{% url 'reports:report_print' report.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" aria-label="عرض تقرير: {{ report.title|default:'بلا عنوان' }}">
-      <i class="fa-solid fa-eye" aria-hidden="true"></i>
-      عرض التقرير
-    </a>
+  {% endif %}
 
-    {% if not report_approval_enabled or report.is_editable_by_owner %}
-      <form action="{% url 'reports:delete_my_report' report.pk %}" method="post" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكنك استعادته لاحقًا." data-confirm-type="warning">
-        {% csrf_token %}
-        <button class="ui-actions-menu__danger" type="submit" aria-label="نقل إلى سلة المحذوفات: {{ report.title|default:'بلا عنوان' }}">
-          <i class="fa-solid fa-trash" aria-hidden="true"></i>
-          نقل إلى سلة المحذوفات
-        </button>
-      </form>
-    {% endif %}
-  </div>
-</details>
+  <a class="report-action" href="{% url 'reports:report_share_manage' report.pk %}" aria-label="مشاركة تقرير: {{ report.title|default:'بلا عنوان' }}">
+    <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+    <span>مشاركة</span>
+  </a>
+
+  {% if not report_approval_enabled or report.is_editable_by_owner %}
+    <form class="report-action-form" action="{% url 'reports:delete_my_report' report.pk %}" method="post" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكنك استعادته لاحقًا." data-confirm-type="warning">
+      {% csrf_token %}
+      <button class="report-action report-action--danger" type="submit" aria-label="نقل إلى سلة المحذوفات: {{ report.title|default:'بلا عنوان' }}">
+        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        <span>حذف</span>
+      </button>
+    </form>
+  {% endif %}
+
+  {% include "reports/partials/report_submit_btn.html" with report=report %}
+</div>

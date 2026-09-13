@@ -1440,6 +1440,117 @@ html[data-theme="dark"] .mr-page{
     }
   }
 
+  /* إجراءات التقرير أعمال أساسية وليست قائمة إعدادات ثانوية. إظهار أسمائها
+     مباشرةً يقلل التخمين، ويبقي كل هدف لمس في الويب وPWA بحجم مريح. */
+  .mr-table th:last-child,
+  .mr-table td:last-child {
+    min-width: 15.5rem;
+  }
+
+  .mr-actions-cell {
+    width: 100%;
+  }
+
+  .report-action-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .report-action,
+  .report-action-form {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .report-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid var(--mr-border);
+    border-radius: 12px;
+    background: var(--mr-surface);
+    color: var(--mr-text);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 850;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color var(--mr-t), background var(--mr-t), color var(--mr-t), transform var(--mr-t);
+  }
+
+  .report-action:hover {
+    color: var(--mr-primary);
+    border-color: color-mix(in srgb, var(--mr-primary) 48%, transparent);
+    background: var(--id-surface-2);
+    transform: translateY(-1px);
+  }
+
+  .report-action:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--mr-primary) 28%, transparent);
+    outline-offset: 2px;
+  }
+
+  .report-action--view {
+    color: var(--id-accent-ink);
+    border-color: var(--mr-primary);
+    background: var(--mr-gradient);
+  }
+
+  .report-action--view:hover {
+    color: var(--id-accent-ink);
+    background: var(--mr-primary-dark);
+  }
+
+  .report-action--danger {
+    color: var(--mr-danger);
+    border-color: color-mix(in srgb, var(--mr-danger) 32%, transparent);
+    background: color-mix(in srgb, var(--mr-danger) 8%, var(--mr-surface));
+  }
+
+  .report-action--danger:hover {
+    color: var(--mr-danger);
+    border-color: var(--mr-danger);
+    background: color-mix(in srgb, var(--mr-danger) 13%, var(--mr-surface));
+  }
+
+  .report-action--submit {
+    grid-column: 1 / -1;
+    color: color-mix(in srgb, var(--id-tone-pending) 74%, var(--mr-text));
+    border-color: color-mix(in srgb, var(--id-tone-pending) 45%, transparent);
+    background: var(--id-tone-pending-wash);
+  }
+
+  @media (max-width: 1100px) {
+    .mr-mobile .mr-mfoot {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .mr-mobile .mr-actions-cell,
+    .mr-mobile .report-action-list {
+      width: 100%;
+    }
+
+    .mr-mobile .report-action {
+      min-height: 48px;
+      font-size: .9rem;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .report-action-list {
+      grid-template-columns: 1fr;
+    }
+  }
+
 </style>
 {% endblock %}
 

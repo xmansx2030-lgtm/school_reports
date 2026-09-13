@@ -448,14 +448,14 @@ def _clean_query_params(query_dict, *, drop_keys: tuple[str, ...] = ("page",)) -
 
 
 def _filter_by_school(qs, school: Optional[School]):
-    """تطبيق فلتر المدرسة إذا كان للموديل حقل school وكان هناك مدرسة نشطة."""
-    if not school:
-        return qs
+    """Apply a tenant boundary; missing/invalid context returns no tenant rows."""
     try:
         if "school" in [f.name for f in qs.model._meta.get_fields()]:
+            if school is None:
+                return qs.none()
             return qs.filter(school=school)
     except Exception:
-        return qs
+        return qs.none()
     return qs
 
 

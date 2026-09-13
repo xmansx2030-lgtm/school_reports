@@ -48,15 +48,15 @@ def _model_has_field(model, field_name: str) -> bool:
 
 
 def filter_by_school(qs: QuerySet, active_school: Optional[School]) -> QuerySet:
-    """تطبيق فلتر المدرسة إن كان للموديل حقل school وكان هناك مدرسة نشطة."""
-    if not active_school:
-        return qs
+    """Scope tenant-owned rows to one school, failing closed without context."""
     try:
         if _model_has_field(qs.model, "school"):
+            if active_school is None:
+                return qs.none()
             return qs.filter(school=active_school)
     except Exception:
         _degraded("reports.filter_by_school", model=getattr(qs, "model", None).__name__)
-        return qs
+        return qs.none()
     return qs
 
 
@@ -197,6 +197,11 @@ def apply_admin_report_filters(
 
 
 def get_reporttype_choices(*, active_school: Optional[School]) -> list[tuple[str, str]]:
+    if ReportType is None or active_school is None:
+        # Return before the cache lookup as well: an old ``school_id=0`` entry
+        # from the former fail-open behaviour must not survive a deployment.
+        return []
+
     school_id = int(getattr(active_school, "id", 0) or 0)
     cache_key = f"reporttype-choices:v1:s{school_id}"
     try:
@@ -206,15 +211,10 @@ def get_reporttype_choices(*, active_school: Optional[School]) -> list[tuple[str
     except Exception:
         pass
 
-    if ReportType is None:
-        return []
-
-    qs = ReportType.objects.filter(is_active=True).order_by("order", "name")
-    try:
-        if active_school is not None:
-            qs = qs.filter(school=active_school)
-    except Exception:
-        pass
+    qs = ReportType.objects.filter(
+        is_active=True,
+        school=active_school,
+    ).order_by("order", "name")
 
     result = [(rt.code, rt.name) for rt in qs]
     try:
@@ -242,9 +242,10 @@ def get_report_for_user_or_404(*, user, pk: int, active_school: Optional[School]
             qs = qs.filter(school=active_school)
         return get_object_or_404(qs, pk=pk)
 
-    # غير المالك: لا تقرير خارج مدرسة نشطة محدَّدة.
+    # غير المالك: غياب المدرسة النشطة لا يوسّع النطاق حتى إلى تقاريره؛
+    # التقرير سجل تابع لمدرسة وليس أرشيفاً شخصياً عابراً للمستأجرين.
     if active_school is None:
-        return get_object_or_404(qs, pk=pk, teacher=user)
+        return get_object_or_404(qs.none(), pk=pk)
 
     qs = qs.filter(school=active_school)
 

@@ -1340,13 +1340,13 @@ def allowed_categories_for(user, active_school: Optional[School] = None) -> Set[
 # ==============================
 def _scope_to_school(qs: QuerySet[Any], active_school: Optional[School]) -> QuerySet[Any]:
     """حصر الاستعلام على المدرسة النشطة متى كان للموديل حقل ``school``."""
-    if active_school is None:
-        return qs
     try:
         if "school" in {f.name for f in qs.model._meta.get_fields()}:
+            if active_school is None:
+                return qs.none()
             return qs.filter(school=active_school)
     except Exception:
-        return qs
+        return qs.none()
     return qs
 
 
@@ -1364,11 +1364,12 @@ def restrict_queryset_for_user(qs: QuerySet[Any], user, active_school: Optional[
     لكن لا شيء يفرضه على الموضع القادم. فطيُّ الفلتر إلى الداخل يجعل الدالة
     آمنة وحدها، ولا يغيّر نتيجة أي مستدعٍ حالي لأن الفلتر نفسه يُطبَّق مرتين.
     """
-    qs = _scope_to_school(qs, active_school)
-
-    # سوبر: لا قيود صلاحية (وحدّ المدرسة أعلاه يبقى مطبَّقاً متى وُجدت)
+    # مالك النظام وحده يستطيع العمل بلا مدرسة نشطة في الشاشات المنصية.
+    # متى اختار مدرسة يبقى حدّها مطبقاً مثل بقية المستخدمين.
     if getattr(user, "is_superuser", False):
-        return qs
+        return _scope_to_school(qs, active_school) if active_school is not None else qs
+
+    qs = _scope_to_school(qs, active_school)
 
     # ✅ مدير المدرسة داخل active_school يرى كل تقارير مدرسته
     if active_school is not None and SchoolMembership is not None:
