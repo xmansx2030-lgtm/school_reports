@@ -61,6 +61,9 @@ class UnifiedSearchIsolationTests(TestCase):
         cls.category = ReportType.objects.create(
             name="نشاط", code="activity", school=cls.mine
         )
+        cls.other_category = ReportType.objects.create(
+            name="نشاط", code="activity", school=cls.theirs
+        )
 
         cls.manager = Teacher.objects.create_user(
             phone="500300001", name="مدير المدرسة", password="pass"
@@ -104,7 +107,7 @@ class UnifiedSearchIsolationTests(TestCase):
             title="زيارة ميدانية للمصنع", idea="فكرة", report_date="2026-03-02",
         )
         cls.other_school_report = Report.objects.create(
-            school=cls.theirs, teacher=cls.outsider, category=cls.category,
+            school=cls.theirs, teacher=cls.outsider, category=cls.other_category,
             title="زيارة ميدانية للحديقة", idea="فكرة", report_date="2026-03-03",
         )
 
