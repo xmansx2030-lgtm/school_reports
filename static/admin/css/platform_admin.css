@@ -1,0 +1,575 @@
+:root {
+  --platform-primary: #174a64;
+  --platform-primary-strong: #10384d;
+  --platform-accent: #d9a72e;
+  --platform-surface: color-mix(in srgb, var(--body-bg) 94%, var(--primary) 6%);
+  --platform-border: color-mix(in srgb, var(--border-color) 82%, var(--primary) 18%);
+  --platform-shadow: 0 12px 30px rgb(15 47 64 / 8%);
+  --platform-radius: 12px;
+}
+
+html[data-theme="dark"] {
+  --platform-primary: #57a8c7;
+  --platform-primary-strong: #9bd6e9;
+  --platform-accent: #f0c45a;
+  --platform-shadow: 0 14px 34px rgb(0 0 0 / 24%);
+}
+
+body {
+  font-family: "IBM Plex Sans Arabic", "Noto Sans Arabic", Tahoma, Arial, sans-serif;
+}
+
+#header {
+  min-height: 64px;
+  padding: 10px 24px;
+  background: linear-gradient(125deg, var(--platform-primary-strong), var(--platform-primary));
+  box-shadow: 0 2px 12px rgb(15 47 64 / 18%);
+}
+
+.platform-admin-brand a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.platform-admin-brand__name {
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.platform-admin-brand__tagline {
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+#user-tools {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  line-height: 1.7;
+}
+
+#user-tools a,
+#user-tools button {
+  border-radius: 6px;
+  padding: 3px 5px;
+}
+
+#user-tools a:hover,
+#user-tools button:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+div.breadcrumbs {
+  background: color-mix(in srgb, var(--platform-primary-strong) 92%, #000 8%);
+  padding: 11px 24px;
+}
+
+/* A task-oriented sidebar that remains compact on long admin pages. */
+#nav-sidebar.platform-admin-nav {
+  flex-basis: 310px;
+  margin-right: -311px;
+  right: -311px;
+  width: 310px;
+  border-color: var(--platform-border);
+  box-shadow: -7px 0 22px rgb(15 47 64 / 5%);
+}
+
+[dir="ltr"] #nav-sidebar.platform-admin-nav {
+  left: -311px;
+  margin-left: -311px;
+  margin-right: 0;
+  right: auto;
+}
+
+[dir="rtl"] .main.shifted > #nav-sidebar.platform-admin-nav {
+  margin-right: 0;
+}
+
+[dir="ltr"] .main.shifted > #nav-sidebar.platform-admin-nav {
+  margin-left: 0;
+}
+
+.main.shifted > #nav-sidebar.platform-admin-nav + .content {
+  max-width: calc(100% - 334px);
+}
+
+.platform-admin-nav__heading {
+  align-items: center;
+  background: var(--platform-surface);
+  border-bottom: 1px solid var(--platform-border);
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 16px 11px;
+}
+
+.platform-admin-nav__heading strong {
+  color: var(--body-fg);
+  font-size: 0.92rem;
+}
+
+.platform-admin-nav__heading span {
+  color: var(--body-quiet-color);
+  font-size: 0.7rem;
+}
+
+#nav-sidebar #nav-filter {
+  background: var(--body-bg);
+  border: 1px solid var(--platform-border);
+  border-radius: 8px;
+  margin: 10px 12px 8px;
+  padding: 9px 11px;
+  width: calc(100% - 24px);
+}
+
+#nav-sidebar #nav-filter:focus {
+  border-color: var(--platform-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--platform-primary) 17%, transparent);
+  outline: 0;
+}
+
+.platform-admin-nav__section {
+  border-bottom: 1px solid var(--hairline-color);
+  margin: 0;
+}
+
+#nav-sidebar .platform-admin-nav__section table {
+  margin: 0;
+}
+
+#nav-sidebar .platform-admin-nav__section caption {
+  background: transparent;
+  padding: 11px 16px 5px;
+}
+
+#nav-sidebar .platform-admin-nav__section caption .section {
+  color: var(--body-quiet-color);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+#nav-sidebar .platform-admin-nav__section th {
+  padding: 0;
+}
+
+#nav-sidebar .platform-admin-nav__section th a {
+  border-inline-start: 3px solid transparent;
+  color: var(--body-fg);
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 550;
+  padding: 8px 17px;
+  text-decoration: none;
+}
+
+#nav-sidebar .platform-admin-nav__section th a:hover {
+  background: var(--darkened-bg);
+  color: var(--link-fg);
+}
+
+#nav-sidebar .platform-admin-nav__section .current-model {
+  background: color-mix(in srgb, var(--selected-row) 72%, var(--body-bg) 28%);
+}
+
+#nav-sidebar .platform-admin-nav__section .current-model a {
+  border-inline-start-color: var(--platform-accent);
+  color: var(--link-fg);
+  font-weight: 750;
+}
+
+.platform-admin-nav__advanced {
+  border-top: 4px solid var(--platform-surface);
+}
+
+.platform-admin-nav__advanced > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 13px 16px;
+}
+
+.platform-admin-nav__advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.platform-admin-nav__advanced > summary::after {
+  color: var(--link-fg);
+  content: "+";
+  font-size: 1.15rem;
+  margin-inline-start: auto;
+}
+
+.platform-admin-nav__advanced[open] > summary::after {
+  content: "−";
+}
+
+.platform-admin-nav__advanced > summary span {
+  font-weight: 750;
+}
+
+.platform-admin-nav__advanced > summary small {
+  color: var(--body-quiet-color);
+  margin-inline: 8px;
+}
+
+.platform-admin-nav__section--advanced {
+  background: var(--darkened-bg);
+}
+
+.platform-admin-nav__empty {
+  color: var(--body-quiet-color);
+  padding: 18px;
+}
+
+/* Administration home. */
+.platform-admin-dashboard #content {
+  width: auto;
+}
+
+.platform-admin-home {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.platform-admin-hero {
+  align-items: center;
+  background:
+    radial-gradient(circle at 12% 20%, rgb(255 255 255 / 16%), transparent 35%),
+    linear-gradient(135deg, var(--platform-primary-strong), var(--platform-primary));
+  border-radius: var(--platform-radius);
+  box-shadow: var(--platform-shadow);
+  color: #fff;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 26px 28px;
+}
+
+.platform-admin-eyebrow {
+  color: color-mix(in srgb, var(--platform-accent) 84%, #fff 16%);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 750;
+  margin-bottom: 5px;
+}
+
+.platform-admin-hero h1 {
+  color: #fff;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  margin: 0 0 7px;
+}
+
+.platform-admin-hero p {
+  color: rgb(255 255 255 / 78%);
+  margin: 0;
+  max-width: 680px;
+}
+
+.button.platform-admin-primary-action,
+.button.admin-password-button {
+  background: var(--platform-accent);
+  border: 0;
+  color: #162e39;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.button.platform-admin-primary-action:hover,
+.button.admin-password-button:hover {
+  background: color-mix(in srgb, var(--platform-accent) 88%, #fff 12%);
+  color: #0c2632;
+}
+
+.platform-admin-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.platform-admin-card {
+  background: var(--body-bg);
+  border: 1px solid var(--platform-border);
+  border-radius: var(--platform-radius);
+  box-shadow: var(--platform-shadow);
+  overflow: hidden;
+}
+
+.platform-admin-card > header {
+  background: var(--platform-surface);
+  border-bottom: 1px solid var(--platform-border);
+  padding: 16px 18px 13px;
+}
+
+.platform-admin-card h2 {
+  color: var(--body-fg);
+  font-size: 1rem;
+  margin: 0 0 4px;
+}
+
+.platform-admin-card header p,
+.platform-admin-advanced-grid p {
+  color: var(--body-quiet-color);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+.platform-admin-card ul,
+.platform-admin-advanced-grid ul {
+  list-style: none;
+  margin: 0;
+  padding: 5px 0;
+}
+
+.platform-admin-card li {
+  align-items: center;
+  border-bottom: 1px solid var(--hairline-color);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 5px 18px;
+}
+
+.platform-admin-card li:last-child {
+  border-bottom: 0;
+}
+
+.platform-admin-card__model {
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.platform-admin-card__add {
+  background: var(--darkened-bg);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  padding: 3px 9px;
+  text-decoration: none;
+}
+
+.platform-admin-advanced-panel {
+  background: var(--body-bg);
+  border: 1px solid var(--platform-border);
+  border-radius: var(--platform-radius);
+  overflow: hidden;
+}
+
+.platform-admin-advanced-panel > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 16px 18px;
+}
+
+.platform-admin-advanced-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.platform-admin-advanced-panel > summary strong,
+.platform-admin-advanced-panel > summary small {
+  display: block;
+}
+
+.platform-admin-advanced-panel > summary small {
+  color: var(--body-quiet-color);
+  font-size: 0.72rem;
+  margin-top: 3px;
+}
+
+.platform-admin-advanced-panel__count {
+  background: var(--platform-surface);
+  border-radius: 999px;
+  color: var(--body-quiet-color);
+  font-size: 0.72rem;
+  padding: 5px 10px;
+}
+
+.platform-admin-advanced-grid {
+  border-top: 1px solid var(--platform-border);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 18px;
+}
+
+.platform-admin-advanced-grid section {
+  background: var(--platform-surface);
+  border-radius: 9px;
+  padding: 14px;
+}
+
+.platform-admin-advanced-grid h2 {
+  font-size: 0.9rem;
+  margin: 0 0 3px;
+}
+
+.platform-admin-advanced-grid li {
+  border-top: 1px solid var(--hairline-color);
+  padding: 6px 0;
+}
+
+.platform-admin-recent .module {
+  border: 1px solid var(--platform-border);
+  border-radius: var(--platform-radius);
+  box-shadow: var(--platform-shadow);
+  overflow: hidden;
+}
+
+.platform-admin-recent .actionlist li {
+  padding-inline-start: 24px;
+}
+
+.platform-admin-recent .actionlist .mini {
+  display: block;
+  margin-top: 2px;
+}
+
+/* User administration: clear sign-in, access, and permissions sections. */
+body.change-form #content {
+  max-width: 1180px;
+}
+
+body.model-teacher.change-form #content-main fieldset.module {
+  border: 1px solid var(--platform-border);
+  border-radius: var(--platform-radius);
+  box-shadow: 0 6px 20px rgb(15 47 64 / 5%);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+body.model-teacher.change-form #content-main fieldset.module > h2,
+body.model-teacher.change-form #content-main fieldset.module > details > summary {
+  background: var(--platform-surface);
+}
+
+body.model-teacher.change-form #content-main fieldset.module > h2 {
+  color: var(--body-fg);
+  font-size: 0.9rem;
+  padding: 12px 16px;
+}
+
+body.model-teacher.change-form fieldset.collapse summary h2 {
+  color: var(--body-fg);
+  font-size: 0.9rem;
+}
+
+.admin-password-management {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-password-management > span {
+  color: var(--body-fg);
+  font-weight: 650;
+}
+
+.admin-password-management > small {
+  color: var(--body-quiet-color);
+}
+
+.admin-password-object-link {
+  background: var(--platform-accent) !important;
+  color: #162e39 !important;
+  font-weight: 750 !important;
+}
+
+.admin-membership-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-membership-chip {
+  background: var(--platform-surface);
+  border: 1px solid var(--platform-border);
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 9px 12px;
+  text-decoration: none;
+}
+
+.admin-membership-chip strong {
+  color: var(--body-fg);
+}
+
+.admin-membership-chip span {
+  color: var(--body-quiet-color);
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+
+.admin-empty-state {
+  background: var(--message-warning-bg);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+}
+
+.admin-empty-state span,
+.admin-muted-value {
+  color: var(--body-quiet-color);
+}
+
+@media (max-width: 1100px) {
+  .platform-admin-grid,
+  .platform-admin-advanced-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-admin-dashboard #content-related {
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  #header {
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  #user-tools {
+    justify-content: flex-start;
+  }
+
+  .platform-admin-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .button.platform-admin-primary-action {
+    text-align: center;
+  }
+
+  .platform-admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.change-form #content {
+    max-width: 100%;
+  }
+
+  .admin-membership-chip {
+    min-width: 0;
+    width: 100%;
+  }
+}

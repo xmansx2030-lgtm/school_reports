@@ -1,0 +1,74 @@
+{% load admin_navigation %}
+{% platform_admin_navigation available_apps as platform_nav %}
+
+<button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" aria-label="إظهار أو إخفاء قائمة الإدارة"></button>
+<nav class="sticky platform-admin-nav" id="nav-sidebar" aria-label="التنقل في إدارة المنصة">
+  <div class="platform-admin-nav__heading">
+    <strong>إدارة المنصة</strong>
+    <span>{{ platform_nav.primary_count }} وجهة أساسية</span>
+  </div>
+  <input
+    type="search"
+    id="nav-filter"
+    placeholder="ابحث في أدوات الإدارة…"
+    aria-label="البحث في أدوات الإدارة"
+  >
+
+  <div class="platform-admin-nav__sections">
+    {% for section in platform_nav.primary %}
+      <section class="module platform-admin-nav__section" data-admin-nav-section>
+        <table>
+          <caption><span class="section">{{ section.title }}</span></caption>
+          <tbody>
+            {% for model in section.models %}
+              {% with model_name=model.object_name|lower %}
+                <tr class="model-{{ model_name }}{% if model.admin_url in request.path|urlencode %} current-model{% endif %}">
+                  <th scope="row">
+                    {% if model.admin_url %}
+                      <a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a>
+                    {% else %}
+                      {{ model.name }}
+                    {% endif %}
+                  </th>
+                </tr>
+              {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    {% empty %}
+      <p class="platform-admin-nav__empty">لا توجد أدوات متاحة لهذا الحساب.</p>
+    {% endfor %}
+  </div>
+
+  {% if platform_nav.advanced %}
+    <details class="platform-admin-nav__advanced" data-admin-advanced>
+      <summary>
+        <span>الأدوات المتقدمة</span>
+        <small>{{ platform_nav.advanced_count }} أداة تقنية</small>
+      </summary>
+      {% for section in platform_nav.advanced %}
+        <section class="module platform-admin-nav__section platform-admin-nav__section--advanced" data-admin-nav-section>
+          <table>
+            <caption><span class="section">{{ section.title }}</span></caption>
+            <tbody>
+              {% for model in section.models %}
+                {% with model_name=model.object_name|lower %}
+                  <tr class="model-{{ model_name }}{% if model.admin_url in request.path|urlencode %} current-model{% endif %}">
+                    <th scope="row">
+                      {% if model.admin_url %}
+                        <a href="{{ model.admin_url }}"{% if model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{{ model.name }}</a>
+                      {% else %}
+                        {{ model.name }}
+                      {% endif %}
+                    </th>
+                  </tr>
+                {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% endfor %}
+    </details>
+  {% endif %}
+</nav>

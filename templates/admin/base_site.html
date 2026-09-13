@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | إدارة منصة توثيق{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/platform_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+  <div id="site-name" class="platform-admin-brand">
+    <a href="{% url 'admin:index' %}">
+      <span class="platform-admin-brand__name">إدارة منصة توثيق</span>
+      <span class="platform-admin-brand__tagline">لوحة تشغيل المنصة</span>
+    </a>
+  </div>
+  {% if user.is_anonymous %}
+    {% include "admin/color_theme_toggle.html" %}
+  {% endif %}
+{% endblock %}
+
+{% block welcome-msg %}
+  أهلاً، <strong>{% firstof user.get_short_name user.get_username %}</strong>
+{% endblock %}
+
+{% block userlinks %}
+  {% if site_url %}
+    <a href="{{ site_url }}">عرض المنصة</a> /
+  {% endif %}
+  <a href="{% url 'admin:index' %}">الرئيسية</a> /
+  {% if user.has_usable_password %}
+    <a href="{% url 'admin:password_change' %}">كلمة مرور حسابي</a> /
+  {% endif %}
+  <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+    {% csrf_token %}
+    <button type="submit">تسجيل الخروج</button>
+  </form>
+  {% include "admin/color_theme_toggle.html" %}
+{% endblock %}
+
+{% block extrabody %}
+  {{ block.super }}
+  <script src="{% static 'admin/js/platform_admin.js' %}" defer></script>
+{% endblock %}

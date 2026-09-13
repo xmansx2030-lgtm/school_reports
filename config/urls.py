@@ -14,6 +14,11 @@ from django.views.decorators.cache import cache_control
 from django.views.generic.base import RedirectView
 
 
+admin.site.site_header = "إدارة منصة توثيق"
+admin.site.site_title = "إدارة منصة توثيق"
+admin.site.index_title = "لوحة تشغيل المنصة"
+
+
 @cache_control(no_cache=True, must_revalidate=True, max_age=0)
 def service_worker(request):
     """Serve service worker from site root to allow scope="/"."""

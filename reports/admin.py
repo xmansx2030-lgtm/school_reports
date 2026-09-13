@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from django import forms
 from django.contrib import admin
+from django.contrib.auth import password_validation
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count
+from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
 from .data_rights_notifications import notify_erasure_updated
 
@@ -52,8 +54,17 @@ class TeacherCreationForm(forms.ModelForm):
     نموذج إنشاء مستخدم في لوحة الإدارة مع حقلي كلمة مرور.
     ملاحظة: is_staff لا يظهر هنا لأنه يُحدَّث تلقائيًا من الدور.
     """
-    password1 = forms.CharField(label="كلمة المرور", widget=forms.PasswordInput)
-    password2 = forms.CharField(label="تأكيد كلمة المرور", widget=forms.PasswordInput)
+    password1 = forms.CharField(
+        label="كلمة المرور",
+        strip=False,
+        help_text=password_validation.password_validators_help_text_html(),
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
+    password2 = forms.CharField(
+        label="تأكيد كلمة المرور",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
 
     class Meta:
         model = Teacher
@@ -64,6 +75,8 @@ class TeacherCreationForm(forms.ModelForm):
         p2 = self.cleaned_data.get("password2")
         if p1 and p2 and p1 != p2:
             raise forms.ValidationError("كلمتا المرور غير متطابقتين.")
+        if p2:
+            password_validation.validate_password(p2, self.instance)
         return p2
 
     def save(self, commit=True):
@@ -77,7 +90,11 @@ class TeacherCreationForm(forms.ModelForm):
 
 class TeacherChangeForm(forms.ModelForm):
     """
-    نموذج تعديل مستخدم في لوحة الإدارة (لا يظهر كلمة المرور الحقيقية).
+    نموذج تعديل مستخدم في لوحة الإدارة.
+
+    كلمة المرور ليست حقلاً قابلاً للتحرير هنا عمداً. تعيينها يتم حصراً من
+    نموذج Django المخصص لكلمات المرور حتى تُطبّق عملية التشفير والتحقق من
+    القوة ولا يمكن حفظ نص خام في حقل ``password``.
     is_staff للعرض فقط (read-only) لأنه يُحدَّث تلقائيًا حسب الدور.
     """
     class Meta:
@@ -102,31 +119,70 @@ class TeacherAdmin(UserAdmin):
     add_form = TeacherCreationForm
     form = TeacherChangeForm
     model = Teacher
+    change_form_template = "admin/reports/teacher/change_form.html"
 
-    list_display = ("name", "phone", "national_id", "is_active", "is_staff")
+    list_display = (
+        "name",
+        "phone",
+        "national_id",
+        "school_roles",
+        "account_status",
+        "is_superuser",
+    )
     list_filter = ("is_active", "is_staff", "is_superuser", "groups")
     search_fields = ("name", "phone", "national_id")
+    search_help_text = "ابحث بالاسم أو رقم الجوال أو الهوية الوطنية."
     ordering = ("name",)
+    list_per_page = 30
+    empty_value_display = "—"
 
     fieldsets = (
-        (None, {"fields": ("phone", "password")}),
-        ("المعلومات الشخصية", {"fields": ("name", "national_id")}),
-        ("تفضيلات الأمان", {"fields": ("passkey_prompt_opt_out",)}),
         (
-            "الصلاحيات",
+            "الحساب وتسجيل الدخول",
+            {"fields": ("phone", "password_management")},
+        ),
+        ("المعلومات الشخصية", {"fields": ("name", "national_id")}),
+        ("المدارس والأدوار", {"fields": ("school_access_summary",)}),
+        (
+            "حالة الحساب",
             {
                 "fields": (
                     "is_active",
-                    "is_staff",       # للعرض فقط
+                    "is_staff",  # للعرض فقط
                     "is_superuser",
+                )
+            },
+        ),
+        (
+            "الصلاحيات المتقدمة",
+            {
+                "classes": ("collapse",),
+                "description": (
+                    "تُستخدم للمشرفين التقنيين فقط. أدوار المدرسة تُدار من "
+                    "قسم عضويات المدارس أعلاه."
+                ),
+                "fields": (
                     "groups",
                     "user_permissions",
                 )
             },
         ),
-        ("تواريخ النظام", {"fields": ("last_login",)}),
+        ("تفضيلات الأمان", {"fields": ("passkey_prompt_opt_out",)}),
+        (
+            "سجل الحساب",
+            {
+                "classes": ("collapse",),
+                "fields": ("last_login", "date_joined"),
+            },
+        ),
     )
-    readonly_fields = ("last_login", "is_staff")
+    readonly_fields = (
+        "password_management",
+        "school_access_summary",
+        "last_login",
+        "date_joined",
+        "is_staff",
+    )
 
     add_fieldsets = (
         (
@@ -144,6 +200,84 @@ class TeacherAdmin(UserAdmin):
             },
         ),
     )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("school_memberships__school")
+
+    @staticmethod
+    def _active_memberships(obj):
+        return [membership for membership in obj.school_memberships.all() if membership.is_active]
+
+    @admin.display(description="المدارس والأدوار")
+    def school_roles(self, obj):
+        memberships = self._active_memberships(obj)
+        if not memberships:
+            return format_html('<span class="admin-muted-value">لا توجد عضوية نشطة</span>')
+
+        visible = memberships[:3]
+        labels = [
+            f"{membership.school.name} — {membership.get_role_type_display()}"
+            for membership in visible
+        ]
+        if len(memberships) > len(visible):
+            labels.append(f"+{len(memberships) - len(visible)} أخرى")
+        return format_html("{}", "، ".join(labels))
+
+    @admin.display(boolean=True, ordering="is_active", description="الحساب نشط")
+    def account_status(self, obj):
+        return obj.is_active
+
+    @admin.display(description="إدارة كلمة المرور")
+    def password_management(self, obj):
+        if not obj or not obj.pk:
+            return "تُعيّن كلمة المرور عند إنشاء الحساب."
+
+        password_url = reverse("admin:auth_user_password_change", args=(obj.pk,))
+        status = (
+            "الدخول بكلمة المرور مفعّل"
+            if obj.has_usable_password()
+            else "لا توجد كلمة مرور قابلة للاستخدام"
+        )
+        return format_html(
+            '<div class="admin-password-management">'
+            '<a class="button admin-password-button" href="{}">تعيين كلمة مرور جديدة</a>'
+            '<span>{}</span>'
+            '<small>يتم التعيين من نموذج آمن ومشفّر، ولا يمكن عرض كلمة المرور الحالية.</small>'
+            "</div>",
+            password_url,
+            status,
+        )
+
+    @admin.display(description="نطاق الوصول الحالي")
+    def school_access_summary(self, obj):
+        memberships = self._active_memberships(obj)
+        if not memberships:
+            return format_html(
+                '<div class="admin-empty-state">'
+                '<strong>لا توجد عضوية مدرسة نشطة</strong>'
+                '<span>لن يستطيع هذا المستخدم الوصول إلى بيانات أي مدرسة.</span>'
+                "</div>"
+            )
+
+        return format_html(
+            '<div class="admin-membership-list">{}</div>',
+            format_html_join(
+                "",
+                '<a class="admin-membership-chip" href="{}">'
+                '<strong>{}</strong><span>{}</span></a>',
+                (
+                    (
+                        reverse(
+                            "admin:reports_schoolmembership_change",
+                            args=(membership.pk,),
+                        ),
+                        membership.school.name,
+                        membership.get_role_type_display(),
+                    )
+                    for membership in memberships
+                ),
+            ),
+        )
 
     # ملاحظة مقصودة: حذف الحساب لم يعد يمحو سجل إجراءاته.
     # ``AuditLog.teacher`` صار SET_NULL مع لقطة اسم الفاعل، فيبقى الأثر منسوباً

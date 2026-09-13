@@ -1,0 +1,115 @@
+{% extends "admin/base_site.html" %}
+{% load admin_navigation i18n static log %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block coltype %}colMS{% endblock %}
+{% block bodyclass %}{{ block.super }} dashboard platform-admin-dashboard{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+  {% platform_admin_navigation app_list as platform_nav %}
+  <div id="content-main" class="platform-admin-home">
+    <header class="platform-admin-hero">
+      <div>
+        <span class="platform-admin-eyebrow">لوحة تشغيل المنصة</span>
+        <h1>ماذا تريد أن تدير اليوم؟</h1>
+        <p>ابدأ من المهمة المطلوبة. جُمعت الأدوات اليومية هنا، بينما بقيت التفاصيل التقنية في قسم مستقل.</p>
+      </div>
+      {% for section in platform_nav.primary %}
+        {% for model in section.models %}
+          {% if model.object_name == "Teacher" and model.admin_url %}
+            <a class="button platform-admin-primary-action" href="{{ model.admin_url }}">إدارة المستخدمين</a>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </header>
+
+    {% if platform_nav.primary %}
+      <div class="platform-admin-grid">
+        {% for section in platform_nav.primary %}
+          <section class="platform-admin-card">
+            <header>
+              <h2>{{ section.title }}</h2>
+              <p>{{ section.description }}</p>
+            </header>
+            <ul>
+              {% for model in section.models %}
+                <li>
+                  {% if model.admin_url %}
+                    <a class="platform-admin-card__model" href="{{ model.admin_url }}">{{ model.name }}</a>
+                  {% else %}
+                    <span class="platform-admin-card__model">{{ model.name }}</span>
+                  {% endif %}
+                  {% if model.add_url %}
+                    <a class="platform-admin-card__add" href="{{ model.add_url }}">إضافة</a>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="platform-admin-empty">لا توجد أدوات إدارة متاحة لهذا الحساب.</div>
+    {% endif %}
+
+    {% if platform_nav.advanced %}
+      <details class="platform-admin-advanced-panel" data-admin-advanced>
+        <summary>
+          <span>
+            <strong>الأدوات المتقدمة والسجلات</strong>
+            <small>للمهام التقنية والمراجعة الدقيقة فقط</small>
+          </span>
+          <span class="platform-admin-advanced-panel__count">{{ platform_nav.advanced_count }} أداة</span>
+        </summary>
+        <div class="platform-admin-advanced-grid">
+          {% for section in platform_nav.advanced %}
+            <section>
+              <h2>{{ section.title }}</h2>
+              <p>{{ section.description }}</p>
+              <ul>
+                {% for model in section.models %}
+                  <li>
+                    {% if model.admin_url %}<a href="{{ model.admin_url }}">{{ model.name }}</a>{% else %}{{ model.name }}{% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </section>
+          {% endfor %}
+        </div>
+      </details>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block sidebar %}
+  <aside id="content-related" class="platform-admin-recent">
+    <div class="module" id="recent-actions-module">
+      <h2>آخر العمليات</h2>
+      <h3>نشاط حسابك الأخير</h3>
+      {% get_admin_log 8 as admin_log for_user user %}
+      {% if not admin_log %}
+        <p>لا توجد عمليات حديثة.</p>
+      {% else %}
+        <ul class="actionlist">
+          {% for entry in admin_log %}
+            <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+              {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+              {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+              {% endif %}
+              {% if entry.content_type %}<span class="mini quiet">{{ entry.content_type.name|capfirst }}</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </aside>
+{% endblock %}

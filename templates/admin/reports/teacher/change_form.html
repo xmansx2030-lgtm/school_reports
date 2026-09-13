@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if original and original.pk %}
+    <li>
+      <a class="admin-password-object-link" href="{% url 'admin:auth_user_password_change' original.pk %}">تعيين كلمة المرور</a>
+    </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
