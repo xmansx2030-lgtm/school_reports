@@ -13,7 +13,7 @@ class PlatformAdminExperienceTests(TestCase):
     def setUpTestData(cls):
         cls.platform_admin = Teacher.objects.create_superuser(
             phone="500880001",
-            name="مشرف المنصة",
+            name="مالك المنصة",
             password="Admin-Safe-Password-2026!",
         )
         cls.user = Teacher.objects.create_user(
