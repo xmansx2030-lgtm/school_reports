@@ -1,14 +1,14 @@
 {% if page_obj.paginator.num_pages > 1 %}
-<nav class="royal-pagination" aria-label="ترقيم الصفحات">
+<nav class="royal-pagination twq-pagination" aria-label="ترقيم الصفحات">
   {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k|urlencode }}={{ v|urlencode }}{% endif %}{% endfor %}" class="btn btn-outline">
+    <a href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k|urlencode }}={{ v|urlencode }}{% endif %}{% endfor %}" class="btn btn-outline twq-pagination__link">
       <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
       السابق
     </a>
   {% endif %}
-  <span class="royal-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+  <span class="royal-pagination__meta twq-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
   {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k|urlencode }}={{ v|urlencode }}{% endif %}{% endfor %}" class="btn btn-outline">
+    <a href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k|urlencode }}={{ v|urlencode }}{% endif %}{% endfor %}" class="btn btn-outline twq-pagination__link">
       التالي
       <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
     </a>

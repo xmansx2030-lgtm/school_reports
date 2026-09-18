@@ -37,7 +37,41 @@ class DesignSystemContractTests(SimpleTestCase):
 
     def test_tokens_cover_the_semantic_and_layout_contract(self):
         tokens = source("static/css/tokens.css")
-        required_tokens = {
+        canonical_tokens = {
+            "--twq-primary",
+            "--twq-primary-hover",
+            "--twq-primary-active",
+            "--twq-primary-soft",
+            "--twq-secondary",
+            "--twq-accent",
+            "--twq-success",
+            "--twq-success-soft",
+            "--twq-warning",
+            "--twq-danger",
+            "--twq-info",
+            "--twq-bg",
+            "--twq-surface",
+            "--twq-surface-secondary",
+            "--twq-surface-elevated",
+            "--twq-text",
+            "--twq-text-secondary",
+            "--twq-text-muted",
+            "--twq-text-inverse",
+            "--twq-border",
+            "--twq-divider",
+            "--twq-focus",
+            "--twq-space-1",
+            "--twq-space-12",
+            "--twq-radius-sm",
+            "--twq-radius-pill",
+            "--twq-shadow-sm",
+            "--twq-font-family",
+            "--twq-font-size-2xl",
+            "--twq-duration-fast",
+            "--twq-duration-normal",
+            "--twq-ease-standard",
+        }
+        compatibility_tokens = {
             "--primary",
             "--secondary",
             "--accent",
@@ -61,11 +95,87 @@ class DesignSystemContractTests(SimpleTestCase):
             "--duration-normal",
         }
 
-        for token in required_tokens:
+        for token in canonical_tokens | compatibility_tokens:
             with self.subTest(token=token):
                 self.assertIn(f"{token}:", tokens)
         self.assertIn('html[data-theme="dark"]', tokens)
         self.assertIn("prefers-reduced-motion", tokens)
+
+    def test_shared_component_api_uses_canonical_tokens_and_logical_properties(self):
+        css = source("static/css/design-system.css")
+        required_components = {
+            ".twq-btn",
+            ".twq-field",
+            ".twq-control",
+            ".twq-card",
+            ".twq-status",
+            ".twq-table-wrap",
+            ".twq-table",
+            ".twq-modal",
+            ".twq-empty",
+            ".twq-loading",
+            ".twq-alert",
+            ".twq-pagination",
+            ".twq-page-header",
+            ".twq-section__header",
+            ".twq-progress__bar",
+            ".twq-disclosure",
+            ".twq-document-item",
+        }
+
+        for selector in required_components:
+            with self.subTest(selector=selector):
+                self.assertIn(selector, css)
+
+        self.assertIn("var(--twq-primary)", css)
+        self.assertIn("padding-inline", css)
+        self.assertIn("border-inline-start", css)
+        self.assertIn("@media (max-width: 40rem)", css)
+
+    def test_design_language_v1_patterns_keep_native_semantics(self):
+        design_system = source("static/css/design-system.css")
+        list_template = source("reports/templates/reports/leadership_portfolio_list.html")
+        detail_template = source("reports/templates/reports/leadership_portfolio_detail.html")
+
+        for template in (list_template, detail_template):
+            self.assertIn("twq-page-header", template)
+            self.assertIn("twq-page-header__context", template)
+            self.assertIn("twq-progress__bar", template)
+            self.assertIn("twq-section__header", template)
+
+        self.assertIn('<details class="lp-detail__axis twq-disclosure"', detail_template)
+        self.assertIn('<summary class="twq-disclosure__summary">', detail_template)
+        self.assertIn("twq-document-item", detail_template)
+        self.assertIn("twq-empty--page", list_template)
+        self.assertIn("twq-empty--local", detail_template)
+        self.assertIn("prefers-reduced-motion", design_system)
+        self.assertNotRegex(design_system, r"transition:\s*all")
+
+    def test_pilot_css_keeps_only_module_owned_composition(self):
+        list_css = source("static/css/leadership-portfolio-list.css")
+        detail_css = source("static/css/leadership-portfolio-detail.css")
+
+        for css in (list_css, detail_css):
+            self.assertIsNone(re.search(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(", css))
+            self.assertIsNone(
+                re.search(
+                    r"(?m)^\s*(?:margin|padding|border)-(?:left|right)\s*:"
+                    r"|^\s*(?:left|right)\s*:",
+                    css,
+                )
+            )
+
+        self.assertNotIn(".lp-pilot__header {", list_css)
+        self.assertNotIn(".lp-detail__header {", detail_css)
+        self.assertNotIn(".lp-detail__report-item {", detail_css)
+
+    def test_shared_pagination_keeps_legacy_contract_and_adds_foundation_hooks(self):
+        pagination = source("reports/templates/reports/_pagination.html")
+
+        self.assertIn('class="royal-pagination twq-pagination"', pagination)
+        self.assertIn("twq-pagination__link", pagination)
+        self.assertIn("twq-pagination__meta", pagination)
+        self.assertIn("request.GET.items", pagination)
 
     def test_new_foundation_uses_no_important_overrides(self):
         for relative_path in (
