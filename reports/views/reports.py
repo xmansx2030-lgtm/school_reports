@@ -784,7 +784,11 @@ def admin_reports(request: HttpRequest) -> HttpResponse:
         return redirect("reports:home")
 
     cats = allowed_categories_for(request.user, active_school)
-    qs = get_admin_reports_queryset(user=request.user, active_school=active_school)
+    # The shared queryset defers this column for other callers; the manager
+    # list reads it twice per row (desktop/mobile), so include it in this SELECT.
+    qs = get_admin_reports_queryset(
+        user=request.user, active_school=active_school, include_approval_state=True
+    )
 
     # النطاق قبل المرشّح: يُضيَّق الاستعلام الأساس أولاً ثم تُبنى فوقه مرشّحات
     # المستخدم. وأقسامٌ فارغة تعني كشفاً فارغاً لا كشف المدرسة كاملاً — القاعدة
@@ -837,6 +841,7 @@ def admin_reports(request: HttpRequest) -> HttpResponse:
         # يجب أن تكون هي أيضاً ``False`` للوكيل، وإلا ظهرت أزرارٌ لا يملكها.
         "can_delete": is_manager,
         "is_manager": is_manager,
+        "show_approval_status": True,
         "qs": _clean_query_params(request.GET),
     }
     return render(request, "reports/admin_reports.html", context)

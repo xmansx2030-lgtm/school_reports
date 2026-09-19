@@ -1,925 +1,69 @@
-{# reports/templates/reports/admin_reports.html (أو اسم القالب لديك) #}
+{# Operational reports list for the school manager and scoped reviewers. #}
 {% extends "base.html" %}
 {% load static %}
 {% load hijri_tags %}
 
-{% block title %}لوحة التحكم بالتقارير{% endblock %}
+{% block title %}تقارير المدرسة{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     لوحة التقارير - تصميم 2026
-     هوية المنصة: أخضر سعودي (#006c35) + ذهبي (#b9975b)
-     متوافق مع نظام التصميم في base.html
-     ========================================================= */
-
-  .repdash-wrap {
-    /* ── ألوان الهوية ── */
-    --rd-primary: #006c35;
-    --rd-primary-soft: rgba(0, 108, 53, 0.08);
-    --rd-primary-ring: rgba(0, 108, 53, 0.16);
-    --rd-secondary: #b9975b;
-    --rd-gradient: linear-gradient(135deg, #006c35 0%, #0a8f49 55%, #b9975b 140%);
-
-    /* ── أسطح وألوان محايدة: من جذر الهوية فتتقلّب معه ── */
-    --rd-bg: var(--id-canvas);
-    --rd-card: var(--id-surface);
-    --rd-soft: var(--id-surface-2);
-    --rd-text: var(--id-ink);
-    --rd-text-light: var(--id-muted);
-    --rd-border: var(--id-line);
-
-    --rd-radius-xl: 22px;
-    --rd-radius-lg: 16px;
-    --rd-radius-md: 12px;
-    --rd-shadow-sm: 0 1px 3px rgba(16, 37, 31, 0.05);
-    --rd-shadow-md: 0 8px 28px rgba(16, 37, 31, 0.07);
-    --rd-shadow-lg: 0 22px 55px rgba(16, 37, 31, 0.14);
-    --rd-ring: 0 0 0 4px var(--rd-primary-ring);
-    --rd-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-
-    background: var(--rd-bg);
-    min-height: 100vh;
-    padding: 2rem 0;
-  }
-
-  /* الأسطح والحبر تتقلّب عبر `--id-*`؛ ولا يبقى
-     هنا إلا ما يختلف فعلاً: النغمة والتدرّج والظلال. */
-  html[data-theme="dark"] .repdash-wrap {
-    --rd-primary: var(--id-accent);
-    --rd-primary-soft: var(--id-accent-wash);
-    --rd-primary-ring: rgba(127, 208, 168, 0.22);
-    --rd-secondary: var(--id-gold);
-    --rd-gradient: linear-gradient(135deg, var(--id-hero-via) 0%, var(--id-green-600) 55%, var(--id-gold-400) 150%);
-    --rd-shadow-sm: var(--id-e1);
-    --rd-shadow-md: var(--id-e3);
-    --rd-shadow-lg: var(--id-e4);
-  }
-
-  .repdash-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  /* ===== Header ===== */
-  .repdash-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-    flex-wrap: wrap;
-    margin: 0 0 28px;
-    background: var(--rd-card);
-    padding: 28px 32px;
-    border-radius: var(--rd-radius-xl);
-    box-shadow: var(--rd-shadow-md);
-    border: 1px solid var(--rd-border);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .repdash-header::before {
-    content: "";
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline: 0;
-    height: 5px;
-    background: var(--rd-gradient);
-  }
-
-  .repdash-header-main {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    min-width: 0;
-  }
-
-  .repdash-header-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: var(--rd-radius-lg);
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    background: var(--rd-gradient);
-    color: #fff;
-    font-size: 1.6rem;
-    box-shadow: 0 10px 24px rgba(0, 108, 53, 0.28);
-  }
-
-  .repdash-title {
-    margin: 0;
-    font-weight: 800;
-    font-size: clamp(1.4rem, 3vw, 2rem);
-    color: var(--rd-text);
-    letter-spacing: -0.3px;
-    line-height: 1.2;
-  }
-
-  .repdash-sub {
-    margin: 6px 0 0;
-    color: var(--rd-text-light);
-    font-weight: 600;
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-
-  .repdash-header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  /* بطاقة عدّاد التقارير في الترويسة */
-  .repdash-count {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
-    border-radius: var(--rd-radius-lg);
-    background: var(--rd-primary-soft);
-    border: 1px solid var(--rd-border);
-    color: var(--rd-text);
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  .repdash-count .n {
-    font-size: 1.5rem;
-    color: var(--rd-primary);
-    line-height: 1;
-  }
-
-  .repdash-count .lbl {
-    font-size: 0.8rem;
-    color: var(--rd-text-light);
-    font-weight: 700;
-  }
-
-  /* ===== Cards ===== */
-  .repdash-card {
-    background: var(--rd-card);
-    border: 1px solid var(--rd-border);
-    border-radius: var(--rd-radius-xl);
-    box-shadow: var(--rd-shadow-md);
-    overflow: hidden;
-    transition: var(--rd-transition);
-  }
-
-  /* ===== Filters ===== */
-  .repdash-filters {
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-
-  .repdash-filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 18px;
-    align-items: end;
-  }
-
-  .repdash-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .repdash-field label {
-    display: block;
-    font-weight: 800;
-    color: var(--rd-text-light);
-    letter-spacing: 0.02em;
-    font-size: 0.82rem;
-  }
-
-  .repdash-control {
-    width: 100%;
-    padding: 13px 16px;
-    border: 1.5px solid var(--rd-border);
-    border-radius: var(--rd-radius-md);
-    font-size: 0.98rem;
-    font-weight: 600;
-    font-family: inherit;
-    background: var(--rd-card);
-    color: var(--rd-text);
-    transition: var(--rd-transition);
-  }
-
-  .repdash-control:focus {
-    outline: none;
-    border-color: var(--rd-primary);
-    box-shadow: var(--rd-ring);
-  }
-
-  .repdash-control:hover {
-    border-color: var(--rd-primary);
-  }
-
-  /* قائمة منسدلة بسهم مخصّص (لتمييزها عن حقول الإدخال النصية) */
-  select.repdash-control {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding-inline-end: 42px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23006c35' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: left 16px center;
-    cursor: pointer;
-  }
-
-  html[data-theme="dark"] select.repdash-control {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  }
-
-  .repdash-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  /* ===== Table ===== */
-  .repdash-table-wrap {
-    box-shadow: var(--rd-shadow-md);
-    border-radius: var(--rd-radius-xl);
-    overflow: hidden;
-    border: 1px solid var(--rd-border);
-  }
-
-  .repdash-table-scroll {
-    overflow-x: auto;
-  }
-
-  .repdash-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    text-align: right;
-  }
-
-  .repdash-table thead th {
-    background: var(--rd-soft);
-    padding: 16px 18px;
-    font-weight: 800;
-    color: var(--rd-text);
-    border-bottom: 2px solid var(--rd-primary);
-    white-space: nowrap;
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-
-  .repdash-table td {
-    padding: 16px 18px;
-    border-bottom: 1px solid var(--rd-border);
-    vertical-align: middle;
-    color: var(--rd-text);
-    font-size: 0.95rem;
-  }
-
-  .repdash-table tbody tr {
-    transition: background 0.18s ease;
-    background: var(--rd-card);
-  }
-
-  .repdash-table tbody tr:hover {
-    background: var(--rd-primary-soft);
-  }
-
-  .repdash-table tbody tr:last-child td {
-    border-bottom: none;
-  }
-
-  /* ===== Badges ===== */
-  .rd-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 7px 14px;
-    border-radius: 999px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    border: 1px solid transparent;
-  }
-
-  .rd-badge-school {
-    background: var(--rd-primary-soft);
-    border-color: rgba(0, 108, 53, 0.25);
-    color: var(--rd-primary);
-  }
-
-  html[data-theme="dark"] .rd-badge-school {
-    color: #6ee7b7;
-  }
-
-  .rd-badge-cat {
-    background: rgba(185, 151, 91, 0.12);
-    border-color: rgba(185, 151, 91, 0.30);
-    color: #8d6b2f;
-  }
-
-  html[data-theme="dark"] .rd-badge-cat {
-    color: #e6cfa3;
-  }
-
-  /* ===== User Cell ===== */
-  .rd-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 200px;
-  }
-
-  .rd-avatar {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: #fff;
-    background: var(--rd-gradient);
-    flex: 0 0 auto;
-    box-shadow: 0 5px 14px rgba(0, 108, 53, 0.28);
-  }
-
-  .rd-user .nm {
-    font-weight: 800;
-    color: var(--rd-text);
-    line-height: 1.4;
-    font-size: 0.98rem;
-  }
-
-  /* ===== Icon Buttons ===== */
-  .rd-iconbtn {
-    min-width: 42px;
-    min-height: 42px;
-    padding: 9px 12px;
-    border-radius: var(--rd-radius-md);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border: 1.5px solid var(--rd-border);
-    background: var(--rd-card);
-    color: var(--rd-text);
-    cursor: pointer;
-    transition: var(--rd-transition);
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 0.9rem;
-    white-space: nowrap;
-  }
-
-  .rd-iconbtn i {
-    font-size: 1.05rem;
-  }
-
-  .rd-iconbtn:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--rd-shadow-sm);
-  }
-
-  /* الأزرار هادئة (محايدة) افتراضيًا، ويظهر لونها الدلالي عند التحويم فقط
-     لتقليل الضجيج البصري وإبراز بيانات الجدول */
-  .rd-iconbtn {
-    color: var(--rd-text-light);
-  }
-
-  .rd-iconbtn.rd-view:hover,
-  .rd-iconbtn.rd-view:focus-visible {
-    color: var(--rd-primary);
-    background: var(--rd-primary-soft);
-    border-color: var(--rd-primary);
-  }
-
-  .rd-iconbtn.rd-print:hover,
-  .rd-iconbtn.rd-print:focus-visible {
-    color: #0f8f87;
-    background: rgba(15, 143, 135, 0.12);
-    border-color: #0f8f87;
-  }
-
-  .rd-iconbtn.rd-edit:hover,
-  .rd-iconbtn.rd-edit:focus-visible {
-    color: #8d6b2f;
-    background: rgba(185, 151, 91, 0.15);
-    border-color: var(--rd-secondary);
-  }
-
-  .rd-iconbtn.rd-share:hover,
-  .rd-iconbtn.rd-share:focus-visible {
-    color: #2563eb;
-    background: rgba(37, 99, 235, 0.12);
-    border-color: #2563eb;
-  }
-
-  .rd-iconbtn.rd-del:hover,
-  .rd-iconbtn.rd-del:focus-visible {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.12);
-    border-color: #ef4444;
-  }
-
-  .rd-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  /* للموبايل - أزرار أكبر */
-  @media (max-width: 768px) {
-    .rd-iconbtn {
-      min-width: 48px;
-      min-height: 48px;
-      padding: 12px 14px;
-    }
-
-    .rd-iconbtn i {
-      font-size: 1.2rem;
-    }
-
-    .rd-actions {
-      gap: 10px;
-    }
-  }
-
-  /* ===== Empty State - تصميم محسّن ===== */
-  .rd-empty {
-    padding: 80px 20px;
-    text-align: center;
-    color: var(--rd-text-light);
-    font-weight: 700;
-    font-size: 1.1rem;
-  }
-
-  .rd-empty i {
-    opacity: 0.5;
-    margin-bottom: 20px;
-    background: var(--rd-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: block;
-  }
-
-  /* ===== Mobile Cards - تصميم محسّن ===== */
-  .repdash-mobile {
-    display: none;
-    gap: 16px;
-    margin-top: 4px;
-  }
-
-  .rd-card {
-    background: var(--rd-card);
-    border: 1px solid var(--rd-border);
-    border-radius: var(--rd-radius-lg);
-    padding: 20px;
-    box-shadow: var(--rd-shadow-md);
-    transition: var(--rd-transition);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .rd-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--rd-gradient);
-    opacity: 0.7;
-  }
-
-  .rd-card:hover {
-    box-shadow: var(--rd-shadow-lg);
-    transform: translateY(-3px);
-    border-color: var(--rd-primary);
-  }
-
-  .rd-card-hd {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    padding-bottom: 16px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--rd-border);
-  }
-
-  .rd-card-title {
-    font-weight: 800;
-    color: var(--rd-text);
-    font-size: 1.15rem;
-    line-height: 1.4;
-  }
-
-  .rd-card-date {
-    color: var(--rd-text-light);
-    font-weight: 700;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    padding: 6px 12px;
-    background: var(--rd-soft);
-    border-radius: var(--rd-radius-md);
-  }
-
-  .rd-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-top: 14px;
-    padding: 12px 0;
-    font-size: 1rem;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-  }
-
-  html[data-theme="dark"] .rd-row {
-    border-bottom-color: rgba(255,255,255,0.05);
-  }
-
-  .rd-row:last-of-type {
-    border-bottom: none;
-  }
-
-  .rd-row .k {
-    color: var(--rd-text-light);
-    font-weight: 700;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  .rd-row .v {
-    color: var(--rd-text);
-    font-weight: 800;
-    text-align: left;
-  }
-
-  .rd-card-actions {
-    margin-top: 20px;
-    padding-top: 18px;
-    border-top: 1px solid var(--rd-border);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-  }
-
-  .rd-card-actions .rd-iconbtn,
-  .rd-card-actions .btn {
-    width: 100%;
-    justify-content: center;
-    min-height: 50px;
-    font-size: 1rem;
-    font-weight: 700;
-  }
-
-  @media (max-width: 480px) {
-    .rd-card-actions {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    .repdash-table-wrap {
-      display: none;
-    }
-    .repdash-mobile {
-      display: grid;
-    }
-  }
-
-  /* ===== Dialogs - تصميم محسّن ===== */
-  .repdash-wrap dialog {
-    border: none;
-    border-radius: var(--rd-radius-xl);
-    padding: 0;
-    max-width: 750px;
-    width: min(750px, 95vw);
-    background: var(--rd-card);
-    color: var(--rd-text);
-    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.4);
-    border: 1px solid var(--rd-border);
-  }
-
-  .repdash-wrap dialog::backdrop {
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(8px);
-  }
-
-  .rd-dlg-hd {
-    padding: 22px 26px;
-    border-bottom: 1px solid var(--rd-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    background: var(--rd-primary-soft);
-  }
-
-  .rd-dlg-hd h3 {
-    margin: 0;
-    font-weight: 800;
-    font-size: 1.35rem;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    color: var(--rd-text);
-  }
-
-  .rd-dlg-bd {
-    padding: 28px;
-  }
-
-  .rd-detail-grid {
-    display: grid;
-    gap: 20px;
-  }
-
-  .rd-detail {
-    border: 2px solid var(--rd-border);
-    border-radius: var(--rd-radius-md);
-    padding: 20px;
-    background: linear-gradient(to bottom, var(--rd-primary-soft), transparent);
-    box-shadow: var(--rd-shadow-sm);
-  }
-
-  .rd-detail .lbl {
-    font-size: 0.9rem;
-    color: var(--rd-text-light);
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-  }
-
-  .rd-detail .val {
-    font-weight: 800;
-    color: var(--rd-text);
-    font-size: 1.1rem;
-  }
-
-  .rd-detail .val-lite {
-    font-weight: 600;
-    color: var(--rd-text);
-    line-height: 1.9;
-    white-space: normal;
-    word-break: break-word;
-    font-size: 1rem;
-  }
-
-  .rd-two {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-  }
-
-  @media (max-width: 520px) {
-    .rd-two {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  /* ===== Gallery ===== */
-  .rd-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
-    margin-top: 12px;
-  }
-
-  .rd-thumb {
-    width: 100%;
-    height: 120px;
-    object-fit: cover;
-    border-radius: var(--rd-radius-md);
-    border: 2px solid var(--rd-border);
-    cursor: zoom-in;
-    transition: var(--rd-transition);
-    background: var(--rd-soft);
-  }
-
-  .rd-thumb:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: var(--rd-shadow-md);
-    border-color: var(--rd-primary);
-  }
-
-  /* ===== Lightbox ===== */
-  #rdLightbox {
-    background: transparent !important;
-    box-shadow: none !important;
-    max-width: none !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  #rdLightbox .rd-lb-wrap {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-
-  #rdLightbox img {
-    max-width: min(1200px, 94vw);
-    max-height: 90vh;
-    border-radius: var(--rd-radius-xl);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
-    cursor: zoom-out;
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  /* ===== Animations ===== */
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .repdash-card {
-    animation: fadeInUp 0.5s ease backwards;
-  }
-
-  .repdash-filters {
-    animation-delay: 0.1s;
-  }
-
-  .repdash-table-wrap {
-    animation-delay: 0.2s;
-  }
-
-  /* ===== Responsive - تحسينات للموبايل ===== */
-  @media (max-width: 768px) {
-    .repdash-wrap {
-      padding: 1rem 0;
-    }
-
-    .repdash-header {
-      padding: 20px;
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .repdash-header-actions {
-      width: 100%;
-    }
-
-    .repdash-count {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .repdash-title {
-      font-size: 1.4rem;
-    }
-
-    .repdash-sub {
-      font-size: 0.95rem;
-    }
-
-    .repdash-filters {
-      padding: 20px;
-    }
-
-    .repdash-filters-grid {
-      grid-template-columns: 1fr;
-      gap: 20px;
-    }
-
-    .repdash-control {
-      padding: 16px 18px;
-      font-size: 1.05rem;
-    }
-
-    .rd-card {
-      padding: 20px;
-    }
-
-    .rd-card-title {
-      font-size: 1.1rem;
-    }
-
-    .rd-row {
-      font-size: 1rem;
-    }
-
-    .rd-badge {
-      padding: 8px 14px;
-      font-size: 0.9rem;
-    }
-
-    /* تكبير الأزرار في الموبايل */
-    .btn {
-      min-height: 50px !important;
-      font-size: 1rem !important;
-      padding: 14px 20px !important;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .repdash-container {
-      padding: 0 16px;
-    }
-
-    .repdash-header {
-      padding: 16px;
-    }
-
-    .repdash-title {
-      font-size: 1.3rem;
-    }
-
-    .repdash-filters {
-      padding: 16px;
-    }
-
-    .rd-card {
-      padding: 16px;
-    }
-  }
-
-  /* ===== Reduce Motion ===== */
-  @media (prefers-reduced-motion: reduce) {
-    .repdash-wrap *,
-    .rd-iconbtn:hover,
-    .rd-thumb:hover,
-    .rd-card:hover {
-      transition: none !important;
-      animation: none !important;
-      transform: none !important;
-    }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/admin-reports.css' %}?v=20260919.3">
 {% endblock %}
 
 {% block content %}
-<div class="repdash-wrap">
+<div class="repdash-wrap twq-page">
   <div class="repdash-container">
 
-    <!-- Header -->
-    <div class="repdash-header">
-      <div class="repdash-header-main">
-        <div class="repdash-header-icon" aria-hidden="true">
-          <i class="fa-solid fa-chart-pie"></i>
-        </div>
+    <header class="repdash-header twq-page-header" aria-labelledby="adminReportsTitle">
+      <div class="repdash-header-main twq-page-header__heading">
+        <span class="twq-page-header__eyebrow"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> منصة توثيق · سجل المدرسة</span>
+        <h1 class="repdash-title twq-page-header__title" id="adminReportsTitle">تقارير المدرسة</h1>
+        <p class="repdash-sub twq-page-header__lead">استعرض تقارير المدرسة، وحدد المعلم والفترة والتصنيف للوصول إلى التقرير المطلوب.</p>
+      </div>
+      <div class="repdash-header-actions twq-page-header__aside">
+        <span class="repdash-count" aria-label="إجمالي التقارير المطابقة">
+          <span class="n"><bdi>{{ reports.paginator.count|default:"0" }}</bdi></span>
+          <span class="lbl">تقرير مطابق</span>
+        </span>
+        {% if can_delete %}
+          <a class="twq-btn twq-btn--secondary" href="{% url 'reports:report_trash' %}"><i class="fa-solid fa-trash-arrow-up" aria-hidden="true"></i> سلة المحذوفات</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <section class="repdash-filters twq-section" aria-labelledby="adminReportsFiltersTitle">
+      <div class="twq-section__header">
         <div>
-          <h1 class="repdash-title">لوحة التقارير</h1>
-          <p class="repdash-sub">إدارة ومتابعة التقارير والأنشطة المدرسية</p>
+          <span class="twq-section__kicker">البحث والتصفية</span>
+          <h2 class="twq-section__title" id="adminReportsFiltersTitle">اعثر على التقرير</h2>
+          <p class="twq-section__description">البحث باسم المعلم، والتصفية بتاريخ التقرير أو تصنيفه.</p>
         </div>
+        {% if start_date or end_date or teacher_name or category %}<span class="twq-section__meta">تصفية نشطة</span>{% endif %}
       </div>
-
-      <div class="repdash-header-actions">
-        <a class="btn" href="{% url 'reports:report_trash' %}"><i class="fa-solid fa-trash-arrow-up"></i> سلة المحذوفات</a>
-        <div class="repdash-count" title="إجمالي التقارير المطابقة">
-          <span class="n">{{ reports.paginator.count|default:"0" }}</span>
-          <span class="lbl">تقرير</span>
+      <form method="get" class="repdash-filters-grid twq-toolbar" role="search" aria-label="تصفية تقارير المدرسة">
+        <div class="repdash-field twq-toolbar__search twq-field">
+          <label class="twq-label" for="reportTeacherName">اسم {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</label>
+          <div class="twq-toolbar__control">
+            <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input id="reportTeacherName" type="search" name="teacher_name" value="{{ teacher_name }}" placeholder="ابحث باسم {{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}" class="repdash-control twq-control">
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="repdash-card repdash-filters">
-      <form method="get" class="repdash-filters-grid">
-        <div class="repdash-field">
-          <label for="reportStartDate">من تاريخ</label>
-          <input id="reportStartDate" type="date" name="start_date" value="{{ start_date }}" class="repdash-control"
+        <div class="repdash-field twq-toolbar__field twq-field">
+          <label class="twq-label" for="reportStartDate">من تاريخ</label>
+          <input id="reportStartDate" type="date" name="start_date" value="{{ start_date }}" class="repdash-control twq-control"
                  data-hijri-echo>
         </div>
 
-        <div class="repdash-field">
-          <label for="reportEndDate">إلى تاريخ</label>
-          <input id="reportEndDate" type="date" name="end_date" value="{{ end_date }}" class="repdash-control"
+        <div class="repdash-field twq-toolbar__field twq-field">
+          <label class="twq-label" for="reportEndDate">إلى تاريخ</label>
+          <input id="reportEndDate" type="date" name="end_date" value="{{ end_date }}" class="repdash-control twq-control"
                  data-hijri-echo>
-        </div>
-
-        <div class="repdash-field">
-          <label for="reportTeacherName">{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</label>
-          <input id="reportTeacherName" type="text" name="teacher_name" value="{{ teacher_name }}" placeholder="بحث باسم {{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}..." class="repdash-control">
         </div>
 
         {% if categories %}
-          <div class="repdash-field">
-            <label for="reportCategory">التصنيف</label>
-            <select id="reportCategory" name="category" class="repdash-control">
+          <div class="repdash-field twq-toolbar__field twq-field">
+            <label class="twq-label" for="reportCategory">التصنيف</label>
+            <select id="reportCategory" name="category" class="repdash-control twq-control">
               <option value="">الكل</option>
               {% for val, label in categories %}
                 <option value="{{ val }}" {% if category == val %}selected{% endif %}>{{ label }}</option>
@@ -928,49 +72,66 @@
           </div>
         {% endif %}
 
-        <div class="repdash-field">
-          <label class="xs-admin-reports-1">إجراءات</label>
-          <div class="repdash-actions">
-            <button type="submit" class="btn btn-primary u-min-h-48 u-fw-700">
-              <i class="fa-solid fa-filter"></i> تصفية
+        <div class="repdash-actions twq-toolbar__actions">
+            <button type="submit" class="twq-btn twq-btn--primary">
+              <i class="fa-solid fa-filter" aria-hidden="true"></i> تطبيق
             </button>
 
             {% if start_date or end_date or teacher_name or category %}
-              <a href="{% url 'reports:admin_reports' %}" class="btn btn-outline u-min-h-48 u-fw-700" title="مسح الفلاتر">
-                <i class="fa-solid fa-rotate-left"></i> إعادة تعيين
+              <a href="{% url 'reports:admin_reports' %}" class="twq-btn twq-btn--ghost" title="مسح الفلاتر">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> مسح الكل
               </a>
             {% endif %}
-          </div>
         </div>
       </form>
-    </div>
+      {% if start_date or end_date or teacher_name or category %}
+        <div class="twq-toolbar__active-filters" aria-label="الفلاتر المطبقة">
+          <span class="twq-toolbar__active-label">المحدد حاليًا:</span>
+          {% if teacher_name %}<span class="twq-filter-chip"><i class="fa-solid fa-user" aria-hidden="true"></i> {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}: <bdi>{{ teacher_name }}</bdi></span>{% endif %}
+          {% if start_date %}<span class="twq-filter-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i> من <bdi>{{ start_date }}</bdi></span>{% endif %}
+          {% if end_date %}<span class="twq-filter-chip"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> إلى <bdi>{{ end_date }}</bdi></span>{% endif %}
+          {% if category %}<span class="twq-filter-chip"><i class="fa-solid fa-tag" aria-hidden="true"></i> التصنيف: <bdi>{{ category }}</bdi></span>{% endif %}
+        </div>
+      {% endif %}
+    </section>
 
-    <!-- Desktop Table -->
-    <div class="repdash-card repdash-table-wrap">
+    <section class="repdash-results twq-section" aria-labelledby="adminReportsResultsTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">سجل العمل</span>
+          <h2 class="twq-section__title" id="adminReportsResultsTitle">التقارير</h2>
+          <p class="twq-section__description">عنوان التقرير، صاحبه، تاريخه، والإجراءات المتاحة بحسب صلاحيتك.</p>
+        </div>
+        <span class="twq-section__meta" aria-live="polite"><bdi>{{ reports.paginator.count|default:"0" }}</bdi> نتيجة</span>
+      </div>
+
+    <div class="repdash-table-wrap twq-table-wrap">
       <div class="repdash-table-scroll">
-        <table class="repdash-table">
+        <table class="repdash-table twq-table">
+          <caption class="repdash-sr-only">تقارير المدرسة مع التاريخ والمعلم{% if show_approval_status %} وحالة الاعتماد{% endif %} والتصنيف والمستفيدين والإجراءات</caption>
           <thead>
             <tr>
-              <th>#</th>
-              <th>التاريخ</th>
+              <th scope="col">#</th>
+              <th scope="col">التاريخ</th>
               {% if request.user.is_superuser %}
-                <th>المدرسة</th>
+                <th scope="col">المدرسة</th>
               {% endif %}
-              <th>{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</th>
-              <th>العنوان</th>
-              <th>التصنيف</th>
-              <th>{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</th>
-              <th>الإجراءات</th>
+              <th scope="col">{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</th>
+              <th scope="col">العنوان</th>
+              {% if show_approval_status %}<th scope="col">حالة الاعتماد</th>{% endif %}
+              <th scope="col">التصنيف</th>
+              <th scope="col">{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</th>
+              <th scope="col">الإجراءات</th>
             </tr>
           </thead>
 
           <tbody>
             {% for r in reports %}
               <tr>
-                <td>{{ r.id }}</td>
+                <td><bdi>{{ r.id }}</bdi></td>
 
                 <td>
-                  <div class="xs-admin-reports-2">{{ r.report_date|hijri }} هـ</div>
+                  <div class="xs-admin-reports-2"><bdi>{{ r.report_date|hijri }} هـ</bdi></div>
                   <div class="xs-admin-reports-3">{{ r.day_name }}</div>
                 </td>
 
@@ -978,7 +139,7 @@
                   <td>
                     {% if r.school %}
                       <span class="rd-badge rd-badge-school">
-                        <i class="fa-solid fa-school u-dim"></i> {{ r.school.name }}
+                        <i class="fa-solid fa-school u-dim" aria-hidden="true"></i> {{ r.school.name }}
                       </span>
                     {% else %}
                       <span class="xs-admin-reports-4">—</span>
@@ -997,18 +158,27 @@
                   </div>
                 </td>
 
-                <td class="xs-admin-reports-5">{{ r.title }}</td>
+                <td class="xs-admin-reports-5"><span class="repdash-report-title">{{ r.title }}</span></td>
+
+                {% if show_approval_status %}
+                  <td class="repdash-approval-cell">
+                    <span class="twq-status repdash-approval-status" data-status="{{ r.approval_tone }}">
+                      <i class="fa-solid fa-circle" aria-hidden="true"></i>
+                      <span>{{ r.get_approval_state_display }}</span>
+                    </span>
+                  </td>
+                {% endif %}
 
                 <td>
                   <span class="rd-badge rd-badge-cat">
-                    <i class="fa-solid fa-tag xs-admin-reports-6"></i>
+                    <i class="fa-solid fa-tag xs-admin-reports-6" aria-hidden="true"></i>
                     {% if r.category %}{{ r.category.name }}{% else %}—{% endif %}
                   </span>
                 </td>
 
                 <td>
                   <span class="xs-admin-reports-7">
-                    {{ r.beneficiaries_count|default:"0" }}
+                    <bdi>{{ r.beneficiaries_count|default:"0" }}</bdi>
                   </span>
                 </td>
 
@@ -1016,6 +186,7 @@
                   <div class="rd-actions">
                     <button type="button" class="rd-iconbtn rd-view" title="عرض التفاصيل" aria-label="عرض تفاصيل تقرير: {{ r.title|default:"بلا عنوان" }}" data-rd-action="details" data-pk="{{ r.pk }}">
                       <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                      <span>عرض</span>
                     </button>
 
                     <a href="{% url 'reports:report_print' r.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="rd-iconbtn rd-print" title="طباعة" aria-label="طباعة تقرير: {{ r.title|default:"بلا عنوان" }}">
@@ -1057,10 +228,17 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="{% if request.user.is_superuser %}8{% else %}7{% endif %}">
-                  <div class="rd-empty">
-                    <i class="fa-regular fa-folder-open fa-3x"></i>
-                    <div>لا توجد تقارير مطابقة للبحث</div>
+                <td colspan="{% if request.user.is_superuser %}{% if show_approval_status %}9{% else %}8{% endif %}{% else %}{% if show_approval_status %}8{% else %}7{% endif %}{% endif %}">
+                  <div class="twq-empty twq-empty--local">
+                    <div class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-folder-open"></i></div>
+                    {% if start_date or end_date or teacher_name or category %}
+                      <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
+                      <p class="twq-empty__message">غيّر معايير التصفية أو امسحها ثم أعد المحاولة.</p>
+                      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:admin_reports' %}">مسح الفلاتر</a>
+                    {% else %}
+                      <h3 class="twq-empty__title">لا توجد تقارير بعد</h3>
+                      <p class="twq-empty__message">ستظهر تقارير المدرسة هنا عند إضافتها.</p>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -1070,13 +248,12 @@
       </div>
     </div>
 
-    <!-- Mobile Cards -->
-    <div class="repdash-mobile">
+    <div class="repdash-mobile" aria-label="تقارير المدرسة على الشاشات الصغيرة">
       {% for r in reports %}
-        <div class="rd-card">
+        <article class="rd-card">
           <div class="rd-card-hd">
-            <div class="rd-card-title">{{ r.title }}</div>
-            <div class="rd-card-date">{{ r.report_date|hijri }} هـ</div>
+            <h3 class="rd-card-title">{{ r.title }}</h3>
+            <div class="rd-card-date"><bdi>{{ r.report_date|hijri }} هـ</bdi></div>
           </div>
 
           {% if request.user.is_superuser and r.school %}
@@ -1091,6 +268,18 @@
             <span class="v">{{ r.teacher_display_name }}</span>
           </div>
 
+          {% if show_approval_status %}
+            <div class="rd-row rd-row--approval">
+              <span class="k">حالة الاعتماد</span>
+              <span class="v">
+                <span class="twq-status repdash-approval-status" data-status="{{ r.approval_tone }}">
+                  <i class="fa-solid fa-circle" aria-hidden="true"></i>
+                  <span>{{ r.get_approval_state_display }}</span>
+                </span>
+              </span>
+            </div>
+          {% endif %}
+
           <div class="rd-row">
             <span class="k">التصنيف</span>
             <span class="v">
@@ -1104,23 +293,23 @@
           </div>
 
           <div class="rd-card-actions">
-            <button type="button" class="rd-iconbtn rd-view" data-rd-action="details" data-pk="{{ r.pk }}">
-              <i class="fa-solid fa-eye"></i> عرض
+            <button type="button" class="rd-iconbtn rd-view" aria-label="عرض تفاصيل تقرير: {{ r.title|default:'بلا عنوان' }}" data-rd-action="details" data-pk="{{ r.pk }}">
+              <i class="fa-solid fa-eye" aria-hidden="true"></i> عرض
             </button>
 
-            <a href="{% url 'reports:report_print' r.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="rd-iconbtn rd-print">
-              <i class="fa-solid fa-print"></i> طباعة
+            <a href="{% url 'reports:report_print' r.pk %}?next={{ request.get_full_path|urlencode }}" target="_blank" rel="noopener" class="rd-iconbtn rd-print" aria-label="طباعة تقرير: {{ r.title|default:'بلا عنوان' }}">
+              <i class="fa-solid fa-print" aria-hidden="true"></i> طباعة
             </a>
 
             {% if r.user_can_edit|default:can_delete %}
-              <a href="{% url 'reports:edit_my_report' r.pk %}?next={{ request.get_full_path|urlencode }}" class="rd-iconbtn rd-edit">
-                <i class="fa-solid fa-pen-to-square"></i> تعديل
+              <a href="{% url 'reports:edit_my_report' r.pk %}?next={{ request.get_full_path|urlencode }}" class="rd-iconbtn rd-edit" aria-label="تعديل تقرير: {{ r.title|default:'بلا عنوان' }}">
+                <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> تعديل
               </a>
             {% endif %}
 
             {% if r.user_can_share|default:can_delete %}
-              <a href="{% url 'reports:report_share_manage' r.pk %}" class="rd-iconbtn rd-share">
-                <i class="fa-solid fa-share-nodes"></i> مشاركة
+              <a href="{% url 'reports:report_share_manage' r.pk %}" class="rd-iconbtn rd-share" aria-label="مشاركة تقرير: {{ r.title|default:'بلا عنوان' }}">
+                <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> مشاركة
               </a>
             {% endif %}
 
@@ -1128,45 +317,52 @@
               <form method="post" action="{% url 'reports:admin_delete_report' r.pk %}" class="rd-delete-form u-inline u-w-full" data-confirm="نقل التقرير إلى سلة المحذوفات؟ يمكن استعادته لاحقًا." data-confirm-type="warning">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button type="submit" class="rd-iconbtn rd-del u-w-full">
-                  <i class="fa-solid fa-trash"></i> حذف
+                <button type="submit" class="rd-iconbtn rd-del u-w-full" aria-label="نقل تقرير إلى سلة المحذوفات: {{ r.title|default:'بلا عنوان' }}">
+                  <i class="fa-solid fa-trash" aria-hidden="true"></i> حذف
                 </button>
               </form>
             {% endif %}
           </div>
-        </div>
+        </article>
       {% empty %}
-        <div class="rd-card">
-          <div class="rd-empty xs-admin-reports-8">
-            <i class="fa-regular fa-folder-open fa-2x"></i>
-            <div>لا توجد تقارير مطابقة للبحث</div>
-          </div>
+        <div class="twq-empty twq-empty--page">
+          <div class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-folder-open"></i></div>
+          {% if start_date or end_date or teacher_name or category %}
+            <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
+            <p class="twq-empty__message">غيّر معايير التصفية أو امسحها ثم أعد المحاولة.</p>
+            <a class="twq-btn twq-btn--secondary" href="{% url 'reports:admin_reports' %}">مسح الفلاتر</a>
+          {% else %}
+            <h3 class="twq-empty__title">لا توجد تقارير بعد</h3>
+            <p class="twq-empty__message">ستظهر تقارير المدرسة هنا عند إضافتها.</p>
+          {% endif %}
         </div>
       {% endfor %}
     </div>
 
     <!-- Pagination - محسّن -->
     {% if reports.paginator.num_pages > 1 %}
-      <div class="xs-admin-reports-9">
+      <nav class="xs-admin-reports-9 twq-pagination" aria-label="ترقيم صفحات تقارير المدرسة">
         {% if reports.has_previous %}
-          <a class="btn btn-primary xs-admin-reports-10"
+          <a class="twq-btn twq-btn--secondary twq-pagination__link xs-admin-reports-10"
              href="?page={{ reports.previous_page_number }}{% if qs %}&{{ qs }}{% endif %}">
-            <i class="fa-solid fa-chevron-right"></i> السابق
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i> السابق
           </a>
         {% endif %}
 
-        <span class="btn btn-outline xs-admin-reports-11">
+        <span class="twq-pagination__meta xs-admin-reports-11">
           صفحة {{ reports.number }} من {{ reports.paginator.num_pages }}
         </span>
 
         {% if reports.has_next %}
-          <a class="btn btn-primary xs-admin-reports-10"
+          <a class="twq-btn twq-btn--secondary twq-pagination__link xs-admin-reports-10"
              href="?page={{ reports.next_page_number }}{% if qs %}&{{ qs }}{% endif %}">
-            التالي <i class="fa-solid fa-chevron-left"></i>
+            التالي <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
           </a>
         {% endif %}
-      </div>
+      </nav>
     {% endif %}
+
+    </section>
 
   </div>
 
@@ -1174,11 +370,11 @@
   <dialog id="rdDetailsDialog" aria-label="تفاصيل التقرير">
     <div class="rd-dlg-hd">
       <h3>
-        <i class="fa-solid fa-clipboard-list u-dim"></i>
+        <i class="fa-solid fa-clipboard-list u-dim" aria-hidden="true"></i>
         تفاصيل التقرير
       </h3>
       <button type="button" class="rd-iconbtn" data-rd-action="close-details" aria-label="إغلاق">
-        <i class="fa-solid fa-xmark"></i>
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
     </div>
 
@@ -1283,9 +479,7 @@
 
         if(arr.length === 0){
           var sp = document.createElement('div');
-          sp.style.color = 'var(--rd-text-light)';
-          sp.style.fontWeight = '850';
-          sp.style.fontSize = '.92rem';
+          sp.className = 'rd-gallery-empty';
           sp.textContent = 'لا توجد صور مرفقة';
           imagesWrap.appendChild(sp);
         }else{
@@ -1296,9 +490,19 @@
             img.loading = 'lazy';
             img.decoding = 'async';
             img.referrerPolicy = 'no-referrer';
+            img.alt = 'شاهد مصور من التقرير';
+            img.setAttribute('role', 'button');
+            img.setAttribute('aria-label', 'عرض الشاهد المصور');
+            img.tabIndex = 0;
             img.addEventListener('click', function(ev){
               ev.stopPropagation();
               window.rdShowLightbox(url);
+            });
+            img.addEventListener('keydown', function(ev){
+              if(ev.key === 'Enter' || ev.key === ' '){
+                ev.preventDefault();
+                window.rdShowLightbox(url);
+              }
             });
             imagesWrap.appendChild(img);
           });
