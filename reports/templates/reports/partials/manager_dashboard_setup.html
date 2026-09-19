@@ -1,0 +1,32 @@
+<section class="manager-section manager-setup twq-section" id="managerSetup" aria-labelledby="setupTitle">
+  <div class="manager-setup__summary">
+    <span class="manager-setup__kicker">ابدأ من هنا</span>
+    <h2 id="setupTitle">إعداد المدرسة خطوة بخطوة</h2>
+    <p>نفّذ الخطوات بالترتيب المقترح لتصبح مساحة العمل جاهزة للفريق.</p>
+    <div class="manager-setup__percent">
+      <strong>{{ setup_percent }}%</strong>
+      <span>{{ setup_completed }} من {{ setup_total }} عناصر مطلوبة</span>
+    </div>
+    <div class="manager-setup__track" role="progressbar" aria-label="نسبة اكتمال الإعداد" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ setup_percent }}">
+      <span data-progress="{{ setup_percent }}"></span>
+    </div>
+    {% if setup_next_step %}
+      <p class="manager-setup__next"><strong>الخطوة التالية:</strong> {{ setup_next_step.title }}</p>
+      <a class="manager-setup__primary" href="{{ setup_next_step.url }}">تنفيذ الخطوة التالية <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+    {% endif %}
+    <a class="manager-setup__details" href="{% url 'reports:school_health' %}">عرض تفاصيل الجاهزية</a>
+  </div>
+  <div class="manager-setup__steps">
+    {% for step in setup_steps %}
+      <a class="manager-setup__step {% if step.complete or not step.applicable %}is-complete{% endif %}" href="{{ step.url }}">
+        <span class="manager-setup__state">
+          <i class="fa-solid {% if not step.applicable %}fa-minus{% elif step.complete %}fa-check{% else %}fa-arrow-left{% endif %}" aria-hidden="true"></i>
+        </span>
+        <span>
+          <strong>{{ step.title }}</strong>
+          <small>{% if not step.applicable %}غير مطلوب حاليًا؛ يظهر عند إضافة وكيل أو موظف إداري.{% elif step.complete %}مكتمل ويمكن مراجعته عند الحاجة.{% else %}{{ step.description }}{% endif %}</small>
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+</section>

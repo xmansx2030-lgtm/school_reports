@@ -1708,10 +1708,11 @@
     .dept-row__bar > span { background: #555; }
   }
 </style>
+<link rel="stylesheet" href="{% static 'css/manager-dashboard.css' %}?v=20260919.1">
 {% endblock %}
 
 {% block content %}
-<div class="manager-page id-root" id="managerDashboard">
+<div class="manager-page manager-dashboard-v1 twq-page id-root" id="managerDashboard">
   {% if active_school %}
     {% comment %}
       رأس اللقطة المطبوعة.
@@ -1730,7 +1731,7 @@
         · طُبعت في {{ today_hijri }} هـ
       </span>
     </div>
-    <section class="manager-hero{% if manager_onboarding %} manager-hero--onboarding{% endif %}"
+    <section class="manager-hero twq-page-header{% if manager_onboarding %} manager-hero--onboarding{% endif %}"
              aria-labelledby="managerDashboardTitle"
              data-manager-mode="{% if manager_onboarding %}setup{% else %}operations{% endif %}">
       <div>
@@ -1748,8 +1749,8 @@
           {% endif %}
         </div>
         <p class="manager-hero__welcome">مرحبًا {{ request.user.name|default:SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</p>
-        <h1 id="managerDashboardTitle">{{ active_school.name }}</h1>
-        <p class="manager-hero__intro">
+        <h1 class="twq-page-header__title" id="managerDashboardTitle">{{ active_school.name }}</h1>
+        <p class="manager-hero__intro twq-page-header__lead">
           {% if manager_onboarding %}
             جهّز المدرسة بخطوات قصيرة ومرتبة؛ سنقودك في كل مرة إلى الإعداد التالي المطلوب.
           {% else %}
@@ -1757,7 +1758,7 @@
           {% endif %}
         </p>
         <div class="manager-school-meta" aria-label="معلومات المدرسة">
-          <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ active_school.current_academic_year|default:"السنة الحالية" }}</span>
+          <span><i class="fa-regular fa-calendar" aria-hidden="true"></i> <bdi>{{ active_school.current_academic_year|default:"السنة الحالية" }}</bdi></span>
           <span><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> {{ active_school.get_stage_display }}</span>
           <span><i class="fa-solid fa-users" aria-hidden="true"></i> {{ teachers_count|intcomma }} من {{ SCHOOL_TEACHERS_OBJ_LABEL|default:"المعلمين" }}</span>
           {% if is_trial_subscription and not subscription_warning %}
@@ -1772,36 +1773,10 @@
                 ابدأ بـ {{ setup_next_step.title }}
               </a>
             {% endif %}
-            <a class="manager-hero__button" href="#managerSetup">
-              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-              عرض جميع خطوات الإعداد
-            </a>
-            <a class="manager-hero__button" href="{% url 'reports:school_health' %}">
-              <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
-              تفاصيل جاهزية المدرسة
-            </a>
           {% else %}
             <a class="manager-hero__button manager-hero__button--primary" href="{% url 'reports:approval_inbox' %}">
               <i class="fa-solid fa-gavel" aria-hidden="true"></i>
               صندوق الاعتماد{% if pending_approvals %} ({{ pending_approvals }}){% endif %}
-            </a>
-            <a class="manager-hero__button" href="{% url 'reports:assignment_create' %}">
-              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-              إنشاء تكليف
-            </a>
-            <a class="manager-hero__button" href="{% url 'reports:notifications_create' %}">
-              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-              إشعار أو نشرة
-            </a>
-            <a class="manager-hero__button" href="{% url 'reports:school_settings' %}">
-              <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-              إعدادات المدرسة
-            </a>
-          {% endif %}
-          {% if USER_SCHOOLS|length > 1 %}
-            <a class="manager-hero__button" href="{% url 'reports:select_school' %}">
-              <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
-              تبديل المدرسة
             </a>
           {% endif %}
         </div>
@@ -1963,39 +1938,8 @@
       <a href="#managerResources" data-manager-jump="managerResources"><i class="fa-solid fa-server" aria-hidden="true"></i> الموارد</a>
     </nav>
 
-    {% if setup_incomplete %}
-    <section class="manager-section manager-setup" id="managerSetup" aria-labelledby="setupTitle">
-      <div class="manager-setup__summary">
-        <span class="manager-setup__kicker">ابدأ من هنا</span>
-        <h2 id="setupTitle">إعداد المدرسة خطوة بخطوة</h2>
-        <p>نفّذ الخطوات بالترتيب المقترح لتصبح مساحة العمل جاهزة للفريق.</p>
-        <div class="manager-setup__percent">
-          <strong>{{ setup_percent }}%</strong>
-          <span>{{ setup_completed }} من {{ setup_total }} عناصر مطلوبة</span>
-        </div>
-        <div class="manager-setup__track" role="progressbar" aria-label="نسبة اكتمال الإعداد" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ setup_percent }}">
-          <span data-progress="{{ setup_percent }}"></span>
-        </div>
-        {% if setup_next_step %}
-          <p class="manager-setup__next"><strong>الخطوة التالية:</strong> {{ setup_next_step.title }}</p>
-          <a class="manager-setup__primary" href="{{ setup_next_step.url }}">تنفيذ الخطوة التالية <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
-        {% endif %}
-        <a class="manager-setup__details" href="{% url 'reports:school_health' %}">عرض تفاصيل الجاهزية</a>
-      </div>
-      <div class="manager-setup__steps">
-        {% for step in setup_steps %}
-          <a class="manager-setup__step {% if step.complete or not step.applicable %}is-complete{% endif %}" href="{{ step.url }}">
-            <span class="manager-setup__state">
-              <i class="fa-solid {% if not step.applicable %}fa-minus{% elif step.complete %}fa-check{% else %}fa-arrow-left{% endif %}" aria-hidden="true"></i>
-            </span>
-            <span>
-              <strong>{{ step.title }}</strong>
-              <small>{% if not step.applicable %}غير مطلوب حاليًا؛ يظهر عند إضافة وكيل أو موظف إداري.{% elif step.complete %}مكتمل ويمكن مراجعته عند الحاجة.{% else %}{{ step.description }}{% endif %}</small>
-            </span>
-          </a>
-        {% endfor %}
-      </div>
-    </section>
+    {% if setup_incomplete and manager_onboarding %}
+      {% include "reports/partials/manager_dashboard_setup.html" %}
     {% endif %}
 
     {% comment %}
@@ -2013,7 +1957,7 @@
       و«الفترة» ليست هنا: هذا الصندوق حالةٌ قائمة الآن لا حصيلةَ نافذة،
       ومبدّلها في قسم الأداء حيث تُقاس الحصيلة.
     {% endcomment %}
-    <section class="manager-section manager-now" id="managerToday" aria-labelledby="nowTitle">
+    <section class="manager-section manager-now twq-section" id="managerToday" aria-labelledby="nowTitle">
       <div class="manager-section__head">
         <div>
           <h2 id="nowTitle">ما يحتاجك الآن</h2>
@@ -2124,8 +2068,27 @@
       </div>
     </section>
 
+    <nav class="manager-quick-actions" aria-label="إجراءات سريعة للمدير">
+      <span class="manager-quick-actions__label">إجراءات سريعة</span>
+      {% if manager_onboarding %}
+        <a href="#managerSetup"><i class="fa-solid fa-list-check" aria-hidden="true"></i> عرض جميع خطوات الإعداد</a>
+        <a href="{% url 'reports:school_health' %}"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> تفاصيل جاهزية المدرسة</a>
+      {% else %}
+        <a href="{% url 'reports:assignment_create' %}"><i class="fa-solid fa-list-check" aria-hidden="true"></i> إنشاء تكليف</a>
+        <a href="{% url 'reports:notifications_create' %}"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> إشعار أو نشرة</a>
+        <a href="{% url 'reports:school_settings' %}"><i class="fa-solid fa-sliders" aria-hidden="true"></i> إعدادات المدرسة</a>
+      {% endif %}
+      {% if USER_SCHOOLS|length > 1 %}
+        <a href="{% url 'reports:select_school' %}"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> تبديل المدرسة</a>
+      {% endif %}
+    </nav>
 
-    <section class="manager-section manager-coverage" id="managerCoverage" aria-labelledby="coverageTitle">
+    {% if setup_incomplete and not manager_onboarding %}
+      {% include "reports/partials/manager_dashboard_setup.html" %}
+    {% endif %}
+
+
+    <section class="manager-section manager-coverage twq-section" id="managerCoverage" aria-labelledby="coverageTitle">
       {% comment %}
         تغطية التوثيق.
 
@@ -2239,6 +2202,66 @@
           </div>
         {% endif %}
       </div>
+    </section>
+
+    <section class="manager-section manager-workspace-shortcuts twq-section" aria-labelledby="managerWorkspaceShortcutsTitle">
+      <div class="manager-section__head">
+        <div>
+          <h2 id="managerWorkspaceShortcutsTitle">مساحات العمل الرئيسية</h2>
+          <p>انتقل إلى العمل الذي تتابعه يوميًا؛ بقية أدوات المدرسة في الدليل أدناه.</p>
+        </div>
+      </div>
+      <div class="manager-workspace-shortcuts__grid">
+        <a class="manager-workspace-shortcut" href="{% url 'reports:admin_reports' %}">
+          <span class="manager-workspace-shortcut__icon"><i class="fa-regular fa-file-lines" aria-hidden="true"></i></span>
+          <span class="manager-workspace-shortcut__body"><strong>تقارير المدرسة</strong><small>استعرض التوثيق والتقارير خلال الفترة الحالية.</small></span>
+          <i class="fa-solid fa-arrow-left manager-workspace-shortcut__arrow" aria-hidden="true"></i>
+        </a>
+        <a class="manager-workspace-shortcut" href="{% url 'reports:manager_school_tickets' %}">
+          <span class="manager-workspace-shortcut__icon"><i class="fa-regular fa-clipboard" aria-hidden="true"></i></span>
+          <span class="manager-workspace-shortcut__body"><strong>طلبات المدرسة</strong><small>تابع الطلبات المفتوحة ومسار إنجازها.</small></span>
+          <i class="fa-solid fa-arrow-left manager-workspace-shortcut__arrow" aria-hidden="true"></i>
+        </a>
+        <a class="manager-workspace-shortcut" href="{% url 'reports:leadership_portfolio_list' %}">
+          <span class="manager-workspace-shortcut__icon"><i class="fa-regular fa-folder-open" aria-hidden="true"></i></span>
+          <span class="manager-workspace-shortcut__body"><strong>ملف الأداء القيادي</strong><small>راجع المؤشرات والشواهد وتقدم الملف.</small></span>
+          <i class="fa-solid fa-arrow-left manager-workspace-shortcut__arrow" aria-hidden="true"></i>
+        </a>
+        <a class="manager-workspace-shortcut" href="{% url 'reports:manage_teachers' %}">
+          <span class="manager-workspace-shortcut__icon"><i class="fa-solid fa-people-group" aria-hidden="true"></i></span>
+          <span class="manager-workspace-shortcut__body"><strong>فريق المدرسة</strong><small>أدر الأعضاء والأدوار والأقسام.</small></span>
+          <i class="fa-solid fa-arrow-left manager-workspace-shortcut__arrow" aria-hidden="true"></i>
+        </a>
+      </div>
+    </section>
+
+    <section class="manager-section manager-recent-activity twq-section" aria-labelledby="managerRecentActivityTitle">
+      <div class="manager-section__head">
+        <div>
+          <h2 id="managerRecentActivityTitle">آخر النشاطات</h2>
+          <p>أحدث ما جرى في مساحة عمل المدرسة.</p>
+        </div>
+      </div>
+      {% if recent_activities_failed %}
+        <p class="section-degraded" role="status">
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+          تعذّر تحميل آخر النشاطات. سُجّلت المشكلة تلقائياً — أعد تحميل الصفحة بعد قليل.
+        </p>
+      {% elif recent_activities %}
+        <div class="manager-activity-list">
+          {% for activity in recent_activities|slice:":4" %}
+            <a class="manager-activity" href="{{ activity.url }}">
+              <span class="manager-activity__icon"><i class="fa-solid {{ activity.icon }}" aria-hidden="true"></i></span>
+              <span>
+                <strong>{{ activity.title }} — {{ activity.description }}</strong>
+                <small>منذ {{ activity.time|timesince }}</small>
+              </span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="manager-recent-activity__empty">لا توجد نشاطات حديثة بعد. ستظهر هنا أعمال الفريق عندما تبدأ.</p>
+      {% endif %}
     </section>
 
     {% comment %}
@@ -2489,35 +2512,6 @@
               <tbody id="categoriesChartTableBody"><tr><td colspan="2">جارٍ تجهيز البيانات…</td></tr></tbody>
             </table>
           </article>
-          {% comment %}
-            القسم يُعرض في ثلاث حالات لا حالتين. «فارغ» و«متعثّر» كانا يظهران
-            شيئاً واحداً — أي لا شيء — فيقرأ المدير العطلَ سكوناً. والحالة
-            الثالثة تقول صراحةً إن البيانات لم تصل، وتُبقي زر إعادة المحاولة.
-          {% endcomment %}
-          {% if recent_activities_failed %}
-            <article class="manager-insight">
-              <h3>آخر النشاطات</h3>
-              <p class="section-degraded" role="status">
-                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                تعذّر تحميل آخر النشاطات. سُجّلت المشكلة تلقائياً — أعد تحميل الصفحة بعد قليل.
-              </p>
-            </article>
-          {% elif recent_activities %}
-            <article class="manager-insight">
-              <h3>آخر النشاطات</h3>
-              <div class="manager-activity-list">
-                {% for activity in recent_activities|slice:":4" %}
-                  <a class="manager-activity" href="{{ activity.url }}">
-                    <span class="manager-activity__icon"><i class="fa-solid {{ activity.icon }}" aria-hidden="true"></i></span>
-                    <span>
-                      <strong>{{ activity.title }} — {{ activity.description }}</strong>
-                      <small>منذ {{ activity.time|timesince }}</small>
-                    </span>
-                  </a>
-                {% endfor %}
-              </div>
-            </article>
-          {% endif %}
         </div>
       </div>
       {% else %}

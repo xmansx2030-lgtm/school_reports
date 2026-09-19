@@ -72,6 +72,7 @@ class ManagerFirstRunExperienceTests(TestCase):
         self.assertContains(response, "ابدأ بـ بيانات المدرسة والسنة الحالية")
         self.assertContains(response, "إعداد المدرسة خطوة بخطوة")
         self.assertLess(html.index('id="managerSetup"'), html.index('id="managerToday"'))
+        self.assertEqual(html.count('role="progressbar"'), 2)
         self.assertContains(response, "لا توجد مهام تشغيلية معلّقة بعد")
         self.assertNotContains(response, "لا شيء ينتظرك الآن")
         self.assertContains(response, "لا توجد بيانات أداء بعد — وهذا طبيعي")
@@ -203,14 +204,22 @@ class ManagerFirstRunExperienceTests(TestCase):
             / "reports"
             / "admin_dashboard.html"
         ).read_text(encoding="utf-8")
+        setup_partial = (
+            project_root
+            / "reports"
+            / "templates"
+            / "reports"
+            / "partials"
+            / "manager_dashboard_setup.html"
+        ).read_text(encoding="utf-8")
 
         hero_rule = css.split("body.page .manager-hero h1", 1)[1].split("}", 1)[0]
         self.assertIn("-webkit-text-fill-color: currentColor", hero_rule)
         self.assertIn('labelledBar.setAttribute("aria-label"', template)
         self.assertIn('link.setAttribute("aria-current", "location")', template)
         self.assertIn("var(--header-bottom, var(--header-h, 72px))", template)
-        self.assertEqual(template.count('role="progressbar"'), 2)
-        self.assertEqual(template.count('aria-valuenow="{{ setup_percent }}"'), 2)
+        self.assertEqual((template + setup_partial).count('role="progressbar"'), 2)
+        self.assertEqual((template + setup_partial).count('aria-valuenow="{{ setup_percent }}"'), 2)
         for period_label_id in (
             "managerPrintPeriodLabel",
             "managerHeroPeriodLabel",

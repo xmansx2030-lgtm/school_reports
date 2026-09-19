@@ -327,6 +327,12 @@ class ManagerDashboardAuditTests(TestCase):
         self.assertContains(response, 'data-manager-mode="operations"')
         self.assertContains(response, "صندوق الاعتماد")
         self.assertContains(response, 'id="managerSetup"')
+        html = response.content.decode("utf-8")
+        self.assertLess(html.index('id="managerToday"'), html.index('id="managerSetup"'))
+        self.assertContains(response, "css/manager-dashboard.css")
+        self.assertContains(response, 'class="manager-quick-actions"')
+        self.assertContains(response, 'class="manager-workspace-shortcuts__grid"')
+        self.assertContains(response, 'id="managerRecentActivityTitle"')
 
     def test_superuser_sees_the_empty_school_state_without_a_key_error(self):
         self.manager.is_staff = True

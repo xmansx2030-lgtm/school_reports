@@ -1,0 +1,303 @@
+/* School manager dashboard pilot. Scoped to this page; the shared design system
+   still owns tokens, controls, and statuses. The legacy template rules remain
+   until each section can be migrated independently. */
+body.page .manager-dashboard-v1 {
+  max-width: 1280px;
+  color: var(--twq-text);
+}
+
+body.page .manager-dashboard-v1 .manager-hero {
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, .55fr);
+  gap: var(--twq-space-6);
+  align-items: stretch;
+  padding: var(--twq-space-6);
+  border-block-start-color: var(--twq-primary);
+  box-shadow: var(--twq-shadow-sm);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__welcome {
+  margin-block-start: var(--twq-space-4);
+  font-size: var(--twq-font-size-sm);
+  font-weight: var(--twq-font-weight-medium);
+}
+
+body.page .manager-dashboard-v1 .manager-hero h1 {
+  margin-block: var(--twq-space-2);
+  overflow-wrap: anywhere;
+}
+
+body.page .manager-dashboard-v1 .manager-hero__intro {
+  color: var(--twq-text-secondary);
+  line-height: 1.75;
+}
+
+body.page .manager-dashboard-v1 .manager-school-meta {
+  gap: var(--twq-space-2);
+  margin-block-start: var(--twq-space-4);
+}
+
+body.page .manager-dashboard-v1 .manager-school-meta span {
+  min-width: 0;
+  padding: var(--twq-space-1) var(--twq-space-3);
+  border-radius: var(--twq-radius-md);
+  overflow-wrap: anywhere;
+}
+
+body.page .manager-dashboard-v1 .manager-hero__actions {
+  margin-block-start: var(--twq-space-5);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__button {
+  min-height: 44px;
+}
+
+body.page .manager-dashboard-v1 .manager-hero__summary {
+  align-content: center;
+  justify-items: stretch;
+  text-align: start;
+  min-height: 0;
+  padding: var(--twq-space-4);
+  background: var(--twq-surface-secondary);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__attention {
+  margin-block: var(--twq-space-3);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__summary-value {
+  font-size: var(--twq-font-size-2xl);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__pulse {
+  gap: var(--twq-space-2);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__pulse a {
+  min-width: 0;
+  padding: var(--twq-space-2);
+}
+
+body.page .manager-dashboard-v1 .manager-hero__pulse span {
+  overflow-wrap: anywhere;
+}
+
+body.page .manager-dashboard-v1 .manager-section__head {
+  margin-block-end: var(--twq-space-4);
+}
+
+body.page .manager-dashboard-v1 .manager-section__head h2 {
+  font-weight: var(--twq-font-weight-bold);
+}
+
+body.page .manager-dashboard-v1 .manager-jumpbar {
+  margin-block-end: var(--twq-space-5);
+  box-shadow: var(--twq-shadow-xs);
+}
+
+body.page .manager-dashboard-v1 #managerSetup,
+body.page .manager-dashboard-v1 #managerToday,
+body.page .manager-dashboard-v1 #managerCoverage,
+body.page .manager-dashboard-v1 #managerWorkspaces,
+body.page .manager-dashboard-v1 #managerPerformance,
+body.page .manager-dashboard-v1 #managerResources {
+  scroll-margin-block-start: calc(var(--header-bottom, var(--header-h, 72px)) + 116px);
+}
+
+body.page .manager-dashboard-v1 .manager-quick-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+  margin-block: calc(-1 * var(--twq-space-2)) var(--twq-space-6);
+  padding: var(--twq-space-3) var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+}
+
+body.page .manager-dashboard-v1 .manager-quick-actions__label {
+  margin-inline-end: var(--twq-space-2);
+  color: var(--twq-text-secondary);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+body.page .manager-dashboard-v1 .manager-quick-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  min-height: 44px;
+  padding-inline: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text-secondary);
+  background: var(--twq-surface-secondary);
+  font-size: var(--twq-font-size-sm);
+  font-weight: var(--twq-font-weight-medium);
+  text-decoration: none;
+  transition: border-color var(--twq-duration-fast) var(--twq-ease-standard),
+    color var(--twq-duration-fast) var(--twq-ease-standard),
+    background-color var(--twq-duration-fast) var(--twq-ease-standard);
+}
+
+body.page .manager-dashboard-v1 .manager-quick-actions a:hover {
+  border-color: var(--twq-primary);
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+body.page .manager-dashboard-v1 .manager-quick-actions a:focus-visible,
+body.page .manager-dashboard-v1 .manager-workspace-shortcut:focus-visible,
+body.page .manager-dashboard-v1 .manager-activity:focus-visible {
+  outline: 2px solid var(--twq-focus);
+  outline-offset: 2px;
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcuts__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-3);
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--twq-space-3);
+  min-width: 0;
+  min-height: 92px;
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  color: var(--twq-text);
+  background: var(--twq-surface);
+  box-shadow: var(--twq-shadow-xs);
+  text-decoration: none;
+  transition: border-color var(--twq-duration-fast) var(--twq-ease-standard),
+    background-color var(--twq-duration-fast) var(--twq-ease-standard);
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut:hover {
+  border-color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut__body {
+  display: grid;
+  gap: var(--twq-space-1);
+  min-width: 0;
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut__body strong {
+  font-size: var(--twq-font-size-md);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut__body small {
+  color: var(--twq-text-secondary);
+  font-size: var(--twq-font-size-sm);
+  line-height: 1.6;
+}
+
+body.page .manager-dashboard-v1 .manager-workspace-shortcut__arrow {
+  color: var(--twq-text-muted);
+}
+
+body.page .manager-dashboard-v1 .manager-recent-activity {
+  padding: var(--twq-space-5);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+}
+
+body.page .manager-dashboard-v1 .manager-recent-activity .manager-activity-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.page .manager-dashboard-v1 .manager-recent-activity__empty {
+  margin: 0;
+  padding: var(--twq-space-4);
+  border: 1px dashed var(--twq-border-strong);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text-secondary);
+  background: var(--twq-surface-secondary);
+}
+
+body.page .manager-dashboard-v1 .manager-activity strong {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 64rem) {
+  body.page .manager-dashboard-v1 .manager-hero {
+    grid-template-columns: 1fr;
+  }
+
+  body.page .manager-dashboard-v1 .manager-hero__summary {
+    max-width: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  body.page .manager-dashboard-v1 .manager-workspace-shortcuts__grid,
+  body.page .manager-dashboard-v1 .manager-recent-activity .manager-activity-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 40rem) {
+  body.page .manager-dashboard-v1 .manager-hero {
+    gap: var(--twq-space-4);
+    padding: var(--twq-space-4);
+  }
+
+  body.page .manager-dashboard-v1 .manager-eyebrow {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  body.page .manager-dashboard-v1 .manager-hero__pulse {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.page .manager-dashboard-v1 .manager-hero__pulse a {
+    display: grid;
+    gap: var(--twq-space-1);
+    min-height: 70px;
+  }
+
+  body.page .manager-dashboard-v1 .manager-quick-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: var(--twq-space-3);
+  }
+
+  body.page .manager-dashboard-v1 .manager-quick-actions__label {
+    grid-column: 1 / -1;
+  }
+
+  body.page .manager-dashboard-v1 .manager-quick-actions a {
+    justify-content: center;
+    padding-inline: var(--twq-space-2);
+    text-align: center;
+  }
+
+  body.page .manager-dashboard-v1 .manager-recent-activity {
+    padding: var(--twq-space-4);
+  }
+}
+
+@media print {
+  body.page .manager-dashboard-v1 .manager-quick-actions,
+  body.page .manager-dashboard-v1 .manager-workspace-shortcuts {
+    display: none;
+  }
+}
