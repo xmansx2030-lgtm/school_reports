@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static hijri_tags %}
 {% block title %}ملف الأداء القيادي · {{ current_school.name }}{% endblock %}
 {% block head %}
 <link rel="stylesheet" href="{% static 'css/leadership-portfolio-detail.css' %}?v=20260919.1">
@@ -199,7 +199,7 @@
                     <label class="twq-label" for="lpReportSelect{{ section.pk }}">تقرير سابق</label>
                     <select class="twq-control" id="lpReportSelect{{ section.pk }}" name="report_id" required>
                       <option value="">اختر تقريرًا سابقًا…</option>
-                      {% for report in available_reports %}<option value="{{ report.pk }}">{{ report.report_date }} — {{ report.title }}</option>{% endfor %}
+                      {% for report in available_reports %}<option value="{{ report.pk }}">{{ report.report_date|hijri }} هـ — {{ report.title }}</option>{% endfor %}
                     </select>
                   </div>
                   <button class="twq-btn twq-btn--secondary" type="submit"><i class="fa-solid fa-link" aria-hidden="true"></i><span>ربط التقرير</span></button>
@@ -214,7 +214,7 @@
                           <div class="lp-detail__report-icon twq-document-item__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></div>
                           <div class="lp-detail__report-copy twq-document-item__content">
                             <h4>{{ evidence.report.title }}</h4>
-                            <p><time datetime="{{ evidence.report.report_date|date:'Y-m-d' }}"><bdi>{{ evidence.report.report_date }}</bdi></time><span aria-hidden="true">·</span><span>{{ evidence.report.category.name|default:"بدون تصنيف" }}</span></p>
+                            <p><time datetime="{{ evidence.report.report_date|date:'Y-m-d' }}"><bdi>{{ evidence.report.report_date|hijri }} هـ</bdi></time><span aria-hidden="true">·</span><span>{{ evidence.report.category.name|default:"بدون تصنيف" }}</span></p>
                           </div>
                           <div class="lp-detail__item-actions twq-document-item__actions">
                             <a class="twq-btn twq-btn--ghost lp-detail__compact-action" target="_blank" rel="noopener" href="{% url 'reports:report_print' evidence.report.pk %}"><i class="fa-solid fa-eye" aria-hidden="true"></i><span>معاينة</span></a>

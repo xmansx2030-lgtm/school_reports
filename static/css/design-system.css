@@ -2880,6 +2880,83 @@ textarea.twq-control {
   accent-color: var(--twq-primary);
 }
 
+/* Search and filter toolbar */
+.twq-toolbar {
+  display: grid;
+  align-items: end;
+  gap: var(--twq-space-4);
+  min-inline-size: 0;
+}
+
+.twq-toolbar__field,
+.twq-toolbar__search {
+  min-inline-size: 0;
+}
+
+.twq-toolbar .twq-label {
+  color: var(--twq-text-secondary);
+}
+
+.twq-toolbar__control {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.twq-toolbar__control .twq-control {
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding-inline-start: var(--twq-space-10);
+}
+
+.twq-toolbar__icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: var(--twq-space-4);
+  z-index: 1;
+  color: var(--twq-text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.twq-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+}
+
+.twq-toolbar__active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+  margin-block-start: var(--twq-space-4);
+  padding-block-start: var(--twq-space-4);
+  border-block-start: 1px solid var(--twq-divider);
+}
+
+.twq-toolbar__active-label {
+  color: var(--twq-text-secondary);
+  font-size: var(--twq-font-size-xs);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.twq-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-1);
+  max-inline-size: 100%;
+  padding-block: var(--twq-space-1);
+  padding-inline: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-pill);
+  color: var(--twq-text-secondary);
+  background: var(--twq-surface-secondary);
+  font-size: var(--twq-font-size-xs);
+  font-weight: var(--twq-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
 /* Cards */
 .twq-card {
   min-inline-size: 0;
@@ -3641,6 +3718,25 @@ body.page .twq-page-header__lead {
   }
 
   .twq-page-header__aside {
+    inline-size: 100%;
+  }
+
+  .twq-toolbar,
+  .twq-toolbar__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twq-toolbar__actions {
+    display: grid;
+  }
+
+  .twq-toolbar__field,
+  .twq-toolbar__search,
+  .twq-toolbar__actions {
+    grid-column: auto;
+  }
+
+  .twq-toolbar__actions .twq-btn {
     inline-size: 100%;
   }
 

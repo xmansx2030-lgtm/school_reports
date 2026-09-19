@@ -12,9 +12,10 @@
 يتوقّع: ``report`` و``report_approval_enabled`` في السياق.
 {% endcomment %}
 {% if report_approval_enabled %}
-  <a class="id-chip mr-state" data-tone="{{ report.approval_tone }}"
+  <a class="id-chip mr-state twq-status" data-tone="{{ report.approval_tone }}" data-status="{{ report.approval_tone }}"
      href="{% url 'reports:approval_detail' report.pk %}"
      title="حالة الاعتماد — افتح لمتابعة التقرير أو إرساله">
-    {{ report.get_approval_state_display }}
+    <i class="fa-solid fa-circle" aria-hidden="true"></i>
+    <span>{{ report.get_approval_state_display }}</span>
   </a>
 {% endif %}

@@ -6,1780 +6,276 @@
 {% block title %}تقاريري{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* ═══════════════════════════════════════════════════════════════════
-     الطبقة الأساس لهذه الشاشة — نُقلت من `app.css`.
-     كانت تُحمَّل على **كل** صفحة في المنصة، وتستعملها هذه الشاشة وحدها.
-     ونقلُها لا حذفُها: التحقق أثبت أنها ليست نسخة مكررة بل أساسٌ يبني
-     عليه ما تحته — نزعُها غيّر ٢١٪ من الصفحة نهاراً و١٣٪ ليلاً، وأسقط
-     `overflow-x` عن غلاف الجدول فتزحف الجداول العريضة خارج الشاشة.
-     وترتيبها هنا أولاً كترتيبها هناك: `app.css` يسبق كتلة رأس الصفحة،
-     فما بعدها في هذا الملف يظل هو المُرجَّح كما كان.
-     ═══════════════════════════════════════════════════════════════════ */
-.mr-wrap{
-  --mr-radius: 18px;
-  --mr-shadow: 0 18px 50px rgba(2,6,23,.08);
-  --mr-shadow-2: 0 10px 26px rgba(2,6,23,.10);
-  --mr-ring: 0 0 0 4px rgba(0,108,53,.18);
-  --mr-t: var(--t-fast);
-}
-
-.mr-container{
-  max-width: 1260px;
-  margin: 0 auto;
-  padding: 16px 12px;
-}
-
-/* ===== Stats ===== */
-.mr-stats{
-  display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap:12px;
-  margin-bottom: 14px;
-}
-.mr-stat{
-  background: linear-gradient(180deg, var(--line-2), var(--card));
-  border: 1px solid var(--line);
-  border-radius: var(--mr-radius);
-  padding: 14px;
-  display:flex;
-  gap:12px;
-  align-items:center;
-  box-shadow: var(--mr-shadow);
-}
-.mr-stat-ico{
-  width: 46px; height: 46px;
-  border-radius: 14px;
-  display:grid; place-items:center;
-  border: 1px solid rgba(0,108,53,.15);
-  background: rgba(0,108,53,.10);
-  color: rgba(0,108,53,.95);
-  flex: 0 0 auto;
-}
-.mr-stat-ico.green{ border-color: rgba(16,185,129,.18); background: rgba(16,185,129,.10); color: rgba(16,185,129,.95); }
-.mr-stat-ico.amber{ border-color: rgba(245,158,11,.20); background: rgba(245,158,11,.12); color: rgba(245,158,11,.95); }
-
-.mr-stat .num{
-  font-weight: 950;
-  font-size: 1.35rem;
-  color: var(--ink);
-  line-height: 1.1;
-}
-.mr-stat .lbl{
-  margin-top: 4px;
-  font-weight: 850;
-  color: var(--muted);
-  font-size: .95rem;
-}
-
-/* كانت كحليّة (var(--id-surface)) — لا صلة لها بأخضر المنصة، فتظهر بطاقات المؤشرات
-   من عائلة لونية أخرى بجوار بقية الصفحة. والسطح من جذر الهوية ينقلب وحده،
-   فلا حاجة لقاعدة ليلية أصلاً؛ تبقى لأن `app.css` يحمل نسخة ثانية من نظام
-   `.mr-*` تتنازع مع نسخة القالب. */
-html[data-theme="dark"] .mr-stat{
-  background: linear-gradient(180deg, var(--id-surface), var(--id-surface-2));
-  border-color: var(--id-line);
-}
-
-/* ===== Main Card ===== */
-.mr-card{
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--mr-radius);
-  overflow:hidden;
-  box-shadow: var(--mr-shadow);
-}
-.mr-hd{
-  padding: 14px 16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:10px;
-  border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--line-2), var(--card));
-}
-.mr-title{
-  margin:0;
-  font-weight: 950;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  color: var(--ink);
-  font-size: 1.2rem;
-}
-
-/* ===== Filters ===== */
-.mr-filters{
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(219,234,254,.55);
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:flex-end;
-}
-html[data-theme="dark"] .mr-filters{
-  background: rgba(26,48,36,.42);
-}
-
-.mr-field{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  min-width: 180px;
-}
-.mr-field.grow{ flex: 1; min-width: 240px; }
-
-.mr-field label{
-  font-size: .82rem;
-  font-weight: 900;
-  color: var(--muted);
-}
-
-.mr-input{
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  color: var(--ink);
-  font-weight: 850;
-  outline: none;
-  transition: var(--mr-t);
-  min-height: 44px;
-}
-.mr-input:focus{
-  box-shadow: var(--mr-ring);
-  border-color: rgba(0,108,53,.45);
-}
-html[data-theme="dark"] .mr-input{
-  border-color: var(--id-line);
-  background: rgba(15,30,23,.85);
-}
-
-.mr-actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-
-/* ===== Table ===== */
-.mr-table-wrap{ overflow-x:auto; }
-.mr-table{
-  width:100%;
-  border-collapse: collapse;
-  text-align:right;
-}
-.mr-table thead th{
-  background: rgba(248,250,252,.90);
-  border-bottom: 2px solid var(--line);
-  padding: 12px 12px;
-  font-weight: 950;
-  font-size: .9rem;
-  color: var(--muted);
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  white-space: nowrap;
-}
-html[data-theme="dark"] .mr-table thead th{
-  background: rgba(15,30,23,.95);
-  border-bottom-color: var(--id-line);
-}
-
-.mr-table tbody td{
-  padding: 12px 12px;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-html[data-theme="dark"] .mr-table tbody td{
-  border-bottom-color:var(--id-line);
-}
-
-.mr-date{
-  font-weight: 950;
-  color: var(--ink);
-}
-.mr-day{
-  margin-top: 3px;
-  font-size: .85rem;
-  font-weight: 850;
-  color: var(--muted);
-}
-
-.mr-rpt{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.mr-rpt .t{
-  font-weight: 950;
-  color: var(--ink);
-  line-height: 1.25;
-}
-.mr-chip{
-  width: fit-content;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-weight: 950;
-  font-size: .82rem;
-  background: rgba(0,108,53,.10);
-  border: 1px solid rgba(0,108,53,.18);
-  color: rgba(0,108,53,.95);
-}
-html[data-theme="dark"] .mr-chip{
-  background: rgba(0,108,53,.14);
-  border-color: rgba(0,108,53,.22);
-}
-
-.mr-idea{
-  max-width: 320px;
-  font-size: .95rem;
-  font-weight: 800;
-  color: var(--muted);
-  display:-webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow:hidden;
-}
-
-/* thumbnails */
-.mr-imgs{
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  align-items:center;
-}
-.mr-thumb{
-  width: 42px; height: 42px;
-  border-radius: 12px;
-  object-fit: cover;
-  border: 1px solid var(--line);
-  cursor: zoom-in;
-  background: rgba(148,163,184,.12);
-  transition: var(--mr-t);
-}
-.mr-thumb:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--mr-shadow-2);
-  border-color: rgba(0,108,53,.35);
-}
-html[data-theme="dark"] .mr-thumb{
-  border-color:var(--id-line);
-}
-
-/* actions */
-.mr-actions-cell{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-.mr-iconbtn{
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--muted);
-  display:grid;
-  place-items:center;
-  transition: var(--mr-t);
-}
-.mr-iconbtn:hover{
-  color: rgba(0,108,53,.95);
-  border-color: rgba(0,108,53,.35);
-  transform: translateY(-1px);
-}
-.mr-iconbtn.danger{
-  color: rgba(239,68,68,.92);
-  border-color: rgba(239,68,68,.25);
-}
-.mr-iconbtn.danger:hover{
-  color: rgba(239,68,68,.95);
-  border-color: rgba(239,68,68,.35);
-}
-html[data-theme="dark"] .mr-iconbtn{
-  border-color:var(--id-line);
-  background: rgba(15,30,23,.85);
-}
-
-/* «إرسال للاعتماد» فعلٌ لا خياراً من قائمة: التقرير الذي لم يُرسل لم يبلغ
-   أحداً، فزرّه يُميَّز عن أخواته الرمادية وإلا ضاع بينها ولم يُنقر.
-
-   حبرُه رمزٌ مقصورٌ على الزرّ ومشتقٌّ من نغمة «بانتظار» العامة لا نسخةٌ
-   منها: النغمة نفسها على أرضيتها الفاتحة تعطي 4.0 — تكفي عنصرَ واجهةٍ
-   ولا تكفي أيقونةً صغيرة — فتُغمَّق للنهار وتعود إلى أصلها لليل حيث
-   الأرضية داكنة والنغمة فاتحة أصلاً. */
-.mr-iconbtn.mr-send{
-  --mr-send-ink: color-mix(in srgb, var(--id-tone-pending) 76%, #000);
-  color: var(--mr-send-ink);
-  border-color: color-mix(in srgb, var(--mr-send-ink) 42%, transparent);
-  background: var(--id-tone-pending-wash);
-}
-.mr-iconbtn.mr-send:hover{
-  color: var(--mr-send-ink);
-  border-color: var(--mr-send-ink);
-}
-html[data-theme="dark"] .mr-iconbtn.mr-send{
-  --mr-send-ink: var(--id-tone-pending);
-  border-color: color-mix(in srgb, var(--id-tone-pending) 46%, transparent);
-}
-
-/* وسم الحالة داخل خلية العنوان: سطرٌ ثالث تحت النوع، لا يزاحمه.
-   و``width: fit-content`` يلزمه لأن ``.mr-rpt`` عمودٌ مرن يمطّ أبناءه إلى
-   عرض الخليّة — فيصير الوسم شريطاً بعرض العمود لا شارةً تحضن كلمتها،
-   وهي العلّة نفسها التي عالجها ``.mr-chip`` فوقه. */
-.mr-state{
-  width: fit-content;
-  text-decoration: none;
-}
-.mr-state:hover{ filter: brightness(.94); }
-
-/* ===== Empty ===== */
-.mr-empty{
-  padding: 44px 16px;
-  text-align:center;
-}
-.mr-empty .ico{
-  font-size: 2.6rem;
-  opacity: .28;
-  margin-bottom: 10px;
-}
-.mr-empty h3{
-  margin: 0 0 6px;
-  font-weight: 950;
-  color: var(--muted);
-}
-.mr-empty p{
-  margin: 0;
-  font-weight: 850;
-  color: var(--muted);
-}
-
-/* ===== Mobile Cards ===== */
-.mr-mobile{
-  display:none;
-  padding: 12px 12px 16px;
-  gap:12px;
-  flex-direction:column;
-}
-.mr-mcard{
-  border: 1px solid var(--line);
-  border-radius: var(--mr-radius);
-  background: linear-gradient(180deg, var(--line-2), var(--card));
-  padding: 14px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-html[data-theme="dark"] .mr-mcard{
-  background: var(--id-surface-2);
-  border-color:var(--id-line);
-}
-.mr-mtop{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:10px;
-}
-.mr-mdate{
-  font-size: .9rem;
-  font-weight: 850;
-  color: var(--muted);
-}
-.mr-mtitle{
-  margin: 6px 0 0;
-  font-weight: 950;
-  color: var(--ink);
-  font-size: 1.05rem;
-}
-.mr-mbody{
-  font-size: .95rem;
-  font-weight: 800;
-  color: var(--muted);
-  line-height: 1.7;
-}
-.mr-mfoot{
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
-html[data-theme="dark"] .mr-mfoot{
-  border-top-color:var(--id-line);
-}
-
-/* Mobile polish: bigger tap targets in cards */
-@media (max-width: 820px){
-  .mr-mobile .mr-actions-cell{ gap:10px; }
-  .mr-mobile .mr-iconbtn{ width:44px; height:44px; border-radius:14px; }
-}
-
-/* ===== Pagination ===== */
-.mr-pager{
-  padding: 14px 16px 18px;
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  align-items:center;
-}
-.mr-page{
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  text-decoration:none;
-  color: var(--ink);
-  font-weight: 900;
-  background: var(--card);
-  transition: var(--mr-t);
-}
-.mr-page:hover{
-  transform: translateY(-1px);
-  border-color: rgba(0,108,53,.35);
-}
-.mr-page.active{
-  background: rgba(0,108,53,.95);
-  border-color: rgba(0,108,53,.95);
-  color: #fff;
-}
-html[data-theme="dark"] .mr-page{
-  border-color:var(--id-line);
-  background: rgba(15,30,23,.85);
-}
-
-/* ===== Modal Gallery ===== */
-.mr-modal{
-  position: fixed;
-  inset: 0;
-  background: rgba(2,6,23,.92);
-  z-index: 14000;
-  display: none;
-  place-items: center;
-  padding: 14px;
-}
-.mr-modal.is-open{ display:grid; }
-
-.mr-modal-inner{
-  width: min(980px, 96vw);
-  display:grid;
-  gap:12px;
-}
-
-.mr-modal-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
-
-.mr-modal-close{
-  width: 44px; height: 44px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.08);
-  color:#fff;
-  cursor:pointer;
-  font-weight: 950;
-}
-.mr-modal-close:hover{
-  background: rgba(255,255,255,.14);
-}
-
-.mr-modal-img{
-  width: 100%;
-  max-height: 78vh;
-  object-fit: contain;
-  border-radius: 18px;
-  box-shadow: 0 30px 80px rgba(0,0,0,.35);
-  background: rgba(255,255,255,.03);
-}
-
-.mr-modal-nav{
-  display:flex;
-  justify-content:center;
-  gap:12px;
-}
-.mr-navbtn{
-  width: 54px; height: 54px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.08);
-  color:#fff;
-  cursor:pointer;
-  display:grid;
-  place-items:center;
-  font-weight: 950;
-  transition: var(--mr-t);
-}
-.mr-navbtn:hover{
-  transform: translateY(-1px);
-  background: rgba(255,255,255,.14);
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 920px){
-  .mr-table-wrap{ display:none; }
-  .mr-mobile{ display:flex; }
-  .mr-hd{ align-items:flex-start; }
-}
-
-  /* رموز هذه الشاشة — **مقصورة على حاويتها** ومشتقّة من جذر الهوية.
-     كانت معلنة على `:root` عاماً بقيم ثابتة **بلا مقابل ليلي واحد**:
-     ``--mr-background: #f8fafc`` و``--mr-surface: #ffffff`` و``--mr-text:
-     #0f172a``. فكانت الصفحة تُعرض لوحاً أبيض داخل تطبيق داكن — وهي شاشة
-     يفتحها كل منسوب. والثلاث قواعد الليلية التي كانت أسفل الملف عالجت
-     أعراضاً (رأس الجدول والرقاقات وأرقام المؤشرات) وتركت السطح نفسه. */
-  .mr-wrap {
-    --mr-primary: var(--id-accent);
-    --mr-primary-dark: var(--id-accent-strong);
-    --mr-gradient: linear-gradient(135deg, var(--id-hero-via) 0%, var(--id-hero-from) 100%);
-    --mr-surface: var(--id-surface);
-    --mr-background: var(--id-canvas);
-    --mr-border: var(--id-line);
-    --mr-border-light: var(--id-line-soft);
-    --mr-text: var(--id-ink);
-    --mr-text-soft: var(--id-muted);
-    --mr-success: var(--id-tone-approved);
-    --mr-warning: var(--id-gold);
-    --mr-danger: var(--id-tone-danger);
-    --mr-shadow-sm: var(--id-e1);
-    --mr-shadow-md: var(--id-e2);
-    --mr-shadow-lg: var(--id-e3);
-    --mr-shadow-xl: var(--id-e4);
-    --mr-radius-sm: var(--id-r1);
-    --mr-radius-md: var(--id-r2);
-    --mr-radius-lg: var(--id-r3);
-    --mr-radius-xl: var(--id-r4);
-    --mr-radius-full: var(--id-pill);
-  }
-
-  /* Page Wrapper */
-  .mr-wrap {
-    background: var(--mr-background);
-    min-height: calc(100vh - 120px);
-    padding: 32px 20px 60px;
-  }
-
-  .mr-container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-
-  /* Stats Cards - Premium 3-Column Grid */
-  .mr-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-    margin-bottom: 32px;
-  }
-
-  .mr-stat {
-    background: var(--mr-surface);
-    border: 2px solid var(--mr-border);
-    border-radius: var(--mr-radius-xl);
-    padding: 28px 24px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--mr-shadow-sm);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .mr-stat::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--mr-gradient);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .mr-stat:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--mr-shadow-xl);
-    border-color: var(--mr-primary);
-  }
-
-  .mr-stat:hover::before {
-    opacity: 0.03;
-  }
-
-  .mr-stat-ico {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--mr-radius-lg);
-    background: linear-gradient(135deg, var(--id-surface-2) 0%, var(--id-line-soft) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.75rem;
-    color: var(--mr-primary);
-    flex-shrink: 0;
-    transition: transform 0.3s ease;
-  }
-
-  .mr-stat:hover .mr-stat-ico {
-    transform: scale(1.1) rotate(5deg);
-  }
-
-  .mr-stat-ico.green {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    color: var(--mr-success);
-  }
-
-  .mr-stat-ico.amber {
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    color: var(--mr-warning);
-  }
-
-  .mr-stat .num {
-    font-size: clamp(2rem, 4vw, 2.75rem);
-    font-weight: 900;
-    color: var(--mr-text);
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-
-  .mr-stat .lbl {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--mr-text-soft);
-  }
-
-  /* Main Card */
-  .mr-card {
-    background: var(--mr-surface);
-    border: 2px solid var(--mr-border);
-    border-radius: var(--mr-radius-xl);
-    padding: 40px 36px;
-    box-shadow: var(--mr-shadow-md);
-  }
-
-  /* Header */
-  .mr-hd {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 32px;
-    padding-bottom: 24px;
-    border-bottom: 2px solid var(--mr-border-light);
-  }
-
-  .mr-title {
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    font-weight: 900;
-    background: var(--mr-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 0;
-  }
-
-  /* Filters Form */
-  .mr-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 32px;
-    padding: 24px;
-    background: linear-gradient(135deg, var(--id-surface-2) 0%, var(--id-line-soft) 100%);
-    border-radius: var(--mr-radius-lg);
-    border: 2px solid var(--mr-border-light);
-  }
-
-  .mr-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 200px;
-  }
-
-  .mr-field.grow {
-    flex: 1;
-    min-width: 280px;
-  }
-
-  .mr-field label {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--mr-text);
-  }
-
-  .mr-input {
-    padding: 12px 16px;
-    border: 2px solid var(--mr-border);
-    border-radius: var(--mr-radius-md);
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--mr-text);
-    background: var(--mr-surface);
-    transition: all 0.2s ease;
-    outline: none;
-  }
-
-  .mr-input:focus {
-    border-color: var(--mr-primary);
-    box-shadow: 0 0 0 4px rgba(0, 108, 53, 0.1);
-    transform: translateY(-1px);
-  }
-
-  .mr-actions {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-  }
-
-  /* Buttons */
-  .btn {
-    padding: 12px 24px;
-    border-radius: var(--mr-radius-md);
-    font-size: 0.95rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    white-space: nowrap;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .btn:hover::before {
-    opacity: 1;
-  }
-
-  .btn-primary {
-    background: var(--mr-gradient);
-    color: white;
-    box-shadow: 0 4px 12px rgba(0, 108, 53, 0.3);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 108, 53, 0.4);
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--mr-text-soft);
-    border: 2px solid var(--mr-border);
-  }
-
-  .btn-ghost:hover {
-    background: var(--mr-border-light);
-    border-color: var(--mr-primary);
-    color: var(--mr-primary);
-  }
-
-  /* Table - Desktop */
-  .mr-table-wrap {
-    overflow-x: auto;
-    border-radius: var(--mr-radius-lg);
-    border: 2px solid var(--mr-border);
-    margin-bottom: 24px;
-  }
-
-  .mr-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .mr-table thead {
-    background: linear-gradient(135deg, var(--id-surface-2) 0%, var(--id-line-soft) 100%);
-    border-bottom: 2px solid var(--mr-border);
-  }
-
-  .mr-table th {
-    padding: 18px 16px;
-    text-align: right;
-    font-weight: 900;
-    color: var(--mr-text);
-    font-size: 0.875rem;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-  }
-
-  .mr-table tbody tr {
-    border-bottom: 1px solid var(--mr-border-light);
-    transition: all 0.2s ease;
-  }
-
-  .mr-table tbody tr:hover {
-    background: linear-gradient(90deg, rgba(0, 108, 53, 0.03), transparent);
-  }
-
-  .mr-table tbody tr:last-child {
-    border-bottom: none;
-  }
-
-  .mr-table td {
-    padding: 20px 16px;
-    color: var(--mr-text);
-    vertical-align: middle;
-  }
-
-  /* Table Cells */
-  .mr-date {
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: var(--mr-text);
-    margin-bottom: 2px;
-  }
-
-  .mr-day {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--mr-text-soft);
-  }
-
-  .mr-rpt {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .mr-rpt .t {
-    font-weight: 800;
-    color: var(--mr-text);
-    font-size: 0.95rem;
-  }
-
-  .mr-chip {
-    display: inline-block;
-    padding: 4px 12px;
-    background: linear-gradient(135deg, var(--id-surface-2), var(--id-line-soft));
-    color: var(--mr-primary);
-    border-radius: var(--mr-radius-full);
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    width: fit-content;
-  }
-
-  .mr-idea {
-    max-width: 280px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 600;
-    color: var(--mr-text-soft);
-    font-size: 0.875rem;
-  }
-
-  .mr-imgs {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .mr-thumb {
-    width: 56px;
-    height: 56px;
-    object-fit: cover;
-    border-radius: var(--mr-radius-md);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 2px solid var(--mr-border);
-    box-shadow: var(--mr-shadow-sm);
-  }
-
-  .mr-thumb:hover {
-    transform: scale(1.15);
-    box-shadow: var(--mr-shadow-lg);
-    border-color: var(--mr-primary);
-    z-index: 10;
-  }
-
-  /* Action Buttons */
-  .mr-actions-cell {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .mr-iconbtn {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--mr-radius-md);
-    background: var(--mr-border-light);
-    border: 2px solid var(--mr-border);
-    color: var(--mr-text-soft);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.95rem;
-    text-decoration: none;
-  }
-
-  .mr-iconbtn:hover {
-    background: var(--mr-primary);
-    color: var(--id-accent-ink);
-    border-color: var(--mr-primary);
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: var(--mr-shadow-md);
-  }
-
-  .mr-iconbtn.danger:hover {
-    background: var(--mr-danger);
-    border-color: var(--mr-danger);
-  }
-
-  .mr-del-form {
-    display: inline-block;
-    margin: 0;
-  }
-
-  /* Empty State */
-  .mr-empty {
-    padding: 60px 20px;
-    text-align: center;
-    color: var(--mr-text-soft);
-  }
-
-  .mr-empty .ico {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    opacity: 0.3;
-  }
-
-  .mr-empty h3 {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: var(--mr-text);
-    margin: 0 0 12px;
-  }
-
-  .mr-empty p {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  /* Mobile Cards */
-  .mr-mobile {
-    display: none;
-  }
-
-  /* Pagination */
-  .mr-pager {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
-    padding-top: 24px;
-    border-top: 2px solid var(--mr-border-light);
-    margin-top: 24px;
-  }
-
-  .mr-page {
-    padding: 10px 20px;
-    border-radius: var(--mr-radius-md);
-    font-weight: 800;
-    font-size: 0.9rem;
-    color: var(--mr-text-soft);
-    border: 2px solid var(--mr-border);
-    background: var(--mr-surface);
-    text-decoration: none;
-    transition: all 0.2s ease;
-  }
-
-  .mr-page:hover {
-    background: var(--mr-primary);
-    color: var(--id-accent-ink);
-    border-color: var(--mr-primary);
-    transform: translateY(-2px);
-  }
-
-  .mr-page.active {
-    background: var(--mr-gradient);
-    color: white;
-    border-color: var(--mr-primary);
-    pointer-events: none;
-  }
-
-  /* Image Modal */
-  .mr-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(12px);
-    z-index: 9999;
-    
-    /* Initially hidden via JS toggling class, but we use display:none + class */
-    display: none;
-    
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-
-  /* --- MOBILE RESPONSIVENESS --- */
-  @media (max-width: 1100px) {
-    .mr-wrap { padding: 20px 16px 80px; }
-    
-    /* Hide Table, Show Cards */
-    .mr-table-wrap { display: none; }
-    .mr-mobile { display: grid; gap: 16px; }
-
-    /* Adjust Filters */
-    .mr-filters { padding: 16px; gap: 12px; }
-    .mr-field,
-    .mr-field.grow {
-      width: 100%;
-      min-width: 0;
-    }
-    .mr-input { width: 100%; min-width: 0; }
-    .mr-actions { width: 100%; }
-    .mr-actions .btn { flex: 1; }
-
-    /* Adjust Header */
-    .mr-hd { flex-direction: column; align-items: flex-start; gap: 16px; }
-    .mr-hd .btn { width: 100%; }
-    
-    /* Stats */
-    .mr-stats { grid-template-columns: 1fr; gap: 16px; }
-    .mr-stat { padding: 20px; }
-    .mr-stat-ico { width: 52px; height: 52px; font-size: 1.5rem; }
-    .mr-stat .num { font-size: 2rem; }
-  }
-
-  /* Mobile Card Styling */
-  .mr-mob-card {
-    background: var(--mr-surface);
-    border: 2px solid var(--mr-border);
-    border-radius: var(--mr-radius-lg);
-    padding: 20px;
-    position: relative;
-    box-shadow: var(--mr-shadow-sm);
-  }
-  
-  .mr-mob-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--mr-border-light);
-  }
-  
-  .mr-mob-date {
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: var(--mr-text);
-  }
-  
-  .mr-mob-day {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--mr-text-soft);
-  }
-
-  .mr-mob-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .mr-mob-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .mr-mob-lbl {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--mr-text-soft);
-  }
-  
-  .mr-mob-val {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--mr-text);
-  }
-  
-  .mr-mob-idea {
-    background: var(--mr-border-light);
-    padding: 12px;
-    border-radius: var(--mr-radius-md);
-    font-size: 0.85rem;
-    color: var(--mr-text);
-    line-height: 1.6;
-    margin-top: 4px;
-  }
-  
-  .mr-mob-imgs {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  
-  .mr-mob-imgs img {
-    width: 60px;
-    height: 60px;
-    flex-shrink: 0;
-    border-radius: var(--mr-radius-md);
-    border: 1px solid var(--mr-border);
-  }
-  
-  .mr-mob-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 2px dashed var(--mr-border);
-  }
-  
-  .mr-mob-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px;
-    border-radius: var(--mr-radius-md);
-    font-weight: 700;
-    font-size: 0.85rem;
-    text-decoration: none;
-    background: var(--mr-border-light);
-    color: var(--mr-text);
-  }
-  
-  .mr-mob-btn.edit { background: var(--id-surface-2); color: var(--mr-primary); }
-  .mr-mob-btn.del { background: #fef2f2; color: var(--mr-danger); }
-
-  .mr-modal.is-open {
-    display: flex;
-    animation: fadeIn 0.3s ease;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  .mr-modal-inner {
-    max-width: 90vw;
-    max-height: 90vh;
-    position: relative;
-  }
-
-  .mr-modal-top {
-    position: absolute;
-    top: -60px;
-    right: 0;
-    left: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 12px;
-  }
-
-  .mr-modal-close {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--mr-radius-full);
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .mr-modal-close:hover {
-    background: white;
-    color: var(--mr-text);
-    transform: rotate(90deg) scale(1.1);
-  }
-
-  .mr-modal-img {
-    max-width: 90vw;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: var(--mr-radius-xl);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-    border: 4px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .mr-modal-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 20px;
-    pointer-events: none;
-  }
-
-  .mr-navbtn {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--mr-radius-full);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    font-size: 1.25rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    pointer-events: all;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .mr-navbtn:hover {
-    background: white;
-    color: var(--mr-text);
-    transform: scale(1.15);
-  }
-
-  /* Responsive Design */
-  @media (max-width: 1024px) {
-    .mr-stats {
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-    }
-
-    .mr-card {
-      padding: 32px 24px;
-    }
-
-    .mr-filters {
-      padding: 20px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .mr-wrap {
-      padding: 20px 12px 50px;
-    }
-
-    .mr-stats {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-
-    .mr-stat {
-      padding: 20px 18px;
-    }
-
-    .mr-stat-ico {
-      width: 56px;
-      height: 56px;
-      font-size: 1.5rem;
-    }
-
-    .mr-card {
-      padding: 24px 20px;
-      border-radius: var(--mr-radius-lg);
-    }
-
-    .mr-hd {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
-    }
-
-    .mr-filters {
-      flex-direction: column;
-      padding: 20px 16px;
-    }
-
-    .mr-field,
-    .mr-field.grow {
-      width: 100%;
-      min-width: 0;
-    }
-
-    .mr-actions {
-      width: 100%;
-    }
-
-    .mr-actions .btn {
-      flex: 1;
-      justify-content: center;
-    }
-
-    /* Hide table, show mobile cards */
-    .mr-table-wrap {
-      display: none;
-    }
-
-    .mr-mobile {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .mr-mcard {
-      background: linear-gradient(135deg, var(--id-surface) 0%, var(--id-surface-2) 100%);
-      border: 2px solid var(--mr-border);
-      border-radius: var(--mr-radius-lg);
-      padding: 20px;
-      transition: all 0.3s ease;
-    }
-
-    .mr-mcard:hover {
-      box-shadow: var(--mr-shadow-lg);
-      transform: translateY(-2px);
-      border-color: var(--mr-primary);
-    }
-
-    .mr-mtop {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .mr-mdate {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--mr-text-soft);
-    }
-
-    .mr-mtitle {
-      font-size: 1.1rem;
-      font-weight: 900;
-      color: var(--mr-text);
-      margin-bottom: 12px;
-    }
-
-    .mr-mbody {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--mr-text-soft);
-      margin-bottom: 16px;
-      line-height: 1.6;
-    }
-
-    .mr-mfoot {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding-top: 16px;
-      border-top: 2px solid var(--mr-border-light);
-    }
-
-    .mr-modal-img {
-      max-width: 100vw;
-      max-height: 80vh;
-    }
-
-    .mr-navbtn {
-      width: 48px;
-      height: 48px;
-      font-size: 1.1rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .mr-stat .num {
-      font-size: 2rem;
-    }
-
-    .mr-iconbtn {
-      width: 36px;
-      height: 36px;
-      font-size: 0.85rem;
-    }
-
-    .mr-thumb {
-      width: 48px;
-      height: 48px;
-    }
-  }
-
-  /* Accessibility */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
-
-  /* إجراءات التقرير أعمال أساسية وليست قائمة إعدادات ثانوية. إظهار أسمائها
-     مباشرةً يقلل التخمين، ويبقي كل هدف لمس في الويب وPWA بحجم مريح. */
-  .mr-table th:last-child,
-  .mr-table td:last-child {
-    min-width: 15.5rem;
-  }
-
-  .mr-actions-cell {
-    width: 100%;
-  }
-
-  .report-action-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    width: 100%;
-  }
-
-  .report-action,
-  .report-action-form {
-    min-width: 0;
-    margin: 0;
-  }
-
-  .report-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    width: 100%;
-    min-height: 44px;
-    padding: 8px 10px;
-    border: 1px solid var(--mr-border);
-    border-radius: 12px;
-    background: var(--mr-surface);
-    color: var(--mr-text);
-    font: inherit;
-    font-size: .82rem;
-    font-weight: 850;
-    line-height: 1.2;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-    transition: border-color var(--mr-t), background var(--mr-t), color var(--mr-t), transform var(--mr-t);
-  }
-
-  .report-action:hover {
-    color: var(--mr-primary);
-    border-color: color-mix(in srgb, var(--mr-primary) 48%, transparent);
-    background: var(--id-surface-2);
-    transform: translateY(-1px);
-  }
-
-  .report-action:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--mr-primary) 28%, transparent);
-    outline-offset: 2px;
-  }
-
-  .report-action--view {
-    color: var(--id-accent-ink);
-    border-color: var(--mr-primary);
-    background: var(--mr-gradient);
-  }
-
-  .report-action--view:hover {
-    color: var(--id-accent-ink);
-    background: var(--mr-primary-dark);
-  }
-
-  .report-action--danger {
-    color: var(--mr-danger);
-    border-color: color-mix(in srgb, var(--mr-danger) 32%, transparent);
-    background: color-mix(in srgb, var(--mr-danger) 8%, var(--mr-surface));
-  }
-
-  .report-action--danger:hover {
-    color: var(--mr-danger);
-    border-color: var(--mr-danger);
-    background: color-mix(in srgb, var(--mr-danger) 13%, var(--mr-surface));
-  }
-
-  .report-action--submit {
-    grid-column: 1 / -1;
-    color: color-mix(in srgb, var(--id-tone-pending) 74%, var(--mr-text));
-    border-color: color-mix(in srgb, var(--id-tone-pending) 45%, transparent);
-    background: var(--id-tone-pending-wash);
-  }
-
-  @media (max-width: 1100px) {
-    .mr-mobile .mr-mfoot {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .mr-mobile .mr-actions-cell,
-    .mr-mobile .report-action-list {
-      width: 100%;
-    }
-
-    .mr-mobile .report-action {
-      min-height: 48px;
-      font-size: .9rem;
-    }
-  }
-
-  @media (max-width: 380px) {
-    .report-action-list {
-      grid-template-columns: 1fr;
-    }
-  }
-
-</style>
+<link rel="stylesheet" href="{% static 'css/my-reports.css' %}?v=20260919.2">
 {% endblock %}
 
 {% block content %}
-<div class="mr-wrap">
-  <div class="mr-container">
-
-    <div class="mr-card">
-      <div class="mr-hd">
-        <h1 class="mr-title">
-          <i class="fa-solid fa-list-ul u-dim"></i>
-          سجل تقاريري
-        </h1>
-
-        <div class="u-flex u-gap-06 u-wrap">
-          <a href="{% url 'reports:report_trash' %}" class="btn"><i class="fa-solid fa-trash-arrow-up"></i> سلة المحذوفات</a>
-          <a href="{% url 'reports:add_report' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة تقرير جديد</a>
-        </div>
+<div class="my-reports-page twq-page">
+  <header class="my-reports-header twq-page-header" aria-labelledby="myReportsTitle">
+    <div class="twq-page-header__heading">
+      <div class="twq-page-header__eyebrow">
+        <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+        <span>منصة توثيق · سجل تقاريري</span>
       </div>
+      <h1 class="twq-page-header__title" id="myReportsTitle">تقاريري</h1>
+      <p class="twq-page-header__lead">ابحث في تقاريرك المدرسية، راجع حالتها وشواهدها، وانتقل إلى الإجراء المطلوب من سجل تشغيلي واحد.</p>
+    </div>
 
-      <!-- Primary KPIs follow the page heading so screen-reader and visual
-           hierarchy match the user's task: understand, then act, then filter. -->
-      <section class="mr-stats" aria-label="ملخص التقارير">
-        <article class="mr-stat">
-          <div class="mr-stat-ico"><i class="fa-solid fa-file-lines" aria-hidden="true"></i></div>
-          <div>
-            <div class="num">{{ stats.total|default:"0" }}</div>
-            <div class="lbl">إجمالي التقارير</div>
-          </div>
-        </article>
-
-        <article class="mr-stat">
-          <div class="mr-stat-ico green"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i></div>
-          <div>
-            <div class="num">{{ stats.this_month|default:"0" }}</div>
-            <div class="lbl">تقارير هذا الشهر</div>
-          </div>
-        </article>
-
-        <article class="mr-stat">
-          <div class="mr-stat-ico amber"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></div>
-          <div>
-            <div class="num">{{ reports.paginator.count|default:"0" }}</div>
-            <div class="lbl">نتائج البحث</div>
-          </div>
-        </article>
-      </section>
-
-      <!-- Filters -->
-      <form method="get" class="mr-filters" aria-label="تصفية التقارير">
-        <div class="mr-field grow">
-          <label for="mrQ">بحث بالعنوان أو المحتوى</label>
-          <input id="mrQ" type="text" name="q" value="{{ q|default:'' }}" class="mr-input" placeholder="اكتب كلمات للبحث...">
-        </div>
-
-        <div class="mr-field">
-          <label for="mrStart">من تاريخ</label>
-          <input id="mrStart" type="date" name="start_date" value="{{ start_date|default:'' }}" class="mr-input">
-        </div>
-
-        <div class="mr-field">
-          <label for="mrEnd">إلى تاريخ</label>
-          <input id="mrEnd" type="date" name="end_date" value="{{ end_date|default:'' }}" class="mr-input">
-        </div>
-
-        <div class="mr-actions">
-          <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-filter"></i> تصفية
-          </button>
-
-          {% if q or start_date or end_date %}
-            <a href="{% url 'reports:my_reports' %}" class="btn btn-ghost">
-              <i class="fa-solid fa-rotate-left"></i> مسح
-            </a>
-          {% endif %}
-        </div>
-      </form>
-
-      <!-- Desktop Table -->
-      <div class="mr-table-wrap">
-        <table class="mr-table">
-          <thead>
-            <tr>
-              <th>التاريخ</th>
-              <th>التقرير</th>
-              <th class="u-text-center">{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</th>
-              <th>الوصف</th>
-              <th>الصور</th>
-              <th>الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for report in reports %}
-              <tr>
-                <td>
-                  <div class="mr-date">{{ report.report_date|hijri }} هـ</div>
-                  <div class="mr-day">{{ report.day_name }}</div>
-                </td>
-
-                <td>
-                  <div class="mr-rpt">
-                    <div class="t">{{ report.title }}</div>
-                    <div class="mr-chip">
-                      {% if report.category and report.category.name %}{{ report.category.name }}{% else %}عام{% endif %}
-                    </div>
-                    {% include "reports/partials/report_state_chip.html" with report=report %}
-                  </div>
-                </td>
-
-                <td class="u-text-center u-fw-950">{{ report.beneficiaries_count|default:"0" }}</td>
-
-                <td>
-                  <div class="mr-idea" title="{{ report.idea|default:'' }}">{{ report.idea }}</div>
-                </td>
-
-                <td>
-                  <div class="mr-imgs js-gallery" data-report="{{ report.pk }}">
-                    {% for evidence in report.evidences.all|slice:":4" %}
-                      <img class="mr-thumb" src="{{ evidence.image.url }}" data-full="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور' }}" loading="lazy" decoding="async">
-                    {% empty %}
-                      {% if report.image1 %}<img class="mr-thumb" src="{{ report.image1.url }}" data-full="{{ report.image1.url }}" alt="شاهد مصور" loading="lazy" decoding="async">{% endif %}
-                      {% if report.image2 %}<img class="mr-thumb" src="{{ report.image2.url }}" data-full="{{ report.image2.url }}" alt="شاهد مصور" loading="lazy" decoding="async">{% endif %}
-                    {% endfor %}
-                  </div>
-                </td>
-
-                <td>
-                  <div class="mr-actions-cell">
-                    {% include "reports/partials/report_actions_menu.html" with report=report %}
-                  </div>
-                </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="6">
-                  <div class="mr-empty">
-                    <div class="ico"><i class="fa-solid fa-folder-open"></i></div>
-                    <h3>لا توجد تقارير تطابق بحثك</h3>
-                    <p>جرّب تغيير معايير التصفية أو أضف تقريراً جديداً.</p>
-                  </div>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="my-reports-header__aside twq-page-header__aside">
+      <div class="twq-page-header__mark" aria-hidden="true">
+        <img src="{% static 'img/brand-mark.svg' %}" alt="">
       </div>
-
-      <!-- Mobile Cards -->
-      <div class="mr-mobile">
-        {% for report in reports %}
-          <div class="mr-mcard">
-            <div class="mr-mtop">
-              <div class="mr-mdate">{{ report.report_date|hijri }} هـ • {{ report.day_name }}</div>
-              <div class="mr-chip">
-                {% if report.category and report.category.name %}{{ report.category.name }}{% else %}عام{% endif %}
-              </div>
-              {% include "reports/partials/report_state_chip.html" with report=report %}
-            </div>
-
-            <div class="mr-mtitle">{{ report.title }}</div>
-
-            <div class="mr-mbody">{{ report.idea|default:""|truncatechars:110 }}</div>
-
-            <div class="mr-mfoot">
-              <div class="mr-imgs js-gallery" data-report="{{ report.pk }}">
-                {% for evidence in report.evidences.all|slice:":2" %}
-                  <img class="mr-thumb" src="{{ evidence.image.url }}" data-full="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور' }}" loading="lazy" decoding="async">
-                {% empty %}
-                  {% if report.image1 %}<img class="mr-thumb" src="{{ report.image1.url }}" data-full="{{ report.image1.url }}" alt="شاهد مصور" loading="lazy" decoding="async">{% endif %}
-                  {% if report.image2 %}<img class="mr-thumb" src="{{ report.image2.url }}" data-full="{{ report.image2.url }}" alt="شاهد مصور" loading="lazy" decoding="async">{% endif %}
-                {% endfor %}
-              </div>
-
-              <div class="mr-actions-cell">
-                {% include "reports/partials/report_actions_menu.html" with report=report %}
-              </div>
-            </div>
-          </div>
-        {% empty %}
-          <div class="mr-empty xs-my-reports-1">
-            <div class="ico"><i class="fa-solid fa-folder-open"></i></div>
-            <h3>لا توجد تقارير</h3>
-            <p>ابدأ الآن بإضافة أول تقرير.</p>
-            <div class="u-mt-4">
-              <a href="{% url 'reports:add_report' %}" class="btn btn-primary">
-                <i class="fa-solid fa-plus"></i> إضافة تقرير
-              </a>
-            </div>
-          </div>
-        {% endfor %}
+      <div class="my-reports-header__actions" aria-label="إجراءات التقارير">
+        <a href="{% url 'reports:add_report' %}" class="twq-btn twq-btn--primary">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <span>إضافة تقرير جديد</span>
+        </a>
+        <a href="{% url 'reports:report_trash' %}" class="twq-btn twq-btn--secondary">
+          <i class="fa-solid fa-trash-arrow-up" aria-hidden="true"></i>
+          <span>سلة المحذوفات</span>
+        </a>
       </div>
+    </div>
+  </header>
 
-      <!-- Pagination -->
-      {% if reports.paginator.num_pages > 1 %}
-        <div class="mr-pager" aria-label="التنقل بين الصفحات">
-          {% if reports.has_previous %}
-            <a class="mr-page" href="?page={{ reports.previous_page_number }}{% if qs %}&{{ qs }}{% endif %}">السابق</a>
-          {% endif %}
+  <section class="my-reports-summary" aria-labelledby="myReportsSummaryTitle">
+    <div class="my-reports-summary__intro">
+      <span class="twq-section__kicker">نظرة سريعة</span>
+      <h2 id="myReportsSummaryTitle">ملخص السجل الحالي</h2>
+      <p>الأرقام تعكس نتائج البحث والتاريخ المحددين حاليًا.</p>
+    </div>
+    <dl class="my-reports-metrics twq-metrics">
+      <div>
+        <dt><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i> النتائج المطابقة</dt>
+        <dd><bdi>{{ stats.total|default:"0" }}</bdi></dd>
+      </div>
+      <div>
+        <dt><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> هذا الشهر</dt>
+        <dd><bdi>{{ stats.this_month|default:"0" }}</bdi></dd>
+      </div>
+    </dl>
+  </section>
 
-          <span class="mr-page active">{{ reports.number }} / {{ reports.paginator.num_pages }}</span>
-
-          {% if reports.has_next %}
-            <a class="mr-page" href="?page={{ reports.next_page_number }}{% if qs %}&{{ qs }}{% endif %}">التالي</a>
-          {% endif %}
-        </div>
+  <section class="my-reports-toolbar twq-section" aria-labelledby="myReportsFiltersTitle">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">البحث والتصفية</span>
+        <h2 class="twq-section__title" id="myReportsFiltersTitle">اعثر على التقرير المطلوب</h2>
+        <p class="twq-section__description">ابحث في العنوان أو المحتوى، وحدد نطاقًا زمنيًا عند الحاجة.</p>
+      </div>
+      {% if q or start_date or end_date %}
+        <span class="twq-section__meta">
+          <i class="fa-solid fa-filter-circle-check" aria-hidden="true"></i>
+          تصفية نشطة
+        </span>
       {% endif %}
     </div>
 
-    <!-- Modal Gallery -->
-    <div class="mr-modal" id="mrImageModal" role="dialog" aria-modal="true" aria-label="عرض الصورة">
-      <div class="mr-modal-inner">
-        <div class="mr-modal-top">
-          <div id="mrModalCounter" class="xs-my-reports-2"></div>
-          <button type="button" class="mr-modal-close" id="mrModalClose" aria-label="إغلاق">✕</button>
-        </div>
-
-        <img id="mrModalImg" class="mr-modal-img" alt="صورة التقرير">
-
-        <div class="mr-modal-nav">
-          <button type="button" class="mr-navbtn" id="mrPrevBtn" aria-label="السابق">
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
-          <button type="button" class="mr-navbtn" id="mrNextBtn" aria-label="التالي">
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
+    <form method="get" class="my-reports-filter twq-toolbar" role="search" aria-label="البحث والتصفية في تقاريري">
+      <div class="my-reports-filter__field my-reports-filter__field--search twq-toolbar__search twq-field">
+        <label class="twq-label" for="mrQ">بحث بالعنوان أو المحتوى</label>
+        <div class="my-reports-filter__control twq-toolbar__control">
+          <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input id="mrQ" type="search" name="q" value="{{ q|default:'' }}" class="twq-control" placeholder="اكتب كلمات للبحث..." autocomplete="off">
         </div>
       </div>
+
+      <div class="my-reports-filter__field twq-toolbar__field twq-field">
+        <label class="twq-label" for="mrStart">من تاريخ</label>
+        <input id="mrStart" type="date" name="start_date" value="{{ start_date|default:'' }}" class="twq-control">
+      </div>
+
+      <div class="my-reports-filter__field twq-toolbar__field twq-field">
+        <label class="twq-label" for="mrEnd">إلى تاريخ</label>
+        <input id="mrEnd" type="date" name="end_date" value="{{ end_date|default:'' }}" class="twq-control">
+      </div>
+
+      <div class="my-reports-filter__actions twq-toolbar__actions">
+        <button type="submit" class="twq-btn twq-btn--primary">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+          <span>تطبيق التصفية</span>
+        </button>
+        {% if q or start_date or end_date %}
+          <a href="{% url 'reports:my_reports' %}" class="twq-btn twq-btn--ghost">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+            <span>مسح الكل</span>
+          </a>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if q or start_date or end_date %}
+      <div class="my-reports-active-filters twq-toolbar__active-filters" aria-label="معايير التصفية الحالية">
+        <span class="my-reports-active-filters__label twq-toolbar__active-label">المحدد حاليًا:</span>
+        {% if q %}<span class="my-reports-filter-chip twq-filter-chip"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> <bdi>{{ q }}</bdi></span>{% endif %}
+        {% if start_date %}<span class="my-reports-filter-chip twq-filter-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i> من <bdi>{{ start_date }}</bdi></span>{% endif %}
+        {% if end_date %}<span class="my-reports-filter-chip twq-filter-chip"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> إلى <bdi>{{ end_date }}</bdi></span>{% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="my-reports-results twq-section" aria-labelledby="myReportsResultsTitle">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">سجل العمل</span>
+        <h2 class="twq-section__title" id="myReportsResultsTitle">التقارير</h2>
+        <p class="twq-section__description">عرض تشغيلي كثيف وواضح للتقارير والشواهد والإجراءات المتاحة.</p>
+      </div>
+      <span class="twq-section__meta" aria-live="polite">
+        <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+        <bdi>{{ reports.paginator.count|default:"0" }}</bdi> تقرير
+      </span>
     </div>
 
+    <div class="my-reports-table twq-table-wrap">
+      <table class="twq-table">
+        <caption class="my-reports-sr-only">قائمة تقاريري مع التاريخ والمستفيدين والشواهد والإجراءات</caption>
+        <thead>
+          <tr>
+            <th scope="col">التقرير</th>
+            <th scope="col">التاريخ</th>
+            <th scope="col">{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</th>
+            <th scope="col">الوصف</th>
+            <th scope="col">الشواهد</th>
+            <th scope="col">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in reports %}
+            <tr>
+              <td>
+                <div class="my-report-title-cell">
+                  <strong>{{ report.title }}</strong>
+                  <div class="my-report-title-cell__meta">
+                    <span class="my-report-category">{% if report.category and report.category.name %}{{ report.category.name }}{% else %}عام{% endif %}</span>
+                    {% include "reports/partials/report_state_chip.html" with report=report %}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <time class="my-report-date">
+                  <span>{{ report.report_date|hijri }} هـ</span>
+                  <small>{{ report.day_name }}</small>
+                </time>
+              </td>
+              <td><span class="my-report-beneficiaries"><bdi>{{ report.beneficiaries_count|default:"0" }}</bdi></span></td>
+              <td><p class="my-report-description" title="{{ report.idea|default:'' }}">{{ report.idea|default:"لا يوجد وصف" }}</p></td>
+              <td>
+                <div class="my-report-gallery js-gallery" data-report="{{ report.pk }}" aria-label="شواهد تقرير {{ report.title }}">
+                  {% for evidence in report.evidences.all|slice:":4" %}
+                    <img class="my-report-thumb" src="{{ evidence.image.url }}" data-full="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور' }}" aria-label="فتح الشاهد: {{ evidence.description|default:'شاهد مصور' }}" role="button" tabindex="0" loading="lazy" decoding="async">
+                  {% empty %}
+                    {% if report.image1 %}<img class="my-report-thumb" src="{{ report.image1.url }}" data-full="{{ report.image1.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الأول" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
+                    {% if report.image2 %}<img class="my-report-thumb" src="{{ report.image2.url }}" data-full="{{ report.image2.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الثاني" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
+                  {% endfor %}
+                  {% if not report.evidences.all and not report.image1 and not report.image2 %}<span class="my-report-no-evidence">لا يوجد</span>{% endif %}
+                </div>
+              </td>
+              <td>
+                <div class="my-report-actions-cell">
+                  {% include "reports/partials/report_actions_menu.html" with report=report %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="twq-table__state">
+                <div class="twq-empty twq-empty--local">
+                  <div class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-folder-open"></i></div>
+                  {% if q or start_date or end_date %}
+                    <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
+                    <p class="twq-empty__message">غيّر كلمات البحث أو النطاق الزمني، ثم أعد المحاولة.</p>
+                    <a href="{% url 'reports:my_reports' %}" class="twq-btn twq-btn--secondary">مسح معايير التصفية</a>
+                  {% else %}
+                    <h3 class="twq-empty__title">لا توجد تقارير حتى الآن</h3>
+                    <p class="twq-empty__message">ابدأ بتوثيق أول تقرير مدرسي ليظهر هنا.</p>
+                    <a href="{% url 'reports:add_report' %}" class="twq-btn twq-btn--primary">إضافة تقرير</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="my-reports-cards" aria-label="قائمة التقارير للجوال">
+      {% for report in reports %}
+        <article class="my-report-card">
+          <div class="my-report-card__top">
+            <span class="my-report-category">{% if report.category and report.category.name %}{{ report.category.name }}{% else %}عام{% endif %}</span>
+            {% include "reports/partials/report_state_chip.html" with report=report %}
+          </div>
+          <h3>{{ report.title }}</h3>
+          <p class="my-report-card__description">{{ report.idea|default:"لا يوجد وصف"|truncatechars:150 }}</p>
+
+          <dl class="my-report-card__meta">
+            <div>
+              <dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> التاريخ</dt>
+              <dd><time>{{ report.report_date|hijri }} هـ · {{ report.day_name }}</time></dd>
+            </div>
+            <div>
+              <dt><i class="fa-solid fa-users" aria-hidden="true"></i> {{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</dt>
+              <dd><bdi>{{ report.beneficiaries_count|default:"0" }}</bdi></dd>
+            </div>
+          </dl>
+
+          <div class="my-report-card__evidence">
+            <span class="my-report-card__label">الشواهد المصورة</span>
+            <div class="my-report-gallery js-gallery" data-report="{{ report.pk }}" aria-label="شواهد تقرير {{ report.title }}">
+              {% for evidence in report.evidences.all|slice:":2" %}
+                <img class="my-report-thumb" src="{{ evidence.image.url }}" data-full="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور' }}" aria-label="فتح الشاهد: {{ evidence.description|default:'شاهد مصور' }}" role="button" tabindex="0" loading="lazy" decoding="async">
+              {% empty %}
+                {% if report.image1 %}<img class="my-report-thumb" src="{{ report.image1.url }}" data-full="{{ report.image1.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الأول" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
+                {% if report.image2 %}<img class="my-report-thumb" src="{{ report.image2.url }}" data-full="{{ report.image2.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الثاني" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
+              {% endfor %}
+              {% if not report.evidences.all and not report.image1 and not report.image2 %}<span class="my-report-no-evidence">لا توجد شواهد</span>{% endif %}
+            </div>
+          </div>
+
+          <div class="my-report-card__actions">
+            {% include "reports/partials/report_actions_menu.html" with report=report %}
+          </div>
+        </article>
+      {% empty %}
+        <div class="twq-empty twq-empty--page">
+          <div class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-folder-open"></i></div>
+          {% if q or start_date or end_date %}
+            <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
+            <p class="twq-empty__message">غيّر كلمات البحث أو النطاق الزمني، ثم أعد المحاولة.</p>
+            <a href="{% url 'reports:my_reports' %}" class="twq-btn twq-btn--secondary">مسح معايير التصفية</a>
+          {% else %}
+            <h3 class="twq-empty__title">لا توجد تقارير حتى الآن</h3>
+            <p class="twq-empty__message">ابدأ بتوثيق أول تقرير مدرسي ليظهر هنا.</p>
+            <a href="{% url 'reports:add_report' %}" class="twq-btn twq-btn--primary">إضافة تقرير</a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    {% include "reports/_pagination.html" with page_obj=reports %}
+  </section>
+
+  <div class="my-reports-modal" id="mrImageModal" role="dialog" aria-modal="true" aria-label="عرض شاهد التقرير" aria-hidden="true">
+    <div class="my-reports-modal__dialog">
+      <div class="my-reports-modal__header">
+        <span id="mrModalCounter" aria-live="polite"></span>
+        <button type="button" class="my-reports-modal__close" id="mrModalClose" aria-label="إغلاق معرض الشواهد">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="my-reports-modal__body">
+        <img id="mrModalImg" class="my-reports-modal__image" alt="شاهد مصور من التقرير">
+      </div>
+      <div class="my-reports-modal__navigation" aria-label="التنقل بين الشواهد">
+        <button type="button" class="my-reports-modal__nav" id="mrPrevBtn" aria-label="الشاهد السابق">
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="my-reports-modal__nav" id="mrNextBtn" aria-label="الشاهد التالي">
+          <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -1787,7 +283,6 @@ html[data-theme="dark"] .mr-page{
 {% block scripts %}
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function(){
-    // ===== Gallery Modal =====
     var modal = document.getElementById('mrImageModal');
     var imgEl = document.getElementById('mrModalImg');
     var closeBtn = document.getElementById('mrModalClose');
@@ -1825,75 +320,66 @@ html[data-theme="dark"] .mr-page{
       current = list || [];
       index = i || 0;
       lastFocus = focusEl || null;
-
       show(index);
       modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
       lockScroll(true);
-
       try{
         if(window.__trapFocus) window.__trapFocus(modal, true);
       }catch(e){}
-
       closeBtn.focus({ preventScroll: true });
     }
 
     function closeModal(){
       modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
       imgEl.removeAttribute('src');
       lockScroll(false);
-
       try{
         if(window.__trapFocus) window.__trapFocus(modal, false);
       }catch(e){}
-
       if(lastFocus && lastFocus.focus){
         lastFocus.focus({ preventScroll: true });
       }
     }
 
-    // Bind galleries
-    document.querySelectorAll('.js-gallery').forEach(function(gal){
-      var thumbs = Array.prototype.slice.call(gal.querySelectorAll('img[data-full]'));
+    document.querySelectorAll('.js-gallery').forEach(function(gallery){
+      var thumbs = Array.prototype.slice.call(gallery.querySelectorAll('img[data-full]'));
       if(!thumbs.length) return;
+      var list = thumbs.map(function(thumb){ return thumb.getAttribute('data-full'); });
 
-      var list = thumbs.map(function(t){ return t.getAttribute('data-full'); });
-
-      thumbs.forEach(function(t, i){
-        t.addEventListener('click', function(ev){
-          ev.preventDefault();
-          openModal(list, i, t);
+      thumbs.forEach(function(thumb, thumbIndex){
+        function activate(event){
+          event.preventDefault();
+          openModal(list, thumbIndex, thumb);
+        }
+        thumb.addEventListener('click', activate);
+        thumb.addEventListener('keydown', function(event){
+          if(event.key === 'Enter' || event.key === ' '){
+            activate(event);
+          }
         });
       });
     });
 
-    // Controls
-    prevBtn.addEventListener('click', function(ev){ ev.stopPropagation(); show(index - 1); });
-    nextBtn.addEventListener('click', function(ev){ ev.stopPropagation(); show(index + 1); });
-    closeBtn.addEventListener('click', function(){ closeModal(); });
-
-    // Click outside image closes
-    modal.addEventListener('click', function(ev){
-      if(ev.target === modal) closeModal();
+    prevBtn.addEventListener('click', function(event){ event.stopPropagation(); show(index - 1); });
+    nextBtn.addEventListener('click', function(event){ event.stopPropagation(); show(index + 1); });
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(event){
+      if(event.target === modal) closeModal();
     });
 
-    // Keyboard
-    document.addEventListener('keydown', function(ev){
+    document.addEventListener('keydown', function(event){
       if(!modal.classList.contains('is-open')) return;
-
-      if(ev.key === 'Escape'){
-        ev.preventDefault();
+      if(event.key === 'Escape'){
+        event.preventDefault();
         closeModal();
-        return;
-      }
-      if(ev.key === 'ArrowLeft'){
-        ev.preventDefault();
+      }else if(event.key === 'ArrowLeft'){
+        event.preventDefault();
         show(index + 1);
-        return;
-      }
-      if(ev.key === 'ArrowRight'){
-        ev.preventDefault();
+      }else if(event.key === 'ArrowRight'){
+        event.preventDefault();
         show(index - 1);
-        return;
       }
     });
   })();

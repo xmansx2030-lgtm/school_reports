@@ -148,6 +148,12 @@ class DesignSystemContractTests(SimpleTestCase):
         self.assertIn("twq-document-item", detail_template)
         self.assertIn("twq-empty--page", list_template)
         self.assertIn("twq-empty--local", detail_template)
+        self.assertIn("{% load static hijri_tags %}", detail_template)
+        self.assertGreaterEqual(detail_template.count("report.report_date|hijri"), 2)
+        self.assertIn(
+            'datetime="{{ evidence.report.report_date|date:\'Y-m-d\' }}"',
+            detail_template,
+        )
         self.assertIn("prefers-reduced-motion", design_system)
         self.assertNotRegex(design_system, r"transition:\s*all")
 
@@ -272,3 +278,92 @@ class DesignSystemContractTests(SimpleTestCase):
             with self.subTest(visible_label=visible_label):
                 self.assertIn(f"<span>{visible_label}</span>", menu)
         self.assertNotIn('target="_blank"', menu)
+
+    def test_my_reports_pilot_uses_design_language_v1_without_changing_query_contracts(self):
+        template = source("reports/templates/reports/my_reports.html")
+
+        for contract in (
+            "css/my-reports.css",
+            "twq-page",
+            "twq-page-header",
+            "twq-metrics",
+            "twq-toolbar",
+            "twq-toolbar__search",
+            "twq-toolbar__actions",
+            "twq-toolbar__active-filters",
+            "twq-filter-chip",
+            "twq-section__header",
+            "twq-table-wrap",
+            "twq-empty--local",
+            "twq-empty--page",
+            'name="q"',
+            'name="start_date"',
+            'name="end_date"',
+            'id="mrImageModal"',
+            'id="mrModalClose"',
+            'id="mrModalImg"',
+            'id="mrPrevBtn"',
+            'id="mrNextBtn"',
+            'class="my-report-gallery js-gallery"',
+            'data-report="{{ report.pk }}"',
+            'reports/_pagination.html',
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, template)
+
+        self.assertEqual(template.count("partials/report_actions_menu.html"), 2)
+        self.assertNotIn("<style", template)
+        self.assertNotRegex(template, r"\sstyle\s*=")
+
+    def test_my_reports_css_is_token_driven_rtl_safe_and_reduced_motion_aware(self):
+        css = source("static/css/my-reports.css")
+        css_without_comments = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+
+        self.assertIn("var(--twq-primary)", css)
+        self.assertIn("@media (max-width: 64rem)", css)
+        self.assertIn("@media (max-width: 48rem)", css)
+        self.assertIn("@media (max-width: 40rem)", css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+        self.assertIsNone(re.search(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(", css))
+        self.assertIsNone(
+            re.search(
+                r"(?m)^\s*(?:margin|padding|border)-(?:left|right)\s*:"
+                r"|^\s*(?:left|right)\s*:",
+                css,
+            )
+        )
+        self.assertNotRegex(css, r"transition:\s*all")
+        self.assertNotIn("!important", css_without_comments)
+
+    def test_shared_toolbar_and_active_filters_are_canonical_components(self):
+        css = source("static/css/design-system.css")
+
+        for contract in (
+            ".twq-toolbar",
+            ".twq-toolbar__search",
+            ".twq-toolbar__control",
+            ".twq-toolbar__icon",
+            ".twq-toolbar__actions",
+            ".twq-toolbar__active-filters",
+            ".twq-toolbar__active-label",
+            ".twq-filter-chip",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, css)
+
+        toolbar_css = css.split("/* Search and filter toolbar */", 1)[1].split("/* Cards */", 1)[0]
+        self.assertNotRegex(toolbar_css, r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
+        self.assertNotRegex(
+            toolbar_css,
+            r"(?m)^\s*(?:margin|padding|border)-(?:left|right)\s*:"
+            r"|^\s*(?:left|right)\s*:",
+        )
+        self.assertNotIn("!important", toolbar_css)
+
+    def test_report_state_chip_adopts_the_shared_semantic_status(self):
+        state_chip = source("reports/templates/reports/partials/report_state_chip.html")
+
+        self.assertIn("twq-status", state_chip)
+        self.assertIn('data-status="{{ report.approval_tone }}"', state_chip)
+        self.assertIn("get_approval_state_display", state_chip)
+        self.assertIn("approval_detail", state_chip)
