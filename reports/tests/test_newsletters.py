@@ -16,6 +16,7 @@ from reports.models import (
     SubscriptionPlan,
     Teacher,
 )
+from reports.tests.test_circular_deadline import drawn_signature_data
 
 
 @override_settings(
@@ -176,8 +177,17 @@ class NewsletterExperienceTests(TestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertTemplateUsed(detail, "reports/my_circular_detail.html")
         self.assertContains(detail, "الاطلاع على النشرة")
-        self.assertContains(detail, "اعتماد التوقيع نهائيًا")
+        self.assertContains(detail, 'name="signature_data"')
         self.assertContains(detail, "NWS-")
+
+        signed = self.client.post(
+            reverse("reports:notification_sign", args=[recipient.pk]),
+            {"ack": "1", "signature_data": drawn_signature_data()},
+        )
+        self.assertEqual(signed.status_code, 302)
+        recipient.refresh_from_db()
+        self.assertTrue(recipient.is_signed)
+        self.assertEqual(recipient.signature_method, "drawn_ack")
 
         self._login(self.manager)
         report = self.client.get(
@@ -186,6 +196,7 @@ class NewsletterExperienceTests(TestCase):
         self.assertEqual(report.status_code, 200)
         self.assertContains(report, "سجل تواقيع النشرة")
         self.assertContains(report, "NWS-")
+        self.assertContains(report, reverse("reports:circular_signature_image", args=[recipient.pk]))
 
     def test_unsigned_newsletter_has_read_receipt_but_no_signature_report(self):
         newsletter = Notification.objects.create(
@@ -207,8 +218,7 @@ class NewsletterExperienceTests(TestCase):
         )
         recipient.refresh_from_db()
         self.assertTrue(recipient.is_read)
-        self.assertContains(detail, "هذه النشرة لا تتطلب توقيعًا")
-        self.assertNotContains(detail, "اعتماد التوقيع نهائيًا")
+        self.assertNotContains(detail, 'name="signature_data"')
 
         self._login(self.manager)
         report = self.client.get(

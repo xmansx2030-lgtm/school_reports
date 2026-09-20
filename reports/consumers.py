@@ -340,7 +340,8 @@ class NotificationCountsConsumer(AsyncJsonWebsocketConsumer):
             notification__kind="circular",
             notification__requires_signature=True,
             is_signed=False,
-        )
+        ) & (Q(notification__signature_deadline_at__gte=now)
+             | Q(notification__signature_deadline_at__isnull=True))
         attention_q = unread_q | pending_sig_q
 
         agg = qs.aggregate(

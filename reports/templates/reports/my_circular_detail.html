@@ -5,6 +5,7 @@
 
 {% block head %}
   <link rel="stylesheet" href="{% static 'css/circulars-official.css' %}">
+  <link rel="stylesheet" href="{% static 'css/handwritten-signature.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -114,6 +115,7 @@
           <div class="cir-notice cir-notice--success">
             <i class="fa-solid fa-circle-check fa-lg"></i>
             <div><strong>اكتمل توقيعك</strong><br>سُجّل إقرارك بتاريخ {{ r.signed_at|date:"Y/m/d" }} عند {{ r.signed_at|date:"H:i" }}.</div>
+            <a class="cir-btn" href="{% url 'reports:circular_receipt' r.pk %}">عرض إيصال الإقرار</a>
           </div>
         {% elif signing_closed %}
           <div class="cir-notice cir-notice--danger">
@@ -169,12 +171,7 @@
               novalidate
             >
               {% csrf_token %}
-              <div class="cir-field">
-                <label for="sig_phone">رقم الجوال المسجل</label>
-                <input class="cir-input" type="tel" id="sig_phone" name="phone" placeholder="05xxxxxxxx" maxlength="10" inputmode="numeric" autocomplete="tel" aria-describedby="sigPhoneHint sigPhoneError" required>
-                <small id="sigPhoneHint">يُستخدم لمطابقة هوية صاحب الحساب قبل الاعتماد.</small>
-                <div class="cir-field-error" id="sigPhoneError" role="alert"></div>
-              </div>
+              {% include "reports/partials/handwritten_signature_pad.html" %}
 
               <label class="cir-ack" for="sig_ack">
                 <input type="checkbox" id="sig_ack" name="ack" required>
@@ -183,7 +180,7 @@
               </label>
 
               <button type="submit" id="sigSubmit" class="cir-btn cir-btn--primary cir-sign-submit">
-                <i class="fa-solid fa-fingerprint"></i> اعتماد التوقيع نهائيًا
+                <i class="fa-solid fa-fingerprint"></i> اعتماد الإقرار نهائيًا
               </button>
             </form>
           </div>
@@ -194,6 +191,7 @@
   </div>
 </div>
 
+<script src="{% static 'js/handwritten-signature.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
 (function () {
   const printButton = document.getElementById('printCircular');
@@ -202,28 +200,17 @@
   const form = document.getElementById('sigForm');
   if (!form) return;
 
-  const phone = document.getElementById('sig_phone');
   const ack = document.getElementById('sig_ack');
   const submit = document.getElementById('sigSubmit');
-  const error = document.getElementById('sigPhoneError');
-
-  function normalize(value) {
-    let digits = String(value || '').replace(/\D/g, '');
-    if (digits.startsWith('9665')) digits = '0' + digits.slice(3);
-    return digits.slice(0, 10);
-  }
+  let signature = null;
+  signature = window.HandwrittenSignature.init(form, validate);
 
   function validate() {
-    const normalized = normalize(phone.value);
-    if (phone.value !== normalized) phone.value = normalized;
-    const valid = /^05\d{8}$/.test(normalized);
-    error.style.display = normalized && !valid ? 'block' : 'none';
-    error.textContent = normalized && !valid ? 'أدخل رقم جوال سعوديًا صحيحًا يبدأ بـ 05.' : '';
-    submit.classList.toggle('is-ready', valid && ack.checked);
-    submit.disabled = !(valid && ack.checked);
+    const ready = Boolean(signature && signature.valid() && ack.checked);
+    submit.classList.toggle('is-ready', ready);
+    submit.disabled = !ready;
   }
 
-  phone.addEventListener('input', validate);
   ack.addEventListener('change', validate);
   validate();
 
@@ -242,7 +229,7 @@
       cancelText: form.getAttribute('data-sign-confirm-cancel')
     }).then(function (confirmed) {
       confirming = false;
-      if (!confirmed) return;
+      if (!confirmed || !signature.prepare()) return;
       submit.disabled = true;
       submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ اعتماد التوقيع…';
       form.submit();

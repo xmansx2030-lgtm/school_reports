@@ -12,6 +12,7 @@
   {% include "reports/_identity.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/circulars-official.css' %}">
+  <link rel="stylesheet" href="{% static 'css/handwritten-signature.css' %}">
 <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1">
 </head>
 <body class="cir-print-body">
@@ -70,9 +71,10 @@
           <th class="xs-notification-signatures-print-7">م</th>
           <th>الاسم</th>
           <th class="xs-notification-signatures-print-8">الصفة</th>
-          <th class="xs-notification-signatures-print-9">الاطلاع</th>
-          <th class="xs-notification-signatures-print-9">التوقيع</th>
-          <th class="xs-notification-signatures-print-10">وقت التوقيع</th>
+          <th class="xs-notification-signatures-print-9">حالة القراءة</th>
+          <th class="xs-notification-signatures-print-9">الإقرار</th>
+          <th class="xs-notification-signatures-print-10">وقت الإقرار / مرجعه</th>
+          <th>التوقيع المرسوم</th>
         </tr>
       </thead>
       <tbody>
@@ -81,19 +83,23 @@
           <td>{{ forloop.counter }}</td>
           <td><strong>{{ row.name }}</strong></td>
           <td>{{ row.role|default:"—" }}</td>
-          <td>{% if row.read %}<span class="cir-report-status cir-report-status--signed">تم</span>{% else %}<span class="cir-report-status cir-report-status--pending">لم يفتح</span>{% endif %}</td>
-          <td>{% if row.signed %}<span class="cir-report-status cir-report-status--signed">موقّع</span>{% else %}<span class="cir-report-status cir-report-status--pending">معلّق</span>{% endif %}</td>
-          <td>{% if row.signed_at %}{{ row.signed_at|date:"Y/m/d — H:i" }}{% else %}—{% endif %}</td>
+          <td>{% if row.read %}<span class="cir-report-status cir-report-status--signed">مقروء</span>{% else %}<span class="cir-report-status cir-report-status--pending">غير مقروء</span>{% endif %}</td>
+          <td>{% if row.signed %}<span class="cir-report-status cir-report-status--signed">مكتمل</span>{% else %}<span class="cir-report-status cir-report-status--pending">معلّق</span>{% endif %}</td>
+          <td>{% if row.signed_at %}{{ row.signed_at|date:"Y/m/d — H:i" }}{% if row.evidence_ref %}<br>مرجع {{ row.evidence_ref }}{% else %}<br>سجل سابق{% endif %}{% else %}—{% endif %}</td>
+          <td>{% if row.has_drawn_signature %}<img class="cir-report-signature" src="{% url 'reports:circular_signature_image' row.recipient_id %}" alt="توقيع {{ row.name }}" loading="eager">{% elif row.signed %}إقرار إلكتروني سابق{% else %}—{% endif %}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="xs-notification-signatures-print-11">لا توجد سجلات مستلمين لهذه الوثيقة.</td></tr>
+        <tr><td colspan="7" class="xs-notification-signatures-print-11">لا توجد سجلات مستلمين لهذه الوثيقة.</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
     <aside class="cir-report-note">
-      <strong>إفادة:</strong> هذا المحضر مستخرج من السجل الإلكتروني لمنصة توثيق. تُثبت حالة «موقّع» إتمام المستلم لإقرار الاطلاع بعد مطابقة رقم الجوال المسجل، ويظهر وقت الاعتماد كما حُفظ في النظام.
-      {% if n.signature_ack_text %}<br><strong>نص الإقرار المعتمد:</strong> {{ n.signature_ack_text|linebreaksbr }}{% endif %}
+      <strong>إفادة:</strong> هذا المحضر مستخرج من سجل المنصة. يظهر الرسم لمن اعتمدوا بالتوقيع اليدوي، وتظهر الإقرارات السابقة بطريقتها المحفوظة. «مقروء» تعني فتح الصفحة أو تحديدها كمقروءة، ولا تثبت قراءة المرفق.
+      {% if issued_snapshot.ack_text %}<br><strong>نص الإقرار المحفوظ:</strong> {{ issued_snapshot.ack_text|linebreaksbr }}{% elif n.signature_ack_text %}<br><strong>نص الإقرار الحالي لسجل سابق:</strong> {{ n.signature_ack_text|linebreaksbr }}{% endif %}
+      {% if n.issued_digest %}<br><strong>فحص نسخة الوثيقة:</strong> {% if document_verified %}متطابقة مع النسخة المحفوظة{% else %}تعذر تأكيد تطابق النسخة الحالية؛ راجع الإدارة{% endif %}
+      <br><strong>بصمة الوثيقة SHA-256:</strong> <span class="cir-receipt__digest" dir="ltr">{{ n.issued_digest }}</span>{% else %}<br>هذه وثيقة سابقة على حفظ نسخ الإصدار.{% endif %}
+      {% if issued_snapshot.basis == 'at_first_sign' %}<br>نسخة هذه الوثيقة السابقة حُفظت عند أول إقرار، وليس وقت إرسالها.{% endif %}
     </aside>
 
     <footer class="xs-notification-signatures-print-12">

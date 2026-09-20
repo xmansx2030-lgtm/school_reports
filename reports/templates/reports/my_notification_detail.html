@@ -5,6 +5,7 @@
 {% block title %}{% if n.requires_signature %}تفاصيل التعميم{% else %}تفاصيل الإشعار{% endif %}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{% static 'css/handwritten-signature.css' %}">
 <style nonce="{{ CSP_NONCE }}">
   /* =========================================================
      My Notification Detail — Premium 2026 Design
@@ -630,17 +631,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{% url 'reports:my_notification_detail' r.pk %}">
 
-                <div>
-                  <label class="mnd-field-label" for="sig_phone">
-                    <i class="fa-solid fa-mobile-screen-button xs-my-notification-detail-6"></i>
-                    رقم الجوال المسجل
-                  </label>
-                  <input class="mnd-input" id="sig_phone" name="phone"
-                         type="tel" inputmode="numeric" autocomplete="tel"
-                         placeholder="مثال: 05xxxxxxxx" required>
-                  <div class="mnd-input-note">يُستخدم للتأكد من هوية الحساب قبل اعتماد التوقيع.</div>
-                  <div class="mnd-input-error" id="sig_phone_error" aria-live="polite"></div>
-                </div>
+                {% include "reports/partials/handwritten_signature_pad.html" %}
 
                 <label class="mnd-check-wrap" for="sig_ack">
                   <input id="sig_ack" name="ack" type="checkbox" required>
@@ -673,41 +664,19 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/handwritten-signature.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function(){
     'use strict';
     var form       = document.querySelector('form.mnd-form-grid');
-    var phoneInput = document.getElementById('sig_phone');
     var ackInput   = document.getElementById('sig_ack');
     var submitBtn  = document.getElementById('sigSubmit');
-    var phoneError = document.getElementById('sig_phone_error');
-    if (!form || !phoneInput || !ackInput || !submitBtn) return;
-
-    function digitsOnly(v){ return String(v||'').replace(/\D+/g,''); }
-    function normalizePhone(raw){
-      var d = digitsOnly(raw);
-      if (d.startsWith('9665') && d.length===12) return '0'+d.slice(3);
-      return d;
-    }
-    function isValidPhone(v){ return /^05\d{8}$/.test(v); }
-    function setPhoneError(msg){
-      if (!phoneError) return;
-      if (!msg){ phoneError.style.display='none'; phoneError.textContent=''; return; }
-      phoneError.style.display='block'; phoneError.textContent=msg;
-    }
+    if (!form || !ackInput || !submitBtn) return;
+    var signature = window.HandwrittenSignature.init(form, updateState);
     function updateState(){
-      var normalized = normalizePhone(phoneInput.value);
-      var okPhone = isValidPhone(normalized);
       var okAck   = !!ackInput.checked;
-      submitBtn.disabled = !(okPhone && okAck) || submitBtn.dataset.busy==='1';
-      if (phoneInput.value && !okPhone) setPhoneError('رقم الجوال غير صحيح. أدخل 10 أرقام تبدأ بـ 05.');
-      else setPhoneError('');
+      submitBtn.disabled = !(signature && signature.valid() && okAck) || submitBtn.dataset.busy==='1';
     }
-    phoneInput.addEventListener('input', function(){
-      var normalized = normalizePhone(phoneInput.value);
-      if (normalized && normalized !== phoneInput.value.replace(/\s+/g,'')) phoneInput.value = normalized;
-      updateState();
-    });
     ackInput.addEventListener('change', updateState);
     form.addEventListener('submit', async function(e){
       updateState();
@@ -721,6 +690,7 @@
           okText: 'اعتماد التوقيع'
         });
         if (!confirmed) return;
+        if (!signature.prepare()) return;
         form.dataset.signatureConfirmed = '1';
         form.requestSubmit(submitBtn);
         return;

@@ -39,7 +39,7 @@ class GroupNotificationForm(forms.Form):
         required=False,
         initial=False,
         label="يتطلب توقيعاً إلزامياً",
-        help_text="سيُطلب من المستلم الإقرار وإدخال جواله المسجل قبل اعتماد التوقيع.",
+        help_text="سيُطلب من المستلم الإقرار ورسم توقيعه قبل الاعتماد.",
     )
     signature_deadline_at = forms.DateTimeField(
         required=False,

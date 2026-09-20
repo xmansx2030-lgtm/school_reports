@@ -2053,7 +2053,7 @@ class NotificationCreateForm(forms.Form):
         required=False,
         initial=False,
         label="يتطلب توقيع إلزامي (تعميم)",
-        help_text="عند تفعيل هذا الخيار سيُطلب من المستلم إدخال جواله المسجل + الإقرار قبل اعتماد التوقيع.",
+        help_text="عند تفعيل هذا الخيار سيُطلب من المستلم رسم توقيعه والموافقة على نص الإقرار.",
     )
     signature_deadline_at = forms.DateTimeField(
         required=False,

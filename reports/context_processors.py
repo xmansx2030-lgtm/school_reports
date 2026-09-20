@@ -727,6 +727,11 @@ def _pending_signatures_count(user, request: Optional[HttpRequest] = None) -> in
         fN = _model_fields(N)
         if "kind" in fN:
             qs = qs.filter(**{f"{notif_fk}__kind": "circular"})
+        if "signature_deadline_at" in fN:
+            qs = qs.filter(
+                Q(**{f"{notif_fk}__signature_deadline_at__gte": now})
+                | Q(**{f"{notif_fk}__signature_deadline_at__isnull": True})
+            )
         with soft_fail("nav.pending_signatures_active_filter", user_id=uid):
             if "is_active" in fN:
                 qs = qs.filter(**{f"{notif_fk}__is_active": True})
