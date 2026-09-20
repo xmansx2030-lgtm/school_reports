@@ -6,837 +6,38 @@
 {% block title %}إرسال تعميم رسمي{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  :root {
-    --c-primary: #006c35;
-    --c-primary-dark: #006c35;
-    --c-primary-light: rgba(0, 108, 53, .07);
-    --c-success: #16845b;
-    --c-text-main: #0f172a;
-    --c-text-muted: #64748b;
-    --c-bg: #f8fafc;
-    --c-card-bg: #ffffff;
-    --c-border: #e2e8f0;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-elegant: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --font-heading: 'Cairo', system-ui, sans-serif;
-  }
-
-  body {
-    background-color: var(--c-bg);
-    color: var(--c-text-main);
-    font-family: var(--font-heading);
-  }
-
-  /* Page Wrapper with subtle gradient mesh */
-  .circular-page {
-    min-height: 100vh;
-    padding: 2rem 1rem;
-    background-image: 
-        radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, transparent 50%), 
-        radial-gradient(at 50% 0%, hsla(225,39%,30%,0) 0, transparent 50%), 
-        radial-gradient(at 100% 0%, hsla(339,49%,30%,0) 0, transparent 50%);
-  }
-
-  .circular-container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-
-  /* Header Styles */
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding: 0 0.5rem;
-  }
-
-  .header-content h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: linear-gradient(135deg, var(--c-primary-dark), #006c35);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .header-subtitle {
-    margin-top: 0.5rem;
-    color: var(--c-text-muted);
-    font-size: 1rem;
-  }
-
-  .header-actions .btn-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: white;
-    color: var(--c-text-main);
-    border: 1px solid var(--c-border);
-    padding: 0.6rem 1.25rem;
-    border-radius: 99px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
-  }
-  .header-actions .btn-link:hover {
-    background: var(--c-primary-light);
-    color: var(--c-primary-dark);
-    border-color: var(--c-primary);
-  }
-
-  /* Grid Layout */
-  .main-grid {
-    display: grid;
-    grid-template-columns: 1.3fr 1fr;
-    gap: 2rem;
-    align-items: start;
-  }
-
-  /* Modern Card */
-  .app-card {
-    background: var(--c-card-bg);
-    border-radius: 1.5rem;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--c-border);
-    overflow: hidden;
-  }
-
-  .app-card-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid var(--c-border);
-    background: linear-gradient(to right, #ffffff, #f8fafc);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .app-card-header h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--c-text-main);
-  }
-
-  .app-card-body {
-    padding: 2rem;
-  }
-
-  /* Form Controls */
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.25rem;
-  }
-
-  .full-width { grid-column: 1 / -1; }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--c-text-main);
-  }
-
-  .form-control, input[type="text"], input[type="file"], input[type="date"], input[type="url"], textarea, select {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1.5px solid var(--c-border);
-    border-radius: 0.75rem;
-    background-color: #fff;
-    font-size: 0.95rem;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    font-family: inherit;
-  }
-
-  input:focus, textarea:focus, select:focus {
-    outline: none;
-    border-color: var(--c-primary);
-    box-shadow: 0 0 0 4px rgba(0, 108, 53, 0.12);
-  }
-
-  textarea {
-    min-height: 120px;
-    resize: vertical;
-    line-height: 1.6;
-  }
-  
-  /* Hints & Errors */
-  .form-hint {
-    font-size: 0.8rem;
-    color: var(--c-text-muted);
-    margin-top: 0.25rem;
-  }
-  .error-list {
-    color: #ef4444;
-    font-size: 0.85rem;
-    margin-top: 0.5rem;
-    list-style: none;
-    padding: 0;
-  }
-  .recipient-alert {
-    display: none;
-    margin-top: 0.85rem;
-    border: 1px solid #fecaca;
-    background: linear-gradient(135deg, #fff7f7 0%, #fff1f2 100%);
-    color: #991b1b;
-    border-radius: 0.85rem;
-    padding: 0.75rem 0.9rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    align-items: center;
-    gap: 0.55rem;
-  }
-  .recipient-alert.show {
-    display: flex;
-    animation: recipientAlertPop .24s ease-out;
-  }
-  @keyframes recipientAlertPop {
-    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* Teacher Selector Modernization */
-  .teacher-selector {
-    border: 1px solid var(--c-border);
-    border-radius: 1rem;
-    background: #f8fafc;
-    padding: 1rem;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-  }
-
-  .recipient-step {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    margin-bottom: 0.75rem;
-    color: var(--c-text-muted);
-    font-size: 0.88rem;
-  }
-
-  .recipient-step-number {
-    width: 1.8rem;
-    height: 1.8rem;
-    display: inline-grid;
-    place-items: center;
-    flex: 0 0 auto;
-    border-radius: 999px;
-    background: var(--c-primary);
-    color: #fff;
-    font-weight: 800;
-  }
-
-  .department-selector {
-    border: 1px solid var(--c-border);
-    border-radius: 1rem;
-    background: #f8fafc;
-    padding: 0.75rem;
-  }
-
-  #id_target_department {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 0.55rem;
-  }
-
-  #id_target_department > div {
-    display: contents;
-  }
-
-  #id_target_department label {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    min-height: 48px;
-    padding: 0.7rem 0.8rem;
-    border: 1px solid var(--c-border);
-    border-radius: 0.65rem;
-    background: var(--c-card-bg);
-    cursor: pointer;
-    transition: all 0.16s ease;
-  }
-
-  #id_target_department label:has(input:checked) {
-    border-color: var(--c-primary);
-    background: var(--c-primary-light);
-    color: var(--c-primary-dark);
-    font-weight: 700;
-    box-shadow: 0 0 0 1px var(--c-primary);
-  }
-
-  #id_target_department input[type="checkbox"] {
-    width: 1.15rem;
-    height: 1.15rem;
-    accent-color: var(--c-primary);
-  }
-
-  .selected-departments {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.65rem;
-  }
-
-  .recipient-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.42rem 0.72rem;
-    border-radius: 999px;
-    background: var(--c-primary);
-    color: #fff;
-    font-size: 0.82rem;
-    font-weight: 700;
-  }
-
-  .recipient-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 0.8rem;
-    padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(5, 150, 105, .25);
-    border-radius: 0.75rem;
-    background: rgba(5, 150, 105, .06);
-  }
-
-  .recipient-summary strong {
-    color: var(--c-primary-dark);
-    white-space: nowrap;
-  }
-
-  .teacher-tools {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    align-items: center;
-  }
-
-  .teacher-search {
-    flex: 1;
-    border-radius: 2rem !important; 
-    border-color: var(--c-border);
-    padding-left: 2.5rem !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: left 0.75rem center;
-    background-size: 1.25rem;
-  }
-
-  .teacher-list-container {
-    max-height: 280px;
-    overflow-y: auto;
-    padding-right: 0.25rem;
-    /* Custom Scrollbar */
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
-  }
-  .teacher-list-container::-webkit-scrollbar { width: 6px; }
-  .teacher-list-container::-webkit-scrollbar-track { background: transparent; }
-  .teacher-list-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-
-  /* Grid of Teachers */
-  .teacher-list-container ul, #id_teachers {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 0.5rem;
-  }
-
-  .teacher-list-container li { display: contents; } /* Let labels be grid items directly if li wrapper exists */
-
-  .teacher-list-container label, #id_teachers label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.6rem 0.75rem;
-    background: #fff;
-    border: 1px solid var(--c-border);
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    font-size: 0.9rem;
-    position: relative;
-    user-select: none;
-  }
-
-  .teacher-list-container label:hover {
-    border-color: var(--c-primary);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  }
-
-  /* Active State (Checked) */
-  .teacher-list-container label:has(input:checked), 
-  #id_teachers label:has(input:checked) {
-    background-color: var(--c-primary-light);
-    border-color: var(--c-primary);
-    color: var(--c-primary-dark);
-    font-weight: 600;
-    box-shadow: 0 0 0 1px var(--c-primary);
-  }
-
-  .teacher-list-container input[type="checkbox"] {
-    width: 1.15rem;
-    height: 1.15rem;
-    accent-color: var(--c-primary);
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  /* ✅ إصلاح تخطيط اختيار المعلمين: Django 4 يغلّف كل خيار بـ <div>،
-     فنجعلها شفافة حتى تصبح الـ label عناصر شبكة مباشرة */
-  #id_teachers > div { display: contents; }
-
-  /* ===== مفتاح «هام وعاجل» (Toggle Switch) ===== */
-  .imp-toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border: 1.5px solid var(--c-border);
-    border-radius: 1rem;
-    background: var(--c-card-bg);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .imp-toggle-row:has(#id_is_important:checked) {
-    border-color: #ef4444;
-    background: linear-gradient(135deg, rgba(239,68,68,.06), rgba(239,68,68,.02));
-  }
-  .imp-toggle-text { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
-  .imp-toggle-text .t { display: flex; align-items: center; gap: .5rem; }
-  .imp-toggle-text small { font-weight: 400; color: var(--c-text-muted); font-size: .82rem; }
-  #id_is_important {
-    appearance: none; -webkit-appearance: none;
-    width: 52px; height: 30px; flex: 0 0 auto;
-    border-radius: 999px; background: #cbd5e1; border: none;
-    position: relative; cursor: pointer; transition: background .2s ease;
-    padding: 0; margin: 0;
-  }
-  #id_is_important::before {
-    content: ""; position: absolute; top: 3px; right: 3px;
-    width: 24px; height: 24px; border-radius: 50%;
-    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
-    transition: right .2s ease;
-  }
-  #id_is_important:checked { background: #ef4444; }
-  #id_is_important:checked::before { right: 25px; }
-
-  /* ===== معاينة المرفق قبل الإرسال ===== */
-  .attach-preview { margin-top: .75rem; }
-  .attach-preview .attach-thumb {
-    max-width: 100%; max-height: 220px; border-radius: .75rem;
-    border: 1px solid var(--c-border); display: block;
-  }
-  .attach-preview .attach-name { font-size: .82rem; color: var(--c-text-muted); margin-top: .4rem; word-break: break-all; }
-  .attach-preview .attach-file {
-    display: inline-flex; align-items: center; gap: .6rem;
-    padding: .7rem 1rem; border: 1px solid var(--c-border); border-radius: .75rem;
-    background: var(--c-primary-light); color: var(--c-primary-dark);
-    font-weight: 600; font-size: .9rem; word-break: break-all;
-  }
-  .attach-preview .attach-file i { font-size: 1.3rem; color: #dc2626; }
-
-  /* Signature Settings - Highlight Box */
-  .sig-settings-box {
-    margin-top: 1.5rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, rgba(185,151,91,.10) 0%, rgba(0,108,53,.06) 100%);
-    border: 1px dashed rgba(185,151,91,.45);
-    border-radius: 1rem;
-    position: relative;
-  }
-  
-  .sig-badge {
-    position: absolute;
-    top: -0.75rem;
-    right: 1.5rem;
-    background: #006c35;
-    color: white;
-    font-size: 0.75rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-weight: 800;
-    box-shadow: 0 2px 4px rgba(0,108,53,0.2);
-  }
-
-  /* Footer Actions */
-  .form-actions {
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--c-border);
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .btn-submit {
-    background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-dark) 100%);
-    color: white;
-    border: none;
-    padding: 0.875rem 2.5rem;
-    border-radius: 99px; /* Pill shape */
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 108, 53, 0.3);
-    transition: all 0.3s ease;
-  }
-  
-  .btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 108, 53, 0.4);
-    filter: brightness(1.1);
-  }
-
-  .btn-cancel {
-    padding: 0.875rem 2rem;
-    color: var(--c-text-muted);
-    font-weight: 600;
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-  .btn-cancel:hover {
-    color: var(--c-text-main);
-  }
-
-  /* --- Right Column: Live 3D Preview --- */
-  .preview-col {
-    position: sticky;
-    top: 2rem;
-    perspective: 2000px; /* Enhanced depth */
-    z-index: 10;
-  }
-  
-  .doc-preview {
-    background: white;
-    min-height: 700px;
-    padding: 3rem;
-    border-radius: 2px;
-    /* Realistic Paper Shadow */
-    box-shadow: 
-      0 1px 1px rgba(0,0,0,0.15), 
-      0 10px 0 -5px #eee, 
-      0 10px 1px -4px rgba(0,0,0,0.15), 
-      0 20px 0 -10px #eee, 
-      0 20px 1px -9px rgba(0,0,0,0.15),
-      0 10px 40px rgba(0,0,0,0.1);
-    
-    /* 3D Transform */
-    transform: rotateY(-3deg) rotateX(2deg);
-    transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-    position: relative;
-    border: 1px solid #f0f0f0;
-  }
-
-  .doc-preview:hover {
-    transform: rotateY(0deg) rotateX(0deg) scale(1.02);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    z-index: 20;
-  }
-
-  /* Paper Content */
-  .doc-header {
-    border-bottom: 3px double #1e293b;
-    padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-
-  .doc-title {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    font-weight: 900;
-    line-height: 1.2;
-    color: #000;
-    margin: 0.5rem 0;
-  }
-  
-  .doc-meta {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 2rem;
-    font-size: 0.85rem;
-  }
-
-  .doc-tag {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    color: #475569;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .doc-body {
-    font-family: var(--font-heading);
-    font-size: 1.15rem;
-    line-height: 1.9;
-    color: #334155;
-    text-align: justify;
-    white-space: pre-wrap;
-    min-height: 200px;
-  }
-
-  .doc-footer {
-     margin-top: auto;
-     border-top: 1px solid #e2e8f0;
-     padding-top: 2rem;
-     display: flex;
-     justify-content: space-between;
-     align-items: flex-end;
-     color: #94a3b8;
-     font-size: 0.8rem;
-  }
-
-  /* Mobile Responsive */
-  @media (max-width: 1024px) {
-    .main-grid {
-      grid-template-columns: 1fr;
-    }
-    .preview-col {
-      order: 2;
-      margin-top: 3rem;
-    }
-    .doc-preview {
-      transform: none !important;
-      min-height: auto;
-      box-shadow: var(--shadow-md);
-    }
-  }
-
-  @media (max-width: 640px) {
-    .form-grid { grid-template-columns: 1fr; }
-    .teacher-list-container ul { grid-template-columns: 1fr; }
-    .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
-    .btn-submit { width: 100%; justify-content: center; }
-
-    /* ── Mobile: remove the height cap so all teachers are visible without inner-scroll ── */
-    .teacher-list-container {
-      max-height: none !important;
-      overflow-y: visible !important;
-    }
-
-    /* ── Mobile: larger tap targets for teacher checkboxes ── */
-    .teacher-list-container label,
-    #id_teachers label {
-      padding: 0.85rem 0.9rem;
-      font-size: 1rem;
-      min-height: 48px;
-    }
-    .teacher-list-container input[type="checkbox"] {
-      width: 1.35rem;
-      height: 1.35rem;
-    }
-
-    /* ── Mobile: make select-all / clear buttons more prominent ── */
-    .teacher-tools {
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    #selectAllTeachers,
-    #clearAllTeachers {
-      min-height: 40px;
-      padding: 0.4rem 1rem;
-      border: 1px solid currentColor;
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-  }
-
-  /* Royal Ministry identity override */
-  .circular-page {
-    --c-primary: var(--brand, #006c35);
-    --c-primary-dark: var(--brand, #006c35);
-    --c-primary-light: rgba(0, 108, 53, .07);
-    --c-success: #16845b;
-    --c-text-main: var(--ink, #10251f);
-    --c-text-muted: var(--muted, #68766f);
-    --c-bg: var(--bg-body, #f4f7f3);
-    --c-card-bg: var(--card, #ffffff);
-    --c-border: rgba(185, 151, 91, .22);
-    --font-heading: var(--font, "Cairo", system-ui, sans-serif);
-    background:
-      radial-gradient(circle at 90% 0%, rgba(185, 151, 91, .13), transparent 30%),
-      linear-gradient(180deg, var(--c-bg), rgba(237, 245, 239, .75));
-  }
-
-  .app-card,
-  .doc-preview,
-  .teacher-selector {
-    border-color: rgba(185, 151, 91, .24);
-    box-shadow: 0 22px 58px rgba(16, 37, 31, .10);
-  }
-
-  .app-card-header {
-    background: linear-gradient(135deg, rgba(185, 151, 91, .12), rgba(0, 108, 53, .04));
-  }
-
-  .header-content h1 {
-    background: linear-gradient(135deg, var(--c-primary-dark), var(--royal-gold, #b9975b));
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-
-  .btn-submit,
-  .sig-badge {
-    background: linear-gradient(135deg, var(--c-primary), var(--royal-gold, #b9975b));
-    box-shadow: 0 14px 28px rgba(0, 108, 53, .22);
-  }
-
-  .sig-settings-box {
-    background: linear-gradient(135deg, rgba(185, 151, 91, .10), rgba(0, 108, 53, .06));
-    border-color: rgba(185, 151, 91, .45);
-  }
-
-  .doc-header {
-    border-bottom-color: var(--c-primary-dark);
-  }
-
-  .doc-title {
-    color: var(--c-primary-dark);
-  }
-
-  /* 👑 ROYAL OVERLAY — إرسال تعميم */
-  .circular-page .page-header{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 150% at 92% -20%, rgba(212,177,109,.22), transparent 48%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:22px !important; box-shadow:0 24px 56px -26px rgba(5,46,26,.7) !important;
-    padding:26px 24px !important; color:#fff !important;
-  }
-  .circular-page .page-header::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .circular-page .page-header h1{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .circular-page .page-header h1 i{ -webkit-text-fill-color:#e6cf9a !important; color:#e6cf9a !important; }
-  .circular-page .header-subtitle{ color:rgba(255,255,255,.82) !important; font-weight:800 !important; }
-  .circular-page .btn-primary,
-  .circular-page button[type="submit"].primary{
-    background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important;
-    box-shadow:0 10px 22px -12px rgba(10,92,51,.6) !important;
-  }
-
-  /* ===== الوضع الليلي ===== */
-  html[data-theme="dark"] .circular-page {
-    --c-text-main: #edf6f1;
-    --c-text-muted: #abc0b6;
-    --c-card-bg: #0d241d;
-    --c-border: rgba(205, 225, 216, .18);
-    --c-bg: transparent;
-    background:
-      radial-gradient(circle at 90% 0%, rgba(185, 151, 91, .10), transparent 30%),
-      transparent;
-  }
-  html[data-theme="dark"] .circular-page .app-card,
-  html[data-theme="dark"] .circular-page .teacher-selector {
-    border-color: rgba(205, 225, 216, .18);
-    box-shadow: 0 22px 58px rgba(0, 0, 0, .45);
-  }
-  html[data-theme="dark"] .circular-page .app-card-header {
-    background: linear-gradient(135deg, rgba(185, 151, 91, .10), rgba(0, 108, 53, .10));
-  }
-  html[data-theme="dark"] .circular-page .form-control,
-  html[data-theme="dark"] .circular-page input[type="text"],
-  html[data-theme="dark"] .circular-page input[type="file"],
-  html[data-theme="dark"] .circular-page input[type="date"],
-  html[data-theme="dark"] .circular-page input[type="url"],
-  html[data-theme="dark"] .circular-page input[type="search"],
-  html[data-theme="dark"] .circular-page textarea,
-  html[data-theme="dark"] .circular-page select {
-    background-color: #102920;
-    color: var(--c-text-main);
-    border-color: rgba(205, 225, 216, .18);
-  }
-  html[data-theme="dark"] .circular-page .teacher-selector,
-  html[data-theme="dark"] .circular-page .department-selector {
-    background: #102920;
-  }
-  html[data-theme="dark"] .circular-page .teacher-list-container label,
-  html[data-theme="dark"] .circular-page #id_teachers label {
-    background: #0d241d;
-    border-color: rgba(205, 225, 216, .18);
-    color: var(--c-text-main);
-  }
-  html[data-theme="dark"] .circular-page .header-actions .btn-link {
-    background: #0d241d;
-    color: var(--c-text-main);
-    border-color: rgba(205, 225, 216, .18);
-  }
-  /* معاينة المستند تبقى كورقة بيضاء واقعية حتى في الوضع الليلي */
-</style>
+<link rel="stylesheet" href="{% static 'css/circular-composer.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="circular-page" dir="rtl">
+<div class="twq-page circular-page" dir="rtl">
   <div class="circular-container">
 
-    <!-- HEADER -->
-    <header class="page-header">
-      <div class="header-content">
-        <h1>
-          <i class="fa-solid fa-feather-pointed u-text-c-primary"></i>
-          <span>إرسال تعميم رسمي</span>
-        </h1>
-        <div class="header-subtitle">
-          إصدار وثيقة رسمية لمنسوبي المدرسة تتطلب الاطلاع والتوقيع
-        </div>
+    <header class="twq-page-header page-header">
+      <div class="twq-page-header__heading header-content">
+        <span class="twq-page-header__eyebrow"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> المراسلات الرسمية</span>
+        <h1 class="twq-page-header__title">إنشاء تعميم رسمي</h1>
+        <p class="twq-page-header__lead header-subtitle">حدّد المستلمين، واكتب الوثيقة، وراجع متطلبات الإقرار قبل إرسالها.</p>
       </div>
-      <div class="header-actions">
-        <a href="{% url 'reports:circulars_sent' %}" class="btn-link">
-          <i class="fa-solid fa-box-archive"></i>
-          الأرشيف والمرسلة
+      <div class="twq-page-header__aside header-actions">
+        <a href="{% url 'reports:circulars_sent' %}" class="twq-btn twq-btn--secondary btn-link">
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> التعاميم المرسلة
         </a>
       </div>
     </header>
+    {% if reminder_context %}
+      <p class="composer__reminder" role="status">تم تجهيز قائمة المستلمين للتذكير بالتوثيق: <bdi>{{ reminder_context.count }}</bdi> حسابات. راجع القائمة قبل الإرسال.</p>
+    {% endif %}
 
     <div class="main-grid">
 
-      <!-- LEFT: FORM SECTION -->
       <section class="form-col">
         <div class="app-card">
           <div class="app-card-header">
             <h2>
-              <i class="fa-solid fa-pen-to-square"></i>
-              بيانات التعميم
+              إعداد التعميم
             </h2>
-            <div class="text-sm form-hint">الحقول بعلامة <span class="text-red">*</span> مطلوبة</div>
+            <div class="text-sm form-hint">الحقول الموسومة «مطلوب» إلزامية.</div>
           </div>
 
           <div class="app-card-body">
@@ -850,171 +51,154 @@
                 {% endif %}
                 
                 {% if form.non_field_errors %}
-                  <div class="error-list xs-send-circular-1">
+                  <div class="error-list composer__error-summary" role="alert">
                     {{ form.non_field_errors }}
                   </div>
                 {% endif %}
 
-                <div class="form-grid">
-
-                  <!-- Title -->
-                  <div class="full-width form-group">
-                    <label class="form-label" for="{{ form.title.id_for_label }}">{{ form.title.label }} <span class="text-red">*</span></label>
-                    {{ form.title }}
-                    {% if form.title.errors %}<div class="error-list">{{ form.title.errors }}</div>{% endif %}
-                  </div>
-
-                  <!-- Body -->
-                  <div class="full-width form-group">
-                    <label class="form-label" for="{{ form.message.id_for_label }}">{{ form.message.label }} <span class="text-red">*</span></label>
-                    {{ form.message }}
-                    {% if form.message.errors %}<div class="error-list">{{ form.message.errors }}</div>{% endif %}
-                  </div>
-
-                  <!-- Optional Filters (Department / School) -->
-                   {% if form.target_department %}
-                    <div class="full-width form-group" data-name="target_department">
-                        <div class="xs-send-circular-2">
-                          <label class="form-label">{{ form.target_department.label }}</label>
-                          <button type="button" id="clearAllDepartments" class="btn-link u-fs-sm">
-                            مسح الأقسام
-                          </button>
-                        </div>
-                        <div class="recipient-step">
-                          <span class="recipient-step-number">1</span>
-                          <span>اختر قسمًا أو أكثر لإضافة جميع أعضائه إلى مستلمي التعميم.</span>
-                        </div>
-                        <div class="department-selector" id="departmentList">
-                          {{ form.target_department }}
-                        </div>
-                        <div class="selected-departments" id="selectedDepartmentsPreview" aria-live="polite"></div>
-                        {% if form.target_department.help_text %}<div class="form-hint">{{ form.target_department.help_text }}</div>{% endif %}
-                        {% if form.target_department.errors %}<div class="error-list">{{ form.target_department.errors }}</div>{% endif %}
+                <div class="composer__sections">
+                  <section class="composer__section" aria-labelledby="circularIdentityHeading">
+                    <div class="composer__section-head">
+                      <span class="composer__step" aria-hidden="true">01</span>
+                      <div>
+                        <h3 id="circularIdentityHeading">هوية التعميم</h3>
+                        <p>عنوان واضح يظهر للمستلمين في سجل التعاميم.</p>
+                      </div>
                     </div>
-                  {% endif %}
-
-                  <!-- Attachment (Circulars only) -->
-                  {% if form.attachment %}
                     <div class="form-group">
-                        <label class="form-label" for="{{ form.attachment.id_for_label }}">{{ form.attachment.label }}</label>
-                        {{ form.attachment }}
-                        <div class="form-hint">يسمح بملف PDF أو صورة، بحد أقصى 5 ميجابايت.</div>
-                        {% if form.attachment.errors %}<div class="error-list">{{ form.attachment.errors }}</div>{% endif %}
-                        <div id="attachPreview" class="attach-preview u-hidden" aria-live="polite"></div>
+                      <label class="form-label" for="{{ form.title.id_for_label }}">{{ form.title.label }} <span class="composer__required">مطلوب</span></label>
+                      {{ form.title }}
+                      {% if form.title.errors %}<div class="error-list" id="titleErrors">{{ form.title.errors }}</div>{% endif %}
                     </div>
-                  {% endif %}
-                  
-                  <!-- Important Toggle -->
-                  <div class="full-width xs-send-circular-3">
                     {% if form.is_important %}
                       <label class="imp-toggle-row" for="{{ form.is_important.id_for_label }}">
-                         <span class="imp-toggle-text">
-                           <span class="t"><i class="fa-solid fa-fire xs-send-circular-4"></i> تعميم هام وعاجل</span>
-                           <small>يُبرز التعميم بشارة حمراء للمستلمين.</small>
-                         </span>
-                         {{ form.is_important }}
+                        {{ form.is_important }}
+                        <span class="imp-toggle-text"><span class="t">تعميم هام</span><small>تظهر للمستلمين علامة «هام».</small></span>
                       </label>
                     {% endif %}
-                  </div>
+                  </section>
 
-                  <!-- RECIPIENTS -->
-                  {% if form.teachers %}
-                  <div class="full-width field" data-name="teachers">
-                     <div class="form-group">
-                        <div class="u-flex u-justify-between u-items-center u-mb-05">
-                           <label class="form-label">
-                              {{ form.teachers.label }}
-                           </label>
-                           <span class="text-sm u-text-c-primary u-fw-700">
-                             أفراد محددون: <span id="selCount">0</span>
-                           </span>
+                  <section class="composer__section" aria-labelledby="circularAudienceHeading">
+                    <div class="composer__section-head">
+                      <span class="composer__step" aria-hidden="true">02</span>
+                      <div>
+                        <h3 id="circularAudienceHeading">الجهة والمستلمون</h3>
+                        <p>راجع نطاق الإرسال قبل نشر الوثيقة. تُزال الأسماء المكررة تلقائيًا.</p>
+                      </div>
+                    </div>
+                    {% if form.audience_scope %}
+                      <fieldset class="form-group">
+                        <legend class="form-label">{{ form.audience_scope.label }}</legend>
+                        {{ form.audience_scope }}
+                        {% if form.audience_scope.help_text %}<p class="form-hint">{{ form.audience_scope.help_text }}</p>{% endif %}
+                        {% if form.audience_scope.errors %}<div class="error-list">{{ form.audience_scope.errors }}</div>{% endif %}
+                      </fieldset>
+                    {% endif %}
+                    {% if form.target_school %}
+                      <div class="form-group">
+                        <label class="form-label" for="{{ form.target_school.id_for_label }}">{{ form.target_school.label }}</label>
+                        {{ form.target_school }}
+                        {% if form.target_school.help_text %}<p class="form-hint">{{ form.target_school.help_text }}</p>{% endif %}
+                        {% if form.target_school.errors %}<div class="error-list">{{ form.target_school.errors }}</div>{% endif %}
+                      </div>
+                    {% endif %}
+                    {% if form.target_department %}
+                      <fieldset class="form-group" data-name="target_department">
+                        <legend class="form-label">{{ form.target_department.label }}</legend>
+                        <div class="composer__field-heading">
+                          <button type="button" id="clearAllDepartments" class="twq-btn twq-btn--secondary">مسح الأقسام</button>
                         </div>
-                        {% if form.target_department %}
-                        <div class="recipient-step">
-                          <span class="recipient-step-number">2</span>
-                          <span>أضف حسابات فردية، سواء كانت داخل الأقسام المختارة أو خارجها.</span>
+                        <p class="form-hint">اختيار قسم يضيف أعضاءه إلى المستلمين.</p>
+                        <div class="department-selector" id="departmentList">{{ form.target_department }}</div>
+                        <div class="selected-departments" id="selectedDepartmentsPreview" aria-live="polite"></div>
+                        {% if form.target_department.errors %}<div class="error-list">{{ form.target_department.errors }}</div>{% endif %}
+                      </fieldset>
+                    {% endif %}
+                    {% if form.teachers %}
+                      <fieldset class="form-group" data-name="teachers">
+                        <legend class="form-label">{{ form.teachers.label }}</legend>
+                        <div class="composer__field-heading">
+                          <span class="form-hint">أفراد محددون: <bdi id="selCount">0</bdi></span>
                         </div>
-                        {% endif %}
-                        
+                        {% if form.teachers.help_text %}<p class="form-hint">{{ form.teachers.help_text }}</p>{% endif %}
                         <div class="teacher-selector">
-                           <div class="teacher-tools">
-                              <input type="search" id="teacherSearch" class="teacher-search" placeholder="ابحث باسم {{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}...">
-                              <button type="button" id="selectAllTeachers" class="btn-link u-text-c-primary u-fs-sm" title="اختيار جميع {{ SCHOOL_TEACHERS_OBJ_LABEL|default:"المعلمين" }}">
-                                <i class="fa-solid fa-check-double xs-send-circular-5"></i>الكل
-                              </button>
-                              <button type="button" id="clearAllTeachers" class="btn-link xs-send-circular-6" title="إلغاء تحديد الكل">
-                                <i class="fa-solid fa-xmark xs-send-circular-5"></i>إلغاء
-                              </button>
-                           </div>
-                           <p class="xs-send-circular-7">
-                             <i class="fa-solid fa-circle-info xs-send-circular-8"></i>
-                             اضغط على اسم {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }} لتحديده، أو اضغط "<strong>الكل</strong>" لتحديد الجميع دفعةً واحدة.
-                           </p>
-                           
-                           <div class="teacher-list-container" id="teacherList">
-                              {{ form.teachers }}
-                           </div>
-                         </div>
-                         <div class="recipient-summary" aria-live="polite">
-                           <strong>ملخص المستلمين</strong>
-                           <span id="recipientSummaryText">لم يتم تحديد مستلمين بعد</span>
-                         </div>
-                         <div id="recipientGuardMsg" class="recipient-alert" role="alert" aria-live="polite">
-                           <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-                           <span>قبل الإرسال، حدّد حسابًا واحدًا أو قسمًا واحدًا على الأقل.</span>
-                         </div>
-                         {% if form.teachers.errors %}<div class="error-list">{{ form.teachers.errors }}</div>{% endif %}
-                     </div>
-                  </div>
-                  {% endif %}
+                          <div class="teacher-tools">
+                            <label class="composer__visually-hidden" for="teacherSearch">البحث في المستلمين</label>
+                            <input type="search" id="teacherSearch" class="teacher-search" placeholder="ابحث باسم {{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}...">
+                            <button type="button" id="selectAllTeachers" class="twq-btn twq-btn--secondary">اختيار الكل</button>
+                            <button type="button" id="clearAllTeachers" class="twq-btn twq-btn--secondary">مسح الأفراد</button>
+                          </div>
+                          <div class="teacher-list-container" id="teacherList">{{ form.teachers }}</div>
+                        </div>
+                        <div class="recipient-summary" aria-live="polite">
+                          <strong>ملخص المستلمين</strong>
+                          <span id="recipientSummaryText">لم يتم تحديد مستلمين بعد</span>
+                        </div>
+                        <div id="recipientGuardMsg" class="recipient-alert" role="alert" aria-live="polite">
+                          حدّد حسابًا واحدًا أو قسمًا واحدًا على الأقل قبل الإرسال.
+                        </div>
+                        {% if form.teachers.errors %}<div class="error-list">{{ form.teachers.errors }}</div>{% endif %}
+                      </fieldset>
+                    {% endif %}
+                  </section>
 
-                  <!-- Signature Requirements -->
-                  <div class="full-width sig-settings-box">
-                    <div class="sig-badge">إلزامي</div>
-                    <div class="sig-header">
-                       <i class="fa-solid fa-signature"></i>
-                       إعدادات التوقيع والإقرار
+                  <section class="composer__section" aria-labelledby="circularContentHeading">
+                    <div class="composer__section-head">
+                      <span class="composer__step" aria-hidden="true">03</span>
+                      <div>
+                        <h3 id="circularContentHeading">نص الوثيقة</h3>
+                        <p>اكتب المحتوى الرسمي كما سيظهر للمستلمين.</p>
+                      </div>
                     </div>
-
-                    <div class="form-grid">
-                      <!-- Deadline -->
-                      {% if form.signature_deadline_at %}
-                        <div class="form-group">
-                          <label class="form-label">{{ form.signature_deadline_at.label }}</label>
-                          {{ form.signature_deadline_at }}
-                          <div class="form-hint">أقصى موعد مسموح للتوقيع</div>
-                          {% if form.signature_deadline_at.errors %}<div class="error-list">{{ form.signature_deadline_at.errors }}</div>{% endif %}
-                        </div>
-                      {% endif %}
-
-                      <!-- Action URL -->
-                      {% if form.action_url %}
-                        <div class="form-group">
-                          <label class="form-label">{{ form.action_url.label }}</label>
-                          {{ form.action_url }}
-                          <div class="form-hint">رابط زر إجراء (اختياري)</div>
-                        </div>
-                      {% endif %}
-
-                      <!-- Acknowledgement Text -->
-                      {% if form.signature_ack_text %}
-                        <div class="full-width form-group">
-                          <label class="form-label">{{ form.signature_ack_text.label }}</label>
-                          {{ form.signature_ack_text }}
-                        </div>
-                      {% endif %}
+                    <div class="form-group">
+                      <label class="form-label" for="{{ form.message.id_for_label }}">{{ form.message.label }} <span class="composer__required">مطلوب</span></label>
+                      {{ form.message }}
+                      {% if form.message.errors %}<div class="error-list">{{ form.message.errors }}</div>{% endif %}
                     </div>
-                  </div>
+                    {% if form.attachment %}
+                      <div class="form-group">
+                        <label class="form-label" for="{{ form.attachment.id_for_label }}">{{ form.attachment.label }}</label>
+                        {{ form.attachment }}
+                        <p class="form-hint">{{ form.attachment.help_text }}</p>
+                        {% if form.attachment.errors %}<div class="error-list">{{ form.attachment.errors }}</div>{% endif %}
+                        <div id="attachPreview" class="attach-preview u-hidden" aria-live="polite"></div>
+                      </div>
+                    {% endif %}
+                  </section>
 
+                  <section class="composer__section sig-settings-box" aria-labelledby="circularAckHeading">
+                    <div class="composer__section-head">
+                      <span class="composer__step" aria-hidden="true">04</span>
+                      <div>
+                        <h3 id="circularAckHeading">الإقرار والتوقيع</h3>
+                        <p>يتطلب هذا التعميم من كل مستلم إقرارًا بتوقيع مرسوم. يمكن تحديد مهلة ونص للإقرار.</p>
+                      </div>
+                    </div>
+                    {% if form.signature_deadline_at %}
+                      <div class="form-group">
+                        <label class="form-label" for="{{ form.signature_deadline_at.id_for_label }}">{{ form.signature_deadline_at.label }}</label>
+                        {{ form.signature_deadline_at }}
+                        <p class="form-hint">اتركه فارغًا إن لم تكن هناك مهلة للتوقيع.</p>
+                        {% if form.signature_deadline_at.errors %}<div class="error-list">{{ form.signature_deadline_at.errors }}</div>{% endif %}
+                      </div>
+                    {% endif %}
+                    {% if form.signature_ack_text %}
+                      <div class="form-group">
+                        <label class="form-label" for="{{ form.signature_ack_text.id_for_label }}">{{ form.signature_ack_text.label }}</label>
+                        {{ form.signature_ack_text }}
+                        {% if form.signature_ack_text.help_text %}<p class="form-hint">{{ form.signature_ack_text.help_text }}</p>{% endif %}
+                        {% if form.signature_ack_text.errors %}<div class="error-list">{{ form.signature_ack_text.errors }}</div>{% endif %}
+                      </div>
+                    {% endif %}
+                  </section>
                 </div>
-
                 <!-- Submit -->
                 <div class="form-actions">
-                  <button type="submit" class="btn-submit">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    <span>اعتماد ونشر التعميم</span>
+                  <button type="submit" class="twq-btn twq-btn--primary btn-submit">
+                    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                    <span>إرسال التعميم</span>
                   </button>
-                  <a href="{% if IS_SCHOOL_MANAGER %}{% url 'reports:admin_dashboard' %}{% else %}{% url 'reports:home' %}{% endif %}" class="btn-cancel">إلغاء والعودة</a>
+                  <a href="{% if IS_SCHOOL_MANAGER %}{% url 'reports:admin_dashboard' %}{% else %}{% url 'reports:home' %}{% endif %}" class="twq-btn twq-btn--secondary btn-cancel">إلغاء والعودة</a>
                 </div>
 
               </form>
@@ -1025,18 +209,13 @@
         </div>
       </section>
 
-      <!-- RIGHT: LIVE PREVIEW -->
-      <aside class="preview-col">
+      <aside class="preview-col" aria-label="معاينة التعميم">
           <div class="doc-preview">
              <!-- Header -->
              <div class="doc-header">
                 <div>
-                    <div class="doc-brand">نظام إدارة المدرسة</div>
+                    <div class="doc-brand">تعميم مدرسي · معاينة</div>
                     <div class="doc-title" id="pv_title">عنوان التعميم</div>
-                </div>
-                <!-- Logo Placehoder -->
-                <div class="xs-send-circular-9">
-                    <i class="fa-solid fa-school fa-3x"></i>
                 </div>
              </div>
              
@@ -1056,7 +235,7 @@
 
              <!-- Body -->
              <div class="doc-body" id="pv_body">
-                نص التعميم سيظهر هنا كما يراه {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}... يرجى الكتابة في الحقل المخصص للمعاينة الفورية.
+                نص التعميم سيظهر هنا كما يراه المستلم... يرجى الكتابة في الحقل المخصص للمعاينة الفورية.
              </div>
 
              <!-- Footer -->
@@ -1067,13 +246,13 @@
                    </span>
                 </div>
                 <div>
-                   <i class="fa-solid fa-fingerprint"></i> وثيقة إلكترونية معتمدة
+                   معاينة قبل الإرسال
                 </div>
              </div>
           </div>
           
-          <div class="xs-send-circular-11">
-             <i class="fa-solid fa-eye"></i> معاينة حية لشكل المستند
+          <div class="composer__preview-note">
+             <i class="fa-solid fa-eye" aria-hidden="true"></i> معاينة حية للنص؛ لا يُرسل التعميم حتى تضغط «إرسال التعميم».
           </div>
       </aside>
 
@@ -1118,20 +297,28 @@
     if(attachObjUrl){ try{ URL.revokeObjectURL(attachObjUrl); }catch(e){} attachObjUrl = null; }
 
     const f = inputs.file.files && inputs.file.files[0];
-    if(!f){ attachPreview.style.display = 'none'; attachPreview.innerHTML = ''; return; }
+    if(!f){ attachPreview.style.display = 'none'; attachPreview.replaceChildren(); return; }
 
     const sizeKB = (f.size/1024).toFixed(0) + 'KB';
     const isImg = (f.type || '').toLowerCase().startsWith('image/');
     attachPreview.style.display = 'block';
 
+    attachPreview.replaceChildren();
     if(isImg){
       attachObjUrl = URL.createObjectURL(f);
-      attachPreview.innerHTML =
-        '<img src="' + attachObjUrl + '" alt="معاينة المرفق" class="attach-thumb">' +
-        '<div class="attach-name">' + f.name + ' · ' + sizeKB + '</div>';
+      const image = document.createElement('img');
+      image.src = attachObjUrl;
+      image.alt = 'معاينة المرفق';
+      image.className = 'attach-thumb';
+      const name = document.createElement('div');
+      name.className = 'attach-name';
+      name.textContent = f.name + ' · ' + sizeKB;
+      attachPreview.append(image, name);
     } else {
-      attachPreview.innerHTML =
-        '<div class="attach-file"><i class="fa-solid fa-file-pdf"></i> ' + f.name + ' · ' + sizeKB + '</div>';
+      const file = document.createElement('div');
+      file.className = 'attach-file';
+      file.textContent = f.name + ' · ' + sizeKB;
+      attachPreview.appendChild(file);
     }
   }
 
@@ -1291,7 +478,7 @@
   const schoolSel = document.getElementById('id_target_school');
 
   async function refreshTeachers(){
-      if(!scopeSel && !schoolSel) return;
+      if((!scopeSel && !schoolSel) || !teacherList) return;
 
       const params = new URLSearchParams();
       params.set('mode', 'circular');
@@ -1307,19 +494,29 @@
          const data = await res.json();
          const results = data.results || [];
          
-         let html = '<ul>'; // Using UL structure
-         const fieldName = 'teachers';
-         
+         teacherList.replaceChildren();
          if(results.length === 0){
-            html = '<div class="xs-send-circular-12">لا يوجد مستلمون مطابقون.</div>';
+            const empty = document.createElement('div');
+            empty.className = 'xs-send-circular-12';
+            empty.textContent = 'لا يوجد مستلمون مطابقون.';
+            teacherList.appendChild(empty);
          } else {
+             const list = document.createElement('ul');
              results.forEach(t => {
-                // Generates structure compatible with CSS: label > input
-                html += `<li><label><input type="checkbox" name="${fieldName}" value="${t.id}"> <span>${t.name}</span></label></li>`;
+                const item = document.createElement('li');
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                const name = document.createElement('span');
+                input.type = 'checkbox';
+                input.name = 'teachers';
+                input.value = t.id;
+                name.textContent = t.name;
+                label.append(input, ' ', name);
+                item.appendChild(label);
+                list.appendChild(item);
              });
-             html += '</ul>';
+             teacherList.appendChild(list);
          }
-         teacherList.innerHTML = html;
          updateCount();
          
       } catch(e){

@@ -4,131 +4,115 @@
 {% block title %}التعاميم الواردة{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="{% static 'css/circulars-official.css' %}">
+<link rel="stylesheet" href="{% static 'css/circulars-list.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="cir-shell" dir="rtl">
-  <div class="cir-container">
-    <header class="cir-hero">
-      <div class="cir-hero__main">
-        <div class="cir-hero__eyebrow"><i class="fa-solid fa-landmark"></i> السجل الإداري الإلكتروني</div>
-        <h1>التعاميم الواردة</h1>
-        <p>اطّلع على التعاميم الرسمية الصادرة إليك، وتابع حالة القراءة والتوقيع من سجل واحد موثّق.</p>
+<div class="twq-page circulars-list" dir="rtl" aria-labelledby="circularsListTitle">
+  <header class="twq-page-header circulars-list__header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-landmark" aria-hidden="true"></i> السجل الإداري الإلكتروني</span>
+      <h1 class="twq-page-header__title" id="circularsListTitle">التعاميم الواردة</h1>
+      <p class="twq-page-header__lead">اطّلع على الوثائق الرسمية الصادرة إليك، وتابع القراءة والإقرار كلًّا على حدة.</p>
+    </div>
+    {% if NAV_SIGNATURES_PENDING %}
+    <div class="twq-page-header__aside circulars-list__header-aside">
+      <span class="circulars-list__pending-count"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> {{ NAV_SIGNATURES_PENDING }} بانتظار إقرارك</span>
+    </div>
+    {% endif %}
+  </header>
+
+  <section class="twq-section circulars-list__workspace" aria-labelledby="circularsListHeading">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">الوارد الرسمي</span>
+        <h2 class="twq-section__title" id="circularsListHeading">سجل التعاميم</h2>
+        <p class="twq-section__description">افتح الوثيقة لقراءة نصها ومرفقها. حالة القراءة لا تعني إكمال الإقرار.</p>
       </div>
-      {% if NAV_SIGNATURES_PENDING %}
-        <div class="cir-hero__actions">
-          <span class="cir-status cir-status--pending">
-            <i class="fa-solid fa-pen-nib"></i>
-            {{ NAV_SIGNATURES_PENDING }} بانتظار توقيعك
-          </span>
-        </div>
+      <span class="twq-section__meta">{{ page_obj.paginator.count }} تعميم</span>
+    </div>
+
+    <div class="circulars-list__toolbar">
+      <nav class="circulars-list__filters" aria-label="تصفية التعاميم حسب حالة الإقرار">
+        <a href="?status=all"{% if status_filter == 'all' %} aria-current="page"{% endif %}>الكل</a>
+        <a href="?status=pending"{% if status_filter == 'pending' %} aria-current="page"{% endif %}>بانتظار إقراري</a>
+        <a href="?status=closed"{% if status_filter == 'closed' %} aria-current="page"{% endif %}>انتهت المهلة</a>
+        <a href="?status=signed"{% if status_filter == 'signed' %} aria-current="page"{% endif %}>مكتملة</a>
+        <a href="?status=reading"{% if status_filter == 'reading' %} aria-current="page"{% endif %}>للاطلاع</a>
+      </nav>
+      {% if page_obj and page_obj.object_list %}
+      <form method="post" action="{% url 'reports:circulars_mark_all_read' %}" class="circulars-list__mark-read">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'reports:my_circulars' %}">
+        <button class="twq-btn twq-btn--secondary" type="submit"><i class="fa-solid fa-check-double" aria-hidden="true"></i> تحديد الكل كمقروء</button>
+      </form>
       {% endif %}
-    </header>
+    </div>
+    {% if status_filter and status_filter != 'all' %}
+    <div class="twq-toolbar__active-filters circulars-list__active-filters" aria-label="معيار العرض الحالي">
+      <span class="twq-toolbar__active-label">المحدد حاليًا:</span>
+      <span class="twq-filter-chip">{% if status_filter == 'pending' %}بانتظار إقراري{% elif status_filter == 'closed' %}انتهت المهلة{% elif status_filter == 'signed' %}مكتملة{% elif status_filter == 'reading' %}للاطلاع{% endif %}</span>
+      <a href="?status=all" class="circulars-list__clear-filter">عرض الكل</a>
+    </div>
+    {% endif %}
 
     {% if page_obj and page_obj.object_list %}
-      <section class="cir-toolbar" aria-label="أدوات التعاميم">
-        <div class="cir-toolbar__group">
-          <label class="cir-check" for="onlyUnsigned">
-            <input type="checkbox" id="onlyUnsigned">
-            <span>إظهار ما ينتظر توقيعي فقط</span>
-          </label>
-          <span class="cir-count" id="visibleCirculars" aria-live="polite"></span>
+    <div class="circulars-list__items" id="circularCards">
+      {% for r in page_obj %}
+      {% with n=r.notification %}
+      <article class="twq-document-item circulars-list__item{% if not r.is_read %} circulars-list__item--unread{% endif %}{% if r.is_signed %} is-signed{% endif %}" data-signed="{% if r.is_signed %}1{% else %}0{% endif %}" aria-labelledby="circularTitle{{ r.pk }}">
+        <span class="twq-document-item__icon circulars-list__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></span>
+        <div class="twq-document-item__content circulars-list__content">
+          <div class="circulars-list__title-row">
+            <h3 id="circularTitle{{ r.pk }}">{{ n.title|default:"تعميم رسمي" }}</h3>
+            {% if n.is_important %}<span class="circulars-list__important"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> هام</span>{% endif %}
+          </div>
+          <p class="circulars-list__excerpt">{{ n.message|default:n.body|default:n.content|default:n.text|default:n.details|default:""|truncatechars:155 }}</p>
+          <div class="circulars-list__meta">
+            <span><i class="fa-regular fa-user" aria-hidden="true"></i> {% firstof n.created_by.name n.created_by.phone "إدارة المدرسة" %}</span>
+            <time datetime="{{ r.created_at|date:'c' }}"><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ r.created_at|date:"Y/m/d — H:i" }}</time>
+            {% if n.signature_deadline_at %}<span><i class="fa-regular fa-clock" aria-hidden="true"></i> آخر إقرار: {{ n.signature_deadline_at|date:"Y/m/d — H:i" }}</span>{% endif %}
+            {% if n.attachment %}<span class="circulars-list__attachment"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> يحتوي مرفقًا</span>{% endif %}
+          </div>
         </div>
-        <form method="post" action="{% url 'reports:circulars_mark_all_read' %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{% url 'reports:my_circulars' %}">
-          <button class="cir-btn" type="submit">
-            <i class="fa-solid fa-check-double"></i>
-            تحديد الكل كمقروء
-          </button>
-        </form>
-      </section>
-
-      <section class="cir-inbox" id="circularCards" aria-label="قائمة التعاميم">
-        {% for r in page_obj %}
-          {% with n=r.notification %}
-          <article class="cir-inbox-card{% if r.is_signed %} is-signed{% endif %}" data-signed="{% if r.is_signed %}1{% else %}0{% endif %}">
-            <div class="cir-inbox-card__seal" aria-hidden="true">
-              <i class="fa-solid {% if r.is_signed %}fa-file-circle-check{% else %}fa-file-signature{% endif %}"></i>
-            </div>
-
-            <div>
-              <h2 class="cir-inbox-card__title">{{ n.title|default:"تعميم رسمي" }}</h2>
-              <p class="cir-inbox-card__excerpt">
-                {{ n.message|default:n.body|default:n.content|default:n.text|default:n.details|default:""|truncatechars:155 }}
-              </p>
-              <div class="cir-meta">
-                <span><i class="fa-regular fa-calendar"></i> {{ r.created_at|date:"Y/m/d — H:i" }}</span>
-                <span><i class="fa-regular fa-user"></i> {% firstof n.created_by.name n.created_by.phone "إدارة المدرسة" %}</span>
-                {% if n.signature_deadline_at %}
-                  <span><i class="fa-regular fa-clock"></i> آخر توقيع: {{ n.signature_deadline_at|date:"Y/m/d — H:i" }}</span>
-                {% endif %}
-                {% if n.is_important %}<span><i class="fa-solid fa-circle-exclamation"></i> هام</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="cir-inbox-card__action">
-              {% if r.is_signed %}
-                <span class="cir-status cir-status--signed"><i class="fa-solid fa-shield-halved"></i> مكتمل</span>
-              {% else %}
-                <span class="cir-status cir-status--pending"><i class="fa-solid fa-pen-nib"></i> توقيع مطلوب</span>
-              {% endif %}
-              <a class="cir-btn cir-btn--primary" href="{% url 'reports:my_circular_detail' r.pk %}">
-                <span>{% if r.is_signed %}عرض الوثيقة{% else %}اطلاع وتوقيع{% endif %}</span>
-                <i class="fa-solid fa-arrow-left"></i>
-              </a>
-            </div>
-          </article>
-          {% endwith %}
-        {% endfor %}
-      </section>
-
-      {% if page_obj.paginator.num_pages > 1 %}
-      <nav class="cir-pagination" aria-label="صفحات التعاميم">
-        {% if page_obj.has_previous %}
-          <a class="cir-btn" href="?page={{ page_obj.previous_page_number }}"><i class="fa-solid fa-arrow-right"></i> السابق</a>
-        {% endif %}
-        <span class="cir-pagination__label">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-          <a class="cir-btn" href="?page={{ page_obj.next_page_number }}">التالي <i class="fa-solid fa-arrow-left"></i></a>
-        {% endif %}
-      </nav>
-      {% endif %}
+        <div class="twq-document-item__actions circulars-list__actions">
+          <div class="circulars-list__states">
+            {% if r.is_read %}<span class="twq-status twq-status--info">مقروء</span>{% else %}<span class="twq-status twq-status--warning">غير مقروء</span>{% endif %}
+            {% if not n.requires_signature %}
+            <span class="twq-status twq-status--info">للاطلاع فقط</span>
+            {% elif r.is_signed %}
+            <span class="twq-status twq-status--success">اكتمل الإقرار</span>
+            {% elif n.signature_deadline_at and n.signature_deadline_at < now %}
+            <span class="twq-status twq-status--draft">انتهت المهلة</span>
+            {% else %}
+            <span class="twq-status twq-status--warning">بانتظار إقرارك</span>
+            {% endif %}
+          </div>
+          <a class="twq-btn twq-btn--secondary circulars-list__open" href="{% url 'reports:my_circular_detail' r.pk %}" aria-label="{% if not n.requires_signature or r.is_signed %}عرض الوثيقة{% elif n.signature_deadline_at and n.signature_deadline_at < now %}عرض الوثيقة{% else %}اطلاع وإقرار{% endif %}: {{ n.title|default:'تعميم رسمي' }}">
+            {% if not n.requires_signature or r.is_signed %}عرض الوثيقة{% elif n.signature_deadline_at and n.signature_deadline_at < now %}عرض الوثيقة{% else %}اطلاع وإقرار{% endif %}
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          </a>
+        </div>
+      </article>
+      {% endwith %}
+      {% endfor %}
+    </div>
     {% else %}
-      <section class="cir-empty">
-        <div class="cir-empty__icon"><i class="fa-regular fa-folder-open"></i></div>
-        <h2>لا توجد تعاميم واردة</h2>
-        <p>ستظهر هنا التعاميم الرسمية التي تصدرها إدارة المدرسة وتتطلب اطلاعك أو توقيعك.</p>
-      </section>
+    <div class="twq-empty twq-empty--page circulars-list__empty">
+      <span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-folder-open"></i></span>
+      <h3 class="twq-empty__title">{% if status_filter and status_filter != 'all' %}لا توجد تعاميم بهذه الحالة{% else %}لا توجد تعاميم واردة{% endif %}</h3>
+      <p class="twq-empty__message">{% if status_filter and status_filter != 'all' %}جرّب حالة أخرى أو اعرض جميع التعاميم الواردة في نطاقك.{% else %}ستظهر هنا التعاميم الرسمية التي تصدرها إدارة المدرسة للاطلاع أو الإقرار.{% endif %}</p>
+      {% if status_filter and status_filter != 'all' %}<a href="?status=all" class="twq-btn twq-btn--secondary">عرض جميع التعاميم</a>{% endif %}
+    </div>
     {% endif %}
-  </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="twq-pagination circulars-list__pagination" aria-label="صفحات التعاميم">
+      {% if page_obj.has_previous %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?status={{ status_filter|urlencode }}&amp;page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}
+      <span class="twq-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?status={{ status_filter|urlencode }}&amp;page={{ page_obj.next_page_number }}">التالي</a>{% endif %}
+    </nav>
+    {% endif %}
+  </section>
 </div>
-
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-(function () {
-  const filter = document.getElementById('onlyUnsigned');
-  const list = document.getElementById('circularCards');
-  const count = document.getElementById('visibleCirculars');
-  if (!filter || !list) return;
-
-  filter.checked = sessionStorage.getItem('circulars_only_unsigned') === 'true';
-
-  function applyFilter() {
-    const onlyUnsigned = filter.checked;
-    let visible = 0;
-    list.querySelectorAll('.cir-inbox-card').forEach((card) => {
-      const signed = card.dataset.signed === '1';
-      const show = !onlyUnsigned || !signed;
-      card.hidden = !show;
-      if (show) visible += 1;
-    });
-    sessionStorage.setItem('circulars_only_unsigned', String(onlyUnsigned));
-    if (count) count.textContent = visible + ' تعميم معروض';
-  }
-
-  filter.addEventListener('change', applyFilter);
-  applyFilter();
-})();
-</script>
 {% endblock %}

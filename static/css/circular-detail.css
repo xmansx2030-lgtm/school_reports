@@ -1,0 +1,236 @@
+/* Recipient reading workspace. The official paper/print rules remain in circulars-official.css. */
+@media screen {
+  .circular-view-page {
+    min-block-size: 0;
+    padding: 0;
+    color: var(--twq-text);
+    background: var(--twq-surface-secondary);
+  }
+
+  .circular-view-page .cir-container {
+    inline-size: 100%;
+  }
+
+  .circular-detail__header {
+    margin-block-end: var(--twq-space-6);
+  }
+
+  .circular-detail__header .twq-page-header__title {
+    overflow-wrap: anywhere;
+  }
+
+  .circular-detail__header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--twq-space-2) var(--twq-space-4);
+    margin-block-start: var(--twq-space-5);
+    color: var(--twq-hero-text-muted);
+    font-size: var(--twq-font-size-sm);
+  }
+
+  .circular-detail__header-meta > :is(span, time):not(.twq-status) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--twq-space-2);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .circular-detail__header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--twq-space-2);
+  }
+
+  .circular-detail__header-action {
+    min-block-size: 44px;
+    white-space: nowrap;
+  }
+
+  .circular-view-page .cir-document-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 19rem);
+    gap: var(--twq-space-5);
+  }
+
+  .circular-view-page .cir-document {
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+
+  .circular-view-page .cir-document__title,
+  .circular-view-page .cir-document__heading-meta {
+    overflow-wrap: anywhere;
+  }
+
+  /* The official white paper keeps its own ink tone even when the app is dark. */
+  .circular-view-page .cir-document__title {
+    color: var(--cir-forest-950) !important;
+  }
+
+  .circular-view-page .cir-document__body {
+    white-space: normal;
+  }
+
+  .circular-detail__side {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--twq-space-4);
+  }
+
+  .circular-detail__side .cir-panel,
+  .circular-detail__acknowledgement,
+  .circular-detail__state-panel {
+    min-inline-size: 0;
+    border: 1px solid var(--twq-border);
+    border-radius: var(--twq-radius-lg);
+    background: var(--twq-surface);
+    box-shadow: var(--twq-shadow-sm);
+  }
+
+  .circular-detail__state-panel {
+    display: grid;
+    justify-items: start;
+    gap: var(--twq-space-3);
+    padding: var(--twq-space-4);
+    border-inline-start: 3px solid var(--twq-accent);
+  }
+
+  .circular-detail__state-panel p {
+    margin: 0;
+    color: var(--twq-text-secondary);
+    font-size: var(--twq-font-size-sm);
+    line-height: var(--twq-line-height-relaxed);
+  }
+
+  .circular-detail__state-panel .twq-btn {
+    inline-size: 100%;
+    text-align: center;
+  }
+
+  .circular-detail__side .cir-panel__head,
+  .circular-detail__acknowledgement .cir-panel__head {
+    margin: 0;
+    color: var(--twq-text);
+    background: var(--twq-surface-secondary);
+    border-block-end-color: var(--twq-border);
+  }
+
+  .circular-detail__side .cir-info-row {
+    border-block-end-color: var(--twq-border);
+  }
+
+  .circular-detail__side .cir-info-row dt {
+    color: var(--twq-text-muted);
+  }
+
+  .circular-detail__side .cir-info-row dd {
+    color: var(--twq-text);
+    overflow-wrap: anywhere;
+  }
+
+  .circular-detail__attachment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .circular-detail__attachment .twq-document-item__icon {
+    display: none;
+  }
+
+  .circular-detail__attachment .twq-document-item__actions {
+    justify-content: stretch;
+  }
+
+  .circular-detail__attachment .twq-btn {
+    inline-size: 100%;
+  }
+
+  .circular-detail__acknowledgement {
+    max-inline-size: 50rem;
+    margin-block-start: var(--twq-space-6);
+    border-block-start: 3px solid var(--twq-accent);
+  }
+
+  .circular-detail__acknowledgement .cir-signature__declaration,
+  .circular-detail__acknowledgement .cir-ack {
+    color: var(--twq-text);
+    background: var(--twq-surface-secondary);
+    border-color: var(--twq-border);
+  }
+
+  .circular-detail__acknowledgement .hs-field {
+    background: var(--twq-surface-secondary);
+    border-color: var(--twq-border);
+    box-shadow: none;
+  }
+
+  .circular-detail__acknowledgement .hs-field__header strong {
+    color: var(--twq-text);
+  }
+
+  .circular-detail__acknowledgement .hs-field__header span,
+  .circular-detail__acknowledgement .hs-field__message {
+    color: var(--twq-text-secondary);
+  }
+
+  .circular-detail__acknowledgement .hs-field__clear {
+    color: var(--twq-text);
+    background: var(--twq-surface);
+    border-color: var(--twq-border);
+  }
+
+  .circular-detail__acknowledgement .cir-sign-submit:focus-visible,
+  .circular-detail__acknowledgement .hs-field__clear:focus-visible {
+    outline: 3px solid var(--twq-focus);
+    outline-offset: 2px;
+  }
+}
+
+@media screen and (max-width: 64rem) {
+  .circular-view-page .cir-document-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .circular-detail__side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .circular-detail__state-panel {
+    grid-column: 1 / -1;
+  }
+
+  .circular-detail__acknowledgement {
+    max-inline-size: none;
+  }
+}
+
+@media screen and (max-width: 48rem) {
+  .circular-detail__header-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .circular-detail__side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media screen and (max-width: 40rem) {
+  .circular-detail__header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .circular-detail__header-actions .twq-btn {
+    min-inline-size: 0;
+    padding-inline: var(--twq-space-2);
+    font-size: var(--twq-font-size-sm);
+    white-space: normal;
+  }
+
+  .circular-view-page .cir-document {
+    padding-inline: var(--twq-space-5);
+  }
+}
