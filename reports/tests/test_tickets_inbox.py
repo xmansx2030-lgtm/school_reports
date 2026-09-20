@@ -1,4 +1,7 @@
+import html
+import re
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from django.conf import settings
 from django.test import TestCase, override_settings
@@ -382,7 +385,7 @@ class TicketsInboxViewTests(TestCase):
         self.assertContains(response, "مسح")
         self.assertContains(
             response,
-            f'href="{reverse("reports:tickets_inbox")}" class="btn btn-outline"',
+            f'href="{reverse("reports:tickets_inbox")}" class="twq-btn twq-btn--secondary"',
         )
 
     def test_tickets_inbox_clear_button_is_hidden_without_active_filters(self):
@@ -405,6 +408,59 @@ class TicketsInboxViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, ">مسح<", html=False)
+
+    def test_inbox_pilot_keeps_desktop_mobile_status_and_detail_links(self):
+        ticket = Ticket.objects.create(
+            creator=self.user,
+            assignee=self.user,
+            school=self.school,
+            is_platform=False,
+            title="طلب وارد للمتابعة",
+            body="تفاصيل الطلب",
+            status=Ticket.Status.IN_PROGRESS,
+        )
+        self._enter_school()
+
+        response = self.client.get(reverse("reports:tickets_inbox"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "css/requests-inbox.css")
+        self.assertContains(response, 'class="twq-table requests-inbox__table"')
+        self.assertContains(response, 'class="requests-inbox__cards"')
+        self.assertContains(response, "twq-status--warning", count=2)
+        self.assertContains(response, reverse("reports:ticket_detail", args=[ticket.pk]))
+        source = (Path(settings.BASE_DIR) / "reports/templates/reports/tickets_inbox.html").read_text(encoding="utf-8")
+        self.assertNotIn("<style", source)
+
+    def test_manager_inbox_pagination_preserves_search_status_and_mine(self):
+        Ticket.objects.bulk_create(
+            [
+                Ticket(
+                    creator=self.user,
+                    assignee=self.user,
+                    school=self.school,
+                    is_platform=False,
+                    title=f"متابعة وارد {index}",
+                    body="تفاصيل البحث",
+                    status=Ticket.Status.OPEN,
+                )
+                for index in range(26)
+            ]
+        )
+        self._enter_school()
+
+        response = self.client.get(
+            reverse("reports:manager_school_tickets"),
+            {"q": "متابعة وارد", "status": Ticket.Status.OPEN, "mine": "1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "twq-toolbar__active-filters")
+        next_link = re.search(r'<a[^>]+href="([^"]+)"[^>]*>التالي</a>', response.content.decode())
+        self.assertIsNotNone(next_link)
+        query = parse_qs(urlsplit(html.unescape(next_link.group(1))).query)
+        self.assertEqual(query, {"page": ["2"], "q": ["متابعة وارد"], "status": ["open"], "mine": ["1"]})
+        self.assertEqual(response.context["tickets"].paginator.num_pages, 2)
 
     def _closed_ticket(self):
         return Ticket.objects.create(
