@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}أرشيف الوثائق | منصة توثيق{% endblock %}
 
@@ -7,9 +7,6 @@
 {% include "reports/_assignment_theme.html" %}
 {% include "reports/_document_theme.html" %}
 <style nonce="{{ CSP_NONCE }}">
-  .doc-grid { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); align-items: start; }
-  @media (max-width: 980px) { .doc-grid { grid-template-columns: 1fr; } }
-
   /* لوحة الرفع تلاصق أعلى الشاشة: الموظف يرفع عدة وثائق تباعاً، وإرجاعه
      إلى أعلى الصفحة بعد كل تمرير يجعل المهمة اليومية رحلة تمرير. */
   .doc-side { position: sticky; top: 1rem; }
@@ -44,151 +41,80 @@
   .doc-prog__label { font-size: .76rem; font-weight: 800; color: var(--asg-muted); margin-top: .35rem; text-align: center; }
   .doc-alert { margin-top: .7rem; font-size: .78rem; font-weight: 700; color: var(--asg-danger); line-height: 1.7; }
 
-  /* ── شبكة الوثائق ─────────────────────────────────────────── */
-  .doc-cards { display: grid; gap: .7rem; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); margin-top: 1.1rem; }
-  .doc-card {
-    position: relative; overflow: hidden; display: flex; flex-direction: column; gap: .5rem;
-    border: 1px solid var(--asg-line); border-radius: 15px; padding: .9rem;
-    background: var(--asg-surface); box-shadow: var(--doc-shadow);
-  }
-  .doc-card:hover { border-color: color-mix(in srgb, var(--k) 55%, transparent); box-shadow: var(--doc-shadow-lift); transform: translateY(-2px); }
-  .doc-card::before { content: ""; position: absolute; inset-block-start: 0; inset-inline: 0; height: 3px; background: var(--k); opacity: .85; }
-  .doc-card__top { display: flex; gap: .6rem; align-items: flex-start; }
-  .doc-card__title { font-size: .89rem; font-weight: 800; line-height: 1.55; overflow-wrap: anywhere; }
-  .doc-card__title a { color: inherit; text-decoration: none; }
-  .doc-card__title a::after { content: ""; position: absolute; inset: 0; }
-  .doc-card:hover .doc-card__title a { color: var(--k); }
-  .doc-card__meta { font-size: .74rem; color: var(--asg-muted); line-height: 1.7; }
-  .doc-card__foot { display: flex; gap: .3rem; flex-wrap: wrap; align-items: center; margin-top: auto; padding-top: .45rem; border-top: 1px solid var(--asg-line); }
-
-  .doc-filters { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); align-items: end; }
-  .doc-pager { display: flex; gap: .6rem; align-items: center; justify-content: center; margin-top: 1.2rem; flex-wrap: wrap; }
-  .doc-pager__n { font-size: .8rem; font-weight: 700; color: var(--asg-muted); }
 </style>
+<link rel="stylesheet" href="{% static 'css/archive-list.css' %}?v=20260920.1">
 {% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <span class="asg-hero__eyebrow">
-      <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
-      التوثيق والأرشفة
-    </span>
-    <h1 class="asg-hero__title">أرشيف الوثائق</h1>
-    <p class="asg-hero__meta">
-      ترفع الوثيقة وتصنّفها بالسنة والقسم والنوع، ثم يُعتمد نقلها إلى الأرشيف —
-      فالأرشفة قرار لا مجرّد رفع.
-    </p>
+<div class="asg-page twq-page archive-list-page">
+  <header class="twq-page-header archive-list-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-folder-tree" aria-hidden="true"></i> التوثيق والأرشفة</span>
+      <h1 class="twq-page-header__title">أرشيف الوثائق</h1>
+      <p class="twq-page-header__lead">ابحث في وثائق المدرسة حسب العنوان أو السنة أو القسم أو النوع. تظل الوثيقة مسودة حتى يُعتمد نقلها إلى الأرشيف.</p>
+      <dl class="twq-page-header__context">
+        <div><dt>المدرسة</dt><dd>{{ active_school.name }}</dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside" aria-label="ملخص الوثائق">
+      <span class="archive-list-header__count">{{ page_obj.paginator.count }} {% if has_filters %}نتيجة مطابقة{% else %}وثيقة متاحة{% endif %}</span>
+      <span class="archive-list-header__secondary">{{ archived_count }} مؤرشفة معتمدة</span>
+    </div>
   </header>
-
-  <section class="asg-kpis" aria-label="ملخص الأرشيف">
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ page_obj.paginator.count }}</div>
-      <div class="asg-kpi__l">{% if has_filters %}نتيجة مطابقة{% else %}وثيقة{% endif %}</div>
-    </article>
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ archived_count }}</div>
-      <div class="asg-kpi__l">مؤرشَفة معتمَدة</div>
-    </article>
-    {% if may_review %}
-      <article class="asg-kpi" data-tone="warn">
-        <div class="asg-kpi__v">{{ pending|length }}</div>
-        <div class="asg-kpi__l">تنتظر اعتماد الأرشفة</div>
-      </article>
-    {% endif %}
-  </section>
 
   <div class="doc-grid">
     <div>
-      {% if pending %}
-        <section class="asg-card">
-          <h2 class="asg-card__title">
-            <i class="fa-solid fa-hourglass-half xs-document-archive-1" aria-hidden="true"></i>
-            تنتظر اعتماد الأرشفة
-          </h2>
-          <p class="asg-card__hint">راجع بياناتها وتصنيفها ثم اعتمد نقلها أو أعِدها بملاحظة.</p>
-          {% for item in pending %}
-            <article class="asg-item doc-kind" data-kind="{{ item.kind }}" data-soon="1">
-              <span class="doc-ico" aria-hidden="true">
-                {% if item.kind == 'minutes' %}<i class="fa-solid fa-file-signature"></i>
-                {% elif item.kind == 'financial' %}<i class="fa-solid fa-file-invoice-dollar"></i>
-                {% elif item.kind == 'contract' %}<i class="fa-solid fa-file-contract"></i>
-                {% elif item.kind == 'certificate' %}<i class="fa-solid fa-award"></i>
-                {% elif item.kind == 'circular' %}<i class="fa-solid fa-bullhorn"></i>
-                {% elif item.kind == 'letter' %}<i class="fa-solid fa-envelope-open-text"></i>
-                {% elif item.kind == 'form' %}<i class="fa-solid fa-file-pen"></i>
-                {% elif item.kind == 'report' %}<i class="fa-solid fa-chart-simple"></i>
-                {% else %}<i class="fa-solid fa-file-lines"></i>{% endif %}
-              </span>
-              <div class="asg-item__main">
-                <div class="asg-item__title">
-                  <a href="{% url 'reports:document_detail' item.pk %}">{{ item.title }}</a>
-                </div>
-                <div class="asg-item__sub">
-                  {{ item.owner_name|default:"—" }} · {{ item.get_kind_display }}
-                  {% if item.academic_year %} · {{ item.academic_year }} هـ{% endif %}
-                  {% if item.department %} · {{ item.department.name }}{% endif %}
-                </div>
-              </div>
-              <div class="asg-item__side">
-                <span class="doc-state" data-s="pending">{{ item.get_approval_state_display }}</span>
-                <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{% url 'reports:document_detail' item.pk %}">مراجعة</a>
-              </div>
-            </article>
-          {% endfor %}
-        </section>
-      {% endif %}
-
-      <section class="asg-card">
-        <h2 class="asg-card__title">
-          <i class="fa-solid fa-magnifying-glass xs-document-archive-2" aria-hidden="true"></i>
-          البحث في الوثائق
-        </h2>
-        <p class="asg-card__hint">
-          ثلاثة محاور مجتمعة — السنة والقسم والنوع. ومحورٌ واحد يترك الباحث
-          يقلّب مئات النتائج.
-        </p>
-
-        <form method="get" class="doc-filters">
-          <div class="asg-field u-m-0">
-            <label for="f-q">بحث بالعنوان</label>
-            <input type="text" id="f-q" name="q" value="{{ q_term }}" placeholder="كلمة من العنوان…">
+      <section class="twq-section archive-list-results" aria-labelledby="archiveSearchTitle">
+        <div class="twq-section__header">
+          <div>
+            <span class="twq-section__kicker">استرجاع الوثائق</span>
+            <h2 class="twq-section__title" id="archiveSearchTitle">ابحث في الأرشيف</h2>
+            <p class="twq-section__description">ابحث في العنوان والوصف، ثم ضيّق النتائج بالسنة أو القسم أو نوع الوثيقة.</p>
           </div>
-          <div class="asg-field u-m-0">
-            <label for="f-year">السنة</label>
-            <select id="f-year" name="year">
+        </div>
+
+        <form method="get" class="twq-toolbar archive-list-toolbar" role="search" aria-label="البحث والتصفية في أرشيف الوثائق">
+          <div class="twq-toolbar__search">
+            <label class="twq-label" for="f-q">عنوان الوثيقة أو وصفها</label>
+            <div class="twq-toolbar__control">
+              <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <input class="twq-control" type="search" id="f-q" name="q" value="{{ q_term }}" placeholder="ابحث في الوثائق…">
+            </div>
+          </div>
+          <div class="twq-toolbar__field">
+            <label class="twq-label" for="f-year">السنة الدراسية</label>
+            <select class="twq-control" id="f-year" name="year">
               <option value="">كل السنوات</option>
               {% for year in years %}
                 <option value="{{ year }}" {% if q_year == year %}selected{% endif %}>{{ year }} هـ</option>
               {% endfor %}
             </select>
           </div>
-          <div class="asg-field u-m-0">
-            <label for="f-dept">القسم</label>
-            <select id="f-dept" name="department">
+          <div class="twq-toolbar__field">
+            <label class="twq-label" for="f-dept">القسم</label>
+            <select class="twq-control" id="f-dept" name="department">
               <option value="">كل الأقسام</option>
               {% for dept in departments %}
                 <option value="{{ dept.pk }}" {% if q_department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="asg-field u-m-0">
-            <label for="f-kind">النوع</label>
-            <select id="f-kind" name="kind">
+          <div class="twq-toolbar__field">
+            <label class="twq-label" for="f-kind">نوع الوثيقة</label>
+            <select class="twq-control" id="f-kind" name="kind">
               <option value="">كل الأنواع</option>
               {% for value, label in kinds %}
                 <option value="{{ value }}" {% if q_kind == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="u-flex u-gap-05 u-wrap">
-            <button type="submit" class="asg-btn asg-btn--primary">
+          <div class="twq-toolbar__actions">
+            <button type="submit" class="twq-btn twq-btn--primary">
               <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
               بحث
             </button>
             {% if has_filters %}
-              <a class="asg-btn asg-btn--ghost" href="{% url 'reports:document_archive' %}">إلغاء الكل</a>
+              <a class="twq-btn twq-btn--ghost" href="{% url 'reports:document_archive' %}">مسح الفلاتر</a>
             {% endif %}
           </div>
         </form>
@@ -198,91 +124,99 @@
         الباحث «لا نتائج» ولا يعرف أيُّ مرشّحٍ أخفى ما يبحث عنه.
         {% endcomment %}
         {% if has_filters %}
-          <div class="doc-chips" aria-label="المرشّحات الفعّالة">
+          <div class="twq-toolbar__active-filters" aria-label="الفلاتر النشطة">
+            <span class="twq-toolbar__active-label">الفلاتر النشطة</span>
             {% if q_term %}
-              <a class="doc-chip" href="?{% if q_year %}year={{ q_year|urlencode }}&{% endif %}{% if q_department %}department={{ q_department|urlencode }}&{% endif %}{% if q_kind %}kind={{ q_kind|urlencode }}{% endif %}">
-                <span>«{{ q_term }}»</span>
-                <span class="doc-chip__x" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span>
+              <a class="twq-filter-chip" href="?{% if q_year %}year={{ q_year|urlencode }}&{% endif %}{% if q_department %}department={{ q_department|urlencode }}&{% endif %}{% if q_kind %}kind={{ q_kind|urlencode }}{% endif %}" aria-label="إزالة بحث {{ q_term }}">
+                <span>بحث: «{{ q_term }}»</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
               </a>
             {% endif %}
             {% if q_year %}
-              <a class="doc-chip" href="?{% if q_term %}q={{ q_term|urlencode }}&{% endif %}{% if q_department %}department={{ q_department|urlencode }}&{% endif %}{% if q_kind %}kind={{ q_kind|urlencode }}{% endif %}">
-                <span>{{ q_year }} هـ</span>
-                <span class="doc-chip__x" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span>
+              <a class="twq-filter-chip" href="?{% if q_term %}q={{ q_term|urlencode }}&{% endif %}{% if q_department %}department={{ q_department|urlencode }}&{% endif %}{% if q_kind %}kind={{ q_kind|urlencode }}{% endif %}" aria-label="إزالة فلتر السنة {{ q_year }}">
+                <span>السنة: {{ q_year }} هـ</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
               </a>
             {% endif %}
             {% if q_department %}
-              <a class="doc-chip" href="?{% if q_term %}q={{ q_term|urlencode }}&{% endif %}{% if q_year %}year={{ q_year|urlencode }}&{% endif %}{% if q_kind %}kind={{ q_kind|urlencode }}{% endif %}">
-                <span>القسم المحدَّد</span>
-                <span class="doc-chip__x" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span>
+              <a class="twq-filter-chip" href="?{% if q_term %}q={{ q_term|urlencode }}&{% endif %}{% if q_year %}year={{ q_year|urlencode }}&{% endif %}{% if q_kind %}kind={{ q_kind|urlencode }}{% endif %}" aria-label="إزالة فلتر القسم">
+                <span>القسم المحدد{% for dept in departments %}{% if q_department == dept.pk|stringformat:"s" %}: {{ dept.name }}{% endif %}{% endfor %}</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
               </a>
             {% endif %}
             {% if q_kind %}
-              <a class="doc-chip" href="?{% if q_term %}q={{ q_term|urlencode }}&{% endif %}{% if q_year %}year={{ q_year|urlencode }}&{% endif %}{% if q_department %}department={{ q_department|urlencode }}{% endif %}">
-                <span>النوع المحدَّد</span>
-                <span class="doc-chip__x" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span>
+              <a class="twq-filter-chip" href="?{% if q_term %}q={{ q_term|urlencode }}&{% endif %}{% if q_year %}year={{ q_year|urlencode }}&{% endif %}{% if q_department %}department={{ q_department|urlencode }}{% endif %}" aria-label="إزالة فلتر نوع الوثيقة">
+                <span>النوع المحدد{% for value, label in kinds %}{% if q_kind == value %}: {{ label }}{% endif %}{% endfor %}</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
               </a>
             {% endif %}
           </div>
         {% endif %}
 
+        {% if pending %}
+          <section class="archive-list-review" aria-labelledby="archivePendingTitle">
+            <h3 id="archivePendingTitle"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> تنتظر اعتماد الأرشفة</h3>
+            <p>راجع بياناتها وتصنيفها ثم اعتمد نقلها أو أعِدها بملاحظة.</p>
+            {% for item in pending %}
+              <article class="twq-document-item archive-list-item">
+                <span class="twq-document-item__icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span>
+                <div class="twq-document-item__content">
+                  <h4><a href="{% url 'reports:document_detail' item.pk %}">{{ item.title }}</a></h4>
+                  <p><span>{{ item.owner_name|default:"—" }}</span><span>{{ item.get_kind_display }}</span>{% if item.academic_year %}<span>{{ item.academic_year }} هـ</span>{% endif %}{% if item.department %}<span>{{ item.department.name }}</span>{% endif %}</p>
+                </div>
+                <div class="twq-document-item__actions">
+                  <span class="twq-status" data-status="pending">{{ item.get_approval_state_display }}</span>
+                  <a class="twq-btn twq-btn--secondary" href="{% url 'reports:document_detail' item.pk %}">مراجعة</a>
+                </div>
+              </article>
+            {% endfor %}
+          </section>
+        {% endif %}
+
+        <div class="archive-list-results__summary" aria-live="polite">
+          <span>{{ page_obj.paginator.count }} {% if has_filters %}نتيجة مطابقة{% else %}وثيقة متاحة{% endif %}</span>
+          {% if page_obj.paginator.num_pages > 1 %}<span>صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>{% endif %}
+        </div>
+
         {% if page_obj.object_list %}
-          <div class="doc-cards">
+          <div class="archive-list-items" role="list" aria-label="نتائج أرشيف الوثائق">
             {% for doc in page_obj %}
-              <article class="doc-card doc-kind" data-kind="{{ doc.kind }}">
-                <div class="doc-card__top">
-                  <span class="doc-ico" aria-hidden="true">
-                    {% if doc.kind == 'minutes' %}<i class="fa-solid fa-file-signature"></i>
-                    {% elif doc.kind == 'financial' %}<i class="fa-solid fa-file-invoice-dollar"></i>
-                    {% elif doc.kind == 'contract' %}<i class="fa-solid fa-file-contract"></i>
-                    {% elif doc.kind == 'certificate' %}<i class="fa-solid fa-award"></i>
-                    {% elif doc.kind == 'circular' %}<i class="fa-solid fa-bullhorn"></i>
-                    {% elif doc.kind == 'letter' %}<i class="fa-solid fa-envelope-open-text"></i>
-                    {% elif doc.kind == 'form' %}<i class="fa-solid fa-file-pen"></i>
-                    {% elif doc.kind == 'report' %}<i class="fa-solid fa-chart-simple"></i>
-                    {% else %}<i class="fa-solid fa-file-lines"></i>{% endif %}
-                  </span>
-                  <div class="doc-card__title">
-                    <a href="{% url 'reports:document_detail' doc.pk %}">{{ doc.title }}</a>
-                  </div>
+              <article class="twq-document-item archive-list-item" role="listitem" data-kind="{{ doc.kind }}">
+                <span class="twq-document-item__icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span>
+                <div class="twq-document-item__content">
+                  <h3><a href="{% url 'reports:document_detail' doc.pk %}">{{ doc.title }}</a></h3>
+                  <p class="archive-list-item__meta">
+                    <span class="archive-list-item__type">{{ doc.get_kind_display }}</span>
+                    <span>{{ doc.owner_name|default:"—" }}</span>
+                    <span>{{ doc.created_at|hijri }} هـ</span>
+                    {% if doc.academic_year %}<span>{{ doc.academic_year }} هـ</span>{% endif %}
+                    {% if doc.department %}<span>{{ doc.department.name }}</span>{% endif %}
+                    {% if doc.storage_bytes %}<span>{{ doc.storage_bytes|filesizeformat }}</span>{% endif %}
+                  </p>
                 </div>
-                <div class="doc-card__meta">
-                  {{ doc.owner_name|default:"—" }}
-                  · {{ doc.created_at|hijri }} هـ
-                  {% if doc.storage_bytes %} · {{ doc.storage_bytes|filesizeformat }}{% endif %}
-                </div>
-                <div class="doc-card__foot">
-                  <span class="asg-tag xs-document-archive-3">{{ doc.get_kind_display }}</span>
-                  {% if doc.academic_year %}<span class="asg-tag">{{ doc.academic_year }} هـ</span>{% endif %}
-                  {% if doc.department %}<span class="asg-tag">{{ doc.department.name }}</span>{% endif %}
+                <div class="twq-document-item__actions archive-list-item__actions">
                   {% if doc.is_archived %}
-                    <span class="doc-state" data-s="approved">
-                      <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
-                      مؤرشَفة
-                    </span>
+                    <span class="twq-status" data-status="approved">مؤرشفة</span>
                   {% elif doc.approval_state == 'draft' %}
-                    <span class="doc-state" data-s="draft">مسودة</span>
+                    <span class="twq-status" data-status="draft">مسودة</span>
                   {% elif doc.approval_state == 'returned' or doc.approval_state == 'needs_info' %}
-                    <span class="doc-state" data-s="returned">{{ doc.get_approval_state_display }}</span>
+                    <span class="twq-status" data-status="danger">{{ doc.get_approval_state_display }}</span>
                   {% else %}
-                    <span class="doc-state" data-s="pending">{{ doc.get_approval_state_display }}</span>
+                    <span class="twq-status" data-status="pending">{{ doc.get_approval_state_display }}</span>
                   {% endif %}
+                  <a class="twq-btn twq-btn--secondary archive-list-item__open" href="{% url 'reports:document_detail' doc.pk %}" aria-label="فتح الوثيقة: {{ doc.title }}">فتح</a>
                 </div>
               </article>
             {% endfor %}
           </div>
 
           {% if page_obj.paginator.num_pages > 1 %}
-            <nav class="doc-pager">
+            <nav class="twq-pagination" aria-label="صفحات أرشيف الوثائق">
               {% if page_obj.has_previous %}
-                <a class="asg-btn asg-btn--ghost asg-btn--sm" href="?page={{ page_obj.previous_page_number }}{% if qs %}&{{ qs }}{% endif %}">
+                <a class="twq-btn twq-btn--ghost twq-pagination__link" href="?page={{ page_obj.previous_page_number }}{% if qs %}&{{ qs }}{% endif %}">
                   <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
                   الأحدث
                 </a>
               {% endif %}
-              <span class="doc-pager__n">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+              <span class="twq-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
               {% if page_obj.has_next %}
-                <a class="asg-btn asg-btn--ghost asg-btn--sm" href="?page={{ page_obj.next_page_number }}{% if qs %}&{{ qs }}{% endif %}">
+                <a class="twq-btn twq-btn--ghost twq-pagination__link" href="?page={{ page_obj.next_page_number }}{% if qs %}&{{ qs }}{% endif %}">
                   الأقدم
                   <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 </a>
@@ -290,10 +224,10 @@
             </nav>
           {% endif %}
         {% else %}
-          <div class="asg-empty u-mt-lg">
-            <div class="asg-empty__icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></div>
-            <h2>{% if has_filters %}لا نتائج مطابقة{% else %}لا وثائق بعد{% endif %}</h2>
-            <p>
+          <div class="twq-empty twq-empty--local archive-list-empty">
+            <span class="twq-empty__icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></span>
+            <h3 class="twq-empty__title">{% if has_filters %}لا نتائج مطابقة{% else %}لا وثائق بعد{% endif %}</h3>
+            <p class="twq-empty__message">
               {% if has_filters %}
                 جرّب توسيع البحث أو إلغاء أحد المرشّحات أعلاه.
               {% else %}
