@@ -1,0 +1,9 @@
+{% if t.status == 'open' or t.status == 'new' %}
+  <span class="twq-status twq-status--info">جديد</span>
+{% elif t.status == 'in_progress' %}
+  <span class="twq-status twq-status--warning">قيد المعالجة</span>
+{% elif t.status == 'done' %}
+  <span class="twq-status twq-status--success">مكتمل</span>
+{% else %}
+  <span class="twq-status twq-status--danger">{{ t.get_status_display }}</span>
+{% endif %}

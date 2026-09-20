@@ -5,313 +5,78 @@
 {% block title %}طلب دعم فني جديد{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     Ticket Create (page-only polish) — بدون لمس .btn / .card العامة
-     - RTL
-     - متوافق مع theme variables في base/app.css قدر الإمكان
-     ========================================================= */
-
-  .ticket-wrap{
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 16px;
-    --t: var(--t-fast);
-  }
-
-  .ticket-hero{
-    border-radius: 18px;
-    padding: 16px 16px;
-    background:
-      radial-gradient(800px 220px at 10% 0%, rgba(255,255,255,.18), transparent 60%),
-      radial-gradient(800px 260px at 95% 90%, rgba(16,185,129,.12), transparent 55%),
-      linear-gradient(135deg, #006c35 0%, #00542a 55%, #073b2a 100%);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,.14);
-    box-shadow: 0 18px 50px rgba(2,6,23,.10);
-    margin-bottom: 12px;
-    position: relative;
-    overflow: hidden;
-  }
-  .ticket-hero::before{
-    content:"";
-    position:absolute;
-    inset:-2px;
-    background:
-      radial-gradient(closest-side, rgba(255,255,255,.14), transparent 60%) 20% 15%/220px 220px no-repeat,
-      radial-gradient(closest-side, rgba(255,255,255,.10), transparent 60%) 85% 70%/260px 260px no-repeat;
-    opacity:.85;
-    pointer-events:none;
-  }
-  .ticket-hero-inner{
-    position: relative;
-    display:flex;
-    align-items:flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .ticket-hero h1{
-    margin: 0;
-    font-weight: 950;
-    letter-spacing: -.4px;
-    line-height: 1.2;
-    font-size: clamp(1.25rem, 2.8vw, 1.7rem);
-    color: #eef2ff;
-    display:flex;
-    align-items:center;
-    gap: 10px;
-  }
-  .ticket-hero p{
-    margin: 8px 0 0;
-    color: rgba(255,255,255,.92);
-    font-weight: 850;
-    max-width: 760px;
-  }
-
-  /* Card */
-  .ticket-card{
-    border: 1px solid var(--line);
-    background: var(--card);
-    border-radius: 18px;
-    box-shadow: 0 10px 30px rgba(2,6,23,.06);
-    overflow: hidden;
-  }
-  .ticket-card-hd{
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--line);
-    background: linear-gradient(180deg, var(--line-2), var(--card));
-    display:flex;
-    align-items:center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .ticket-card-hd .hint{
-    color: var(--muted);
-    font-weight: 850;
-  }
-
-  .ticket-card-bd{
-    padding: 16px;
-  }
-
-  /* Alerts */
-  .t-alert{
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    padding: 12px 12px;
-    margin-bottom: 14px;
-    font-weight: 900;
-    background: linear-gradient(180deg, var(--line-2), var(--card));
-    color: var(--ink);
-  }
-  .t-alert.t-danger{
-    border-color: rgba(239,68,68,.30);
-    background: rgba(239,68,68,.08);
-    color: #b91c1c;
-  }
-
-  /* Form */
-  .t-form{
-    display:grid;
-    gap: 14px;
-  }
-  .t-group label{
-    display:block;
-    font-weight: 950;
-    margin-bottom: 8px;
-    color: var(--ink);
-  }
-
-  /* ننسّق عناصر الفورم سواء كانت Django widgets أو inputs عادية */
-  .t-group input,
-  .t-group textarea,
-  .t-group select{
-    width:100%;
-    padding: 12px 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    font-size: 1rem;
-    background: var(--card);
-    color: var(--ink);
-    transition: var(--t);
-  }
-  .t-group textarea{ min-height: 140px; resize: vertical; }
-
-  .t-group input:focus,
-  .t-group textarea:focus,
-  .t-group select:focus{
-    outline: none;
-    border-color: rgba(0,108,53,.55);
-    box-shadow: 0 0 0 4px rgba(0,108,53,.14);
-  }
-
-  /* File helper row */
-  .t-help{
-    margin-top: 6px;
-    font-weight: 850;
-    color: var(--muted);
-    font-size: .92rem;
-    display:flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items:center;
-  }
-  .t-help .tag{
-    display:inline-flex;
-    align-items:center;
-    gap: 8px;
-    border: 1px solid var(--line);
-    background: var(--line-2);
-    color: var(--ink);
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-weight: 950;
-    font-size: .85rem;
-  }
-
-  .t-err{
-    margin-top: 6px;
-    color: #dc2626;
-    font-weight: 900;
-    font-size: .92rem;
-  }
-
-  /* معاينة المرفق قبل الإرسال */
-  .t-attach-preview{ margin-top: 10px; }
-  .t-attach-preview .thumb{
-    max-width: 100%;
-    max-height: 240px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    display: block;
-  }
-  .t-attach-preview .name{
-    margin-top: 6px;
-    color: var(--muted);
-    font-weight: 850;
-    font-size: .9rem;
-    word-break: break-all;
-  }
-
-  /* Actions */
-  .t-actions{
-    margin-top: 4px;
-    display:flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items:center;
-    justify-content: flex-start;
-  }
-
-  .t-actions .btn{
-    min-height: 44px;
-    border-radius: 999px;
-    padding: 10px 16px;
-    transition: var(--t);
-  }
-
-  .t-submit{
-    width: 100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap: 10px;
-  }
-  @media(min-width: 640px){
-    .t-submit{ width: auto; min-width: 220px; }
-  }
-
-  .t-actions .btn[disabled]{
-    opacity: .75;
-    cursor: not-allowed;
-    transform: none !important;
-  }
-
-  /* Reduce motion */
-  @media (prefers-reduced-motion: reduce){
-    .ticket-wrap *{ transition: none !important; }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/ticket-form.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="ticket-wrap" dir="rtl">
-  <section class="ticket-hero" aria-label="عنوان صفحة الدعم">
-    <div class="ticket-hero-inner">
-      <div>
-        <h1><i class="fa-solid fa-headset" aria-hidden="true"></i> طلب دعم فني للمنصة</h1>
-        <p>اكتب المشكلة بوضوح، وأرفق صورة إن لزم. سيصل الطلب للإدارة للمتابعة.</p>
-      </div>
-
-      <div class="u-flex u-gap-3 u-wrap u-items-center u-fw-900 u-opacity-95">
-        <span class="xs-support-ticket-create-1">
-          <i class="fa-solid fa-user u-opacity-95"></i>
-          {{ request.user.name|default:"مستخدم" }}
-        </span>
-      </div>
+<div class="twq-page ticket-form-page ticket-form-page--support" dir="rtl" aria-labelledby="supportCreateTitle">
+  <header class="twq-page-header">
+    <div class="twq-page-header__heading">
+      <a class="ticket-form__back" href="{% url 'reports:my_requests' %}" data-smart-back="1"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> رجوع لطلباتي</a>
+      <span class="twq-page-header__eyebrow">الدعم الفني للمنصة</span>
+      <h1 class="twq-page-header__title" id="supportCreateTitle">طلب دعم فني للمنصة</h1>
+      <p class="twq-page-header__lead">اشرح المشكلة أو الاستفسار بوضوح، وأرفق صورة إن احتجت. سيصل طلبك إلى الإدارة للمتابعة.</p>
+      <dl class="twq-page-header__context">
+        <div><dt>مقدم الطلب</dt><dd>{{ request.user.name|default:"مستخدم" }}</dd></div>
+      </dl>
     </div>
-  </section>
+  </header>
 
-  <div class="ticket-card">
-    <div class="ticket-card-hd">
-      <div class="u-fw-950 u-flex u-gap-3 u-items-center">
-        <i class="fa-solid fa-life-ring u-dim-more"></i>
-        <span>نموذج طلب الدعم</span>
+  <form method="post" enctype="multipart/form-data" id="supportForm" class="ticket-form__form t-form" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="twq-alert twq-alert--danger" role="alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
       </div>
-      <div class="hint">الحقول بعلامة * إلزامية</div>
+    {% elif form.errors %}
+      <div class="twq-alert twq-alert--danger" role="alert">يرجى مراجعة الحقول المشار إليها أدناه.</div>
+    {% endif %}
+
+    <section class="twq-section ticket-form__section" aria-labelledby="supportDetailsTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">بيانات الطلب</span>
+          <h2 class="twq-section__title" id="supportDetailsTitle">المشكلة أو الاستفسار</h2>
+          <p class="twq-section__description">اذكر ما حدث وما الذي كنت تحاول فعله لتسهيل المتابعة.</p>
+        </div>
+      </div>
+      <div class="ticket-form__field t-group{% if form.title.errors %} ticket-form__field--error{% endif %}">
+        <label for="{{ form.title.id_for_label }}" class="twq-label">عنوان الطلب <span class="ticket-form__required">(مطلوب)</span></label>
+        {{ form.title }}
+        {% for error in form.title.errors %}<p class="ticket-form__error t-err" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="ticket-form__field t-group{% if form.body.errors %} ticket-form__field--error{% endif %}">
+        <label for="{{ form.body.id_for_label }}" class="twq-label">تفاصيل المشكلة <span class="ticket-form__required">(اختياري)</span></label>
+        {{ form.body }}
+        <p class="ticket-form__help">أضف الخطوات التي أدت إلى المشكلة، أو صف الاستفسار المطلوب.</p>
+        {% for error in form.body.errors %}<p class="ticket-form__error t-err" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+    </section>
+
+    <section class="twq-section ticket-form__section" aria-labelledby="supportAttachmentTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">اختياري</span>
+          <h2 class="twq-section__title" id="supportAttachmentTitle">صورة توضيحية</h2>
+          <p class="twq-section__description">يمكن إرفاق صورة واحدة توضح المشكلة.</p>
+        </div>
+      </div>
+      <div class="ticket-form__field t-group{% if form.attachment.errors %} ticket-form__field--error{% endif %}">
+        <label for="{{ form.attachment.id_for_label }}" class="twq-label">مرفق الصورة</label>
+        {{ form.attachment }}
+        <p class="ticket-form__help">صورة فقط؛ يتحقق النظام من صلاحيتها وحجمها عند الإرسال.</p>
+        <div id="attachPreview" class="ticket-form__preview t-attach-preview" aria-live="polite"></div>
+        {% for error in form.attachment.errors %}<p class="ticket-form__error t-err" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+    </section>
+
+    <div class="ticket-form__actions t-actions">
+      <button type="submit" class="twq-btn twq-btn--primary t-submit" id="submitBtn">
+        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>إرسال الطلب</span>
+      </button>
+      <a href="{% url 'reports:my_requests' %}" class="twq-btn twq-btn--secondary" data-smart-back="1">إلغاء</a>
     </div>
-
-    <div class="ticket-card-bd">
-      <form method="post" enctype="multipart/form-data" id="supportForm" class="t-form" novalidate>
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-          <div class="t-alert t-danger">{{ form.non_field_errors }}</div>
-        {% elif form.errors %}
-          <div class="t-alert t-danger">يرجى تصحيح الأخطاء أدناه.</div>
-        {% endif %}
-
-        <div class="t-group">
-          <label for="{{ form.title.id_for_label }}">عنوان الطلب *</label>
-          {{ form.title }}
-          {% if form.title.errors %}<div class="t-err">{{ form.title.errors.0 }}</div>{% endif %}
-        </div>
-
-        <div class="t-group">
-          <label for="{{ form.body.id_for_label }}">تفاصيل المشكلة *</label>
-          {{ form.body }}
-          {% if form.body.errors %}<div class="t-err">{{ form.body.errors.0 }}</div>{% endif %}
-        </div>
-
-        <div class="t-group">
-          <label for="{{ form.attachment.id_for_label }}">مرفق (اختياري)</label>
-          {{ form.attachment }}
-
-          <div class="t-help">
-            <span class="tag"><i class="fa-solid fa-image"></i> صور فقط</span>
-            <span>JPG / PNG — يفضّل أقل من 10MB</span>
-          </div>
-
-          <div id="attachPreview" class="t-attach-preview u-hidden" aria-live="polite"></div>
-
-          {% if form.attachment.errors %}<div class="t-err">{{ form.attachment.errors.0 }}</div>{% endif %}
-        </div>
-
-        <div class="t-actions">
-          <button type="submit" class="btn btn-primary t-submit" id="submitBtn">
-            <i class="fa-solid fa-paper-plane"></i>
-            <span>إرسال الطلب</span>
-          </button>
-
-          <a class="btn btn-outline" href="{% url 'reports:my_requests' %}" data-smart-back="1">
-            <i class="fa-solid fa-arrow-right"></i> رجوع لطلباتي
-          </a>
-        </div>
-      </form>
-    </div>
-  </div>
+  </form>
 </div>
 {% endblock %}
 

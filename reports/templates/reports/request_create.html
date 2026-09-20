@@ -4,552 +4,120 @@
 {% block title %}طلب مدرسي جديد{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-    /*
-       DESIGN SYSTEM 2026
-       هوية المنصة: أخضر سعودي (#006c35) + ذهبي (#b9975b)
-       متوافق مع نظام التصميم في base.html + دعم الوضع الليلي
-    */
-    .ticket-page {
-        --font-primary: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-
-        /* ألوان الهوية */
-        --c-brand: #006c35;
-        --c-brand-dark: #00532a;
-        --c-brand-light: #eef6f0;
-        --c-accent: #b9975b;
-
-        /* محايدة (وضع فاتح) */
-        --c-text-main: #10251f;
-        --c-text-muted: #68766f;
-        --c-text-light: #94a3b8;
-        --c-border: #e3ebe5;
-        --c-bg: #f4f7f3;
-        --c-surface: #ffffff;
-
-        /* حالات */
-        --c-success: #16845b;
-        --c-danger: #ef4444;
-
-        /* تأثيرات */
-        --radius-xl: 16px;
-        --radius-lg: 12px;
-        --radius-md: 8px;
-        --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        --shadow-sm: 0 4px 6px -1px rgb(16 37 31 / 0.06);
-        --shadow-md: 0 10px 28px -3px rgb(16 37 31 / 0.10);
-        --shadow-glow: 0 0 0 4px rgba(0, 108, 53, 0.15);
-        --ease: cubic-bezier(0.16, 1, 0.3, 1);
-
-        font-family: var(--font-primary);
-        color: var(--c-text-main);
-    }
-
-    html[data-theme="dark"] .ticket-page {
-        --c-brand: #42ca88;
-        --c-brand-dark: #bdebd2;
-        --c-brand-light: rgba(66, 202, 136, 0.12);
-        --c-accent: #d4b16d;
-        --c-text-main: #edf6f1;
-        --c-text-muted: #abc0b6;
-        --c-text-light: #91a99e;
-        --c-border: rgba(205, 225, 216, .18);
-        --c-bg: #061512;
-        --c-surface: #0d241d;
-        --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.4);
-        --shadow-md: 0 10px 28px -3px rgb(0 0 0 / 0.5);
-        --shadow-glow: 0 0 0 4px rgba(66, 202, 136, 0.22);
-    }
-
-    /* Container & Layout */
-    .ticket-page {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 40px 20px;
-        direction: rtl;
-    }
-    
-    .layout-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 32px;
-        animation: fadeIn 0.6s var(--ease);
-    }
-
-    @media (min-width: 1024px) {
-        .layout-grid {
-            grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
-            align-items: start;
-        }
-    }
-
-    /* Typography & Header */
-    .page-header {
-        margin-bottom: 32px;
-        text-align: right;
-    }
-    
-    .page-title {
-        font-size: 2rem;
-        font-weight: 800;
-        letter-spacing: -0.025em;
-        background: linear-gradient(135deg, var(--c-text-main), var(--c-brand));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 8px;
-        display: inline-block;
-    }
-    
-    .page-desc {
-        font-size: 1.05rem;
-        color: var(--c-text-muted);
-        max-width: 600px;
-        line-height: 1.6;
-    }
-
-    /* Cards */
-    .modern-card {
-        background: var(--c-surface);
-        border: 1px solid var(--c-border);
-        border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-sm);
-        padding: 32px;
-        transition: box-shadow 0.3s var(--ease);
-    }
-    
-    .modern-card:hover {
-        box-shadow: var(--shadow-md);
-    }
-    
-    .is-sticky {
-        position: sticky;
-        top: 24px;
-        z-index: 20;
-    }
-
-    @media (max-width: 768px) {
-        .is-sticky {
-            position: static;
-            top: auto;
-            z-index: auto;
-        }
-    }
-
-    /* Forms */
-    .form-section-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 24px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--c-border);
-        color: var(--c-text-main);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .form-section-title i {
-        color: var(--c-brand);
-        font-size: 1.1rem;
-    }
-
-    .form-group {
-        margin-bottom: 24px;
-    }
-
-    .form-label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: var(--c-text-main);
-        font-size: 0.95rem;
-    }
-    
-    .form-label .req { color: var(--c-danger); }
-
-    /* Inputs styled via JS classes .tk-input/.tk-textarea but we override here */
-    .field-input, .tk-input, .tk-select, .tk-textarea, .recipients-search {
-        width: 100%;
-        padding: 14px 16px;
-        border: 1px solid var(--c-border);
-        border-radius: var(--radius-lg);
-        background: var(--c-bg); /* Slight background */
-        font-size: 1rem;
-        color: var(--c-text-main);
-        transition: all 0.2s var(--ease);
-        font-family: inherit;
-    }
-
-    .field-input:focus, .tk-input:focus, .tk-select:focus, .recipients-search:focus {
-        outline: none;
-        border-color: var(--c-brand);
-        background: var(--c-surface);
-        box-shadow: var(--shadow-glow);
-    }
-
-    .tk-textarea {
-        min-height: 240px;
-        line-height: 1.6;
-        resize: vertical;
-    }
-
-    select.tk-select {
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: left 1rem center;
-        background-repeat: no-repeat;
-        background-size: 1.25em;
-        cursor: pointer;
-    }
-
-    /* Helper & Error Text */
-    .field-help {
-        font-size: 0.85rem;
-        color: var(--c-text-muted);
-        margin-top: 6px;
-    }
-    
-    .field-error {
-        margin-top: 6px;
-        padding: 8px 12px;
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: var(--radius-md);
-        color: #b91c1c;
-        font-size: 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    html[data-theme="dark"] .field-error {
-        background: rgba(239, 68, 68, 0.12);
-        border-color: rgba(239, 68, 68, 0.35);
-        color: #fca5a5;
-    }
-
-    /* نصوص مساعدة تُحقن عبر JS داخل صندوق المستلمين */
-    .help-text {
-        font-size: 0.85rem;
-        color: var(--c-text-muted);
-        padding: 10px 4px;
-        text-align: center;
-    }
-
-    .error-text {
-        font-size: 0.88rem;
-        color: var(--c-danger);
-        font-weight: 600;
-        padding: 12px;
-        text-align: center;
-        background: rgba(239, 68, 68, 0.06);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        border-radius: var(--radius-md);
-    }
-
-    .recipients-box.disabled {
-        opacity: 0.6;
-        pointer-events: none;
-    }
-
-    /* Dynamic JS Components Styling */
-    /* Recipients Dropdown */
-    .recipients-dd {
-        border: 1px solid var(--c-border);
-        border-radius: var(--radius-lg);
-        background: var(--c-surface);
-        overflow: hidden;
-    }
-    
-    .recipients-dd[open] {
-        border-color: var(--c-brand);
-        box-shadow: var(--shadow-glow);
-    }
-
-    .recipients-dd > summary {
-        padding: 14px 16px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: var(--c-bg);
-        font-weight: 500;
-        transition: background 0.2s;
-    }
-    
-    .recipients-dd > summary::-webkit-details-marker { display:none; }
-    
-    .recipients-panel {
-        padding: 12px;
-        border-top: 1px solid var(--c-border);
-    }
-
-    .recipients-scroll {
-        max-height: 250px;
-        overflow-y: auto;
-        padding-top: 8px;
-    }
-
-    .recipients-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .rcpt {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 12px;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        transition: 0.1s;
-    }
-    
-    .rcpt:hover { background: var(--c-bg); }
-    
-    .rcpt.selected {
-        background: var(--c-brand-light);
-        color: var(--c-brand-dark);
-        font-weight: 600;
-    }
-    
-    .rcpt input { accent-color: var(--c-brand); width: 18px; height: 18px; cursor: pointer; }
-
-    /* Upload Zone */
-    .upload-box {
-        display: block;
-        border: 2px dashed var(--c-border);
-        border-radius: var(--radius-lg);
-        padding: 32px 20px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-        background: var(--c-bg);
-    }
-    
-    .upload-box:hover {
-        border-color: var(--c-brand);
-        background: var(--c-brand-light);
-    }
-
-    .upload-icon {
-        font-size: 2rem;
-        color: var(--c-text-light);
-        margin-bottom: 10px;
-        display: block;
-        transition: color 0.2s var(--ease);
-    }
-
-    .upload-box:hover .upload-icon {
-        color: var(--c-brand);
-    }
-
-    .previews-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-        gap: 8px;
-        margin-top: 16px;
-    }
-    
-    .thumb {
-        aspect-ratio: 1;
-        border-radius: var(--radius-md);
-        overflow: hidden;
-        border: 1px solid var(--c-border);
-        position: relative;
-    }
-    
-    .thumb img { width: 100%; height: 100%; object-fit: cover; }
-    
-    .thumb .badge {
-        position: absolute;
-        top: 2px; right: 2px;
-        background: rgba(0,0,0,0.6);
-        color: #fff;
-        font-size: 0.65rem;
-        padding: 1px 5px;
-        border-radius: 99px;
-    }
-
-    /* Buttons */
-    .submit-btn {
-        width: 100%;
-        background: linear-gradient(135deg, var(--c-brand), var(--c-brand-dark));
-        color: white;
-        font-weight: 700;
-        font-size: 1.05rem;
-        padding: 16px;
-        border: none;
-        border-radius: var(--radius-lg);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        box-shadow: 0 4px 6px -1px rgba(0, 108, 53, 0.4);
-    }
-    
-    .submit-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 108, 53, 0.5);
-    }
-    
-    .submit-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-
-    .cancel-btn {
-        display: block;
-        text-align: center;
-        padding: 12px;
-        color: var(--c-text-muted);
-        font-weight: 600;
-        text-decoration: none;
-        border-radius: var(--radius-lg);
-        margin-top: 8px;
-        transition: color 0.2s;
-    }
-    
-    .cancel-btn:hover { color: var(--c-text-main); background: var(--c-bg); }
-
-    /* Badge/Info Box */
-    .info-box {
-        background: var(--c-brand-light);
-        border: 1px solid rgba(0, 108, 53, 0.2);
-        color: var(--c-brand-dark);
-        padding: 16px;
-        border-radius: var(--radius-lg);
-        font-size: 0.9rem;
-        line-height: 1.5;
-        margin-bottom: 24px;
-        display: flex;
-        gap: 12px;
-    }
-
-    .info-box svg { flex: 0 0 auto; color: var(--c-brand); }
-
-    /* Anim */
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-</style>
+<link rel="stylesheet" href="{% static 'css/ticket-form.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="ticket-page" dir="rtl">
-    
-    <div class="page-header">
-        <h1 class="page-title">إنشاء طلب مدرسي جديد</h1>
-        <p class="page-desc">أرسل طلبك إلى القسم المختص داخل المدرسة، وتابع حالته والردود عليه من صفحة طلباتي.</p>
+<div class="twq-page ticket-form-page ticket-page" dir="rtl" aria-labelledby="requestCreateTitle">
+  <header class="twq-page-header">
+    <div class="twq-page-header__heading">
+      <a class="ticket-form__back" href="{% url 'reports:my_requests' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> طلباتي</a>
+      <span class="twq-page-header__eyebrow">الطلبات المدرسية</span>
+      <h1 class="twq-page-header__title" id="requestCreateTitle">إنشاء طلب مدرسي جديد</h1>
+      <p class="twq-page-header__lead">اختر الجهة المستلمة، ثم وضّح ما تحتاجه. ستتمكن من متابعة الطلب والردود من صفحة طلباتي.</p>
     </div>
+  </header>
 
-    <form method="post" enctype="multipart/form-data" id="ticket-form" novalidate>
-        {% csrf_token %}
-        
-        <div class="layout-grid">
-            
-            <!-- Main Content -->
-            <div class="main-col">
-                <div class="modern-card">
-                    <div class="form-section-title">
-                        <i class="fa-solid fa-file-lines"></i> تفاصيل الطلب
-                    </div>
+  <form method="post" enctype="multipart/form-data" id="ticket-form" class="ticket-form__form" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="twq-alert twq-alert--danger" role="alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% elif form.errors %}
+      <div class="twq-alert twq-alert--danger" role="alert">يرجى مراجعة الحقول المشار إليها أدناه.</div>
+    {% endif %}
 
-                    <div class="info-box">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <div>
-                            <strong>ليصل طلبك إلى الشخص المناسب:</strong><br>
-                            اكتب عنوانًا واضحًا، وحدد المطلوب ومكانه وأي معلومات تساعد القسم المختص على التنفيذ.
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="{{ form.title.id_for_label }}" class="form-label">عنوان الطلب <span class="req">*</span></label>
-                        {{ form.title }}
-                        {% for e in form.title.errors %}<div class="field-error">⚠️ {{ e }}</div>{% endfor %}
-                    </div>
-
-                    <div class="form-group">
-                        <label for="{{ form.body.id_for_label }}" class="form-label">تفاصيل الطلب <span class="req">*</span></label>
-                        {{ form.body }}
-                        <div class="field-help">وضّح المطلوب، المكان، والموعد أو الأولوية إن وجدت.</div>
-                        {% for e in form.body.errors %}<div class="field-error">⚠️ {{ e }}</div>{% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Side Panel -->
-            <div class="side-col">
-                <div class="modern-card is-sticky">
-                    
-                    <div class="form-section-title">
-                        <i class="fa-solid fa-paper-plane"></i> التوجيه
-                    </div>
-
-                    {% if form.non_field_errors %}
-                        <div class="field-error u-mb-6">
-                            {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
-                        </div>
-                    {% endif %}
-
-                    <div class="form-group">
-                        <label for="{{ form.department.id_for_label }}" class="form-label">القسم المختص <span class="req">*</span></label>
-                        <select id="{{ form.department.id_for_label }}" name="{{ form.department.html_name }}" class="tk-select" required>
-                            <option value="" selected hidden>— اختر القسم —</option>
-                            {% for d in form.fields.department.queryset %}
-                              {% with v=d.slug %}
-                                <option value="{{ v }}"
-                                  {% if form.is_bound %}
-                                    {% if form.data.department == v %}selected{% endif %}
-                                  {% else %}
-                                    {% if form.initial.department == v %}selected{% endif %}
-                                  {% endif %}
-                                >{{ d.name }}</option>
-                              {% endwith %}
-                            {% endfor %}
-                        </select>
-                        {% for e in form.department.errors %}<div class="field-error">⚠️ {{ e }}</div>{% endfor %}
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">المستلمون <span class="req">*</span></label>
-                        <div id="id_recipients" class="recipients-box" aria-label="قائمة المستلمين"
-                          data-members-url="{% url 'reports:api_department_members' %}"
-                            {% if selected_recipient_ids %}
-                                data-selected="{% for rid in selected_recipient_ids %}{{ rid }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                            {% endif %}
-                        >
-                            <div class="field-help">الرجاء اختيار القسم أولاً.</div>
-                        </div>
-                        {% for e in form.recipients.errors %}<div class="field-error">⚠️ {{ e }}</div>{% endfor %}
-                    </div>
-
-                    <hr class="xs-request-create-1">
-
-                    <div class="form-group">
-                        <label class="form-label">المرفقات (اختياري)</label>
-                        <input id="id_images" name="images" type="file" accept="image/*" multiple hidden>
-                        <label for="id_images" class="upload-box">
-                            <span class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
-                            <div class="u-fw-600 u-fs-md">إرفاق صور</div>
-                            <div class="field-help u-mt-1">بحد أقصى 4 صور</div>
-                        </label>
-                         {% if form.errors.images %}<div class="field-error">{{ form.errors.images.0 }}</div>{% endif %}
-                        <div class="previews-grid" id="previews"></div>
-                    </div>
-
-                    <div id="dynamic-msg" class="status-msg xs-request-create-2" aria-live="polite"></div>
-
-                    <button type="submit" class="submit-btn" id="submitBtn">
-                        <span>إرسال الطلب</span>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
-                    <a href="{% url 'reports:my_requests' %}" class="cancel-btn">إلغاء</a>
-
-                </div>
-            </div>
-
+    <section class="twq-section ticket-form__section" aria-labelledby="requestRoutingTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">الخطوة الأولى</span>
+          <h2 class="twq-section__title" id="requestRoutingTitle">الجهة المستلمة</h2>
+          <p class="twq-section__description">اختر القسم المختص، ثم حدد المستلم من الأسماء المتاحة له.</p>
         </div>
-    </form>
+      </div>
+      <div class="ticket-form__grid">
+        <div class="twq-field ticket-form__field{% if form.department.errors %} ticket-form__field--error{% endif %}">
+          <label for="{{ form.department.id_for_label }}" class="twq-label">القسم المختص <span class="ticket-form__required">(مطلوب)</span></label>
+          <select id="{{ form.department.id_for_label }}" name="{{ form.department.html_name }}" class="tk-select twq-control" required{% if form.department.errors %} aria-invalid="true" aria-describedby="department-error"{% endif %}>
+            <option value="" selected hidden>— اختر القسم —</option>
+            {% for d in form.fields.department.queryset %}
+              {% with v=d.slug %}
+                <option value="{{ v }}"
+                  {% if form.is_bound %}
+                    {% if form.data.department == v %}selected{% endif %}
+                  {% else %}
+                    {% if form.initial.department == v %}selected{% endif %}
+                  {% endif %}
+                >{{ d.name }}</option>
+              {% endwith %}
+            {% endfor %}
+          </select>
+          {% if form.department.errors %}
+            <div id="department-error" role="alert">
+              {% for error in form.department.errors %}<p class="ticket-form__error">{{ error }}</p>{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="twq-field ticket-form__field{% if form.recipients.errors %} ticket-form__field--error{% endif %}">
+          <span class="twq-label" id="recipient-label">المستلمون</span>
+          <div id="id_recipients" class="recipients-box ticket-form__recipients" role="group" aria-labelledby="recipient-label"
+            data-members-url="{% url 'reports:api_department_members' %}"
+            {% if selected_recipient_ids %}data-selected="{% for rid in selected_recipient_ids %}{{ rid }}{% if not forloop.last %},{% endif %}{% endfor %}"{% endif %}>
+            <div class="help-text">اختر القسم أولًا لعرض المستلمين.</div>
+          </div>
+          <p class="ticket-form__help">اختر مستلمًا واحدًا على الأقل عندما تتوفر أسماء في القسم.</p>
+          {% for error in form.recipients.errors %}<p class="ticket-form__error" role="alert">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="twq-section ticket-form__section" aria-labelledby="requestDetailsTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">الخطوة الثانية</span>
+          <h2 class="twq-section__title" id="requestDetailsTitle">تفاصيل الطلب</h2>
+          <p class="twq-section__description">العنوان المختصر والوصف الواضح يساعدان القسم على معالجة الطلب.</p>
+        </div>
+      </div>
+      <div class="ticket-form__field{% if form.title.errors %} ticket-form__field--error{% endif %}">
+        <label for="{{ form.title.id_for_label }}" class="twq-label">عنوان الطلب <span class="ticket-form__required">(مطلوب)</span></label>
+        {{ form.title }}
+        {% for error in form.title.errors %}<p class="ticket-form__error" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="ticket-form__field{% if form.body.errors %} ticket-form__field--error{% endif %}">
+        <label for="{{ form.body.id_for_label }}" class="twq-label">تفاصيل الطلب <span class="ticket-form__required">(مطلوب)</span></label>
+        {{ form.body }}
+        <p class="ticket-form__help">وضّح المطلوب والمكان وأي معلومات تساعد في تنفيذه.</p>
+        {% for error in form.body.errors %}<p class="ticket-form__error" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+    </section>
+
+    <section class="twq-section ticket-form__section" aria-labelledby="requestImagesTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">اختياري</span>
+          <h2 class="twq-section__title" id="requestImagesTitle">الصور المرفقة</h2>
+          <p class="twq-section__description">أرفق صورًا توضّح الطلب إذا احتجت إلى ذلك.</p>
+        </div>
+      </div>
+      <div class="ticket-form__field{% if form.images.errors %} ticket-form__field--error{% endif %}">
+        <label for="id_images" class="twq-label">إرفاق صور</label>
+        <input id="id_images" name="images" type="file" accept="image/*" multiple class="ticket-form__file">
+        <p class="ticket-form__help">حتى 4 صور بصيغة JPG أو PNG أو WebP؛ الحد الأقصى لكل صورة 5MB.</p>
+        {% for error in form.images.errors %}<p class="ticket-form__error" role="alert">{{ error }}</p>{% endfor %}
+        <div class="previews-grid ticket-form__previews" id="previews" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <div id="dynamic-msg" class="status-msg ticket-form__message" aria-live="polite"></div>
+    <div class="ticket-form__actions">
+      <button type="submit" class="twq-btn twq-btn--primary submit-btn" id="submitBtn">
+        <span>إرسال الطلب</span><i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+      </button>
+      <a href="{% url 'reports:my_requests' %}" class="twq-btn twq-btn--secondary cancel-btn">إلغاء</a>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
@@ -577,7 +145,8 @@
   const submitBtn = document.getElementById('submitBtn');
 
   const MAX_FILES = 4;
-  const MAX_FILE_MB = 6;
+  // Match TicketCreateForm's existing per-image server limit.
+  const MAX_FILE_MB = 5;
   const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
   const CSRF = (window.getCsrfToken ? window.getCsrfToken() : (window.csrfToken || ''));
@@ -842,7 +411,7 @@
       const url = URL.createObjectURL(f);
       const box = document.createElement('div');
       box.className = 'thumb';
-      box.innerHTML = '<span class="badge">' + (idx + 1) + '</span><img src="' + url + '" alt="preview">';
+      box.innerHTML = '<span class="badge">' + (idx + 1) + '</span><img src="' + url + '" alt="معاينة الصورة المرفقة">';
       previews.appendChild(box);
 
       const img = box.querySelector('img');

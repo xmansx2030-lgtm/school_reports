@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -10,6 +13,7 @@ from reports.models import (
     SubscriptionPlan,
     Teacher,
     Ticket,
+    TicketNote,
 )
 
 
@@ -429,6 +433,55 @@ class TicketsInboxViewTests(TestCase):
         self.assertContains(response, "إعادة فتح الطلب")
         self.assertNotContains(response, "حفظ التحديث")
         self.assertNotContains(response, 'name="status"')
+
+    def test_detail_uses_request_workspace_and_preserves_post_contract(self):
+        ticket = self._closed_ticket()
+        ticket.status = Ticket.Status.IN_PROGRESS
+        ticket.save(update_fields=["status"])
+        self._enter_school()
+
+        response = self.client.get(reverse("reports:ticket_detail", args=[ticket.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "css/ticket-detail.css")
+        self.assertContains(response, 'class="twq-page ticket-detail"')
+        self.assertContains(response, 'id="ticketDetailTitle"')
+        self.assertContains(response, "twq-status--warning")
+        self.assertContains(response, "قيد المعالجة")
+        self.assertContains(response, 'id="ticketStatus" name="status"')
+        self.assertContains(response, 'id="ticketActionNote" name="note"')
+        self.assertContains(response, 'id="ticketDirectLink"')
+        self.assertContains(response, 'id="lightbox"')
+        self.assertContains(response, reverse("reports:ticket_print", args=[ticket.pk]))
+        detail_source = (Path(settings.BASE_DIR) / "reports/templates/reports/ticket_detail.html").read_text(encoding="utf-8")
+        self.assertNotIn("<style", detail_source)
+
+    def test_detail_closed_state_exposes_reopen_but_no_reply_field(self):
+        ticket = self._closed_ticket()
+        self._enter_school()
+
+        response = self.client.get(reverse("reports:ticket_detail", args=[ticket.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "twq-status--success")
+        self.assertContains(response, 'name="ticket_action" value="reopen"')
+        self.assertNotContains(response, 'name="note"')
+
+    def test_detail_thread_keeps_author_date_content_and_edit_route(self):
+        ticket = self._closed_ticket()
+        ticket.status = Ticket.Status.OPEN
+        ticket.save(update_fields=["status"])
+        note = TicketNote.objects.create(ticket=ticket, author=self.user, body="رد تجريبي على الطلب")
+        self._enter_school()
+
+        response = self.client.get(reverse("reports:ticket_detail", args=[ticket.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "رد تجريبي على الطلب")
+        self.assertContains(response, self.user.name)
+        self.assertContains(response, 'class="ticket-detail__thread"')
+        self.assertContains(response, reverse("reports:ticket_note_edit", args=[note.pk]))
+        self.assertContains(response, 'datetime="')
 
     def test_closed_ticket_cannot_be_reopened_through_generic_status_post(self):
         ticket = self._closed_ticket()

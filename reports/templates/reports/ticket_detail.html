@@ -1,627 +1,135 @@
-{# reports/templates/reports/ticket_detail.html #}
 {% extends "base.html" %}
 {% load static ticket_notes hijri_tags %}
 
-{% block title %}
-  {% if t.is_platform %}دعم فني #{{ t.id }} - {{ t.title }}{% else %}طلب #{{ t.id }} - {{ t.title }}{% endif %}
-{% endblock %}
+{% block title %}{% if t.is_platform %}دعم فني #{{ t.id }} - {{ t.title }}{% else %}طلب #{{ t.id }} - {{ t.title }}{% endif %}{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-/* =========================================================
-   Neo-Professional 2026 Ticket Detail System
-   - Luxuriously clean, distinct, and unambiguous.
-   ========================================================= */
-
-/* رموز هذه الشاشة — مقصورة على حاويتها ومشتقّة من جذر الهوية. كانت معلنة
-   على `:root` عاماً بقيم فاتحة **بلا مقابل ليلي**، فكانت بطاقات التذكرة
-   تُعرض بيضاء وحبرها شبه أسود داخل تطبيق داكن. و`--id-*` وحدها ما يُعاد
-   تعريفه تحت `data-theme="dark"`، ونغمات الحالات تأتي من سلّم الاعتماد. */
-.ticket-wrapper {
-  /* Unified Palette */
-  --c-brand: var(--id-accent);
-  --c-brand-rgb: 37, 99, 235;
-  --c-text: var(--id-ink);
-  --c-text-muted: var(--id-muted);
-  --c-surface: var(--id-surface);
-  --c-surface-alt: var(--id-surface-2);
-  --c-border: var(--id-line);
-
-  /* Type Specific Colors (Crucial for distinction) */
-  --c-platform: var(--id-gold);
-  --c-platform-bg: var(--id-tone-attention-wash);
-  --c-request: var(--id-tone-pending);
-  --c-request-bg: var(--id-tone-pending-wash);
-
-  /* Status Colors */
-  --s-new: var(--id-tone-pending);     --s-new-bg: var(--id-tone-pending-wash);
-  --s-pro: var(--id-tone-attention);   --s-pro-bg: var(--id-tone-attention-wash);
-  --s-don: var(--id-tone-approved);    --s-don-bg: var(--id-tone-approved-wash);
-  --s-rej: var(--id-tone-danger);      --s-rej-bg: var(--id-tone-danger-wash);
-}
-
-.ticket-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: 'Cairo', sans-serif;
-  color: var(--c-text);
-  padding-bottom: 60px;
-}
-
-/* 1. Header Hero Section */
-.hero-header {
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  margin-bottom: 24px;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Distinct Top Stripe */
-.hero-stripe {
-  height: 6px;
-  width: 100%;
-  background: var(--c-request); /* Default */
-}
-.hero-stripe.is-platform { background: var(--c-platform); }
-
-.hero-body {
-  padding: 24px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.hero-main {
-  flex: 1;
-  min-width: 300px;
-}
-
-.ticket-badges {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  align-items: center;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.badge-id {
-  background: var(--c-surface-alt);
-  color: var(--c-text-muted);
-  border: 1px solid var(--c-border);
-  font-family: 'Fira Code', monospace;
-}
-
-.badge-type {
-  background: var(--c-request-bg);
-  color: var(--c-request);
-  border: 1px solid rgba(14, 165, 233, 0.2);
-}
-.badge-type.platform {
-  background: var(--c-platform-bg);
-  color: var(--c-platform);
-  border-color: rgba(185, 151, 91, 0.2);
-}
-
-.hero-title {
-  margin: 0 0 8px 0;
-  font-size: 1.75rem;
-  font-weight: 800;
-  line-height: 1.3;
-  color: var(--c-text);
-}
-
-.hero-meta {
-  display: flex;
-  gap: 16px;
-  color: var(--c-text-muted);
-  font-size: 0.9rem;
-  font-weight: 500;
-  flex-wrap: wrap;
-}
-.hero-meta span { display: flex; align-items: center; gap: 6px; }
-
-/* Status Pill */
-.status-pill {
-  padding: 8px 16px;
-  border-radius: 99px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid transparent;
-}
-.st-open { background: var(--s-new-bg); color: var(--s-new); border-color: rgba(15,143,135,0.2); }
-.st-in_progress { background: var(--s-pro-bg); color: var(--s-pro); border-color: rgba(139,92,246,0.2); }
-.st-done { background: var(--s-don-bg); color: var(--s-don); border-color: rgba(16,185,129,0.2); }
-.st-rejected { background: var(--s-rej-bg); color: var(--s-rej); border-color: rgba(239,68,68,0.2); }
-
-/* 2. Grid Layout */
-.layout-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
-}
-@media (max-width: 900px) {
-  .layout-grid { grid-template-columns: 1fr; }
-}
-
-/* 3. Cards */
-.lux-card {
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-  margin-bottom: 24px;
-  overflow: hidden;
-}
-.lux-card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--c-border);
-  background: var(--c-surface-alt);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.lux-card-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--c-text);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.lux-card-body {
-  padding: 24px;
-}
-
-/* Details List */
-.details-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.dl-item {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 16px;
-  align-items: baseline;
-}
-@media (max-width: 600px) { .dl-item { grid-template-columns: 1fr; gap: 4px; } }
-
-.dl-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--c-text-muted);
-}
-.dl-value {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--c-text);
-  line-height: 1.6;
-}
-.dl-value.pre {
-  white-space: pre-wrap;
-  background: var(--c-surface-alt);
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--c-border);
-  font-size: 0.95rem;
-}
-
-/* Actions Buttons in Sidebar */
-.action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.2s;
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
-  color: var(--c-text);
-  cursor: pointer;
-  margin-bottom: 8px;
-}
-.action-btn:hover { background: var(--c-surface-alt); border-color: #cbd5e1; }
-.action-btn.primary {
-  background: var(--c-brand);
-  color: #fff;
-  border-color: var(--c-brand);
-  box-shadow: 0 4px 6px rgba(0,108,53,0.2);
-}
-.action-btn.primary:hover {
-  background: #00542a;
-  transform: translateY(-1px);
-}
-
-/* Notes Feed */
-.notes-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.note-bubble {
-  border: 1px solid var(--c-border);
-  border-radius: 12px;
-  padding: 16px;
-  background: var(--c-surface);
-  position: relative;
-}
-.note-bubble.is-mine {
-  background: var(--id-tone-pending-wash);
-  border-color: var(--id-tone-pending);
-}
-.note-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 0.85rem;
-  color: var(--c-text-muted);
-}
-.note-author {
-  font-weight: 700;
-  color: var(--c-text);
-}
-.note-content {
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-/* Inputs */
-.lux-input, .lux-select, .lux-textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 0.95rem;
-  transition: border 0.2s;
-}
-.lux-input:focus, .lux-select:focus, .lux-textarea:focus {
-  outline: none;
-  border-color: var(--c-brand);
-  box-shadow: 0 0 0 3px rgba(0,108,53,0.1);
-}
-
-/* Gallery */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
-}
-.gallery-item {
-  aspect-ratio: 1;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--c-border);
-  position: relative;
-  transition: transform 0.2s;
-}
-.gallery-item:hover { transform: scale(1.02); shadow: 0 4px 6px rgba(0,0,0,0.1); }
-.gallery-item img {
-  width: 100%; height: 100%; object-fit: cover;
-}
-
-/* Lightbox Styles (inline for reliability) */
-.lb-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: rgba(15, 23, 42, 0.9);
-  display: none; place-items: center;
-  backdrop-filter: blur(4px);
-}
-.lb-overlay.active { display: grid; }
-.lb-img { max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
-.lb-close {
-  position: absolute; top: 20px; right: 20px;
-  color: #fff; font-size: 2rem; cursor: pointer; background: none; border: none;
-}
-
-  /* A pinned light bubble under themed (light) text on the dark theme. */
-</style>
+<link rel="stylesheet" href="{% static 'css/ticket-detail.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="ticket-wrapper" dir="rtl">
-
-  <!-- 1. HEADER (HERO) -->
-  <header class="hero-header">
-    <div class="hero-stripe {% if t.is_platform %}is-platform{% endif %}"></div>
-    <div class="hero-body">
-      <div class="hero-main">
-        <div class="ticket-badges">
-          <span class="badge badge-id">#{{ t.id }}</span>
-          {% if t.is_platform %}
-            <span class="badge badge-type platform">
-              <i class="fa-solid fa-server"></i> طلب دعم فني (المنصة)
-            </span>
-          {% else %}
-            <span class="badge badge-type">
-              <i class="fa-solid fa-file-signature"></i> طلب إداري
-            </span>
-          {% endif %}
-        </div>
-        
-        <h1 class="hero-title">{{ t.title|default:"(بدون عنوان)" }}</h1>
-        
-        <div class="hero-meta">
-          <span><i class="fa-regular fa-calendar"></i> {{ t.created_at|hijri }} هـ · {{ t.created_at|date:"Y-m-d H:i" }} م</span>
-          <span><i class="fa-regular fa-user"></i> {{ t.creator.name|default:"غير معروف" }}</span>
-          {% if not t.is_platform %}
-            <span><i class="fa-solid fa-building-columns"></i> {{ t.department.name|default:"—" }}</span>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="hero-status">
-        <span class="status-pill {% if t.status == 'open' %}st-open{% elif t.status == 'in_progress' %}st-in_progress{% elif t.status == 'done' %}st-done{% else %}st-rejected{% endif %}">
-          {% if t.status == 'open' %}<i class="fa-regular fa-circle-dot"></i> جديدة
-          {% elif t.status == 'in_progress' %}<i class="fa-solid fa-spinner fa-spin-pulse"></i> قيد التنفيذ
-          {% elif t.status == 'done' %}<i class="fa-solid fa-check-circle"></i> مكتملة
-          {% else %}<i class="fa-solid fa-ban"></i> {{ t.get_status_display }}{% endif %}
-        </span>
-      </div>
+<div class="twq-page ticket-detail" dir="rtl" aria-labelledby="ticketDetailTitle">
+  <header class="twq-page-header ticket-detail__header">
+    <div class="twq-page-header__heading">
+      {% if t.is_platform %}
+        <a class="ticket-detail__back" href="{% url 'reports:my_support_tickets' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> كل طلبات الدعم</a>
+      {% elif request.user.is_staff %}
+        <a class="ticket-detail__back" href="{% url 'reports:tickets_inbox' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> صندوق الوارد</a>
+      {% else %}
+        <a class="ticket-detail__back" href="{% url 'reports:my_requests' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> طلباتي</a>
+      {% endif %}
+      <span class="twq-page-header__eyebrow">{% if t.is_platform %}طلب دعم فني (المنصة){% else %}طلب إداري{% endif %} · <bdi>#{{ t.id }}</bdi></span>
+      <h1 class="twq-page-header__title" id="ticketDetailTitle">{{ t.title|default:"(بدون عنوان)" }}</h1>
+      <p class="twq-page-header__lead">تفاصيل الطلب وسجل الردود والإجراء المتاح لك في مكان واحد.</p>
+      <dl class="twq-page-header__context ticket-detail__header-context">
+        <div><dt>مقدم الطلب</dt><dd>{{ t.creator.name|default:"غير معروف" }}</dd></div>
+        <div><dt>تاريخ الإنشاء</dt><dd><time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ · {{ t.created_at|date:"Y-m-d H:i" }} م</time></dd></div>
+        {% if not t.is_platform %}<div><dt>القسم</dt><dd>{{ t.department.name|default:"—" }}</dd></div>{% endif %}
+      </dl>
+    </div>
+    <div class="twq-page-header__aside ticket-detail__header-aside">
+      {% include "reports/partials/ticket_status.html" with t=t %}
+      <a class="twq-btn twq-btn--secondary ticket-detail__print" href="{% url 'reports:ticket_print' t.id %}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة الطلب</a>
     </div>
   </header>
 
-  <div class="layout-grid">
-    
-    <!-- 2. MAIN COLUMN -->
-    <div class="ticket-main">
-      <!-- Description Card -->
-      <section class="lux-card">
-        <div class="lux-card-header">
-          <h3 class="lux-card-title"><i class="fa-solid fa-align-right"></i> تفاصيل الطلب</h3>
+  <div class="ticket-detail__layout">
+    <div class="ticket-detail__main">
+      <section class="twq-section ticket-detail__section" aria-labelledby="ticketContentTitle">
+        <div class="twq-section__header">
+          <div><span class="twq-section__kicker">الطلب</span><h2 class="twq-section__title" id="ticketContentTitle">تفاصيل الطلب</h2></div>
         </div>
-        <div class="lux-card-body">
-          <div class="details-list">
-            
-            <div class="dl-item">
-              <div class="dl-label">نص الطلب:</div>
-              <div class="dl-value pre">{{ t.body|default:"—"|linebreaksbr }}</div>
-            </div>
+        <div class="ticket-detail__body">{{ t.body|default:"—"|linebreaksbr }}</div>
 
-            <!-- Attachments -->
-            {% if t.attachment or images %}
-            <div class="dl-item">
-              <div class="dl-label">المرفقات:</div>
-              <div class="dl-value">
-                <div class="gallery-grid">
-                  {% if t.attachment %}
-                    {% with att_url=t.attachment.url|lower %}
-                      {% if '.jpg' in att_url or '.png' in att_url or '.jpeg' in att_url or '.webp' in att_url %}
-                        <a href="{{ t.attachment.url }}" class="gallery-item lightbox-trigger" aria-label="فتح مرفق الطلب">
-                          <img src="{{ t.attachment.url }}" alt="مرفق الطلب">
-                        </a>
-                      {% else %}
-                        <a href="{{ t.attachment.url }}" target="_blank" rel="noopener" class="gallery-item xs-ticket-detail-1" aria-label="فتح مرفق الطلب في نافذة جديدة">
-                          <i class="fa-solid fa-paperclip fa-2x"></i>
-                        </a>
-                      {% endif %}
-                    {% endwith %}
-                  {% endif %}
-                  
-                  {% for im in images %}
-                    <a href="{{ im.image.url }}" class="gallery-item lightbox-trigger" aria-label="فتح صورة مرفقة بالطلب">
-                      <img src="{{ im.image.url }}" alt="صورة مرفقة بالطلب">
-                    </a>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-            {% endif %}
-
-          </div>
-        </div>
-      </section>
-
-      <!-- Notes / History -->
-      <section class="lux-card">
-        <div class="lux-card-header">
-          <h3 class="lux-card-title"><i class="fa-solid fa-comments"></i> الملاحظات والردود</h3>
-        </div>
-        <div class="lux-card-body">
-          {% if notes %}
-            <div class="notes-feed">
-              {% for n in notes %}
-                <div class="note-bubble {% if n.author_id == request.user.id %}is-mine{% endif %}">
-                  <div class="note-header">
-                    <span class="note-author">
-                      <i class="fa-solid fa-user-circle"></i> {{ n.author.name|default:"مسؤول النظام" }}
-                      {% if n.author.display_role_label %}
-                        <span class="xs-ticket-detail-2">({{ n.author.display_role_label }})</span>
-                      {% endif %}
-                    </span>
-                    <span>{{ n.created_at|hijri }} هـ · {{ n.created_at|date:"Y-m-d H:i" }} م</span>
-                  </div>
-                  <div class="note-content">{{ n.body|ticket_note_ar|default:""|linebreaksbr }}</div>
-                  
-                  {% if n.author_id == request.user.id and t.status != 'done' and t.status != 'rejected' %}
-                    <div class="xs-ticket-detail-3">
-                        <a href="{% url 'reports:ticket_note_edit' n.id %}?next={{ request.get_full_path|urlencode }}" class="xs-ticket-detail-4">
-                            <i class="fa-solid fa-pen"></i> تعديل
-                        </a>
-                    </div>
-                  {% endif %}
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="xs-ticket-detail-5">
-              <i class="fa-regular fa-comment-dots fa-2x xs-ticket-detail-6"></i>
-              <p>لا توجد ملاحظات أو ردود حتى الآن.</p>
-            </div>
-          {% endif %}
-        </div>
-      </section>
-
-      <!-- Action Forms -->
-      {% if can_act and form %}
-        <section class="lux-card xs-ticket-detail-7">
-          <div class="lux-card-header xs-ticket-detail-8">
-            <h3 class="lux-card-title xs-ticket-detail-9">
-              {% if t.status == 'done' or t.status == 'rejected' %}
-                <i class="fa-solid fa-lock"></i> الطلب مغلق
-              {% else %}
-                <i class="fa-solid fa-gavel"></i> اتخاذ إجراء
-              {% endif %}
-            </h3>
-          </div>
-          <div class="lux-card-body">
-            {% if t.status == 'done' or t.status == 'rejected' %}
-              <p class="xs-ticket-detail-10">
-                لا يمكن تعديل الحالة أو إضافة ردود إلى طلب مغلق. إذا عاد الطلب للعمل، أعد فتحه أولاً ثم سجّل التحديث المطلوب.
-              </p>
-              <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="ticket_action" value="reopen">
-                <button type="submit" class="action-btn primary">
-                  <i class="fa-solid fa-lock-open"></i> إعادة فتح الطلب
-                </button>
-              </form>
-            {% else %}
-              <form method="post" novalidate>
-                {% csrf_token %}
-                <div class="u-mb-6">
-                  <label class="dl-label u-block u-mb-2" for="ticketStatus">تحديث الحالة:</label>
-                  <select id="ticketStatus" name="status" class="lux-select">
-                      {% for value,label in form.fields.status.choices %}
-                      <option value="{{ value }}" {% if value == t.status %}selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                  </select>
-                </div>
-
-                <div class="u-mb-6">
-                    <label class="dl-label u-block u-mb-2" for="ticketActionNote">إضافة رد أو ملاحظة:</label>
-                    <textarea id="ticketActionNote" name="note" class="lux-textarea" rows="4" placeholder="اكتب ردّك هنا..."></textarea>
-                </div>
-
-                <button type="submit" class="action-btn primary">
-                  <i class="fa-regular fa-paper-plane"></i> حفظ التحديث
-                </button>
-              </form>
-            {% endif %}
-          </div>
-        </section>
-
-      {% elif is_owner and t.status != 'done' and t.status != 'rejected' and not can_act %}
-        <section class="lux-card">
-            <div class="lux-card-header">
-              <h3 class="lux-card-title"><i class="fa-solid fa-reply"></i> إضافة رد</h3>
-            </div>
-            <div class="lux-card-body">
-              <form method="post" novalidate>
-                {% csrf_token %}
-                <div class="u-mb-6">
-                  <label class="dl-label u-block u-mb-2" for="ticketOwnerNote">معلومات إضافية</label>
-                  <textarea id="ticketOwnerNote" name="note" class="lux-textarea" rows="4" placeholder="هل تود إضافة معلومات أخرى؟"></textarea>
-                </div>
-                <button type="submit" class="action-btn primary">
-                  <i class="fa-solid fa-plus"></i> إضافة الرد
-                </button>
-              </form>
-            </div>
-        </section>
-      {% endif %}
-
-    </div>
-
-    <!-- 3. SIDEBAR -->
-    <aside>
-      <!-- Meta Card -->
-      <section class="lux-card">
-        <div class="lux-card-header">
-          <h3 class="lux-card-title"><i class="fa-solid fa-circle-info"></i> معلومات</h3>
-        </div>
-        <div class="lux-card-body xs-ticket-detail-11">
-          <div class="xs-ticket-detail-12">
-            <div class="dl-label u-mb-1">الجهة/المدرسة</div>
-            <div class="u-fw-600">
-              {% if t.is_platform %}
-                <span class="xs-ticket-detail-13">إدارة المنصة</span>
-              {% else %}
-                {{ t.school.name|default:"—" }}
-              {% endif %}
-            </div>
-            {% if t.school.city %}<div class="u-fs-sm u-text-c-muted">{{ t.school.city }}</div>{% endif %}
-          </div>
-          
-          {% if not t.is_platform %}
-          <div class="xs-ticket-detail-12">
-             <div class="dl-label u-mb-1">المستلمون</div>
-             <div class="u-fs-md">
-                {% if t.recipients.exists %}
-                    {% for u in t.recipients.all %}
-                    <div class="xs-ticket-detail-14"><i class="fa-solid fa-check-double xs-ticket-detail-15"></i> {{ u.name }}</div>
-                    {% endfor %}
+        {% if t.attachment or images %}
+        <div class="ticket-detail__attachments" aria-label="مرفقات الطلب">
+          <h3>المرفقات</h3>
+          <div class="ticket-detail__gallery">
+            {% if t.attachment %}
+              {% with att_url=t.attachment.url|lower %}
+                {% if '.jpg' in att_url or '.png' in att_url or '.jpeg' in att_url or '.webp' in att_url %}
+                  <a href="{{ t.attachment.url }}" class="ticket-detail__image lightbox-trigger" aria-label="فتح مرفق الطلب"><img src="{{ t.attachment.url }}" alt="مرفق الطلب"></a>
                 {% else %}
-                    {% firstof t.assignee.name t.assignee "—" %}
+                  <a href="{{ t.attachment.url }}" target="_blank" rel="noopener" class="twq-document-item ticket-detail__file"><i class="fa-solid fa-paperclip" aria-hidden="true"></i><span>فتح مرفق الطلب</span></a>
                 {% endif %}
-             </div>
-          </div>
-          {% endif %}
-          
-          <div class="u-p-5">
-            <div class="dl-label u-mb-1">رابط مباشر</div>
-            <label class="sr-only" for="ticketDirectLink">الرابط المباشر للطلب</label>
-            <input type="text" id="ticketDirectLink" readonly value="{{ request.build_absolute_uri }}" class="lux-input u-fs-xs u-text-c-muted">
+              {% endwith %}
+            {% endif %}
+            {% for im in images %}
+              <a href="{{ im.image.url }}" class="ticket-detail__image lightbox-trigger" aria-label="فتح صورة مرفقة بالطلب"><img src="{{ im.image.url }}" alt="صورة مرفقة بالطلب"></a>
+            {% endfor %}
           </div>
         </div>
-      </section>
-
-      <!-- Quick Actions -->
-      <section>
-        <div class="xs-ticket-detail-16">إجراءات سريعة</div>
-        
-        <a href="{% url 'reports:ticket_print' t.id %}" target="_blank" class="action-btn">
-          <i class="fa-solid fa-print"></i> طباعة الطلب
-        </a>
-
-        {% if t.is_platform %}
-          <a href="{% url 'reports:my_support_tickets' %}" class="action-btn">
-             <i class="fa-solid fa-arrow-right"></i> كل طلبات الدعم
-          </a>
-        {% elif request.user.is_staff %}
-          <a href="{% url 'reports:tickets_inbox' %}" class="action-btn">
-             <i class="fa-solid fa-inbox"></i> صندوق الوارد
-          </a>
-        {% else %}
-          <a href="{% url 'reports:my_requests' %}" class="action-btn">
-             <i class="fa-solid fa-list-check"></i> طلباتي
-          </a>
         {% endif %}
       </section>
+
+      <section class="twq-section ticket-detail__section" aria-labelledby="ticketRepliesTitle">
+        <div class="twq-section__header">
+          <div><span class="twq-section__kicker">سجل التواصل</span><h2 class="twq-section__title" id="ticketRepliesTitle">الملاحظات والردود</h2></div>
+        </div>
+        {% if notes %}
+          <ol class="ticket-detail__thread">
+            {% for n in notes %}
+              <li class="ticket-detail__reply {% if n.author_id == request.user.id %}ticket-detail__reply--mine{% endif %}">
+                <div class="ticket-detail__reply-head">
+                  <div><strong>{{ n.author.name|default:"مسؤول النظام" }}</strong>{% if n.author.display_role_label %}<span class="ticket-detail__role"> ({{ n.author.display_role_label }})</span>{% endif %}</div>
+                  <time datetime="{{ n.created_at|date:'c' }}">{{ n.created_at|hijri }} هـ · {{ n.created_at|date:"Y-m-d H:i" }} م</time>
+                </div>
+                <div class="ticket-detail__reply-body">{{ n.body|ticket_note_ar|default:""|linebreaksbr }}</div>
+                {% if n.author_id == request.user.id and t.status != 'done' and t.status != 'rejected' %}
+                  <div class="ticket-detail__reply-actions"><a href="{% url 'reports:ticket_note_edit' n.id %}?next={{ request.get_full_path|urlencode }}" class="twq-btn twq-btn--ghost"><i class="fa-solid fa-pen" aria-hidden="true"></i> تعديل</a></div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <div class="twq-empty-state twq-empty--local ticket-detail__empty"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i><h3>لا توجد ردود حتى الآن</h3><p>ستظهر هنا الملاحظات والردود المتعلقة بهذا الطلب.</p></div>
+        {% endif %}
+      </section>
+
+      {% if can_act and form %}
+        <section class="twq-section ticket-detail__section ticket-detail__action" aria-labelledby="ticketActionTitle">
+          <div class="twq-section__header"><div><span class="twq-section__kicker">الإجراء التالي</span><h2 class="twq-section__title" id="ticketActionTitle">{% if t.status == 'done' or t.status == 'rejected' %}الطلب مغلق{% else %}تحديث الطلب{% endif %}</h2></div></div>
+          {% if t.status == 'done' or t.status == 'rejected' %}
+            <p class="ticket-detail__hint">لا يمكن تعديل الحالة أو إضافة ردود إلى طلب مغلق. إذا عاد الطلب للعمل، أعد فتحه أولاً ثم سجّل التحديث المطلوب.</p>
+            <form method="post">{% csrf_token %}<input type="hidden" name="ticket_action" value="reopen"><button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-lock-open" aria-hidden="true"></i> إعادة فتح الطلب</button></form>
+          {% else %}
+            <form method="post" novalidate class="ticket-detail__form">
+              {% csrf_token %}
+              <div class="twq-field"><label class="twq-label" for="ticketStatus">تحديث الحالة</label><select id="ticketStatus" name="status" class="twq-control">{% for value,label in form.fields.status.choices %}<option value="{{ value }}" {% if value == t.status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div class="twq-field"><label class="twq-label" for="ticketActionNote">إضافة رد أو ملاحظة</label><textarea id="ticketActionNote" name="note" class="twq-control" rows="4" placeholder="اكتب ردّك هنا..."></textarea></div>
+              <button type="submit" class="twq-btn twq-btn--primary"><i class="fa-regular fa-paper-plane" aria-hidden="true"></i> حفظ التحديث</button>
+            </form>
+          {% endif %}
+        </section>
+      {% elif is_owner and t.status != 'done' and t.status != 'rejected' and not can_act %}
+        <section class="twq-section ticket-detail__section ticket-detail__action" aria-labelledby="ticketActionTitle">
+          <div class="twq-section__header"><div><span class="twq-section__kicker">المتابعة</span><h2 class="twq-section__title" id="ticketActionTitle">إضافة رد</h2></div></div>
+          <form method="post" novalidate class="ticket-detail__form">{% csrf_token %}<div class="twq-field"><label class="twq-label" for="ticketOwnerNote">معلومات إضافية</label><textarea id="ticketOwnerNote" name="note" class="twq-control" rows="4" placeholder="هل تود إضافة معلومات أخرى؟"></textarea></div><button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة الرد</button></form>
+        </section>
+      {% endif %}
+    </div>
+
+    <aside class="ticket-detail__aside" aria-label="سياق الطلب">
+      <section class="twq-section ticket-detail__section" aria-labelledby="ticketInfoTitle">
+        <div class="twq-section__header"><div><span class="twq-section__kicker">السياق</span><h2 class="twq-section__title" id="ticketInfoTitle">معلومات الطلب</h2></div></div>
+        <dl class="ticket-detail__facts">
+          <div><dt>الجهة/المدرسة</dt><dd>{% if t.is_platform %}إدارة المنصة{% else %}{{ t.school.name|default:"—" }}{% endif %}{% if t.school.city %}<span class="ticket-detail__sub">{{ t.school.city }}</span>{% endif %}</dd></div>
+          {% if not t.is_platform %}<div><dt>المستلمون</dt><dd>{% if t.recipients.exists %}{% for u in t.recipients.all %}<span class="ticket-detail__recipient">{{ u.name }}</span>{% endfor %}{% else %}{% firstof t.assignee.name t.assignee "—" %}{% endif %}</dd></div>{% endif %}
+          <div><dt><label for="ticketDirectLink">الرابط المباشر</label></dt><dd><input type="text" id="ticketDirectLink" readonly value="{{ request.build_absolute_uri }}" class="twq-control ticket-detail__link" aria-label="الرابط المباشر للطلب؛ انقر لتحديده"></dd></div>
+        </dl>
+      </section>
+      <nav class="ticket-detail__navigation" aria-label="إجراءات التنقل">
+        {% if t.is_platform %}<a href="{% url 'reports:my_support_tickets' %}" class="twq-btn twq-btn--secondary">كل طلبات الدعم</a>
+        {% elif request.user.is_staff %}<a href="{% url 'reports:tickets_inbox' %}" class="twq-btn twq-btn--secondary">صندوق الوارد</a>
+        {% else %}<a href="{% url 'reports:my_requests' %}" class="twq-btn twq-btn--secondary">طلباتي</a>{% endif %}
+      </nav>
     </aside>
-
   </div>
 
-  <!-- Lightbox Modal -->
-  <div class="lb-overlay" id="lightbox">
-    <button class="lb-close" id="lb-close">&times;</button>
-    <img src="" class="lb-img" id="lb-img">
+  <div class="ticket-detail__lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="عرض صورة مرفقة" aria-hidden="true">
+    <button class="ticket-detail__lightbox-close" type="button" id="lb-close" aria-label="إغلاق الصورة">&times;</button>
+    <img src="" alt="صورة مرفقة بالطلب" class="ticket-detail__lightbox-image" id="lb-img">
   </div>
-
 </div>
 {% endblock %}
 
@@ -634,29 +142,35 @@
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lb-img');
     const lbClose = document.getElementById('lb-close');
+    let returnFocus = null;
 
     triggers.forEach(trig => {
       trig.addEventListener('click', (e) => {
         e.preventDefault();
-        const src = trig.getAttribute('href');
-        lbImg.src = src;
+        returnFocus = trig;
+        lbImg.src = trig.getAttribute('href');
         lightbox.classList.add('active');
+        lightbox.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+        lbClose.focus();
       });
     });
 
     const closeLb = () => {
-        lightbox.classList.remove('active');
-        document.body.style.overflow = '';
-        setTimeout(() => { lbImg.src = ''; }, 200);
+      lightbox.classList.remove('active');
+      lightbox.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (returnFocus) returnFocus.focus();
+      setTimeout(() => { lbImg.src = ''; }, 200);
     };
-
     lbClose.addEventListener('click', closeLb);
-    lightbox.addEventListener('click', (e) => {
-        if(e.target === lightbox) closeLb();
-    });
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLb(); });
     document.addEventListener('keydown', (e) => {
-        if(e.key === 'Escape' && lightbox.classList.contains('active')) closeLb();
+      if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLb();
+      if (e.key === 'Tab' && lightbox.classList.contains('active')) {
+        e.preventDefault();
+        lbClose.focus();
+      }
     });
   });
 </script>

@@ -1,4 +1,3 @@
-{# reports/templates/reports/my_requests.html (طلباتي) #}
 {% extends "base.html" %}
 {% load static %}
 {% load hijri_tags %}
@@ -6,1009 +5,216 @@
 {% block title %}طلباتي{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* ═══════════════════════════════════════════════════════════════════
-     الطبقة الأساس لهذه الشاشة — نُقلت من `app.css` الذي يُحمَّل على كل صفحة،
-     وهذه الشاشة وحدها تستعملها. ترتيبها أولاً هنا يطابق ترتيبها هناك:
-     ورقة القاعدة تسبق أنماط الصفحة، فما بعدها يظل هو المُرجَّح.
-     ═══════════════════════════════════════════════════════════════════ */
-/* ===== My Requests: reports/templates/reports/my_requests.html ===== */
-.req-scope .wrap{max-width:1200px;margin:0 auto;padding:16px 12px}
-
-/* ===== Hero ===== */
-.req-scope .hero{
-  border-radius:22px;
-  color:#fff;
-  box-shadow: var(--shadow, 0 18px 50px rgba(2,6,23,.10));
-  padding:18px 20px;
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
-  background:
-    radial-gradient(900px 380px at 15% 10%, rgba(255,255,255,.16), transparent 55%),
-    linear-gradient(135deg, var(--brand), #0072bc);
-}
-.req-scope .hero .title{
-  margin:0;font-weight:950;font-size:1.45rem;
-  display:flex;align-items:center;gap:10px;
-}
-.req-scope .hero .title i{opacity:.95}
-.req-scope .you-chip{
-  background:rgba(255,255,255,.14);
-  border:1px solid rgba(255,255,255,.22);
-  border-radius:999px;
-  padding:10px 12px;
-  display:flex;align-items:center;gap:10px;
-  backdrop-filter:saturate(160%) blur(8px);
-  -webkit-backdrop-filter:saturate(160%) blur(8px);
-}
-.req-scope .you-ava{
-  width:38px;height:38px;border-radius:999px;
-  background:rgba(2,6,23,.18);
-  display:grid;place-items:center;
-  border:1px solid rgba(255,255,255,.18);
-}
-.req-scope .you-ava span{font-weight:950}
-.req-scope .you-name{font-weight:950;line-height:1}
-.req-scope .you-role{display:block;margin-top:3px;font-size:.8rem;opacity:.92;font-weight:850}
-
-/* ===== Toolbar ===== */
-.req-scope .toolbar{
-  margin-top:14px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:18px;
-  box-shadow: var(--shadow, 0 18px 50px rgba(2,6,23,.10));
-  padding:12px;
-  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
-}
-.req-scope .tb-group{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-
-.req-scope .input,
-.req-scope .select{
-  border:1px solid var(--line);
-  border-radius:14px;
-  background: #fff;
-  color: var(--ink);
-  padding:10px 12px;
-  font-size:.95rem;
-  min-height:44px;
-  outline: none;
-}
-html[data-theme="dark"] .req-scope .input,
-html[data-theme="dark"] .req-scope .select{
-  background: rgba(15,30,23,.55);
-  border-color: var(--id-line);
-  color: var(--ink);
-}
-.req-scope .input:focus,
-.req-scope .select:focus{
-  box-shadow: 0 0 0 4px rgba(0,108,53,.18);
-  border-color: rgba(0,108,53,.45);
-}
-
-.req-scope .input{min-width:min(380px, 100%);}
-.req-scope .select{min-width:180px}
-
-.req-scope .btnx{
-  border:1px solid #c7d2fe;
-  border-radius:14px;
-  background:#eef2ff;
-  color:#073b2a;
-  font-weight:950;
-  padding:10px 14px;
-  min-height:44px;
-  cursor:pointer;
-  text-decoration:none;
-  display:inline-flex;align-items:center;gap:8px;
-  transition: transform .15s ease, background .15s ease, border-color .15s ease, filter .15s ease;
-}
-.req-scope .btnx:hover{background:#e0e7ff;border-color:#b6c3ff;transform:translateY(-1px)}
-.req-scope .btnx:active{transform:none}
-
-.req-scope .btnx.primary{
-  background:var(--brand);
-  border-color:var(--brand);
-  color:#fff;
-}
-.req-scope .btnx.primary:hover{filter:brightness(.98)}
-
-.req-scope .btnx.sm{
-  padding:8px 10px;
-  min-height:38px;
-  border-radius:12px;
-  font-size:.92rem;
-}
-
-.req-scope .view-switch{margin-inline-start:auto;display:flex;gap:8px}
-.req-scope .view-switch a{
-  padding:9px 12px;border-radius:12px;border:1px solid var(--line);
-  background:#fff;font-weight:950;color:#073b2a;text-decoration:none;min-height:44px;
-  display:inline-flex;align-items:center;gap:8px;
-}
-html[data-theme="dark"] .req-scope .view-switch a{
-  background: rgba(15,30,23,.55);
-  border-color:var(--id-line);
-  color: var(--ink);
-}
-.req-scope .view-switch .active{background:var(--brand);color:#fff;border-color:var(--brand)}
-
-.req-scope .hintline{
-  width:100%;
-  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
-  color:var(--muted);
-  font-weight:850;
-  padding-top:6px;
-}
-
-/* ===== Stats ===== */
-.req-scope .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
-.req-scope .stat{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow: var(--shadow, 0 18px 50px rgba(2,6,23,.10));
-  padding:16px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-}
-.req-scope .stat .num{font-weight:950;font-size:1.45rem;line-height:1}
-.req-scope .stat .lbl{color:var(--muted);font-weight:850;margin-top:6px}
-.req-scope .ico{
-  width:42px;height:42px;border-radius:14px;
-  display:grid;place-items:center;
-  border:1px solid rgba(15,30,23,.06);
-  font-weight:950;
-}
-.req-scope .ico.o{background:#ecfdf5;color:#065f46}
-.req-scope .ico.i{background:#f5f3ff;color:#5b21b6}
-.req-scope .ico.d{background:#e0f2fe;color:#075985}
-.req-scope .ico.r{background:#fee2e2;color:#991b1b}
-html[data-theme="dark"] .req-scope .ico{border-color: rgba(255,255,255,.06)}
-
-/* ===== List Cards ===== */
-.req-scope .list{margin-top:12px;display:grid;gap:12px}
-.req-scope .ticket{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow: var(--shadow, 0 18px 50px rgba(2,6,23,.10));
-  padding:14px;
-  display:grid;
-  grid-template-columns:1fr 290px;
-  gap:16px;
-  position:relative;
-  overflow:hidden;
-}
-.req-scope .ticket::after{
-  content:"";
-  position:absolute;top:0;bottom:0;left:0;width:6px;background:rgba(148,163,184,.55);
-}
-
-.req-scope .t-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
-.req-scope .tid{
-  background:#eef2ff;color:#00542a;border:1px solid #c7d2fe;
-  border-radius:999px;padding:6px 10px;font-weight:950;font-size:.85rem;
-}
-.req-scope .t-title{margin:0;font-weight:950;color:var(--ink);font-size:1.08rem}
-.req-scope .t-title a{color:inherit;text-decoration:none}
-.req-scope .t-title a:hover{color:var(--brand)}
-
-.req-scope .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.req-scope .pill{
-  border:1px solid var(--line);
-  border-radius:999px;
-  background:#f8fafc;
-  padding:8px 12px;
-  display:inline-flex;align-items:center;gap:8px;
-  font-size:.9rem;
-  color:var(--ink);
-  font-weight:850;
-}
-html[data-theme="dark"] .req-scope .pill{
-  background: rgba(15,30,23,.35);
-  border-color:var(--id-line);
-}
-.req-scope .dot{width:8px;height:8px;border-radius:999px}
-.req-scope .dot.a{background:#06b6d4}
-.req-scope .dot.b{background:linear-gradient(135deg,#006c35,#16845b)}
-.req-scope .dot.c{background:#94a3b8}
-
-.req-scope .last-note{
-  margin-top:10px;
-  border:1px dashed var(--line);
-  border-radius:14px;
-  background:linear-gradient(180deg,#ffffff,#fbfdff);
-  padding:10px 12px;
-  color:var(--muted);
-  font-weight:850;
-}
-html[data-theme="dark"] .req-scope .last-note{
-  background: linear-gradient(180deg, rgba(15,30,23,.45), rgba(15,30,23,.25));
-  border-color:var(--id-line);
-}
-.req-scope .last-note b{color:var(--ink)}
-
-.req-scope .aside{display:flex;flex-direction:column;gap:10px;align-items:flex-start;justify-content:center}
-.req-scope .badge2{
-  --bg:#f1f5f9;--fg:#0f172a;--bd:#e2e8f0;
-  background:var(--bg);color:var(--fg);border:1px solid var(--bd);
-  padding:10px 14px;border-radius:14px;font-weight:950;
-  display:inline-flex;align-items:center;gap:8px;
-  white-space:nowrap;
-}
-.req-scope .b-open{--bg:#ecfdf5;--fg:#065f46;--bd:#a7f3d0}
-.req-scope .b-in{--bg:#f5f3ff;--fg:#5b21b6;--bd:#ddd6fe}
-.req-scope .b-done{--bg:#e0f2fe;--fg:#075985;--bd:#bae6fd}
-.req-scope .b-rej{--bg:#fee2e2;--fg:#991b1b;--bd:#fecaca}
-
-.req-scope .meter{
-  height:7px;width:100%;
-  border-radius:999px;
-  background:#eef2f7;border:1px solid #e6ebf2;
-  overflow:hidden;
-}
-html[data-theme="dark"] .req-scope .meter{
-  background: rgba(148,163,184,.18);
-  border-color:var(--id-line);
-}
-.req-scope .fill{height:100%;display:block;width:100%}
-.req-scope .m-open .fill{width:34%;background:linear-gradient(90deg,#35a96f,#16845b)}
-.req-scope .m-in .fill{width:67%;background:linear-gradient(90deg,#a78bfa,#b9975b)}
-.req-scope .m-done .fill{width:100%;background:linear-gradient(90deg,#0f8f87,#006c35)}
-.req-scope .m-rej .fill{width:100%;background:linear-gradient(90deg,#fda4af,#ef4444)}
-
-.req-scope .ticket.state-open::after{background:#16845b}
-.req-scope .ticket.state-in::after{background:#b9975b}
-.req-scope .ticket.state-done::after{background:#006c35}
-.req-scope .ticket.state-rej::after{background:#ef4444}
-
-/* ===== Table ===== */
-.req-scope .table-wrap{
-  margin-top:12px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow: var(--shadow, 0 18px 50px rgba(2,6,23,.10));
-  overflow:auto;
-}
-.req-scope table{width:100%;border-collapse:collapse}
-.req-scope thead th{
-  background:#f8fafc;border-bottom:1px solid var(--line);
-  padding:12px 10px;text-align:right;
-  color:var(--ink);font-weight:950;white-space:nowrap;
-}
-html[data-theme="dark"] .req-scope thead th{
-  background: rgba(15,30,23,.45);
-  border-color:var(--id-line);
-}
-.req-scope td{border-bottom:1px solid var(--line);padding:11px 10px;white-space:nowrap}
-html[data-theme="dark"] .req-scope td{border-color:var(--id-line)}
-.req-scope .tbl-id{font-weight:950;color:#00542a}
-html[data-theme="dark"] .req-scope .tbl-id{color: #93c5fd}
-.req-scope .tbl-title a{text-decoration:none;color:var(--ink);font-weight:950}
-.req-scope .tbl-title a:hover{color:var(--brand)}
-.req-scope .note-preview{max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-weight:850}
-
-/* ===== Empty state ===== */
-.req-scope .empty{
-  margin-top:12px;
-  border:1px dashed var(--line);
-  border-radius:18px;
-  background:linear-gradient(180deg,#ffffff,#fbfdff);
-  padding:18px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  color:var(--muted);
-  font-weight:950;
-}
-html[data-theme="dark"] .req-scope .empty{
-  background: linear-gradient(180deg, rgba(15,30,23,.45), rgba(15,30,23,.25));
-  border-color:var(--id-line);
-}
-.req-scope .empty .big{font-size:1.05rem;color:var(--ink)}
-.req-scope .empty .sub{font-weight:850;margin-top:4px;color:var(--muted)}
-.req-scope .empty .spark{
-  width:52px;height:52px;border-radius:18px;
-  display:grid;place-items:center;
-  background:rgba(0,108,53,.08);
-  border:1px solid rgba(0,108,53,.18);
-  color:var(--brand);
-  font-size:1.2rem;
-}
-
-/* ===== Pager ===== */
-.req-scope .pager{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
-.req-scope .pager a, .req-scope .pager span{
-  background:#fff;border:1px solid var(--line);border-radius:12px;
-  padding:9px 12px;text-decoration:none;color:var(--ink);font-weight:950;
-}
-html[data-theme="dark"] .req-scope .pager a,
-html[data-theme="dark"] .req-scope .pager span{
-  background: rgba(15,30,23,.55);
-  border-color:var(--id-line);
-}
-.req-scope .pager .current{
-  background:#eef2ff;border-color:#c7d2fe;color:#073b2a;
-}
-html[data-theme="dark"] .req-scope .pager .current{
-  background: rgba(0,108,53,.18);
-  border-color: rgba(0,108,53,.28);
-  color: var(--ink);
-}
-
-/* Responsive */
-@media (max-width: 980px){
-  .req-scope .ticket{grid-template-columns:1fr}
-  .req-scope .stats{grid-template-columns:repeat(2,1fr)}
-  .req-scope .view-switch{width:100%;margin-inline-start:0}
-  .req-scope .view-switch a{flex:1;justify-content:center}
-  .req-scope .input{min-width: 100%;}
-}
-@media (max-width: 560px){
-  .req-scope .stats{grid-template-columns:1fr}
-}
-
-@media (prefers-reduced-motion: reduce){
-  .req-scope .btnx{transition:none !important}
-  .req-scope .btnx:hover{transform:none !important}
-}
-
-  /* 
-     NEO-PROFESSIONAL 2026 
-     Theme: Refined Slate & Royal Blue (Requests List)
-  */
-  .req-scope {
-    --c-brand: #006c35;
-    --c-brand-light: #eff6ff;
-    --c-ink: #0f172a;
-    --c-muted: #64748b;
-    --c-border: #e2e8f0;
-    --c-bg: #f8fafc;
-    --c-card: #ffffff;
-    
-    --shadow-soft: 0 4px 6px -1px rgba(0,0,0,0.05);
-    --shadow-hard: 0 10px 15px -3px rgba(0,0,0,0.05);
-    
-    --radius-xl: 16px;
-    --radius-lg: 12px;
-    
-    --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .req-scope .wrap {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 24px;
-      font-family: system-ui, -apple-system, sans-serif;
-  }
-
-  /* Hero Section */
-  .hero-card {
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      color: white;
-      padding: 32px;
-      border-radius: var(--radius-xl);
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-hard);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 20px;
-      position: relative;
-      overflow: hidden;
-  }
-  
-  .hero-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      opacity: 0.1;
-  }
-
-  .hero-content {
-      position: relative; 
-      z-index: 2;
-  }
-
-  .hero-title {
-      font-size: 1.8rem;
-      font-weight: 800;
-      margin: 0 0 8px 0;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-  }
-
-  .hero-user {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255,255,255,0.1);
-      padding: 8px 16px;
-      border-radius: 99px;
-      border: 1px solid rgba(255,255,255,0.2);
-  }
-  .hero-ava {
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, var(--c-brand), #0f8f87);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700;
-      font-size: 0.9rem;
-      border: 2px solid rgba(255,255,255,0.3);
-  }
-
-  /* Toolbar */
-  .toolbar {
-      background: var(--c-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xl);
-      padding: 20px;
-      margin-bottom: 24px;
-      box-shadow: var(--shadow-soft);
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 24px;
-      align-items: end;
-  }
-  
-  @media (max-width: 992px) { .toolbar { grid-template-columns: 1fr; } }
-
-  .tb-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-  }
-
-  .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-  }
-  .field-label {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--c-muted);
-  }
-
-  /* Inputs */
-  .input-lux {
-      background: var(--c-bg);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-lg);
-      padding: 10px 14px;
-      font-size: 0.95rem;
-      min-width: 200px;
-      transition: all 0.2s;
-  }
-  .input-lux:focus {
-      background: white;
-      border-color: var(--c-brand);
-      box-shadow: 0 0 0 3px rgba(0,108,53,0.1);
-      outline: none;
-  }
-  
-  .select-lux {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: left 12px center;
-      background-size: 16px;
-      padding-left: 36px;
-  }
-
-  /* Buttons */
-  .btn-lux {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: var(--radius-lg);
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: all 0.2s;
-      text-decoration: none;
-      height: 42px;
-  }
-  
-  .btn-primary {
-      background: var(--c-brand);
-      color: white;
-      box-shadow: 0 4px 6px -1px rgba(0,108,53,0.3);
-  }
-  .btn-primary:hover { background: #00542a; transform: translateY(-1px); }
-  
-  .btn-ghost {
-      background: transparent;
-      color: var(--c-muted);
-      border: 1px solid var(--c-border);
-  }
-  .btn-ghost:hover {
-      background: var(--c-bg);
-      color: var(--c-ink);
-      border-color: var(--c-brand);
-  }
-
-  /* Stats Grid */
-  .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-  }
-  
-  .stat-card {
-      background: var(--c-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xl);
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: var(--shadow-soft);
-  }
-  
-  .stat-info .num { font-size: 1.8rem; font-weight: 800; color: var(--c-ink); line-height: 1; }
-  .stat-info .lbl { font-size: 0.9rem; color: var(--c-muted); margin-top: 4px; font-weight: 600; }
-  
-  .stat-icon {
-      width: 48px; height: 48px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem;
-  }
-  
-  .s-open { background: #eff6ff; color: #006c35; }
-  .s-prog { background: #fff7ed; color: #ea580c; }
-  .s-done { background: #f0fdf4; color: #166534; }
-  .s-rejected { background: #fef2f2; color: #dc2626; }
-
-  /* Table View */
-  .table-card {
-      background: var(--c-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xl);
-      overflow: hidden;
-      box-shadow: var(--shadow-soft);
-  }
-  
-  .data-table { width: 100%; border-collapse: collapse; min-width: 900px; }
-  .data-table th {
-      background: var(--c-bg);
-      text-align: right;
-      padding: 16px 20px;
-      font-weight: 700;
-      color: var(--c-muted);
-      font-size: 0.85rem;
-      border-bottom: 1px solid var(--c-border);
-  }
-  .data-table td {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--c-border);
-      color: var(--c-ink);
-      font-size: 0.95rem;
-  }
-  .data-table tr:hover td { background: rgba(241,245,249,0.5); }
-
-  /* List View */
-  .list-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 16px;
-  }
-  
-  .list-card {
-      background: var(--c-card);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-xl);
-      padding: 20px;
-      transition: all 0.2s;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-  }
-  .list-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-hard);
-      border-color: var(--c-brand);
-  }
-
-  .lc-head { display: flex; justify-content: space-between; align-items: flex-start; }
-  .lc-id { font-family: monospace; color: var(--c-muted); font-size: 0.9rem; }
-  .lc-title { font-size: 1.1rem; font-weight: 700; color: var(--c-ink); margin: 4px 0 0 0; line-height: 1.4; }
-  .lc-title a { text-decoration: none; color: inherit; }
-  .lc-title a:hover { color: var(--c-brand); }
-  
-  .lc-meta {
-      display: flex; flex-wrap: wrap; gap: 8px;
-      font-size: 0.85rem; color: var(--c-muted);
-  }
-  .lc-pill {
-      background: var(--c-bg);
-      padding: 4px 10px;
-      border-radius: 6px;
-      display: flex; align-items: center; gap: 6px;
-  }
-  
-  .lc-foot {
-      margin-top: auto;
-      padding-top: 16px;
-      border-top: 1px solid var(--c-border);
-      display: flex; justify-content: space-between; align-items: center;
-  }
-
-  /* Badges */
-  .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 12px;
-      border-radius: 99px;
-      font-size: 0.8rem;
-      font-weight: 700;
-  }
-  .badge.open { background: #eff6ff; color: #006c35; border: 1px solid #dbeafe; }
-  .badge.prog { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
-  .badge.done { background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; }
-  .badge.rej { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
-
-  /* Empty State */
-  .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      background: var(--c-card);
-      border-radius: var(--radius-xl);
-      border: 2px dashed var(--c-border);
-  }
-  .empty-icon { font-size: 3rem; color: var(--c-border); margin-bottom: 16px; }
-
-    /* Refined manager-grade workspace */
-    .req-scope {
-            --c-brand: #075b36;
-            --c-brand-deep: #043d25;
-            --c-gold: #b58a46;
-            --c-ink: #17211c;
-            --c-muted: #65736b;
-            --c-border: #dce4df;
-            --c-bg: #f4f7f5;
-            background:
-                linear-gradient(rgba(7,91,54,.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(7,91,54,.035) 1px, transparent 1px);
-            background-size: 28px 28px;
-            min-height: calc(100vh - 80px);
-    }
-    .req-scope .wrap { max-width: 1240px; padding: 32px 24px 56px; font-family: inherit; }
-    .req-scope * { letter-spacing: 0; }
-    .hero-card {
-            min-height: 150px;
-            padding: 32px 36px;
-            border-radius: 8px;
-            background:
-                linear-gradient(115deg, rgba(181,138,70,.2), transparent 38%),
-                linear-gradient(135deg, var(--c-brand), var(--c-brand-deep));
-            border: 1px solid rgba(181,138,70,.48);
-            box-shadow: 0 18px 42px -30px rgba(4,61,37,.8);
-    }
-    .hero-card::before { background-image: none; opacity: 1; width: 5px; inset-inline-start: 0; inset-inline-end: auto; background: var(--c-gold); }
-    .hero-title { font-size: 1.75rem; font-weight: 900; }
-    .hero-subtitle { opacity: .86; margin: 0; line-height: 1.8; }
-    .hero-side { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .hero-user { border-radius: 8px; background: rgba(255,255,255,.1); }
-    .hero-ava { border-radius: 6px; background: var(--c-gold); color: #17211c; }
-    .hero-new { background: #fff; color: var(--c-brand-deep); border-color: #fff; font-weight: 800; }
-    .hero-new:hover { background: #f8faf9; color: var(--c-brand); }
-    .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-    .stat-card { border-radius: 8px; padding: 18px; box-shadow: none; border-top: 3px solid transparent; }
-    .stat-card:nth-child(1) { border-top-color: #2563eb; }
-    .stat-card:nth-child(2) { border-top-color: #d97706; }
-    .stat-card:nth-child(3) { border-top-color: #15803d; }
-    .stat-card:nth-child(4) { border-top-color: #b91c1c; }
-    .stat-icon { border-radius: 6px; }
-    .toolbar { border-radius: 8px; box-shadow: none; border-color: #d7e1db; }
-    .input-lux, .btn-lux { border-radius: 6px; }
-    .input-lux { min-height: 44px; color: var(--c-ink); }
-    .btn-lux { justify-content: center; }
-    .btn-primary { background: var(--c-brand); box-shadow: none; }
-    .btn-active { color: var(--c-brand); border-color: var(--c-brand); background: #edf7f1; }
-    .list-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 14px; }
-    .list-card { border-radius: 8px; padding: 20px; box-shadow: 0 10px 24px -24px rgba(23,33,28,.8); border-top: 3px solid #dce4df; }
-    .list-card:hover { transform: translateY(-2px); box-shadow: 0 18px 32px -26px rgba(7,91,54,.8); }
-    .lc-pill, .badge { border-radius: 5px; }
-    .lc-reply { font-size: .85rem; color: #475569; background: #f1f5f9; padding: 10px; border-radius: 6px; line-height: 1.6; }
-
-    /* The page's primary action sat at 1.31:1 on the dark theme. */
-    [data-theme="dark"] .req-scope .hero-new { color: #0a2a1c; background: #cfeedd; border-color: #cfeedd; }
-    [data-theme="dark"] .req-scope .hero-new:hover { color: #06301e; background: #eaf9f1; border-color: #eaf9f1; }
-    [data-theme="dark"] .req-scope .btn-active { color: #42ca88; background: #113328; border-color: #42ca88; }
-    [data-theme="dark"] .req-scope .lc-reply { color: #c8dbd1; background: #102a22; }
-    [data-theme="dark"] .req-scope .empty-state { background: var(--surface); }
-    .lc-detail { text-decoration: none; color: var(--c-brand); font-weight: 800; font-size: .9rem; display: flex; align-items: center; gap: 6px; }
-    .table-card, .empty-state { border-radius: 8px; box-shadow: none; }
-    .empty-state { background: rgba(255,255,255,.82); }
-
-    @media (max-width: 820px) {
-            .req-scope .wrap { padding: 18px 14px 40px; }
-            .hero-card { padding: 24px 20px; align-items: flex-start; }
-            .hero-side { width: 100%; }
-            .hero-new { flex: 1; }
-            .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .toolbar, .tb-row { gap: 12px; }
-            .field-group, .input-lux { width: 100%; min-width: 0; }
-            .toolbar .tb-row:last-child > div { width: 100%; border-left: 0 !important; padding-left: 0 !important; }
-    }
-    @media (max-width: 460px) {
-          .hero-side { justify-content: space-between; }
-            .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-            .stat-card { padding: 14px 12px; }
-            .stat-icon { width: 40px; height: 40px; }
-            .stat-info .num { font-size: 1.5rem; }
-            .list-card { padding: 16px; }
-            .lc-head { gap: 10px; }
-    }
-
-</style>
+<link rel="stylesheet" href="{% static 'css/my-requests.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="req-scope" dir="rtl">
-    <div class="wrap">
-
-      <!-- Hero Header -->
-      <section class="hero-card">
-        <div class="hero-content">
-            <h1 class="hero-title">
-                <i class="fa-solid fa-layer-group"></i>
-                طلباتي
-            </h1>
-                        <p class="hero-subtitle">تابع حالة طلباتك وردود الأقسام من مكان واحد.</p>
+<div class="twq-page requests-page" dir="rtl" aria-labelledby="requestsTitle">
+  <header class="twq-page-header requests-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-inbox" aria-hidden="true"></i> مساحة متابعة الطلبات</span>
+      <h1 class="twq-page-header__title" id="requestsTitle">طلباتي</h1>
+      <p class="twq-page-header__lead">تابع طلباتك المرسلة، حالة معالجتها، وآخر رد من القسم المختص في سجل واحد واضح.</p>
+      {% firstof request.user.name request.user.phone "المستخدم" as display_name %}
+      <dl class="twq-page-header__context requests-header__context">
+        <div>
+          <dt>صاحب الطلب</dt>
+          <dd>{{ display_name }}</dd>
         </div>
-                <div class="hero-side">
-                    <a href="{% url 'reports:request_create' %}" class="btn-lux hero-new">
-                        <i class="fa-solid fa-plus" aria-hidden="true"></i> طلب جديد
-                    </a>
-                    <div class="hero-user">
-            {% firstof request.user.name request.user.phone "أنا" as display_name %}
-            <div class="hero-ava">{{ display_name|slice:":1" }}</div>
-            <div>
-                 <div class="u-fw-700 u-fs-95">{{ display_name }}</div>
-                 <div class="xs-my-requests-1">صاحب الطلب</div>
-            </div>
-                    </div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside requests-header__aside">
+      <a href="{% url 'reports:request_create' %}" class="twq-btn twq-btn--primary requests-header__action">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i> طلب جديد
+      </a>
+    </div>
+  </header>
+
+  <section class="requests-overview" aria-labelledby="requestsOverviewTitle">
+    <div class="twq-section__header requests-section-head">
+      <div>
+        <span class="twq-section__kicker">لمحة سريعة</span>
+        <h2 class="twq-section__title" id="requestsOverviewTitle">حالات طلباتك{% if request.GET.q %} المطابقة للبحث{% endif %}</h2>
+      </div>
+      <p class="twq-section__meta">الأعداد تشمل الحالات كافة قبل تصفية الحالة</p>
+    </div>
+    <dl class="requests-summary">
+      <div class="requests-summary__item">
+        <dt><span class="requests-summary__dot requests-summary__dot--info"></span> جديدة</dt>
+        <dd>{{ stats.open|default:0 }}</dd>
+      </div>
+      <div class="requests-summary__item">
+        <dt><span class="requests-summary__dot requests-summary__dot--warning"></span> قيد المعالجة</dt>
+        <dd>{{ stats.in_progress|default:0 }}</dd>
+      </div>
+      <div class="requests-summary__item">
+        <dt><span class="requests-summary__dot requests-summary__dot--success"></span> مكتملة</dt>
+        <dd>{{ stats.done|default:0 }}</dd>
+      </div>
+      <div class="requests-summary__item">
+        <dt><span class="requests-summary__dot requests-summary__dot--danger"></span> مرفوضة</dt>
+        <dd>{{ stats.rejected|default:0 }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="requests-workspace twq-section" aria-labelledby="requestsResultsTitle">
+    <div class="twq-section__header requests-section-head">
+      <div>
+        <span class="twq-section__kicker">سجل الطلبات</span>
+        <h2 class="twq-section__title" id="requestsResultsTitle">استعرض طلباتك</h2>
+        <p class="twq-section__description">ابحث برقم الطلب أو عنوانه، ثم حدد الحالة والترتيب المناسبين.</p>
+      </div>
+      <span class="requests-results-count" aria-live="polite">{{ tickets.paginator.count }} طلب</span>
+    </div>
+
+    <div class="requests-filter-panel">
+      <form class="twq-toolbar requests-toolbar" method="get" role="search" aria-label="البحث والتصفية في طلباتي">
+        <input type="hidden" name="view" value="{{ view_mode|default:'list' }}">
+        <div class="twq-toolbar__search twq-field">
+          <label class="twq-label" for="myRequestsSearch">البحث</label>
+          <div class="twq-toolbar__control">
+            <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input class="twq-control" id="myRequestsSearch" type="search" name="q" placeholder="رقم الطلب أو عنوانه" value="{{ request.GET.q|default_if_none:'' }}">
+          </div>
         </div>
-      </section>
-
-      <!-- Stats Overview -->
-      <section class="stats-grid">
-          <div class="stat-card">
-              <div class="stat-info">
-                  <div class="num">{{ stats.open|default:0 }}</div>
-                  <div class="lbl">طلبات جديدة</div>
-              </div>
-              <div class="stat-icon s-open"><i class="fa-solid fa-sparkles"></i></div>
-          </div>
-          <div class="stat-card">
-              <div class="stat-info">
-                  <div class="num">{{ stats.in_progress|default:0 }}</div>
-                  <div class="lbl">قيد المعالجة</div>
-              </div>
-              <div class="stat-icon s-prog"><i class="fa-solid fa-spinner"></i></div>
-          </div>
-          <div class="stat-card">
-              <div class="stat-info">
-                  <div class="num">{{ stats.done|default:0 }}</div>
-                  <div class="lbl">مكتملة</div>
-              </div>
-              <div class="stat-icon s-done"><i class="fa-solid fa-check-circle"></i></div>
-          </div>
-          <div class="stat-card">
-              <div class="stat-info">
-                  <div class="num">{{ stats.rejected|default:0 }}</div>
-                  <div class="lbl">مرفوضة</div>
-              </div>
-              <div class="stat-icon s-rejected"><i class="fa-solid fa-times-circle"></i></div>
-          </div>
-      </section>
-
-      <!-- Advanced Filter Toolbar -->
-      <form class="toolbar" method="get">
-         <input type="hidden" name="view" value="{{ view_mode|default:'list' }}">
-         
-         <div class="tb-row u-grow">
-             <!-- Search -->
-             <div class="field-group u-grow">
-                 <label class="field-label" for="myRequestsSearch">البحث</label>
-                 <input class="input-lux" id="myRequestsSearch" type="search" name="q" placeholder="ابحث برقم الطلب، العنوان..." value="{{ request.GET.q|default_if_none:'' }}">
-             </div>
-             
-             <!-- Status Filter (Corrected Labels) -->
-             <div class="field-group">
-                 <label class="field-label" for="myRequestsStatus">حالة الطلب</label>
-                 <select class="input-lux select-lux" id="myRequestsStatus" name="status">
-                    <option value="">جميع الحالات</option>
-                    <option value="open" {% if request.GET.status == "open" %}selected{% endif %}>جديدة</option>
-                    <!-- Removed Duplicate/English Labels -->
-                    <option value="in_progress" {% if request.GET.status == "in_progress" %}selected{% endif %}>قيد المعالجة</option>
-                    <option value="done" {% if request.GET.status == "done" %}selected{% endif %}>مكتملة</option>
-                    <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>مرفوضة</option>
-                 </select>
-             </div>
-
-             <!-- Sort -->
-             <div class="field-group">
-                 <label class="field-label" for="myRequestsOrder">ترتيب العرض</label>
-                 <select class="input-lux select-lux" id="myRequestsOrder" name="order">
-                    <option value="-created_at" {% if request.GET.order|default:"-created_at" == "-created_at" %}selected{% endif %}>الأحدث أولاً</option>
-                    <option value="created_at" {% if request.GET.order == "created_at" %}selected{% endif %}>الأقدم أولاً</option>
-                 </select>
-             </div>
-
-             <div class="field-group u-justify-end">
-                <button type="submit" class="btn-lux btn-primary xs-my-requests-2">
-                    <i class="fa-solid fa-filter"></i> تطبيق
-                </button>
-             </div>
-             
-             {% if request.GET.q or request.GET.status or request.GET.order %}
-             <div class="field-group u-justify-end">
-                <a href="?view={{ view_mode|default:'list' }}" class="btn-lux btn-ghost xs-my-requests-2">
-                    مسح
-                </a>
-             </div>
-             {% endif %}
-         </div>
-
-         <!-- View Toggles & Actions -->
-         <div class="tb-row">
-             <div class="xs-my-requests-3">
-                {% with bq=request.GET.q|urlencode bs=request.GET.status bo=request.GET.order %}
-                    <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view=list" 
-                              class="btn-lux btn-ghost {% if view_mode != 'table' %}btn-active{% endif %}" title="عرض قائمة" aria-label="عرض الطلبات كبطاقات">
-                       <i class="fa-solid fa-grip"></i>
-                    </a>
-                    <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view=table" 
-                              class="btn-lux btn-ghost {% if view_mode == 'table' %}btn-active{% endif %}" title="عرض جدول" aria-label="عرض الطلبات كجدول">
-                       <i class="fa-solid fa-table"></i>
-                    </a>
-                {% endwith %}
-             </div>
-         </div>
+        <div class="twq-toolbar__field twq-field">
+          <label class="twq-label" for="myRequestsStatus">حالة الطلب</label>
+          <select class="twq-control" id="myRequestsStatus" name="status">
+            <option value="">جميع الحالات</option>
+            <option value="open" {% if request.GET.status == "open" %}selected{% endif %}>جديدة</option>
+            <option value="in_progress" {% if request.GET.status == "in_progress" %}selected{% endif %}>قيد المعالجة</option>
+            <option value="done" {% if request.GET.status == "done" %}selected{% endif %}>مكتملة</option>
+            <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>مرفوضة</option>
+          </select>
+        </div>
+        <div class="twq-toolbar__field twq-field">
+          <label class="twq-label" for="myRequestsOrder">ترتيب العرض</label>
+          <select class="twq-control" id="myRequestsOrder" name="order">
+            <option value="-created_at" {% if request.GET.order|default:"-created_at" == "-created_at" %}selected{% endif %}>الأحدث أولًا</option>
+            <option value="created_at" {% if request.GET.order == "created_at" %}selected{% endif %}>الأقدم أولًا</option>
+          </select>
+        </div>
+        <div class="twq-toolbar__actions requests-toolbar__actions">
+          <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-filter" aria-hidden="true"></i> تطبيق</button>
+          {% if request.GET.q or request.GET.status or request.GET.order %}
+          <a href="?view={{ view_mode|default:'list' }}" class="twq-btn twq-btn--secondary">مسح</a>
+          {% endif %}
+        </div>
       </form>
 
-      <!-- Content Area -->
-      {% if view_mode == "table" %}
-        <div class="table-card">
-          <div class="xs-my-requests-4">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th width="80">#</th>
-                        <th>العنوان</th>
-                        <th>القسم</th>
-                        <th>التاريخ</th>
-                        <th>الحالة</th>
-                        <th width="100">إجراء</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in tickets %}
-                    <tr>
-                        <td class="xs-my-requests-5">#{{ t.pk }}</td>
-                        <td>
-                            <div class="u-fw-600">{{ t.title }}</div>
-                            <div class="u-fs-sm u-text-c-muted-2">
-                                المستلم: {% firstof t.assignee.name t.assignee "—" %}
-                            </div>
-                        </td>
-                        <td>{{ t.get_department_display|default:t.department|default:"—" }}</td>
-                        <td>
-                            <time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time><br>
-                            <small class="xs-my-requests-6">{{ t.created_at|date:"Y-m-d H:i" }} م</small>
-                        </td>
-                        <td>
-                            {% if t.status == 'open' or t.status == 'new' %}
-                                <span class="badge open">جديدة</span>
-                            {% elif t.status == 'in_progress' %}
-                                <span class="badge prog">قيد المعالجة</span>
-                            {% elif t.status == 'done' %}
-                                <span class="badge done">مكتملة</span>
-                            {% else %}
-                                <span class="badge rej">مرفوضة</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'reports:ticket_detail' t.pk %}" class="btn-lux btn-ghost xs-my-requests-7">عرض</a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="xs-my-requests-8">لا توجد طلبات مطابقة للبحث</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-          </div>
-        </div>
-
-      {% else %}
-        <!-- List View -->
-        <div class="list-grid">
-            {% for t in tickets %}
-            <div class="list-card">
-                <div class="lc-head">
-                    <div>
-                        <div class="lc-id">#{{ t.pk }}</div>
-                        <h3 class="lc-title">
-                            <a href="{% url 'reports:ticket_detail' t.pk %}">{{ t.title|default:"طلب بدون عنوان" }}</a>
-                        </h3>
-                    </div>
-                    {% if t.status == 'open' or t.status == 'new' %}
-                        <span class="badge open">جديدة</span>
-                    {% elif t.status == 'in_progress' %}
-                        <span class="badge prog">قيد التنفيذ</span>
-                    {% elif t.status == 'done' %}
-                        <span class="badge done">مكتملة</span>
-                    {% else %}
-                        <span class="badge rej">مرفوضة</span>
-                    {% endif %}
-                </div>
-                
-                <div class="lc-meta">
-                    <span class="lc-pill"><i class="fa-solid fa-building-user"></i> {{ t.get_department_display|default:t.department|default:"—" }}</span>
-                    <span class="lc-pill"><i class="fa-regular fa-clock"></i> {{ t.created_at|hijri }} هـ · {{ t.created_at|date:"Y-m-d" }} م</span>
-                </div>
-                
-                {% if t.pub_notes %}
-                <div class="lc-reply">
-                    {% for n in t.pub_notes|slice:":1" %}
-                       <i class="fa-solid fa-reply u-text-c-muted-2"></i> 
-                       <b>{{ n.author.name }}:</b> {{ n.body|default:"—"|truncatechars:60 }}
-                    {% endfor %}
-                </div>
-                {% endif %}
-                
-                <div class="lc-foot">
-                    <div class="u-fs-sm u-text-c-muted-2">
-                         إلى: {% firstof t.assignee.name t.assignee.username "غير مسند" %}
-                    </div>
-                    <a href="{% url 'reports:ticket_detail' t.pk %}" class="lc-detail">
-                        التفاصيل <i class="fa-solid fa-arrow-left"></i>
-                    </a>
-                </div>
-            </div>
-            {% empty %}
-            <div class="empty-state u-span-all">
-                <div class="empty-icon"><i class="fa-regular fa-folder-open"></i></div>
-                <h3>لا توجد طلبات حالياً</h3>
-                <p class="u-text-c-muted-2">يمكنك إنشاء طلب جديد للتواصل مع الأقسام المختلفة.</p>
-                <br>
-                <a href="{% url 'reports:request_create' %}" class="btn-lux btn-primary">إنشاء طلب جديد</a>
-            </div>
-            {% endfor %}
-        </div>
-      {% endif %}
-
-      <!-- Pager -->
-      {% if tickets.paginator and tickets.paginator.num_pages > 1 %}
-      <div class="xs-my-requests-9">
-        {% with bq=request.GET.q|urlencode bs=request.GET.status bo=request.GET.order %}
-          {% if tickets.has_previous %}
-            <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view={{ view_mode }}&page={{ tickets.previous_page_number }}" class="btn-lux btn-ghost">السابق</a>
-          {% endif %}
-          
-          <span class="xs-my-requests-10">
-              {{ tickets.number }} / {{ tickets.paginator.num_pages }}
+      {% if request.GET.q or request.GET.status or request.GET.order %}
+      <div class="twq-toolbar__active-filters requests-active-filters" aria-label="معايير العرض الحالية">
+        <span class="twq-toolbar__active-label">المحدد حاليًا:</span>
+        {% if request.GET.q %}<span class="twq-filter-chip">بحث: <bdi>{{ request.GET.q }}</bdi></span>{% endif %}
+        {% if request.GET.status %}
+          <span class="twq-filter-chip">الحالة:
+            {% if request.GET.status == "open" %}جديدة{% elif request.GET.status == "in_progress" %}قيد المعالجة{% elif request.GET.status == "done" %}مكتملة{% elif request.GET.status == "rejected" %}مرفوضة{% else %}{{ request.GET.status }}{% endif %}
           </span>
-
-          {% if tickets.has_next %}
-            <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view={{ view_mode }}&page={{ tickets.next_page_number }}" class="btn-lux btn-ghost">التالي</a>
-          {% endif %}
-        {% endwith %}
+        {% endif %}
+        {% if request.GET.order %}<span class="twq-filter-chip">الترتيب: {% if request.GET.order == "created_at" %}الأقدم أولًا{% else %}الأحدث أولًا{% endif %}</span>{% endif %}
       </div>
       {% endif %}
-
     </div>
-  </div>
+
+    <div class="requests-list-head">
+      <p class="requests-list-head__hint">افتح الطلب للاطلاع على التفاصيل والردود والإجراء المتاح لك.</p>
+      <nav class="requests-view-switch" aria-label="طريقة عرض الطلبات">
+        {% with bq=request.GET.q|urlencode bs=request.GET.status bo=request.GET.order %}
+        <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view=list"
+           class="twq-btn twq-btn--secondary {% if view_mode != 'table' %}requests-view-switch__active{% endif %}"
+           {% if view_mode != 'table' %}aria-current="page"{% endif %} aria-label="عرض الطلبات كبطاقات">
+          <i class="fa-solid fa-grip" aria-hidden="true"></i><span>بطاقات</span>
+        </a>
+        <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view=table"
+           class="twq-btn twq-btn--secondary {% if view_mode == 'table' %}requests-view-switch__active{% endif %}"
+           {% if view_mode == 'table' %}aria-current="page"{% endif %} aria-label="عرض الطلبات كجدول">
+          <i class="fa-solid fa-table" aria-hidden="true"></i><span>جدول</span>
+        </a>
+        {% endwith %}
+      </nav>
+    </div>
+
+    {% if view_mode == "table" %}
+    {% if tickets %}
+    <div class="requests-table-wrap">
+      <table class="twq-table requests-table">
+        <caption class="sr-only">طلباتك بحسب معايير البحث والتصفية الحالية</caption>
+        <thead>
+          <tr>
+            <th scope="col">الطلب</th>
+            <th scope="col">القسم / المستلم</th>
+            <th scope="col">التاريخ</th>
+            <th scope="col">الحالة</th>
+            <th scope="col">الإجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tickets %}
+          <tr>
+            <td class="requests-table__identity">
+              <span class="requests-id">طلب #{{ t.pk }}</span>
+              <a href="{% url 'reports:ticket_detail' t.pk %}" class="requests-table__title">{{ t.title|default:"طلب بدون عنوان" }}</a>
+            </td>
+            <td>
+              <span class="requests-table__department">{{ t.get_department_display|default:t.department|default:"—" }}</span>
+              <span class="requests-table__sub">المستلم: {% firstof t.assignee.name t.assignee "غير مسند" %}</span>
+            </td>
+            <td>
+              <time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time>
+              <span class="requests-table__sub">{{ t.created_at|date:"Y-m-d H:i" }} م</span>
+            </td>
+            <td>
+              {% include "reports/partials/ticket_status.html" with t=t %}
+            </td>
+            <td><a href="{% url 'reports:ticket_detail' t.pk %}" class="twq-btn twq-btn--secondary">عرض الطلب</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="requests-table-mobile requests-cards">
+      {% for t in tickets %}
+        {% include "reports/partials/my_request_card.html" with t=t %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="requests-cards">
+      {% for t in tickets %}
+        {% include "reports/partials/my_request_card.html" with t=t %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not tickets %}
+    <div class="twq-empty-state requests-empty">
+      <i class="fa-regular fa-folder-open requests-empty__icon" aria-hidden="true"></i>
+      {% if request.GET.q or request.GET.status %}
+        <h3>لا توجد طلبات مطابقة</h3>
+        <p>جرّب تعديل البحث أو الحالة لعرض طلبات أخرى.</p>
+        <a href="?view={{ view_mode|default:'list' }}" class="twq-btn twq-btn--secondary">عرض جميع الطلبات</a>
+      {% else %}
+        <h3>لا توجد طلبات بعد</h3>
+        <p>أنشئ طلبًا جديدًا للتواصل مع القسم المختص، ثم تابع حالته هنا.</p>
+        <a href="{% url 'reports:request_create' %}" class="twq-btn twq-btn--primary">إنشاء طلب جديد</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  {% if tickets.paginator and tickets.paginator.num_pages > 1 %}
+  <nav class="twq-pagination requests-pagination" aria-label="ترقيم صفحات الطلبات">
+    {% with bq=request.GET.q|urlencode bs=request.GET.status bo=request.GET.order %}
+      {% if tickets.has_previous %}
+      <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view={{ view_mode }}&page={{ tickets.previous_page_number }}" class="twq-btn twq-btn--secondary twq-pagination__link">السابق</a>
+      {% endif %}
+      <span class="twq-pagination__meta">صفحة {{ tickets.number }} من {{ tickets.paginator.num_pages }}</span>
+      {% if tickets.has_next %}
+      <a href="?{% if bq %}q={{ bq }}&{% endif %}{% if bs %}status={{ bs }}&{% endif %}{% if bo %}order={{ bo }}&{% endif %}view={{ view_mode }}&page={{ tickets.next_page_number }}" class="twq-btn twq-btn--secondary twq-pagination__link">التالي</a>
+      {% endif %}
+    {% endwith %}
+  </nav>
+  {% endif %}
+</div>
 {% endblock %}
