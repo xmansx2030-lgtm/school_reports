@@ -10,6 +10,7 @@ from typing import Any
 
 import openpyxl
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from .gender_labels import school_gender_labels
@@ -321,9 +322,17 @@ def build_preview(raw_rows: Iterable[dict[str, Any]], school: School) -> dict[st
             errors.append("رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام.")
         if national_id and not re.fullmatch(r"\d{10}", national_id):
             errors.append("رقم الهوية يجب أن يتكون من 10 أرقام.")
-        if job_title is None:
-            errors.append("المسمى الوظيفي غير معروف.")
-            job_title = SchoolMembership.JobTitle.TEACHER
+        assignment_valid = job_title is not None
+        if assignment_valid:
+            try:
+                get_assignment(job_title)
+            except ValidationError:
+                assignment_valid = False
+        if not assignment_valid:
+            errors.append("التكليف غير مدعوم في الاستيراد الجماعي.")
+            # Keep the unsupported input in the session: confirmation rebuilds
+            # the preview and must not reinterpret this row as a teacher.
+            job_title = job_title or normalize_text(source.get("job_title"))
         if phone and phone in seen_phones:
             errors.append("رقم الجوال مكرر داخل القائمة.")
         if phone:
@@ -386,7 +395,9 @@ def build_preview(raw_rows: Iterable[dict[str, Any]], school: School) -> dict[st
             "phone": phone,
             "national_id": national_id,
             "job_title": job_title,
-            "job_title_label": job_title_label(job_title, school),
+            "job_title_label": (
+                job_title_label(job_title, school) if assignment_valid else "تكليف غير مدعوم"
+            ),
             "department_id": int(department.pk) if department else None,
             "department_name": department.name if department else "",
             "lab_kind": lab_kind,
