@@ -1,541 +1,204 @@
-{# reports/templates/reports/teacher_form.html (or your file name) #}
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{{ page_title|default:"إضافة حساب جديد" }}{% endblock %}
+{% block title %}{{ page_title|default:"إضافة منسوب جديد" }}{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* ✅ Scoped styles: لا نلمس :root نهائيًا حتى ما نكسر هوية المنصة */
-  .teacher-page{max-width:1120px;margin:0 auto;padding:clamp(10px,2.2vw,18px)}
-  .teacher-page .teacher-shell{
-    background:var(--card);
-    border:1px solid var(--line-2);
-    border-radius:18px;
-    box-shadow:var(--shadow);
-    overflow:hidden;
-    position:relative;
-  }
-
-  /* Header */
-  .teacher-page .teacher-head{
-    padding:clamp(16px,2.2vw,22px) clamp(16px,3vw,26px);
-    background:
-      radial-gradient(900px 200px at 20% 0%, rgba(0,108,53,.18), transparent 55%),
-      radial-gradient(700px 220px at 85% 80%, rgba(16,185,129,.14), transparent 60%),
-      linear-gradient(135deg, rgba(0,108,53,.92), rgba(15,143,135,.86));
-    color:#fff;
-  }
-  .teacher-page .teacher-head-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
-  .teacher-page .teacher-title{
-    margin:0;
-    font-weight:900;
-    font-size:clamp(1.25rem,2.4vw,1.65rem);
-    display:flex;align-items:center;gap:10px;
-  }
-  .teacher-page .teacher-sub{margin:6px 0 0;opacity:.95;font-weight:800}
-  .teacher-page .teacher-chip{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:8px 12px;border-radius:999px;
-    background:rgba(255,255,255,.14);
-    border:1px solid rgba(255,255,255,.22);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-weight:900;
-  }
-
-  /* Body */
-  .teacher-page .teacher-body{padding:clamp(14px,2.6vw,22px)}
-  .teacher-page .tgrid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:14px}
-  .teacher-page #labDepartmentPanel[hidden]{display:none!important}
-  @media(max-width:900px){.teacher-page .tgrid{grid-template-columns:1fr}}
-
-  .teacher-page .group{display:block}
-  .teacher-page .label{
-    display:flex;align-items:center;gap:10px;
-    margin:0 0 8px;
-    font-weight:900;
-    color:var(--ink);
-  }
-  .teacher-page .label i{color:rgba(0,108,53,.95)}
-  .teacher-page .hint{margin-top:6px;color:var(--muted);font-weight:800;font-size:.88rem}
-
-  /* Inputs */
-  .teacher-page .teacher-body input:not([type="checkbox"]),
-  .teacher-page .teacher-body select,
-  .teacher-page .teacher-body textarea{
-    width:100%;
-    min-height:var(--tap);
-    border-radius:14px;
-    border:1px solid var(--line);
-    padding:12px 14px;
-    background:rgba(248,250,252,.85);
-    font-weight:800;
-    transition: box-shadow .18s ease, border-color .18s ease, transform .12s ease;
-  }
-  html[data-theme="dark"] .teacher-page .teacher-body input:not([type="checkbox"]),
-  html[data-theme="dark"] .teacher-page .teacher-body select,
-  html[data-theme="dark"] .teacher-page .teacher-body textarea{
-    background: rgba(255,255,255,.04);
-    border-color: rgba(148,163,184,.16);
-  }
-  .teacher-page .teacher-body input:not([type="checkbox"]):focus,
-  .teacher-page .teacher-body select:focus,
-  .teacher-page .teacher-body textarea:focus{
-    outline:none;
-    border-color:var(--brand);
-    box-shadow:var(--ring);
-  }
-
-  /* Password control */
-  .teacher-page .pw-wrap{position:relative}
-  .teacher-page .pw-wrap input{padding-inline:44px}
-  .teacher-page .pw-ico{
-    position:absolute;right:12px;top:50%;transform:translateY(-50%);
-    color:rgba(100,116,139,.95);
-    pointer-events:none;
-  }
-  .teacher-page .pw-toggle{
-    position:absolute;left:10px;top:50%;transform:translateY(-50%);
-    width:40px;height:40px;border-radius:12px;
-    border:1px solid rgba(15,23,42,.10);
-    background:rgba(255,255,255,.70);
-    cursor:pointer;
-    display:grid;place-items:center;
-    color:rgba(100,116,139,.95);
-    transition:transform .12s ease,border-color .12s ease,color .12s ease;
-  }
-  .teacher-page .pw-toggle:hover{transform:translateY(-50%) translateY(-1px);border-color:rgba(0,108,53,.28);color:var(--brand)}
-  html[data-theme="dark"] .teacher-page .pw-toggle{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.18)}
-
-  /* Switch */
-  .teacher-page .switch-row{display:flex;align-items:center;gap:12px}
-  .teacher-page .switch{position:relative;width:56px;height:32px;flex:0 0 auto}
-  .teacher-page .switch input{opacity:0;width:0;height:0}
-  .teacher-page .slider{
-    position:absolute;inset:0;border-radius:999px;
-    background:#cbd5e1;
-    transition:.25s;
-  }
-  .teacher-page .slider:before{
-    content:"";
-    position:absolute;top:5px;right:5px;
-    width:22px;height:22px;border-radius:50%;
-    background:#fff;transition:.25s;
-  }
-  .teacher-page .switch input:checked + .slider{background:var(--brand)}
-  .teacher-page .switch input:checked + .slider:before{transform:translateX(-24px)}
-  .teacher-page .switch-meta{display:grid;gap:4px}
-  .teacher-page .switch-meta b{font-weight:900}
-
-  /* Errors */
-  .teacher-page .field-error{margin-top:6px;color:#b91c1c;font-weight:900;font-size:.9rem}
-  html[data-theme="dark"] .teacher-page .field-error{color:#fecaca}
-
-  .teacher-page .nferr{
-    margin-bottom:12px;
-    padding:12px 14px;
-    border-radius:16px;
-    border:1px solid rgba(254,202,202,.9);
-    background:rgba(254,242,242,.92);
-    color:#991b1b;
-    font-weight:900;
-  }
-  .teacher-page .new-account-note{
-    background:#eef8f2;color:#075c32;border-color:#b8dfc8
-  }
-  .teacher-page .new-account-note a{font-weight:950;color:inherit}
-  html[data-theme="dark"] .teacher-page .nferr{
-    background: rgba(239,68,68,.10);
-    border-color: rgba(239,68,68,.22);
-    color: #fecaca;
-  }
-
-  /* Actions */
-  .teacher-page .actions{
-    margin-top:16px;
-    padding-top:14px;
-    border-top:1px solid var(--line-2);
-    display:flex;
-    gap:12px;
-    justify-content:flex-start;
-    flex-wrap:wrap;
-  }
-  .teacher-page .actions .btn{border-radius:14px}
-  .teacher-page .actions .btn-primary{min-width:200px}
-  @media(max-width:560px){
-    .teacher-page .actions{flex-direction:column}
-    .teacher-page .actions .btn,
-    .teacher-page .actions .btn-primary{width:100%}
-  }
-
-  /* اختيار الدور — المكوّن نفسه يُغذّى من كتالوج الأدوار المركزي */
-  .teacher-page .role-stage{
-    margin-top:20px;padding:18px;border:1px solid rgba(10,92,51,.16);
-    border-radius:20px;background:
-      radial-gradient(520px 130px at 100% 0,rgba(212,177,109,.10),transparent 62%),
-      color-mix(in srgb,var(--card) 94%,#eef8f2 6%);
-  }
-  .teacher-page .role-stage__head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
-  .teacher-page .role-stage__eyebrow{color:var(--brand);font-size:.78rem;font-weight:950;margin-bottom:4px}
-  .teacher-page .role-stage__title{margin:0;color:var(--ink);font-size:1.08rem;font-weight:950}
-  .teacher-page .role-stage__hint{margin:4px 0 0;color:var(--muted);font-size:.88rem;font-weight:750}
-  .teacher-page .role-stage__count{white-space:nowrap;padding:6px 10px;border-radius:999px;background:rgba(10,92,51,.08);color:var(--brand);font-size:.78rem;font-weight:950}
-  .teacher-page .role-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-  .teacher-page .role-option{position:relative;min-width:0}
-  .teacher-page .role-option>input{position:absolute;opacity:0;pointer-events:none}
-  .teacher-page .role-card{
-    height:100%;min-height:150px;padding:15px;border:1px solid var(--line);
-    border-radius:17px;background:var(--card);cursor:pointer;display:flex;flex-direction:column;gap:9px;
-    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
-  }
-  .teacher-page .role-card:hover{transform:translateY(-2px);border-color:rgba(10,92,51,.38);box-shadow:0 14px 28px -22px rgba(10,92,51,.65)}
-  .teacher-page .role-option>input:focus-visible+.role-card{outline:3px solid rgba(14,165,107,.24);outline-offset:2px}
-  .teacher-page .role-option>input:checked+.role-card{
-    border-color:#0a7542;background:linear-gradient(145deg,rgba(10,117,66,.10),rgba(212,177,109,.08));
-    box-shadow:0 14px 30px -22px rgba(10,92,51,.75),inset 0 0 0 1px rgba(10,117,66,.12);
-  }
-  .teacher-page .role-card__top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .teacher-page .role-card__icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:rgba(10,92,51,.09);color:var(--brand);font-size:1.05rem}
-  .teacher-page .role-option>input:checked+.role-card .role-card__icon{background:#0a673a;color:#fff}
-  .teacher-page .role-card__check{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);color:transparent;font-size:.72rem}
-  .teacher-page .role-option>input:checked+.role-card .role-card__check{background:#0a673a;border-color:#0a673a;color:#fff}
-  .teacher-page .role-card__name{color:var(--ink);font-weight:950;font-size:.95rem}
-  .teacher-page .role-card__desc{color:var(--muted);font-weight:700;font-size:.79rem;line-height:1.65}
-  .teacher-page .role-card__badge{margin-top:auto;width:max-content;max-width:100%;padding:4px 8px;border-radius:999px;background:rgba(212,177,109,.14);color:#85621e;font-size:.68rem;font-weight:900}
-  html[data-theme="dark"] .teacher-page .role-card__badge{color:#f1d69d;background:rgba(212,177,109,.12)}
-  .teacher-page .teaching-panel{margin-top:12px;padding:13px 14px;border-radius:16px;border:1px dashed rgba(10,92,51,.34);background:rgba(10,92,51,.045)}
-  .teacher-page .teaching-panel[hidden]{display:none}
-  .teacher-page .teaching-check{display:flex;align-items:flex-start;gap:11px;cursor:pointer}
-  .teacher-page .teaching-check input{width:19px;height:19px;margin-top:2px;accent-color:#0a673a;flex:0 0 auto}
-  .teacher-page .teaching-check strong{display:block;color:var(--ink);font-weight:950}
-  .teacher-page .teaching-check span{display:block;margin-top:3px;color:var(--muted);font-size:.82rem;font-weight:750}
-  .teacher-page .role-confirm{margin-bottom:16px;padding:16px;border-radius:18px;border:1px solid rgba(212,177,109,.55);background:linear-gradient(135deg,rgba(255,248,230,.96),rgba(246,255,249,.96));color:#594313}
-  html[data-theme="dark"] .teacher-page .role-confirm{background:linear-gradient(135deg,rgba(212,177,109,.12),rgba(10,92,51,.12));color:#f6e4b9}
-  .teacher-page .role-confirm__title{display:flex;gap:9px;align-items:center;font-weight:950;margin-bottom:6px}
-  .teacher-page .role-confirm__flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:.86rem;font-weight:900}
-  .teacher-page .role-confirm__pill{padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.62);border:1px solid rgba(133,98,30,.18)}
-  html[data-theme="dark"] .teacher-page .role-confirm__pill{background:rgba(255,255,255,.06)}
-  @media(max-width:900px){.teacher-page .role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media(max-width:560px){
-    .teacher-page .role-stage{padding:13px}.teacher-page .role-grid{grid-template-columns:1fr}
-    .teacher-page .role-card{min-height:0}.teacher-page .role-stage__count{display:none}
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/staff-create.css' %}?v=20260920.1">
 {% endblock %}
 
 {% block content %}
-<div class="teacher-page">
-  <div class="teacher-shell">
-    <div class="teacher-head">
-      <div class="teacher-head-top">
+<div class="twq-page staff-create-page" dir="rtl">
+  <a class="staff-create-back" href="{% if back_href %}{{ back_href }}{% elif next_url_value %}{{ next_url_value }}{% else %}{% url 'reports:manage_teachers' %}{% endif %}">
+    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> {{ back_label|default:"العودة إلى قائمة المنسوبين" }}
+  </a>
+
+  <header class="twq-page-header staff-create-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> إدارة منسوبي المدرسة</span>
+      <h1 class="twq-page-header__title">{{ page_title|default:"إضافة منسوب جديد" }}</h1>
+      <p class="twq-page-header__lead">أدخل بيانات المنسوب ثم اختر تكليفه المدرسي. يحدد رقم الجوال ما إذا كان الحساب جديدًا أو مرتبطًا بالنظام من قبل.</p>
+      {% if request.active_school %}
+        <dl class="twq-page-header__context staff-create-context">
+          <div><dt>المدرسة الحالية</dt><dd>{{ request.active_school.name }}</dd></div>
+        </dl>
+      {% endif %}
+    </div>
+  </header>
+
+  <form method="post" class="staff-create-form" id="teacherCreateForm" novalidate>
+    {% csrf_token %}
+    {% if next_url_value %}<input type="hidden" name="next" value="{{ next_url_value }}">{% endif %}
+    {% if role_change_confirmation %}<input type="hidden" name="confirm_role_change" value="1">{% endif %}
+
+    {% if form.errors %}
+      <div class="twq-alert twq-alert--danger staff-create-summary" id="staff-create-errors" role="alert" tabindex="-1">
+        <strong>تعذّر حفظ المنسوب.</strong> راجع الأخطاء الموضحة بجانب الحقول.
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    {% if role_change_confirmation %}
+      <div class="twq-alert twq-alert--warning staff-create-confirm" role="alert">
+        <strong>الحساب موجود في المدرسة — راجع تغيير الدور</strong>
+        <p>لن نغيّر بيانات الدخول الخاصة بـ <bdi>{{ role_change_confirmation.member_name }}</bdi>؛ سيُحدَّث تكليفه المدرسي فقط بعد التأكيد.</p>
+        <p>الدور الحالي: {{ role_change_confirmation.current_role|default:"غير محدد" }} ← الدور الجديد: {{ role_change_confirmation.new_role }}{% if role_change_confirmation.keeps_teaching %}، مع الاحتفاظ بالنصاب التدريسي{% endif %}.</p>
+      </div>
+    {% endif %}
+
+    <section class="twq-section staff-create-section" aria-labelledby="staff-create-identity-title">
+      <div class="twq-section__header">
         <div>
-          <h1 class="teacher-title">
-            <i class="fas fa-user-plus" aria-hidden="true"></i>
-            {{ page_title|default:"إضافة منسوب جديد" }}
-          </h1>
-          <p class="teacher-sub">{{ page_subtitle|default:"أنشئ الحساب وحدّد دوره الأساسي في خطوة واضحة وآمنة" }}</p>
-        </div>
-        <div class="teacher-chip">
-          <i class="fas fa-shield-halved" aria-hidden="true"></i>
-          <span>إسناد موحّد وآمن</span>
+          <span class="twq-section__kicker">الهوية والتواصل</span>
+          <h2 class="twq-section__title" id="staff-create-identity-title">بيانات المنسوب</h2>
+          <p class="twq-section__description">رقم الجوال هو معرّف الدخول ومعيار اكتشاف الحساب الموجود. لا يعرض هذا النموذج البريد الإلكتروني أو إسناد الأقسام.</p>
         </div>
       </div>
-    </div>
+      <div class="staff-create-grid">
+        <div class="twq-field{% if form.name.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.name.id_for_label }}">اسم المنسوب <span class="staff-create-required">مطلوب</span></label>
+          {{ form.name }}
+          <p class="twq-field__help" id="staff-create-name-help">الاسم الكامل كما سيظهر في النظام والكشوف.</p>
+          <p class="twq-field__message" id="staff-create-name-error"{% if form.name.errors %} role="alert"{% endif %}>{% for error in form.name.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+        <div class="twq-field{% if form.phone.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.phone.id_for_label }}">رقم الجوال <span class="staff-create-required">مطلوب</span></label>
+          {{ form.phone }}
+          <p class="twq-field__help" id="staff-create-phone-help">يبدأ بـ 05 ويتكون من 10 أرقام. يستخدم للدخول والبحث عن حساب قائم.</p>
+          <p class="twq-field__message" id="staff-create-phone-error"{% if form.phone.errors %} role="alert"{% endif %}>{% for error in form.phone.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+        <div class="twq-field{% if form.national_id.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.national_id.id_for_label }}">رقم الهوية الوطنية <span class="staff-create-optional">اختياري</span></label>
+          {{ form.national_id }}
+          <p class="twq-field__help" id="staff-create-national_id-help">10 أرقام عند إدخاله. تجنّب مشاركة هذه البيانات خارج العمل المصرح.</p>
+          <p class="twq-field__message" id="staff-create-national_id-error"{% if form.national_id.errors %} role="alert"{% endif %}>{% for error in form.national_id.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+      </div>
+    </section>
 
-    <div class="teacher-body">
+    {% if form.job_title and form.assignment_cards %}
+      <section class="twq-section staff-create-section" aria-labelledby="staff-create-role-title">
+        <div class="twq-section__header">
+          <div>
+            <span class="twq-section__kicker">الوصول المدرسي</span>
+            <h2 class="twq-section__title" id="staff-create-role-title">اختر الدور الأساسي في المدرسة</h2>
+            <p class="twq-section__description">هذا الاختيار يحدد تكليف المدرسة: دور الصلاحيات والمسمى المرتبط به وفق النظام. يمكن تعديل المسمى الوصفي لاحقًا في شاشة التعديل، ولا يغيّر ذلك دور الصلاحيات.</p>
+          </div>
+        </div>
+        <fieldset class="staff-create-role-fieldset">
+          <legend class="staff-create-role-legend">الدور المدرسي <span class="staff-create-required">مطلوب</span></legend>
+          <p class="twq-field__help" id="staff-role-help">اختر دورًا واحدًا. بعض الأدوار يتبعها تحديد نطاق العمل والصلاحيات بعد الحفظ.</p>
+          <div class="staff-create-roles">
+            {% for option in form.assignment_cards %}
+              <div class="role-option">
+                <input type="radio" name="job_title" id="staff-role-{{ forloop.counter }}" value="{{ option.code }}" required
+                  data-supports-teaching="{% if option.supports_teaching_load %}1{% else %}0{% endif %}"
+                  data-needs-scope="{% if option.requires_scope %}1{% else %}0{% endif %}"
+                  data-role-label="{{ option.label }}"
+                  aria-describedby="staff-role-help staff-role-error"
+                  {% if form.job_title.errors %}aria-invalid="true"{% endif %}
+                  {% if form.job_title.value|stringformat:"s" == option.code|stringformat:"s" %}checked{% endif %}>
+                <label class="staff-create-role-card" for="staff-role-{{ forloop.counter }}">
+                  <span class="staff-create-role-card__title"><i class="{{ option.icon }}" aria-hidden="true"></i> {{ option.label }}</span>
+                  <span class="staff-create-role-card__description">{{ option.description }}</span>
+                  {% if option.requires_scope %}<span class="staff-create-role-card__note">يتبعه تحديد النطاق والصلاحيات</span>{% else %}<span class="staff-create-role-card__note">جاهز بعد الحفظ</span>{% endif %}
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+          <p class="twq-field__message" id="staff-role-error"{% if form.job_title.errors %} role="alert"{% endif %}>{% for error in form.job_title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </fieldset>
+        <div class="staff-create-conditional" id="teachingLoadPanel" hidden aria-hidden="true">
+          <label class="twq-choice" for="{{ form.keep_teaching_role.id_for_label }}">{{ form.keep_teaching_role }} <span>{{ form.keep_teaching_role.label }}</span></label>
+          <p class="twq-field__help" id="staff-create-keep_teaching_role-help">{{ form.keep_teaching_role.help_text }}</p>
+          <p class="twq-field__message" id="staff-create-keep_teaching_role-error"{% if form.keep_teaching_role.errors %} role="alert"{% endif %}>{% for error in form.keep_teaching_role.errors %}{{ error }}{% endfor %}</p>
+        </div>
+        <div class="staff-create-conditional twq-field{% if form.lab_kind.errors %} twq-field--error{% endif %}" id="labDepartmentPanel" hidden aria-hidden="true">
+          <label class="twq-label" for="{{ form.lab_kind.id_for_label }}">{{ form.lab_kind.label }} <span class="staff-create-required">مطلوب لمحضر المختبر</span></label>
+          {{ form.lab_kind }}
+          <p class="twq-field__help" id="staff-create-lab_kind-help">{{ form.lab_kind.help_text }}</p>
+          <p class="twq-field__message" id="staff-create-lab_kind-error"{% if form.lab_kind.errors %} role="alert"{% endif %}>{% for error in form.lab_kind.errors %}{{ error }}{% endfor %}</p>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="twq-section staff-create-section" aria-labelledby="staff-create-account-title">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">الدخول والحساب</span>
+          <h2 class="twq-section__title" id="staff-create-account-title">حالة الحساب وكلمة المرور</h2>
+          <p class="twq-section__description">الحساب الجديد يحصل على كلمة مرور مؤقتة تساوي رقم الجوال ويُطلب تغييرها عند أول دخول. إذا كان الرقم لحساب قائم، يُربط بالمدرسة دون تغيير بيانات دخوله.</p>
+        </div>
+      </div>
+      <div class="staff-create-account">
+        <div class="twq-field{% if form.is_active.errors %} twq-field--error{% endif %}">
+          <label class="twq-choice" for="{{ form.is_active.id_for_label }}">{{ form.is_active }} <span>السماح للحساب الجديد بالدخول إلى النظام</span></label>
+          <p class="twq-field__help" id="staff-create-is_active-help">إلغاء التحديد ينشئ حسابًا معطلًا. عند ربط حساب قائم تبقى حالة حسابه كما هي.</p>
+          <p class="twq-field__message" id="staff-create-is_active-error"{% if form.is_active.errors %} role="alert"{% endif %}>{% for error in form.is_active.errors %}{{ error }}{% endfor %}</p>
+        </div>
+        <div class="staff-create-account-note">
+          <strong>قبل الحفظ</strong>
+          <p>قد ينشئ النظام حسابًا جديدًا أو يربط حسابًا موجودًا بهذا الجوال. إذا كان المنسوب عضوًا بالفعل بدور مختلف، سيعرض تأكيدًا صريحًا قبل تغيير تكليفه.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="staff-create-actions">
+      <button type="submit" class="twq-btn twq-btn--primary" id="submitBtn" data-confirming="{% if role_change_confirmation %}1{% else %}0{% endif %}">
+        {% if role_change_confirmation %}تأكيد تحديث الدور{% else %}حفظ المنسوب{% endif %}
+      </button>
       {% if is_staff_onboarding and not role_change_confirmation %}
-        <div class="nferr new-account-note" role="note">
-          <strong>دخول المستخدم الجديد:</strong>
-          ستكون كلمة المرور المؤقتة هي رقم الجوال، وسيطلب النظام تغييرها عند أول تسجيل دخول.
-          لإضافة عدة مستخدمين دفعة واحدة استخدم
-          <a href="{% url 'reports:bulk_import_teachers' %}">الإضافة السريعة أو Excel</a>.
-        </div>
+        <button type="submit" class="twq-btn twq-btn--secondary" name="save_and_add_another" value="1">حفظ وإضافة مستخدم آخر</button>
       {% endif %}
-
-      {% if form.non_field_errors %}
-        <div class="nferr" role="alert">
-          {% for e in form.non_field_errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-        </div>
-      {% endif %}
-
-      <form method="POST" novalidate>
-        {% csrf_token %}
-        {% if next_url_value %}<input type="hidden" name="next" value="{{ next_url_value }}">{% endif %}
-
-        {% if role_change_confirmation %}
-          <input type="hidden" name="confirm_role_change" value="1">
-          <div class="role-confirm" role="alert">
-            <div class="role-confirm__title">
-              <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-              الحساب موجود في المدرسة — راجع تغيير الدور
-            </div>
-            <div>
-              لن نغيّر بيانات الدخول الخاصة بـ <strong>{{ role_change_confirmation.member_name }}</strong>؛
-              سيُحدَّث تكليفه المدرسي فقط بعد التأكيد.
-            </div>
-            <div class="role-confirm__flow" aria-label="ملخص تغيير الدور">
-              <span class="role-confirm__pill">{{ role_change_confirmation.current_role|default:"الدور الحالي" }}</span>
-              <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-              <span class="role-confirm__pill">{{ role_change_confirmation.new_role }}</span>
-              {% if role_change_confirmation.keeps_teaching %}
-                <span class="role-confirm__pill">مع الاحتفاظ بالنصاب التدريسي</span>
-              {% endif %}
-            </div>
-          </div>
-        {% endif %}
-
-        <div class="tgrid">
-          <!-- الاسم -->
-          <div class="group">
-            <label class="label" for="{{ form.name.id_for_label }}">
-              <i class="fas fa-user" aria-hidden="true"></i> اسم المنسوب
-            </label>
-            {{ form.name }}
-            {% for e in form.name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-            <div class="hint">الاسم الكامل كما سيظهر في النظام والكشوف</div>
-          </div>
-
-          <!-- الهوية -->
-          <div class="group">
-            <label class="label" for="{{ form.national_id.id_for_label }}">
-              <i class="fas fa-id-card" aria-hidden="true"></i> رقم الهوية
-            </label>
-            {{ form.national_id }}
-            {% for e in form.national_id.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-            <div class="hint">اختياري — 10 أرقام</div>
-          </div>
-
-          <!-- الجوال -->
-          <div class="group">
-            <label class="label" for="{{ form.phone.id_for_label }}">
-              <i class="fas fa-phone" aria-hidden="true"></i> رقم الجوال
-            </label>
-            {{ form.phone }}
-            {% for e in form.phone.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-            <div class="hint">05XXXXXXXX — يستخدم لتسجيل الدخول</div>
-          </div>
-
-          {% if form.password %}
-            <!-- كلمة المرور في النماذج الإدارية الخاصة فقط -->
-            <div class="group">
-              <label class="label" for="{{ form.password.id_for_label }}">
-                <i class="fas fa-key" aria-hidden="true"></i> كلمة المرور
-              </label>
-              <div class="pw-wrap">
-                {{ form.password }}
-                <span class="pw-ico" aria-hidden="true"><i class="fas fa-lock"></i></span>
-                <button type="button" class="pw-toggle" id="togglePassword" aria-label="إظهار كلمة المرور">
-                  <i class="fa-regular fa-eye" aria-hidden="true"></i>
-                </button>
-              </div>
-              {% for e in form.password.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-              {% if form.instance.pk %}
-                <div class="hint">اتركها فارغة إذا لا تريد تغيير كلمة المرور</div>
-              {% endif %}
-            </div>
-          {% endif %}
-
-          <!-- نشط -->
-          <div class="group">
-            <div class="label"><i class="fas fa-toggle-on" aria-hidden="true"></i> حالة الحساب</div>
-            <div class="switch-row">
-              <label class="switch" aria-label="تفعيل حساب المنسوب">
-                {{ form.is_active }}
-                <span class="slider"></span>
-              </label>
-              <span class="switch-meta">
-                <b>نشط</b>
-                <span class="hint">السماح للمنسوب بالدخول إلى النظام</span>
-              </span>
-            </div>
-            {% for e in form.is_active.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-          </div>
-        </div>
-
-        {% if form.job_title and form.assignment_cards %}
-          <section class="role-stage" aria-labelledby="role-stage-title">
-            <div class="role-stage__head">
-              <div>
-                <div class="role-stage__eyebrow">الخطوة الثانية</div>
-                <h2 class="role-stage__title" id="role-stage-title">اختر الدور الأساسي في المدرسة</h2>
-                <p class="role-stage__hint">اختيار واحد واضح؛ ويمكن إضافة النصاب التدريسي للأدوار المناسبة.</p>
-              </div>
-              <span class="role-stage__count">4 أدوار معتمدة</span>
-            </div>
-
-            <div class="role-grid">
-              {% for option in form.assignment_cards %}
-                <div class="role-option">
-                  <input type="radio" name="job_title" id="staff-role-{{ forloop.counter }}"
-                         value="{{ option.code }}"
-                         required
-                         data-supports-teaching="{% if option.supports_teaching_load %}1{% else %}0{% endif %}"
-                         data-needs-scope="{% if option.requires_scope %}1{% else %}0{% endif %}"
-                         data-role-label="{{ option.label }}"
-                         {% if form.job_title.value|stringformat:"s" == option.code|stringformat:"s" %}checked{% endif %}>
-                  <label class="role-card" for="staff-role-{{ forloop.counter }}">
-                    <span class="role-card__top">
-                      <span class="role-card__icon"><i class="{{ option.icon }}" aria-hidden="true"></i></span>
-                      <span class="role-card__check"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                    </span>
-                    <span class="role-card__name">{{ option.label }}</span>
-                    <span class="role-card__desc">{{ option.description }}</span>
-                    {% if option.requires_scope %}
-                      <span class="role-card__badge">يتبعه تحديد النطاق والصلاحيات</span>
-                    {% else %}
-                      <span class="role-card__badge">جاهز بعد الحفظ</span>
-                    {% endif %}
-                  </label>
-                </div>
-              {% endfor %}
-            </div>
-            {% for e in form.job_title.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-
-            <div class="teaching-panel" id="teachingLoadPanel" hidden>
-              <label class="teaching-check" for="{{ form.keep_teaching_role.id_for_label }}">
-                {{ form.keep_teaching_role }}
-                <span>
-                  <strong>{{ form.keep_teaching_role.label }}</strong>
-                  <span>{{ form.keep_teaching_role.help_text }}</span>
-                </span>
-              </label>
-              {% for e in form.keep_teaching_role.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-            </div>
-          </section>
-        {% endif %}
-
-        {% if form.lab_kind %}
-          <div class="tgrid" id="labDepartmentPanel" hidden aria-hidden="true">
-            <div class="group">
-              <label class="label" for="{{ form.lab_kind.id_for_label }}">
-                <i class="fa-solid fa-flask-vial" aria-hidden="true"></i>
-                {{ form.lab_kind.label }}
-              </label>
-              {{ form.lab_kind }}
-              {% for e in form.lab_kind.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
-              <div class="hint">{{ form.lab_kind.help_text }}</div>
-            </div>
-          </div>
-        {% endif %}
-
-        <div class="actions">
-          <button type="submit" class="btn btn-primary" id="submitBtn" data-confirming="{% if role_change_confirmation %}1{% else %}0{% endif %}">
-            <i class="fas fa-save" aria-hidden="true"></i>
-            {% if role_change_confirmation %}تأكيد تحديث الدور{% else %}حفظ المنسوب{% endif %}
-          </button>
-
-          {% if is_staff_onboarding and not role_change_confirmation %}
-            <button type="submit" class="btn" name="save_and_add_another" value="1">
-              <i class="fas fa-user-plus" aria-hidden="true"></i>
-              حفظ وإضافة مستخدم آخر
-            </button>
-          {% endif %}
-
-          {% if back_href %}
-            <a href="{{ back_href }}" class="btn">
-              <i class="fas fa-arrow-right" aria-hidden="true"></i>
-              {{ back_label|default:"رجوع للقائمة" }}
-            </a>
-          {% else %}
-            <a href="{% url 'reports:manage_teachers' %}" class="btn">
-              <i class="fas fa-arrow-right" aria-hidden="true"></i>
-              {{ back_label|default:"رجوع للقائمة" }}
-            </a>
-          {% endif %}
-        </div>
-      </form>
+      <a class="twq-btn twq-btn--ghost" href="{% if back_href %}{{ back_href }}{% elif next_url_value %}{{ next_url_value }}{% else %}{% url 'reports:manage_teachers' %}{% endif %}">إلغاء</a>
     </div>
-  </div>
+    {% if is_staff_onboarding and not role_change_confirmation %}
+      <p class="staff-create-bulk-link">لإضافة عدة منسوبين، يتوفر مسار <a href="{% url 'reports:bulk_import_teachers' %}">الإضافة السريعة أو Excel</a>.</p>
+    {% endif %}
+  </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   document.addEventListener("DOMContentLoaded", function () {
-    const national = document.getElementById('{{ form.national_id.id_for_label }}') || document.getElementById('id_national_id');
-    const phone = document.getElementById('{{ form.phone.id_for_label }}') || document.getElementById('id_phone');
-
-    if(national){
-      national.setAttribute('inputmode','numeric');
-      national.setAttribute('pattern','^\\d{10}$');
-      national.setAttribute('maxlength','10');
-      national.dir='ltr';
-      national.style.textAlign='left';
-      national.setAttribute('autocomplete','off');
-    }
-
-    if(phone){
-      phone.setAttribute('inputmode','tel');
-      phone.setAttribute('pattern','^05\\d{8}$');
-      phone.setAttribute('maxlength','10');
-      phone.dir='ltr';
-      phone.style.textAlign='left';
-      phone.setAttribute('autocomplete','tel');
-    }
-
-    const toggle = document.getElementById("togglePassword");
-    const pwd =
-      document.getElementById('{{ form.password.id_for_label }}') ||
-      document.getElementById('id_password') ||
-      document.querySelector('input[type="password"],input[name="password"]');
-
-    if(pwd && pwd.type !== 'password'){
-      pwd.type = 'password';
-    }
-    if(pwd){
-      // أفضل للمتصفحات (حتى لو التغيير اختياري عند التعديل)
-      pwd.setAttribute('autocomplete','new-password');
-    }
-
-    if(toggle && pwd){
-      toggle.addEventListener("click", function(){
-        const isPwd = pwd.type === "password";
-        pwd.type = isPwd ? "text" : "password";
-        toggle.setAttribute('aria-label', isPwd ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-        toggle.innerHTML = isPwd
-          ? '<i class="fa-regular fa-eye-slash" aria-hidden="true"></i>'
-          : '<i class="fa-regular fa-eye" aria-hidden="true"></i>';
-      });
-    }
-
-    const form = document.querySelector(".teacher-body form");
+    const form = document.getElementById("teacherCreateForm");
     const btn = document.getElementById("submitBtn");
     const roleInputs = Array.from(document.querySelectorAll('input[name="job_title"][data-supports-teaching]'));
     const teachingPanel = document.getElementById("teachingLoadPanel");
     const teachingCheckbox = teachingPanel ? teachingPanel.querySelector('input[type="checkbox"]') : null;
     const labDepartmentPanel = document.getElementById("labDepartmentPanel");
     const departmentSelect = labDepartmentPanel ? labDepartmentPanel.querySelector('select') : null;
+    const summary = document.getElementById("staff-create-errors");
 
-    function syncRoleExperience(){
-      const selected = roleInputs.find(function(input){ return input.checked; });
-      if(!selected){ return; }
+    function syncRoleExperience() {
+      const selected = roleInputs.find(function (input) { return input.checked; });
+      if (!selected) { return; }
       const supportsTeaching = selected.dataset.supportsTeaching === "1";
       const needsScope = selected.dataset.needsScope === "1";
       const isLabTechnician = selected.value === "lab_tech";
-      if(teachingPanel){
+      if (teachingPanel) {
         teachingPanel.hidden = !supportsTeaching;
         teachingPanel.setAttribute("aria-hidden", supportsTeaching ? "false" : "true");
       }
-      if(!supportsTeaching && teachingCheckbox){ teachingCheckbox.checked = false; }
-      if(labDepartmentPanel){
+      if (!supportsTeaching && teachingCheckbox) { teachingCheckbox.checked = false; }
+      if (labDepartmentPanel) {
         labDepartmentPanel.hidden = !isLabTechnician;
         labDepartmentPanel.setAttribute("aria-hidden", isLabTechnician ? "false" : "true");
       }
-      if(departmentSelect){ departmentSelect.required = isLabTechnician; }
-      if(btn && btn.dataset.confirming !== "1"){
-        btn.innerHTML = needsScope
-          ? '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i> حفظ ومتابعة للصلاحيات'
-          : '<i class="fas fa-save" aria-hidden="true"></i> حفظ المنسوب';
+      if (departmentSelect) { departmentSelect.required = isLabTechnician; }
+      if (btn && btn.dataset.confirming !== "1") {
+        btn.textContent = needsScope ? "حفظ ومتابعة للصلاحيات" : "حفظ المنسوب";
       }
     }
-    roleInputs.forEach(function(input){ input.addEventListener("change", syncRoleExperience); });
+    roleInputs.forEach(function (input) { input.addEventListener("change", syncRoleExperience); });
     syncRoleExperience();
 
-    if(form && btn){
-      form.addEventListener("submit", function(){
+    if (summary) { summary.focus(); }
+    if (form && btn) {
+      form.addEventListener("submit", function () {
         btn.disabled = true;
-        btn.style.opacity = ".75";
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> جارٍ الحفظ...';
+        btn.textContent = "جارٍ الحفظ...";
       });
     }
   });

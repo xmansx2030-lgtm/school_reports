@@ -1,0 +1,259 @@
+.staff-create-page {
+  max-inline-size: 68rem;
+}
+
+.staff-create-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  min-block-size: var(--twq-tap-target);
+  margin-block-end: var(--twq-space-4);
+  color: var(--twq-primary);
+  font-weight: var(--twq-font-weight-semibold);
+  text-decoration: none;
+}
+
+.staff-create-back:hover,
+.staff-create-bulk-link a:hover {
+  text-decoration: underline;
+}
+
+.staff-create-back:focus-visible,
+.staff-create-bulk-link a:focus-visible,
+.staff-create-role-card:focus-visible {
+  outline: 2px solid var(--twq-focus);
+  outline-offset: 3px;
+}
+
+.staff-create-header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.staff-create-context {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.staff-create-form {
+  max-inline-size: 56rem;
+  margin-inline: auto;
+}
+
+.staff-create-summary,
+.staff-create-confirm {
+  margin-block-start: var(--twq-space-6);
+}
+
+.staff-create-summary p,
+.staff-create-confirm p {
+  margin-block: var(--twq-space-2) 0;
+}
+
+.staff-create-section {
+  margin-block-start: var(--twq-space-8);
+}
+
+.staff-create-grid,
+.staff-create-account {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-5);
+}
+
+.staff-create-page .twq-field,
+.staff-create-role-fieldset {
+  min-inline-size: 0;
+}
+
+.staff-create-page .twq-label {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+}
+
+.staff-create-page .twq-control {
+  margin-block-start: var(--twq-space-2);
+}
+
+.staff-create-page :is(input[name="phone"], input[name="national_id"]) {
+  direction: ltr;
+  text-align: start;
+}
+
+.staff-create-page .twq-field__help {
+  margin-block-start: var(--twq-space-2);
+}
+
+.staff-create-page .twq-field__message:not(:empty) {
+  margin-block-start: var(--twq-space-2);
+}
+
+.staff-create-required,
+.staff-create-optional {
+  font-size: var(--twq-font-size-xs);
+  font-weight: var(--twq-font-weight-medium);
+}
+
+.staff-create-required {
+  color: var(--twq-primary);
+}
+
+.staff-create-optional {
+  color: var(--twq-text-muted);
+}
+
+.staff-create-role-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.staff-create-role-legend {
+  font-weight: var(--twq-font-weight-semibold);
+  color: var(--twq-text);
+}
+
+.staff-create-roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-3);
+  margin-block-start: var(--twq-space-4);
+}
+
+.staff-create-page .role-option {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.staff-create-page .role-option > input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+.staff-create-role-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--twq-space-2);
+  block-size: 100%;
+  min-block-size: var(--twq-control-lg);
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface);
+  cursor: pointer;
+  transition: border-color var(--twq-duration-fast) var(--twq-ease-standard),
+    background-color var(--twq-duration-fast) var(--twq-ease-standard);
+}
+
+.staff-create-page .role-option > input:checked + .staff-create-role-card {
+  border-color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.staff-create-page .role-option > input:focus-visible + .staff-create-role-card {
+  outline: 2px solid var(--twq-focus);
+  outline-offset: 3px;
+}
+
+.staff-create-role-card__title {
+  color: var(--twq-text);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.staff-create-role-card__title i {
+  margin-inline-end: var(--twq-space-2);
+  color: var(--twq-primary);
+}
+
+.staff-create-role-card__description,
+.staff-create-role-card__note {
+  color: var(--twq-text-secondary);
+  font-size: var(--twq-font-size-sm);
+  line-height: var(--twq-line-height-normal);
+}
+
+.staff-create-role-card__note {
+  margin-block-start: auto;
+  color: var(--twq-primary);
+  font-weight: var(--twq-font-weight-medium);
+}
+
+.staff-create-conditional,
+.staff-create-account-note {
+  margin-block-start: var(--twq-space-4);
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-inline-start: 3px solid var(--twq-accent);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface-muted);
+}
+
+.staff-create-conditional[hidden] {
+  display: none;
+}
+
+.staff-create-conditional .twq-control {
+  max-inline-size: 24rem;
+}
+
+.staff-create-account-note {
+  margin-block-start: 0;
+  color: var(--twq-text-secondary);
+  line-height: var(--twq-line-height-normal);
+}
+
+.staff-create-account-note strong {
+  color: var(--twq-text);
+}
+
+.staff-create-account-note p {
+  margin-block: var(--twq-space-2) 0;
+}
+
+.staff-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--twq-space-3);
+  margin-block-start: var(--twq-space-8);
+  padding-block-start: var(--twq-space-5);
+  border-block-start: 1px solid var(--twq-divider);
+}
+
+.staff-create-bulk-link {
+  margin-block: var(--twq-space-4) 0;
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-sm);
+}
+
+.staff-create-bulk-link a {
+  color: var(--twq-primary);
+}
+
+@media (max-width: 47.999rem) {
+  .staff-create-grid,
+  .staff-create-account,
+  .staff-create-roles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 39.999rem) {
+  .staff-create-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .staff-create-actions .twq-btn {
+    inline-size: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staff-create-role-card {
+    transition: none;
+  }
+}

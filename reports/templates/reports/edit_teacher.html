@@ -1,489 +1,166 @@
-{# templates/reports/teacher_edit.html (أو اسم ملفك الحالي) #}
 {% extends "base.html" %}
-{% block title %}تعديل بيانات المستخدم{% endblock %}
+{% load static %}
+
+{% block title %}تعديل بيانات المنسوب{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     TEACHER EDIT (page-only, scoped)
-     - بدون إعادة تعريف .btn / .card
-     - Dark mode عبر html[data-theme="dark"]
-     ========================================================= */
-
-  .teacher-edit-scope{
-    --te-ink: var(--id-ink);
-    --te-muted: var(--id-muted);
-    --te-line: var(--id-line);
-    --te-card: var(--id-surface);
-
-    --te-brand:#006c35;
-    --te-brand2:#0f8f87;
-    --te-danger:#b91c1c;
-
-    --te-radius: 16px;
-    --te-shadow: var(--id-e3);
-    --te-ring: 0 0 0 3px rgba(0,108,53,.22);
-    --te-tap: 48px;
-  }
-
-  .teacher-edit-scope .te-wrap{
-    max-width: 900px;
-    margin: 0 auto;
-    padding: clamp(10px, 2.5vw, 18px);
-  }
-
-  .teacher-edit-scope .te-card{
-    background: var(--te-card);
-    border: 1px solid var(--te-line);
-    border-radius: var(--te-radius);
-    box-shadow: var(--te-shadow);
-    overflow: hidden;
-  }
-
-  .teacher-edit-scope .te-header{
-    background: linear-gradient(135deg, #b9975b, #fb923c);
-    color: #111827;
-    padding: clamp(18px, 2.2vw, 26px) clamp(18px, 3vw, 30px);
-    text-align: center;
-  }
-  html[data-theme="dark"] .teacher-edit-scope .te-header{ color:#0b1712; }
-
-  .teacher-edit-scope .te-title{
-    margin: 0 0 6px;
-    font-weight: 950;
-    font-size: clamp(1.15rem, 2vw, 1.45rem);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .teacher-edit-scope .te-subtitle{
-    margin: 0;
-    opacity: .95;
-    font-weight: 800;
-    font-size: .95rem;
-  }
-
-  .teacher-edit-scope .te-form{
-    padding: clamp(16px, 3vw, 26px);
-  }
-
-  .teacher-edit-scope .te-grid{
-    display: grid;
-    grid-template-columns: repeat(2, minmax(240px, 1fr));
-    gap: 16px;
-  }
-  @media (max-width: 820px){
-    .teacher-edit-scope .te-grid{ grid-template-columns: 1fr; }
-  }
-
-  .teacher-edit-scope .te-group{ display:block; }
-  .teacher-edit-scope .te-label{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom: 8px;
-    font-weight: 950;
-    color: var(--te-ink);
-  }
-  .teacher-edit-scope .te-icon{
-    color: var(--te-brand);
-    opacity: .95;
-  }
-  html[data-theme="dark"] .teacher-edit-scope .te-icon{ color:#93c5fd; }
-
-  .teacher-edit-scope .te-control{
-    width: 100%;
-    min-height: var(--te-tap);
-    padding: 12px 14px;
-    border: 1px solid var(--te-line);
-    border-radius: 12px;
-    background: var(--te-card);
-    background: color-mix(in srgb, var(--te-card) 92%, #f8fafc 8%);
-    color: var(--te-ink);
-    font-size: 1rem;
-    transition: box-shadow .18s ease, border-color .18s ease, transform .12s ease;
-  }
-  .teacher-edit-scope .te-control:focus{
-    outline: none;
-    border-color: var(--te-brand);
-    box-shadow: var(--te-ring);
-  }
-  html[data-theme="dark"] .teacher-edit-scope .te-control{
-    background: #0b1712;
-    color: var(--te-ink);
-  }
-
-  .teacher-edit-scope .te-field-error{
-    color: var(--te-danger);
-    font-size: .92rem;
-    margin-top: 6px;
-    font-weight: 850;
-  }
-  .teacher-edit-scope .te-hint{
-    color: var(--te-muted);
-    font-size: .86rem;
-    margin-top: 6px;
-    font-weight: 800;
-  }
-
-  /* Password */
-  .teacher-edit-scope .te-password-wrap{
-    position: relative;
-    display:flex;
-    align-items:center;
-  }
-  .teacher-edit-scope .te-password-wrap .te-control{ padding-inline-end: 46px; }
-
-  .teacher-edit-scope .te-toggle{
-    position:absolute;
-    inset-inline-end: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--te-line);
-    border-radius: 10px;
-    background: var(--te-card);
-    background: color-mix(in srgb, var(--te-card) 92%, #f8fafc 8%);
-    color: var(--te-muted);
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-  }
-  .teacher-edit-scope .te-toggle:focus-visible{
-    outline: 2px solid var(--te-brand);
-    outline-offset: 2px;
-  }
-  html[data-theme="dark"] .teacher-edit-scope .te-toggle{ background:#0b1712; }
-
-  /* Switch */
-  .teacher-edit-scope .te-switch-row{
-    display:flex;
-    align-items:center;
-    gap: 12px;
-    margin-top: 6px;
-  }
-  .teacher-edit-scope .te-switch{
-    position: relative;
-    display: inline-block;
-    width: 54px;
-    height: 30px;
-    flex: 0 0 auto;
-  }
-  .teacher-edit-scope .te-switch input{
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  .teacher-edit-scope .te-slider{
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background: #cbd5e1;
-    border-radius: 999px;
-    transition: .25s;
-  }
-  .teacher-edit-scope .te-slider:before{
-    content:"";
-    position:absolute;
-    height: 22px;
-    width: 22px;
-    inset-inline-start: 4px;
-    top: 4px;
-    background:#fff;
-    border-radius: 50%;
-    transition: .25s;
-  }
-  .teacher-edit-scope .te-switch input:checked + .te-slider{ background: var(--te-brand); }
-  .teacher-edit-scope .te-switch input:checked + .te-slider:before{ transform: translateX(-24px); }
-
-  .teacher-edit-scope .te-switch-text{ flex: 1; }
-  .teacher-edit-scope .te-switch-text .te-hint{ margin-top: 4px; }
-
-  /* Alerts */
-  .teacher-edit-scope .te-alert{
-    padding: 12px 14px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    border: 1px solid var(--te-line);
-    background: var(--te-card);
-    background: color-mix(in srgb, var(--te-card) 92%, #eff6ff 8%);
-    color: var(--te-ink);
-    font-weight: 850;
-  }
-  .teacher-edit-scope .te-alert.success{ background:#ecfdf5; color:#065f46; border-color: color-mix(in srgb,#16a34a 25%, var(--te-line)); }
-  .teacher-edit-scope .te-alert.error{ background:#fef2f2; color:#991b1b; border-color:#fecaca; }
-  .teacher-edit-scope .te-alert.warning{ background:#fffbeb; color:#92400e; border-color:#fde68a; }
-  .teacher-edit-scope .te-alert.info{ background:#eff6ff; color:#00542a; border-color:#bfdbfe; }
-
-  html[data-theme="dark"] .teacher-edit-scope .te-alert{ background:#0b1712; }
-  html[data-theme="dark"] .teacher-edit-scope .te-alert.error{ background:#2a0f14; color:#fecaca; border-color:#7f1d1d; }
-
-  /* Actions */
-  .teacher-edit-scope .te-actions{
-    display:flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid var(--te-line);
-  }
-
-  .teacher-edit-scope .te-btn{
-    display:inline-flex;
-    align-items:center;
-    gap: 10px;
-    justify-content:center;
-    min-height: var(--te-tap);
-    padding: 10px 16px;
-    border-radius: 12px;
-    border: 1px solid var(--te-line);
-    background: var(--te-card);
-    background: color-mix(in srgb, var(--te-card) 92%, #f8fafc 8%);
-    font-weight: 950;
-    cursor: pointer;
-    text-decoration: none;
-    color: var(--te-ink);
-    transition: transform .12s ease, filter .12s ease, opacity .12s ease;
-  }
-  .teacher-edit-scope .te-btn:hover{ transform: translateY(-1px); }
-  .teacher-edit-scope .te-btn:focus-visible{ outline: 2px solid var(--te-brand); outline-offset: 2px; }
-
-  .teacher-edit-scope .te-btn-primary{
-    background: linear-gradient(135deg, var(--te-brand), var(--te-brand2));
-    border-color: transparent;
-    color: #fff;
-  }
-  .teacher-edit-scope .te-btn-primary:hover{ filter: brightness(1.03); }
-
-  .teacher-edit-scope .te-btn-outline{ background: transparent; }
-
-  html[data-theme="dark"] .teacher-edit-scope .te-btn{ background:#0b1712; color: var(--te-ink); }
-  html[data-theme="dark"] .teacher-edit-scope .te-btn-outline{ background: transparent; }
-
-  @media (max-width: 560px){
-    .teacher-edit-scope .te-form{ padding: 16px; }
-    .teacher-edit-scope .te-actions{ flex-direction: column; }
-    .teacher-edit-scope .te-btn{ width: 100%; }
-  }
-
-</style>
+<link rel="stylesheet" href="{% static 'css/staff-edit.css' %}?v=20260920.1">
 {% endblock %}
 
 {% block content %}
-<div class="teacher-edit-scope">
-  <div class="te-wrap" dir="rtl">
-    <div class="te-card">
-      <div class="te-header">
-        <h1 class="te-title">
-          <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
-          تعديل بيانات المستخدم
-        </h1>
-        <p class="te-subtitle">
-          عدّل بيانات الحساب الأساسية لهذا المنسوب، بصرف النظر عن دوره الحالي.
-          {% firstof teacher.name form.initial.name "" %}
-        </p>
-      </div>
+<div class="twq-page staff-edit-page" dir="rtl">
+  <a class="staff-edit-back" href="{% if next_url_value %}{{ next_url_value }}{% else %}{% url 'reports:manage_teachers' %}{% endif %}">
+    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى قائمة المنسوبين
+  </a>
 
-      <form method="post" class="te-form" novalidate id="teacherEditForm">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-          <div class="te-alert error" role="alert">
-            {% for e in form.non_field_errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-          </div>
-        {% endif %}
-
-        <div class="te-grid">
-          <div class="te-group">
-            <label class="te-label" for="{{ form.name.id_for_label }}">
-              <i class="fa-solid fa-user te-icon" aria-hidden="true"></i>
-              اسم {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}
-            </label>
-            {{ form.name }}
-            {% for e in form.name.errors %}<div class="te-field-error">{{ e }}</div>{% endfor %}
-            <div class="te-hint">الاسم الكامل {{ SCHOOL_TEACHER_DATIVE_LABEL|default:"للمعلم" }}</div>
-          </div>
-
-          <div class="te-group">
-            <label class="te-label" for="{{ form.national_id.id_for_label }}">
-              <i class="fa-solid fa-id-card te-icon" aria-hidden="true"></i>
-              رقم الهوية
-            </label>
-            {{ form.national_id }}
-            {% for e in form.national_id.errors %}<div class="te-field-error">{{ e }}</div>{% endfor %}
-            <div class="te-hint">رقم الهوية الوطنية مكوّن من 10 أرقام (اختياري)</div>
-          </div>
-
-          <div class="te-group">
-            <label class="te-label" for="{{ form.phone.id_for_label }}">
-              <i class="fa-solid fa-phone te-icon" aria-hidden="true"></i>
-              رقم الجوال
-            </label>
-            {{ form.phone }}
-            {% for e in form.phone.errors %}<div class="te-field-error">{{ e }}</div>{% endfor %}
-            <div class="te-hint">يبدأ بـ 05 ويحتوي على 10 أرقام</div>
-          </div>
-
-          {% if form.job_title %}
-          <div class="te-group">
-            <label class="te-label" for="{{ form.job_title.id_for_label }}">
-              <i class="fa-solid fa-user-tag te-icon" aria-hidden="true"></i>
-              الدور
-            </label>
-            {{ form.job_title }}
-            {% for e in form.job_title.errors %}<div class="te-field-error">{{ e }}</div>{% endfor %}
-            <div class="te-hint">اختر ({{ SCHOOL_TEACHER_LABEL|default:"معلم" }} / {{ SCHOOL_ADMIN_STAFF_LABEL|default:"موظف إداري" }} / {{ SCHOOL_LAB_TECH_LABEL|default:"محضر مختبر" }}) — بنفس الصلاحيات</div>
-          </div>
-          {% endif %}
-
-          <div class="te-group">
-            <label class="te-label" for="{{ form.password.id_for_label }}">
-              <i class="fa-solid fa-key te-icon" aria-hidden="true"></i>
-              كلمة المرور
-            </label>
-            <div class="te-password-wrap">
-              {{ form.password }}
-              <button type="button" class="te-toggle" id="togglePassword" aria-label="إظهار/إخفاء كلمة المرور">
-                <i class="fa-solid fa-eye" aria-hidden="true"></i>
-              </button>
-            </div>
-            {% for e in form.password.errors %}<div class="te-field-error">{{ e }}</div>{% endfor %}
-            <div class="te-hint">اترك الحقل فارغًا للحفاظ على كلمة المرور الحالية</div>
-          </div>
-
-          <div class="te-group u-span-all">
-            <div class="te-switch-row">
-              <label class="te-switch" aria-label="تفعيل/تعطيل">
-                {{ form.is_active }}
-                <span class="te-slider"></span>
-              </label>
-
-              <div class="te-switch-text">
-                <div class="xs-edit-teacher-1">
-                  <i class="fa-solid fa-toggle-on te-icon" aria-hidden="true"></i>
-                  نشط
-                </div>
-                <div class="te-hint">تفعيل أو إلغاء تفعيل حساب {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</div>
-                {% for e in form.is_active.errors %}<div class="te-field-error">{{ e }}</div>{% endfor %}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {% if request.GET.next %}
-          <input type="hidden" name="next" value="{{ request.GET.next }}">
-        {% endif %}
-
-        <div class="te-actions">
-          <button type="submit" class="te-btn te-btn-primary" id="saveBtn">
-            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-            <span data-label>حفظ التعديلات</span>
-          </button>
-
-          {% if request.GET.next %}
-            <a href="{{ request.GET.next }}" class="te-btn te-btn-outline">
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-              رجوع
-            </a>
-          {% else %}
-            <a href="{% url 'reports:manage_teachers' %}" class="te-btn te-btn-outline">
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-              رجوع للقائمة
-            </a>
-          {% endif %}
-        </div>
-      </form>
+  <header class="twq-page-header staff-edit-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-user-pen" aria-hidden="true"></i> إدارة منسوبي المدرسة</span>
+      <h1 class="twq-page-header__title">تعديل بيانات <bdi>{{ teacher.name }}</bdi></h1>
+      <p class="twq-page-header__lead">حدّث بيانات الحساب والمسمى الوظيفي. دور الصلاحيات وتكليفات الأقسام يُداران في مسارات منفصلة.</p>
+      <dl class="twq-page-header__context staff-edit-context">
+        {% if active_school %}<div><dt>المدرسة الحالية</dt><dd>{{ active_school.name }}</dd></div>{% endif %}
+        <div><dt>حالة الحساب المسجلة</dt><dd>{% if form.initial.is_active %}<span class="twq-status" data-status="active">نشط</span>{% else %}<span class="twq-status" data-status="danger">معطل</span>{% endif %}</dd></div>
+        {% if active_school %}<div><dt>دور الصلاحيات الحالي</dt><dd>{{ school_role_label }}</dd></div>{% endif %}
+      </dl>
     </div>
-  </div>
+  </header>
+
+  <form method="post" id="teacherEditForm" class="staff-edit-form" novalidate>
+    {% csrf_token %}
+    {% if next_url_value %}<input type="hidden" name="next" value="{{ next_url_value }}">{% endif %}
+
+    {% if form.errors %}
+      <div class="twq-alert twq-alert--danger staff-edit-summary" role="alert">
+        تعذّر حفظ التعديلات. راجع الأخطاء الموضحة بجانب الحقول ثم أعد المحاولة.
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <section class="twq-section staff-edit-section" aria-labelledby="staffIdentityTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">الهوية والتواصل</span>
+          <h2 class="twq-section__title" id="staffIdentityTitle">بيانات الحساب الأساسية</h2>
+          <p class="twq-section__description">تُستخدم هذه البيانات للتعريف بالمنسوب وتسجيل دخوله؛ لا تغيّر ارتباطه بالمدرسة.</p>
+        </div>
+      </div>
+      <div class="staff-edit-grid">
+        <div class="twq-field{% if form.name.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.name.id_for_label }}">اسم المنسوب <span class="staff-edit-required">مطلوب</span></label>
+          {{ form.name }}
+          <p class="twq-field__help" id="staff-name-help">الاسم الكامل كما يظهر في النظام والكشوف.</p>
+          <p class="twq-field__message" id="staff-name-error"{% if form.name.errors %} role="alert"{% endif %}>{% for error in form.name.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+        <div class="twq-field{% if form.phone.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.phone.id_for_label }}">رقم الجوال <span class="staff-edit-required">مطلوب</span></label>
+          {{ form.phone }}
+          <p class="twq-field__help" id="staff-phone-help">يبدأ بـ 05 ويتكون من 10 أرقام؛ يُستخدم لتسجيل الدخول.</p>
+          <p class="twq-field__message" id="staff-phone-error"{% if form.phone.errors %} role="alert"{% endif %}>{% for error in form.phone.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+        <div class="twq-field{% if form.national_id.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.national_id.id_for_label }}">رقم الهوية الوطنية <span class="staff-edit-optional">اختياري</span></label>
+          {{ form.national_id }}
+          <p class="twq-field__help" id="staff-national_id-help">10 أرقام عند إدخاله. لا تشارك هذه البيانات خارج نطاق العمل المصرح.</p>
+          <p class="twq-field__message" id="staff-national_id-error"{% if form.national_id.errors %} role="alert"{% endif %}>{% for error in form.national_id.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="twq-section staff-edit-section" aria-labelledby="staffSchoolTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">المدرسة والتكليف</span>
+          <h2 class="twq-section__title" id="staffSchoolTitle">المسمى الوظيفي والصلاحيات</h2>
+          <p class="twq-section__description">المسمى الوظيفي وصف تنظيمي، وليس مصدرًا للصلاحيات. تعديل الدور والأقسام يتم من شاشاتهما المخصصة.</p>
+        </div>
+      </div>
+      <div class="staff-edit-grid">
+        <div class="twq-field{% if form.job_title.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.job_title.id_for_label }}">المسمى الوظيفي</label>
+          {{ form.job_title }}
+          <p class="twq-field__help" id="staff-job_title-help">يغيّر الاسم المعروض داخل المدرسة فقط؛ لا يغيّر دور الصلاحيات.</p>
+          <p class="twq-field__message" id="staff-job_title-error"{% if form.job_title.errors %} role="alert"{% endif %}>{% for error in form.job_title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+        <div class="staff-edit-scope-note">
+          {% if active_school %}<p><strong>دور الصلاحيات:</strong> {{ school_role_label }}</p>{% endif %}
+          <p>تغيير الدور أو ارتباط القسم لا يحدث عند حفظ هذا النموذج.</p>
+          <div class="staff-edit-scope-links">
+            <a href="{% url 'reports:staff_roles' %}">إدارة الأدوار والصلاحيات</a>
+            <a href="{% url 'reports:departments_list' %}">إدارة الأقسام</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="twq-section staff-edit-section" aria-labelledby="staffAccountTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">حالة الحساب</span>
+          <h2 class="twq-section__title" id="staffAccountTitle">الدخول وكلمة المرور</h2>
+          <p class="twq-section__description">تعطيل الحساب يمنع الدخول إلى النظام، وهو مختلف عن إزالة المنسوب من المدرسة.</p>
+        </div>
+      </div>
+      <div class="staff-edit-account">
+        <div class="twq-field{% if form.is_active.errors %} twq-field--error{% endif %}">
+          <label class="twq-choice staff-edit-active" for="{{ form.is_active.id_for_label }}">
+            {{ form.is_active }}
+            <span>السماح لهذا الحساب بالدخول إلى النظام</span>
+          </label>
+          <p class="twq-field__help" id="staff-is-active-help">إلغاء التحديد يعطّل الحساب؛ لا يزيل عضويته المدرسية.</p>
+          <p class="twq-field__message" id="staff-is-active-error"{% if form.is_active.errors %} role="alert"{% endif %}>{% for error in form.is_active.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+        <div class="twq-field{% if form.password.errors %} twq-field--error{% endif %}">
+          <label class="twq-label" for="{{ form.password.id_for_label }}">كلمة مرور جديدة <span class="staff-edit-optional">اختياري</span></label>
+          <div class="staff-edit-password">
+            {{ form.password }}
+            <button type="button" id="togglePassword" class="twq-btn twq-btn--ghost staff-edit-password__toggle" aria-label="إظهار كلمة المرور" aria-pressed="false">
+              <i class="fa-solid fa-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p class="twq-field__help" id="staff-password-help">اترك الحقل فارغًا للإبقاء على كلمة المرور الحالية. لا تُعرض كلمة المرور الحالية هنا.</p>
+          <p class="twq-field__message" id="staff-password-error"{% if form.password.errors %} role="alert"{% endif %}>{% for error in form.password.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="staff-edit-actions">
+      <button type="submit" class="twq-btn twq-btn--primary" id="saveBtn">
+        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i><span data-label>حفظ التعديلات</span>
+      </button>
+      <a class="twq-btn twq-btn--secondary" href="{% if next_url_value %}{{ next_url_value }}{% else %}{% url 'reports:manage_teachers' %}{% endif %}">إلغاء والعودة للقائمة</a>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ block.super }}
-<script nonce="{{ CSP_NONCE|default:'' }}" data-cfasync="false">
-  (function(){
-    var form = document.getElementById('teacherEditForm');
-    if(!form) return;
-
-    // أضف class te-control لجميع الحقول (بدون checkbox)
-    form.querySelectorAll('input:not([type="checkbox"]), select, textarea').forEach(function(el){
-      if(!el.classList.contains('te-control')) el.classList.add('te-control');
-    });
-
-    // تحسين إدخال الهوية والجوال + محاذاة LTR
-    var national = document.getElementById('{{ form.national_id.id_for_label }}') || document.getElementById('id_national_id');
-    var phone = document.getElementById('{{ form.phone.id_for_label }}') || document.getElementById('id_phone');
-
-    if(national){
-      national.setAttribute('inputmode','numeric');
-      national.setAttribute('pattern','\\d{10}');
-      national.setAttribute('maxlength','10');
-      national.setAttribute('autocomplete','off');
-      national.dir = 'ltr';
-      national.style.textAlign = 'left';
-    }
-
-    if(phone){
-      phone.setAttribute('inputmode','tel');
-      phone.setAttribute('pattern','05\\d{8}');
-      phone.setAttribute('maxlength','10');
-      phone.setAttribute('autocomplete','tel');
-      phone.dir = 'ltr';
-      phone.style.textAlign = 'left';
-    }
-
-    // كلمة المرور: autocomplete جديد
-    var password = document.getElementById('{{ form.password.id_for_label }}')
-      || document.getElementById('id_password')
-      || form.querySelector('input[name="password"]');
-
-    if(password){
-      password.setAttribute('autocomplete','new-password');
-    }
-
-    // إظهار/إخفاء كلمة المرور
-    var toggle = document.getElementById('togglePassword');
-    if(toggle && password){
-      toggle.addEventListener('click', function(){
-        var isPw = password.getAttribute('type') === 'password';
-        password.setAttribute('type', isPw ? 'text' : 'password');
-
-        var ic = toggle.querySelector('i');
-        if(ic){
-          ic.classList.toggle('fa-eye', !isPw);
-          ic.classList.toggle('fa-eye-slash', isPw);
-        }
+<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
+  (function () {
+    const form = document.getElementById("teacherEditForm");
+    const password = document.getElementById("id_password");
+    const toggle = document.getElementById("togglePassword");
+    if (toggle && password) {
+      toggle.addEventListener("click", function () {
+        const showing = password.type === "password";
+        password.type = showing ? "text" : "password";
+        toggle.setAttribute("aria-pressed", showing ? "true" : "false");
+        toggle.setAttribute("aria-label", showing ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+        const icon = toggle.querySelector("i");
+        if (icon) icon.className = showing ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
       });
     }
-
-    // إخفاء رسائل الفلاش غير الخطأ بعد 3 ثوانٍ
-    var flash = document.getElementById('flash');
-    if(flash){
-      window.setTimeout(function(){
-        flash.querySelectorAll('.te-alert').forEach(function(a){
-          if(!a.classList.contains('error')){
-            a.style.display = 'none';
-          }
-        });
-      }, 3000);
+    if (form) {
+      form.addEventListener("submit", function () {
+        const button = document.getElementById("saveBtn");
+        if (!button) return;
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        const label = button.querySelector("[data-label]");
+        if (label) label.textContent = "جارٍ الحفظ…";
+      });
     }
-
-    // منع الإرسال المزدوج
-    form.addEventListener('submit', function(){
-      var btn = document.getElementById('saveBtn');
-      if(!btn) return;
-
-      btn.disabled = true;
-      btn.setAttribute('aria-busy', 'true');
-      btn.style.opacity = '.75';
-
-      var lbl = btn.querySelector('[data-label]');
-      if(lbl) lbl.textContent = 'جارٍ الحفظ...';
-    });
   })();
 </script>
 {% endblock %}

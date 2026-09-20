@@ -537,15 +537,16 @@ class TableActionNamingTests(SimpleTestCase):
     def test_staff_row_actions_name_the_person(self):
         source = _source("reports/templates/reports/manage_teachers.html")
         self.assertIn('aria-label="تعديل بيانات: {{ t.name|default:t.phone }}"', source)
-        self.assertIn('aria-label="حذف: {{ t.name|default:t.phone }}"', source)
+        self.assertIn('إزالة من المدرسة: {% endif %}{{ t.name|default:t.phone }}', source)
         self.assertNotIn('aria-label="حذف"', source)
 
     def test_delete_is_not_louder_than_the_action_beside_it(self):
         # الحذف نادرٌ لا رجعة فيه، والتعديل شائع. فمربّعٌ أحمر مصمت بجوار
         # التعديل يجعل الأخطر أسهلَ إصابةً بالإبهام.
-        source = _source("reports/templates/reports/manage_teachers.html")
-        self.assertIn(".admin-scope .btn-delete{background:transparent", source)
-        self.assertNotIn(".admin-scope .btn-delete{background:#ef4444", source)
+        source = _source("static/css/users-list.css")
+        self.assertIn(".users-list-delete {", source)
+        self.assertIn("background: transparent;", source)
+        self.assertNotIn("background: #ef4444", source)
 
 
 class SeatPressureTests(SimpleTestCase):

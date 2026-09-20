@@ -15,7 +15,8 @@
           'رقم الجوال للصف ',
           'رقم الهوية للصف ',
           'المسمى الوظيفي للصف ',
-          'القسم للصف '
+          'القسم للصف ',
+          'المختبر للصف '
         ];
         row.querySelectorAll('input, select').forEach(function (field, fieldIndex) {
           if (labels[fieldIndex]) field.setAttribute('aria-label', labels[fieldIndex] + rowNumber);
@@ -65,11 +66,11 @@
     var fileInput = document.getElementById('onboardingFile');
     var fileName = document.getElementById('onboardingFileName');
     var previewButton = document.getElementById('filePreviewButton');
+    var fileForm = document.getElementById('filePreviewForm');
     if (dropZone && fileInput) {
       function updateFile() {
         var file = fileInput.files && fileInput.files[0];
         if (fileName) fileName.textContent = file ? file.name : 'لم يتم اختيار ملف';
-        if (previewButton) previewButton.disabled = !file;
       }
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (eventName) {
         dropZone.addEventListener(eventName, function (event) {
@@ -90,6 +91,14 @@
         }
       });
       fileInput.addEventListener('change', updateFile);
+      if (fileForm && previewButton) {
+        fileForm.addEventListener('submit', function () {
+          if (fileInput.files && fileInput.files.length) {
+            previewButton.disabled = true;
+            fileForm.setAttribute('aria-busy', 'true');
+          }
+        });
+      }
       updateFile();
     }
   }

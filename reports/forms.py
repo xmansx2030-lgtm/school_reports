@@ -1082,6 +1082,14 @@ class TeacherCreateForm(forms.ModelForm):
         self.fields["job_title"].choices = assignment_choices(self._active_school)
         self.assignment_cards = assignment_cards(self._active_school)
         self.initial.setdefault("job_title", SchoolMembership.RoleType.TEACHER)
+        # Presentation-only associations for the individual staff form.
+        for name in ("name", "phone", "national_id", "is_active", "lab_kind", "keep_teaching_role"):
+            widget = self.fields[name].widget
+            widget.attrs["aria-describedby"] = f"staff-create-{name}-help staff-create-{name}-error"
+            if name in ("name", "phone", "national_id", "lab_kind"):
+                widget.attrs["class"] = "twq-control"
+            if self.is_bound and name in self.errors:
+                widget.attrs["aria-invalid"] = "true"
 
     def clean(self):
         cleaned = super().clean()
@@ -1196,6 +1204,19 @@ class TeacherEditForm(forms.ModelForm):
         self._active_school = kwargs.pop("active_school", None)
         super().__init__(*args, **kwargs)
         self.fields["job_title"].choices = _school_job_title_choices(self._active_school)
+
+        # Presentation-only attributes for the staff edit workspace. The
+        # field names, choices, required flags and validation stay unchanged.
+        for field_name in ("name", "phone", "national_id", "job_title", "password"):
+            widget = self.fields[field_name].widget
+            widget.attrs["class"] = f"{widget.attrs.get('class', '')} twq-control".strip()
+            widget.attrs["aria-describedby"] = f"staff-{field_name}-help staff-{field_name}-error"
+        self.fields["phone"].widget.attrs["dir"] = "ltr"
+        self.fields["phone"].widget.attrs["autocomplete"] = "tel"
+        self.fields["national_id"].widget.attrs["dir"] = "ltr"
+        self.fields["is_active"].widget.attrs["aria-describedby"] = (
+            "staff-is-active-help staff-is-active-error"
+        )
 
         # initial job title from membership for active school (if available)
         try:
