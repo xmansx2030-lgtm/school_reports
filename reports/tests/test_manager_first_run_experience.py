@@ -267,15 +267,23 @@ class ManagerFirstRunExperienceTests(TestCase):
             / "reports"
             / "school_settings.html"
         ).read_text(encoding="utf-8")
-        self.assertIn(":focus-visible", settings_template)
-        focus_rule = settings_template.split(":focus-visible", 1)[1].split("}", 1)[0]
+        settings_css = (project_root / "static" / "css" / "school-settings.css").read_text(
+            encoding="utf-8"
+        )
+        settings_script = (project_root / "static" / "js" / "school-settings.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("css/school-settings.css", settings_template)
+        self.assertIn("js/school-settings.js", settings_template)
+        self.assertIn(":focus-visible", settings_css)
+        focus_rule = settings_css.split(":focus-visible", 1)[1].split("}", 1)[0]
         self.assertIn("outline: 3px solid", focus_rule)
-        self.assertIn('window.addEventListener("pageshow"', settings_template)
-        self.assertIn("if(event.persisted) restoreSubmitButton();", settings_template)
-        self.assertIn('#id_email,\n  #id_current_academic_year {', settings_template)
-        self.assertIn("direction: ltr;", settings_template)
+        self.assertIn('window.addEventListener("pageshow"', settings_script)
+        self.assertIn("if (event.persisted) restoreSubmitButton();", settings_script)
+        self.assertIn('input[name="phone"]', settings_css)
+        self.assertIn("direction: ltr;", settings_css)
         self.assertIn('aria-busy="false" aria-describedby="saveStatus"', settings_template)
         self.assertIn('id="saveStatus" role="status" aria-live="polite"', settings_template)
-        self.assertIn('form.setAttribute("aria-busy", "true")', settings_template)
-        self.assertIn('form.setAttribute("aria-busy", "false")', settings_template)
-        self.assertIn('if(saveStatus) saveStatus.textContent = "";', settings_template)
+        self.assertIn('form.setAttribute("aria-busy", "true")', settings_script)
+        self.assertIn('form.setAttribute("aria-busy", "false")', settings_script)
+        self.assertIn('if (saveStatus) saveStatus.textContent = "";', settings_script)

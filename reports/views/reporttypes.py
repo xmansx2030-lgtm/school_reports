@@ -7,6 +7,13 @@ from django.db.models import Count, Q as _Q
 from ..model_parts.approvals import ApprovalRoute
 
 
+def _mark_invalid_fields(form) -> None:
+    """Connect existing validation errors to their rendered controls."""
+    for field_name in form.errors:
+        if field_name in form.fields:
+            form.fields[field_name].widget.attrs["aria-invalid"] = "true"
+
+
 @login_required(login_url="reports:login")
 @role_required({"manager"})
 @require_http_methods(["GET"])
@@ -40,6 +47,7 @@ def reporttypes_list(request: HttpRequest) -> HttpResponse:
             "obj": rt,
             "code": rt.code,
             "name": rt.name,
+            "description": rt.description,
             "is_active": rt.is_active,
             "order": rt.order,
             "count": rt.report_count,
@@ -53,7 +61,11 @@ def reporttypes_list(request: HttpRequest) -> HttpResponse:
         }
         for rt in qs
     ]
-    return render(request, "reports/reporttypes_list.html", {"items": items, "db_backed": True})
+    return render(
+        request,
+        "reports/reporttypes_list.html",
+        {"items": items, "db_backed": True, "school": active_school},
+    )
 
 @login_required(login_url="reports:login")
 @role_required({"manager"})
@@ -94,7 +106,12 @@ def reporttype_create(request: HttpRequest) -> HttpResponse:
             messages.success(request, "تمت إضافة نوع التقرير.")
             return redirect("reports:reporttypes_list")
         messages.error(request, "تعذّر الحفظ. تحقّق من الحقول.")
-    return render(request, "reports/reporttype_form.html", {"form": form, "mode": "create"})
+        _mark_invalid_fields(form)
+    return render(
+        request,
+        "reports/reporttype_form.html",
+        {"form": form, "mode": "create", "school": active_school},
+    )
 
 @login_required(login_url="reports:login")
 @role_required({"manager"})
@@ -132,7 +149,12 @@ def reporttype_update(request: HttpRequest, pk: int) -> HttpResponse:
             messages.success(request, "تم تعديل نوع التقرير.")
             return redirect("reports:reporttypes_list")
         messages.error(request, "تعذّر الحفظ. تحقّق من الحقول.")
-    return render(request, "reports/reporttype_form.html", {"form": form, "mode": "edit", "obj": obj})
+        _mark_invalid_fields(form)
+    return render(
+        request,
+        "reports/reporttype_form.html",
+        {"form": form, "mode": "edit", "obj": obj, "school": active_school},
+    )
 
 @login_required(login_url="reports:login")
 @role_required({"manager"})

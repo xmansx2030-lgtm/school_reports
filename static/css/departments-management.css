@@ -1,0 +1,475 @@
+/* Departments list and create/edit surfaces. Shared Tawtheeq primitives remain
+   owned by design-system.css; this file owns department-specific composition. */
+.departments-page {
+  max-inline-size: 78rem;
+}
+
+.departments-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  min-block-size: 2.75rem;
+  margin-block-end: var(--twq-space-4);
+  color: var(--twq-text-secondary);
+  font-weight: var(--twq-font-weight-semibold);
+  text-decoration: none;
+}
+
+.departments-page__back:hover {
+  color: var(--twq-primary);
+}
+
+.departments-page__back:focus-visible,
+.departments-form__error-summary a:focus-visible {
+  outline: 3px solid var(--twq-focus);
+  outline-offset: 3px;
+  border-radius: var(--twq-radius-sm);
+}
+
+.departments-page__header {
+  align-items: center;
+}
+
+.departments-page__context {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.departments-page__context > div,
+.departments-table__identity > div {
+  min-inline-size: 0;
+}
+
+.departments-page__section,
+.departments-form__section,
+.departments-form__danger {
+  min-inline-size: 0;
+  margin-block-start: var(--twq-space-6);
+  padding: clamp(var(--twq-space-5), 3vw, var(--twq-space-8));
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+  box-shadow: var(--twq-shadow-xs);
+}
+
+.departments-table-wrap {
+  margin-block-start: var(--twq-space-5);
+  outline: none;
+}
+
+.departments-table-wrap:focus-visible {
+  box-shadow: 0 0 0 3px var(--twq-focus);
+}
+
+.departments-table {
+  min-inline-size: 62rem;
+}
+
+.departments-table__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--twq-space-3);
+}
+
+.departments-table__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.departments-table__identity strong,
+.departments-table__identity span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.departments-table__identity strong {
+  color: var(--twq-text);
+}
+
+.departments-table__identity div > span {
+  margin-block-start: var(--twq-space-1);
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-xs);
+}
+
+.departments-table__metric {
+  color: var(--twq-text-secondary);
+  white-space: nowrap;
+}
+
+.departments-table__metric strong {
+  color: var(--twq-text);
+}
+
+.departments-table__tickets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--twq-space-2);
+  min-inline-size: 15rem;
+}
+
+.departments-table__tickets > span {
+  display: grid;
+  gap: var(--twq-space-1);
+  padding: var(--twq-space-2);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-sm);
+  text-align: center;
+  background: var(--twq-surface-secondary);
+}
+
+.departments-table__tickets small {
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-xs);
+}
+
+.departments-table__tickets strong {
+  color: var(--twq-text);
+}
+
+.departments-table__actions {
+  flex-wrap: wrap;
+  min-inline-size: 17rem;
+}
+
+.departments-table__actions form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.departments-table__actions .twq-btn {
+  min-block-size: 2.75rem;
+  padding-inline: var(--twq-space-3);
+}
+
+.departments-table__protected {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  min-block-size: 2.75rem;
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-sm);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.departments-page__empty {
+  margin-block-start: var(--twq-space-5);
+}
+
+.departments-form-page {
+  max-inline-size: 58rem;
+}
+
+.departments-form-page__header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.departments-form-page__header::after {
+  display: none;
+}
+
+.departments-form {
+  min-inline-size: 0;
+}
+
+.departments-form__error-summary,
+.departments-form__notice {
+  margin-block-start: var(--twq-space-6);
+}
+
+.departments-form__error-summary p,
+.departments-form__notice p {
+  margin-block: var(--twq-space-1) 0;
+}
+
+.departments-form__error-summary ul {
+  margin-block: var(--twq-space-3) 0;
+  padding-inline-start: var(--twq-space-5);
+}
+
+.departments-form__error-summary a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.departments-form .twq-field {
+  max-inline-size: 38rem;
+}
+
+.departments-form .twq-control {
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.departments-form__required {
+  margin-inline-start: var(--twq-space-2);
+  color: var(--twq-text-secondary);
+  font-size: var(--twq-font-size-xs);
+  font-weight: var(--twq-font-weight-medium);
+}
+
+.departments-form__fieldset {
+  min-inline-size: 0;
+  margin-block-start: var(--twq-space-6);
+  padding: 0;
+  border: 0;
+}
+
+.departments-form__fieldset > legend {
+  margin-block-end: var(--twq-space-3);
+  color: var(--twq-text);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.departments-form__choice {
+  align-items: flex-start;
+  max-inline-size: 38rem;
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface-secondary);
+}
+
+.departments-form__choice > span {
+  display: grid;
+  gap: var(--twq-space-1);
+}
+
+.departments-form__choice small {
+  color: var(--twq-text-muted);
+  font-weight: var(--twq-font-weight-regular);
+  line-height: var(--twq-line-height-normal);
+}
+
+.departments-form__choices-wrap ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.departments-form__choices-wrap li {
+  min-inline-size: 0;
+}
+
+.departments-form__choices-wrap label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--twq-space-3);
+  min-block-size: 2.75rem;
+  padding: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text);
+  background: var(--twq-surface);
+  cursor: pointer;
+}
+
+.departments-form__choices-wrap label:hover {
+  border-color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.departments-form__choices-wrap input {
+  flex: none;
+  margin-block-start: var(--twq-space-1);
+}
+
+.departments-form__choices-wrap label:has(input:checked) {
+  border-color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.departments-form .twq-field__help,
+.departments-form .twq-field__message {
+  overflow-wrap: anywhere;
+  margin-block: var(--twq-space-2) 0;
+}
+
+.departments-form .twq-field__message:empty {
+  display: none;
+}
+
+.departments-form .twq-field--error .twq-field__message {
+  color: var(--twq-danger);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.departments-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--twq-space-3);
+  margin-block-start: var(--twq-space-6);
+}
+
+.departments-form__actions .twq-btn {
+  min-block-size: 2.75rem;
+}
+
+.departments-form__danger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--twq-space-6);
+  border-color: color-mix(in srgb, var(--twq-danger) 38%, var(--twq-border));
+  background: color-mix(in srgb, var(--twq-danger-soft) 36%, var(--twq-surface));
+}
+
+.departments-form__danger .twq-section__description {
+  max-inline-size: 40rem;
+}
+
+.departments-form__danger form {
+  flex: none;
+  margin: 0;
+}
+
+.departments-page__sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 63.999rem) {
+  .departments-page__header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .departments-table {
+    min-inline-size: 56rem;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .departments-page__section,
+  .departments-form__section,
+  .departments-form__danger {
+    padding: var(--twq-space-5);
+  }
+
+  .departments-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .departments-table,
+  .departments-table tbody {
+    display: grid;
+    min-inline-size: 0;
+    gap: var(--twq-space-4);
+  }
+
+  .departments-table thead {
+    display: none;
+  }
+
+  .departments-table tbody tr {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid var(--twq-border);
+    border-radius: var(--twq-radius-md);
+    background: var(--twq-surface);
+  }
+
+  .departments-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 7rem) minmax(0, 1fr);
+    gap: var(--twq-space-3);
+    align-items: center;
+    min-inline-size: 0;
+    padding: var(--twq-space-3);
+    border-block-end: 1px solid var(--twq-border);
+    white-space: normal;
+  }
+
+  .departments-table tbody td::before {
+    content: attr(data-label);
+    color: var(--twq-text-muted);
+    font-size: var(--twq-font-size-xs);
+    font-weight: var(--twq-font-weight-semibold);
+  }
+
+  .departments-table tbody td:first-child,
+  .departments-table tbody td:last-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .departments-table tbody td:first-child::before,
+  .departments-table tbody td:last-child::before {
+    display: none;
+  }
+
+  .departments-table tbody td:last-child {
+    border-block-end: 0;
+  }
+
+  .departments-table__tickets {
+    min-inline-size: 0;
+  }
+
+  .departments-table__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-inline-size: 0;
+  }
+
+  .departments-table__actions form,
+  .departments-table__actions .twq-btn {
+    inline-size: 100%;
+  }
+
+  .departments-form__choices-wrap ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .departments-form__danger {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .departments-form__danger form,
+  .departments-form__danger .twq-btn {
+    inline-size: 100%;
+  }
+}
+
+@media (max-width: 39.999rem) {
+  .departments-page__context {
+    display: grid;
+  }
+
+  .departments-form__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .departments-form__actions .twq-btn {
+    inline-size: 100%;
+  }
+
+  .departments-table__tickets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .departments-page *,
+  .departments-page *::before,
+  .departments-page *::after {
+    scroll-behavior: auto;
+  }
+}

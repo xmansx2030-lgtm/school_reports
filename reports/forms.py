@@ -1839,9 +1839,7 @@ class DepartmentForm(forms.ModelForm):
         label="أنواع التقارير المرتبطة",
         queryset=ReportType.objects.filter(is_active=True).order_by("order", "name"),
         required=False,
-        widget=forms.CheckboxSelectMultiple(
-            attrs={"aria-label": "اختر نوع/أنواع التقارير للقسم"}
-        ),
+        widget=forms.CheckboxSelectMultiple(),
         help_text="المسؤولون عن هذا القسم سيشاهدون التقارير من هذه الأنواع فقط.",
     )
 
@@ -1886,7 +1884,9 @@ class DepartmentForm(forms.ModelForm):
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise forms.ValidationError("المعرّف (slug) مستخدم مسبقًا لقسم آخر.")
+            raise forms.ValidationError(
+                "يوجد قسم آخر بالاسم نفسه أو بمعرّف مطابق داخل هذه المدرسة."
+            )
         return slug
 
     def __init__(self, *args, **kwargs):
@@ -1899,6 +1899,28 @@ class DepartmentForm(forms.ModelForm):
         # لذا لا يجب أن يكون مطلوبًا على مستوى الحقل.
         if "slug" in self.fields:
             self.fields["slug"].required = False
+
+        # Presentation-only attributes for the departments workspace. The
+        # submitted names, values, validation, and model contract stay intact.
+        self.fields["name"].widget.attrs.update(
+            {
+                "class": "twq-control",
+                "autocomplete": "organization-title",
+                "aria-describedby": "id_name_helptext id_name_error",
+            }
+        )
+        self.fields["is_active"].widget.attrs.update(
+            {
+                "class": "twq-choice__control",
+                "aria-describedby": "id_is_active_helptext id_is_active_error",
+            }
+        )
+        self.fields["reporttypes"].widget.attrs.update(
+            {
+                "class": "departments-form__choices",
+                "aria-describedby": "id_reporttypes_helptext id_reporttypes_error",
+            }
+        )
 
         # حصر أنواع التقارير على المدرسة النشطة
         if ReportType is not None:
@@ -1918,15 +1940,13 @@ class ReportTypeForm(forms.ModelForm):
         queryset=Department.objects.none(),
         required=False,
         help_text="تظهر تقارير هذا النوع للوكلاء المرتبطين بقسم واحد على الأقل من هذه الأقسام.",
-        widget=forms.CheckboxSelectMultiple(
-            attrs={"aria-label": "اختر الأقسام المستلمة لهذا النوع"}
-        ),
+        widget=forms.CheckboxSelectMultiple(),
     )
     approval_route = forms.ChoiceField(
         label="مسار الاعتماد",
         choices=ApprovalRoute.choices,
         help_text="حدّد الجهة التي تستلم التقرير بعد إرساله للمراجعة.",
-        widget=forms.Select(attrs={"class": "smart-input"}),
+        widget=forms.Select(),
     )
 
     class Meta:
@@ -1940,15 +1960,39 @@ class ReportTypeForm(forms.ModelForm):
             "is_active",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"class": "smart-input", "maxlength": "120"}),
-            "description": forms.Textarea(attrs={"class": "smart-input", "rows": 6}),
-            "order": forms.NumberInput(attrs={"class": "smart-input", "min": "0", "inputmode": "numeric"}),
+            "name": forms.TextInput(attrs={"maxlength": "120"}),
+            "description": forms.Textarea(attrs={"rows": 6}),
+            "order": forms.NumberInput(attrs={"min": "0", "inputmode": "numeric"}),
             "is_active": forms.CheckboxInput(),
         }
 
     def __init__(self, *args, **kwargs):
         self.active_school = kwargs.pop("active_school", None)
         super().__init__(*args, **kwargs)
+
+        # Presentation attributes for the Report Types workspace. Field names,
+        # values, validation, and model behavior remain unchanged.
+        for field_name in ("name", "description", "approval_route", "order"):
+            self.fields[field_name].widget.attrs.update(
+                {
+                    "class": "twq-control",
+                    "aria-describedby": (
+                        f"id_{field_name}_helptext id_{field_name}_error"
+                    ),
+                }
+            )
+        self.fields["name"].widget.attrs["autocomplete"] = "off"
+        self.fields["order"].widget.attrs["dir"] = "ltr"
+        self.fields["is_active"].widget.attrs.update(
+            {
+                "class": "twq-choice__control",
+                "aria-describedby": "id_is_active_helptext id_is_active_error",
+            }
+        )
+        self.fields["departments"].widget.attrs.update(
+            {"class": "report-types-form__department-control"}
+        )
+
         departments = Department.objects.filter(is_active=True).order_by("name", "id")
         if self.active_school is not None:
             departments = departments.filter(school=self.active_school)

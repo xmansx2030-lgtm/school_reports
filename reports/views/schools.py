@@ -921,6 +921,31 @@ class _SchoolSettingsForm(forms.ModelForm):
             "عند التفعيل يُنشئ المنسوب تقريره مسودةً ثم يرسله للمراجعة والاعتماد. "
             "التقارير القائمة لا تتأثر."
         )
+        # Presentation only: connect the existing help and error elements to
+        # their controls without changing field choices or validation.
+        for field_name in (
+            "current_academic_year",
+            "email",
+            "phone",
+            "share_link_default_days",
+            "report_approval_enabled",
+        ):
+            widget = self.fields[field_name].widget
+            widget.attrs["aria-describedby"] = f"id_{field_name}_helptext id_{field_name}_error"
+            if field_name != "report_approval_enabled":
+                widget.attrs["class"] = "twq-control"
+        self.fields["current_academic_year"].widget.attrs["dir"] = "ltr"
+        self.fields["email"].widget.attrs.update({"dir": "ltr", "autocomplete": "email"})
+        self.fields["phone"].widget.attrs.update(
+            {
+                "dir": "ltr",
+                "inputmode": "tel",
+                "autocomplete": "tel",
+                "pattern": r"(?:05\d{8}|(?:\+?966)5\d{8})",
+                "maxlength": "16",
+                "placeholder": "05XXXXXXXX",
+            }
+        )
         # ملاحظة: السنوات المتاحة للمدارس صارت تُدار مركزيًا من لوحة الآدمن
         # (نموذج AcademicYear)، لذا أُزيل حقل اختيارها هنا منعًا للتكرار/الالتباس.
 
@@ -986,6 +1011,9 @@ def school_settings(request: HttpRequest) -> HttpResponse:
             return redirect("reports:admin_dashboard")
         # في حال وجود أخطاء نعرضها للمستخدم ليسهل معرفة سبب الفشل
         messages.error(request, "تعذّر الحفظ. تحقّق من الحقول.")
+        for field_name in form.errors:
+            if field_name in form.fields:
+                form.fields[field_name].widget.attrs["aria-invalid"] = "true"
         try:
             for field, errors in form.errors.items():
                 label = form.fields.get(field).label if field in form.fields else field
@@ -1912,7 +1940,11 @@ def departments_list(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "reports/departments_list.html",
-        {"departments": depts, "has_dept_model": Department is not None},
+        {
+            "departments": depts,
+            "has_dept_model": Department is not None,
+            "school": active_school,
+        },
     )
 
 @login_required(login_url="reports:login")
@@ -1946,7 +1978,16 @@ def department_create(request: HttpRequest) -> HttpResponse:
             messages.success(request, "تم إنشاء القسم.")
             return redirect("reports:departments_list")
         messages.error(request, "تعذّر الحفظ. تحقّق من الحقول.")
-    return render(request, "reports/department_form.html", {"form": form, "mode": "create"})
+        for field_name in form.errors:
+            if field_name in form.fields:
+                form.fields[field_name].widget.attrs["aria-invalid"] = "true"
+        if "slug" in form.errors and "name" in form.fields:
+            form.fields["name"].widget.attrs["aria-invalid"] = "true"
+    return render(
+        request,
+        "reports/department_form.html",
+        {"form": form, "mode": "create", "school": active_school},
+    )
 
 @login_required(login_url="reports:login")
 @role_required({"manager"})
@@ -1993,7 +2034,21 @@ def department_edit(request: HttpRequest, code: str) -> HttpResponse:
             messages.success(request, f"تم تحديث قسم «{label}».")
             return redirect("reports:departments_list")
         messages.error(request, "تعذّر الحفظ. تحقّق من الحقول.")
-    return render(request, "reports/department_form.html", {"form": form, "mode": "edit", "department": obj})
+        for field_name in form.errors:
+            if field_name in form.fields:
+                form.fields[field_name].widget.attrs["aria-invalid"] = "true"
+        if "slug" in form.errors and "name" in form.fields:
+            form.fields["name"].widget.attrs["aria-invalid"] = "true"
+    return render(
+        request,
+        "reports/department_form.html",
+        {
+            "form": form,
+            "mode": "edit",
+            "department": obj,
+            "school": active_school,
+        },
+    )
 
 @login_required(login_url="reports:login")
 @user_passes_test(lambda u: getattr(u, "is_superuser", False), login_url="reports:login")

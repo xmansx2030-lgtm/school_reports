@@ -1,324 +1,118 @@
-{# templates/reports/departments_list.html #}
 {% extends "base.html" %}
+{% load static %}
+
 {% block title %}إدارة الأقسام{% endblock %}
+
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  .departments-page { min-height: 100vh; padding: 14px 0 36px; background: linear-gradient(120deg, #eef3ee 0%, #f7f3ea 100%); }
-  .smart-card {
-    max-width: 1100px;
-    margin: 0 auto;
-    background: #fff;
-    border-radius: 32px;
-    box-shadow: 0 8px 48px #006c3522, 0 1.5px 0 #006c3511;
-    padding: 0 0 32px 0;
-    overflow: hidden;
-    border: 1.5px solid #e0e7ff;
-    position: relative;
-    direction: rtl;
-  }
-  .smart-header {
-    background: linear-gradient(90deg, #006c35 0%, #0072bc 100%);
-    color: #fff;
-    padding: 32px 36px 18px 36px;
-    border-bottom-left-radius: 48px 32px;
-    border-bottom-right-radius: 48px 32px;
-    box-shadow: 0 2px 16px #006c3522;
-    position: relative;
-  }
-  .smart-header .icon {
-    font-size: 2.2rem;
-    margin-left: 12px;
-    vertical-align: middle;
-  }
-  .smart-header .breadcrumbs {
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    opacity: 0.93;
-  }
-  .smart-header .breadcrumbs a {
-    color: #fff;
-    text-decoration: underline dotted;
-    margin: 0 4px;
-    transition: color .18s;
-  }
-  .smart-header .breadcrumbs a:hover {
-    color: #d4b16d;
-  }
-  .smart-header .title {
-    font-size: 2.1rem;
-    font-weight: 900;
-    margin: 0 0 6px;
-    letter-spacing: -1px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .smart-header .desc {
-    font-size: 1.08rem;
-    font-weight: 500;
-    opacity: 0.96;
-    margin-bottom: 0;
-  }
-  .smart-header .dashboard-btn {
-    position: absolute;
-    left: 36px;
-    top: 32px;
-    background: #fff;
-    color: #006c35;
-    border-radius: 999px;
-    font-weight: 900;
-    padding: 8px 22px;
-    box-shadow: 0 2px 12px #006c3522;
-    border: none;
-    font-size: 1.08rem;
-    text-decoration: none;
-    transition: background .18s, color .18s;
-    z-index: 2;
-  }
-  .smart-header .dashboard-btn:hover {
-    background: #006c35;
-    color: #fff;
-  }
-  .smart-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 8px;
-    flex-wrap: wrap;
-  }
-  .smart-btn {
-    border-radius: 999px;
-    min-width: 120px;
-    font-weight: 900;
-    font-size: 1.08rem;
-    padding: 10px 28px;
-    border: none;
-    background: linear-gradient(90deg, #006c35 0%, #0072bc 100%);
-    color: #fff;
-    box-shadow: 0 2px 12px #006c3522;
-    transition: background .18s, color .18s, transform .18s;
-    cursor: pointer;
-  }
-  .smart-btn:hover {
-    background: #fff;
-    color: #006c35;
-    border: 1.5px solid #006c35;
-    transform: translateY(-2px);
-  }
-  .smart-btn.ghost {
-    background: #fff;
-    color: #006c35;
-    border: 1.5px solid #006c35;
-    box-shadow: none;
-  }
-  .smart-btn.ghost:hover {
-    background: #006c35;
-    color: #fff;
-  }
-  .smart-table-wrap {
-    overflow: auto;
-    border-radius: 18px;
-    background: #f8fafc;
-    margin-top: 18px;
-    box-shadow: 0 2px 12px #006c3511;
-    border: 1.5px solid #e0e7ff;
-  }
-  table.smart-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    background: #fff;
-    border-radius: 18px;
-    overflow: hidden;
-  }
-  table.smart-table th, table.smart-table td {
-    padding: 13px 11px;
-    border-bottom: 1px solid #e0e7ff;
-    white-space: nowrap;
-    vertical-align: middle;
-    font-size: 1.04rem;
-  }
-  table.smart-table thead th {
-    background: #f1f5ff;
-    color: #006c35;
-    font-weight: 900;
-    text-align: right;
-    border-bottom: 2px solid #e0e7ff;
-  }
-  table.smart-table tbody tr:hover {
-    background: #f0fdfa;
-    transition: background .18s;
-  }
-  .smart-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border-radius: 999px;
-    padding: 5px 10px;
-    border: 1px solid #e0e7ff;
-    font-weight: 900;
-    font-size: .98rem;
-  }
-  .smart-pill.on {
-    color: #16a34a;
-    background: #f0fdf4;
-    border-color: #bbf7d0;
-  }
-  .smart-pill.off {
-    color: #b45309;
-    background: #fff7ed;
-    border-color: #fed7aa;
-  }
-  .smart-table-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  @media (max-width: 900px) {
-    .smart-card, .smart-header { padding-left: 10px !important; padding-right: 10px !important; }
-    .smart-header .dashboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: .98rem; }
-  }
-
-  /* ============================================================
-     👑 ROYAL LUXURY — أقسام (زمرّدي + ذهبي)
-     ============================================================ */
-  .departments-page { background: linear-gradient(120deg, #eef3ee 0%, #f7f3ea 100%); }
-  .smart-card { border:1px solid rgba(185,151,91,.22); box-shadow:0 26px 60px -28px rgba(10,92,51,.5); }
-  .smart-card::before{ content:""; position:absolute; inset-inline:0; top:0; height:4px; z-index:3;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent); }
-  .smart-header{
-    background:
-      radial-gradient(120% 160% at 92% -30%, rgba(212,177,109,.26), transparent 50%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border-bottom:none !important;
-  }
-  .smart-header .title{
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  }
-  .smart-header .title .icon{ -webkit-text-fill-color:#e6cf9a; color:#e6cf9a; }
-  .smart-header .dashboard-btn{ background:rgba(212,177,109,.18); color:#fdf6e6; border:1px solid rgba(212,177,109,.5); }
-  .smart-header .dashboard-btn:hover{ background:#d4b16d; color:#063d22; }
-  .smart-btn{ background:linear-gradient(135deg,#0a5c33,#074426); box-shadow:0 10px 22px -12px rgba(10,92,51,.6); }
-  .smart-btn:hover{ background:#fff; color:#0a5c33; border:1.5px solid #0a5c33; }
-  .smart-btn.ghost{ color:#0a5c33; border:1.5px solid rgba(185,151,91,.45); }
-  .smart-btn.ghost:hover{ background:#0a5c33; color:#fff; border-color:#0a5c33; }
-  .smart-btn.danger{ background:#fff; color:#dc2626; border:1.5px solid #fecaca; min-width:auto; padding:9px 16px; box-shadow:none; }
-  .smart-btn.danger:hover{ background:#dc2626; color:#fff; border-color:#dc2626; }
-
-  .smart-table-wrap{ border:1px solid rgba(185,151,91,.2); }
-  table.smart-table thead th{ background:#faf7ef; color:#0a5c33; border-bottom:2px solid rgba(185,151,91,.3); }
-  table.smart-table tbody tr:hover{ background:rgba(212,177,109,.06); }
-  .dept-name{ font-weight:900; color:#0f172a; }
-  .dept-name i{ color:#b9975b; margin-inline-end:4px; }
-
-  .dept-count{ display:inline-flex; align-items:center; gap:7px; padding:5px 13px; border-radius:999px; font-weight:950; font-size:1rem; border:1px solid; }
-  .dept-count.reports{ color:#0a5c33; background:rgba(10,92,51,.08); border-color:rgba(10,92,51,.2); }
-  .dept-count.reports i{ color:#0a5c33; }
-  .dept-count.members{ color:#7a5c1e; background:rgba(212,177,109,.14); border-color:rgba(185,151,91,.35); }
-  .dept-count.members i{ color:#b9975b; }
-  .dept-tickets{ font-weight:850; color:#475569; }
-  .smart-pill.on{ color:#16a34a; background:#f0fdf4; border-color:#bbf7d0; }
-  .smart-table-actions .smart-btn{ min-width:auto; padding:8px 12px; font-size:.86rem; }
-  .dept-tickets{ display:inline-flex; align-items:center; min-height:34px; padding:6px 10px; border-radius:10px; background:#f8fafc; }
-  html[data-theme="dark"] .departments-page{background:var(--id-canvas)}
-  html[data-theme="dark"] .smart-card{background:var(--id-surface);border-color:var(--id-line)}
-  html[data-theme="dark"] table.smart-table{background:var(--id-surface)}
-  html[data-theme="dark"] table.smart-table thead th{background:var(--id-surface-2);color:var(--id-gold-300)}
-  html[data-theme="dark"] .dept-name{color:var(--id-ink)}
-  html[data-theme="dark"] .dept-tickets{background:var(--id-surface-2);color:var(--id-muted)}
-  @media (max-width:700px){
-    .departments-page{padding:10px 0 28px}
-    .smart-card{border-radius:18px;margin-inline:10px}
-    .smart-header{padding:24px 18px 20px!important}
-    .smart-header .dashboard-btn{position:static;display:inline-flex;margin-bottom:16px}
-    .smart-header .title{font-size:1.65rem}
-    .smart-actions{padding-inline:18px}
-    .smart-actions .smart-btn{width:100%;justify-content:center}
-    .smart-table-wrap{margin:14px 10px 0;border:0;background:transparent;box-shadow:none;overflow:visible}
-    table.smart-table{display:block;background:transparent}
-    table.smart-table thead{display:none}
-    table.smart-table tbody{display:grid;gap:10px}
-    table.smart-table tbody tr{display:grid;gap:0;border:1px solid rgba(185,151,91,.28);border-radius:15px;background:var(--card);box-shadow:0 10px 24px -18px rgba(10,92,51,.7);overflow:hidden}
-    table.smart-table tbody td{display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid var(--line-2);white-space:normal;text-align:start;font-size:.88rem}
-    table.smart-table tbody td::before{content:attr(data-label);color:var(--muted);font-size:.76rem;font-weight:950}
-    table.smart-table tbody td:first-child{display:none}
-    table.smart-table tbody td:last-child{display:block;padding:12px;border-bottom:0}
-    table.smart-table tbody td:last-child::before{display:block;margin-bottom:8px}
-    .smart-table-actions{display:flex;gap:7px;justify-content:stretch}
-    .smart-table-actions .smart-btn{flex:1;justify-content:center;font-size:.78rem;padding:8px 6px}
-    .smart-table-actions form{display:flex;flex:1}
-    .smart-table-actions form .smart-btn{width:100%}
-  }
-  @media (prefers-reduced-motion:reduce){.smart-table tbody tr,.smart-btn{transition:none!important}}
-</style>
-{% endblock head %}
+<link rel="stylesheet" href="{% static 'css/departments-management.css' %}?v=20260921.1">
+{% endblock %}
 
 {% block content %}
-<div class="departments-page">
-<div class="smart-card" dir="rtl">
-  <div class="smart-header">
-    <a href="{% url 'reports:admin_dashboard' %}" class="dashboard-btn" title="عودة إلى لوحة المدرسة">
-      <i class="fa-solid fa-arrow-right-to-bracket"></i> لوحة المدرسة
-    </a>
-    <div class="breadcrumbs">
-      <a href="{% url 'reports:admin_dashboard' %}"><i class="fa-solid fa-gauge-high"></i> لوحة المدرسة</a>
-      <span>›</span>
-      <span><i class="fa-solid fa-layer-group"></i> إدارة الأقسام</span>
-    </div>
-    <h1 class="title">
-      <span class="icon"><i class="fa-solid fa-layer-group"></i></span>
-      إدارة الأقسام
-    </h1>
-    <div class="desc">
-      يمكنك من هنا إضافة أو تعديل أو حذف الأقسام وإدارة أعضاء كل قسم.
-    </div>
-  </div>
-  <div class="smart-actions">
-    <a class="smart-btn" href="{% url 'reports:department_create' %}"><i class="fa-solid fa-plus"></i> قسم جديد</a>
-  </div>
-  <div class="smart-table-wrap">
-    <table class="smart-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>الاسم</th>
-          <th>الحالة</th>
-          <th>عدد التقارير</th>
-          <th>عدد الأعضاء</th>
-          <th>التذاكر (جـديد / قيد / منجزة)</th>
-          <th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in departments %}
-          {% with code=d.slug|default:d.pk %}
-          <tr>
-            <td data-label="الترتيب">{{ forloop.counter }}</td>
-            <td data-label="القسم" class="dept-name"><i class="fa-solid fa-layer-group"></i> {{ d.name|default:"—" }}</td>
-            <td data-label="الحالة">
-              {% if d.is_active %}
-                <span class="smart-pill on"><i class="fa-solid fa-circle-check"></i> نشط</span>
-              {% else %}
-                <span class="smart-pill off"><i class="fa-solid fa-circle-pause"></i> غير نشط</span>
-              {% endif %}
-            </td>
-            <td data-label="التقارير"><span class="dept-count reports"><i class="fa-solid fa-file-lines"></i> {{ d.reports_count|default:"0" }}</span></td>
-            <td data-label="الأعضاء"><span class="dept-count members"><i class="fa-solid fa-users"></i> {{ d.members_count|default:"0" }}</span></td>
-            <td data-label="التذاكر"><span class="dept-tickets">{{ d.tickets_summary|default:"—" }}</span></td>
-            <td data-label="الإجراءات" class="smart-table-actions">
-              <a class="smart-btn ghost" href="{% url 'reports:department_edit' code=code %}"><i class="fa-solid fa-pen-to-square"></i> تعديل</a>
-              <a class="smart-btn ghost" href="{% url 'reports:department_members' code=code %}"><i class="fa-solid fa-users"></i> الأعضاء</a>
-              <form method="post" action="{% url 'reports:department_delete' code=code %}" data-confirm="هل تريد حذف القسم «{{ d.name|escapejs }}» نهائيًا؟" class="u-inline">{% csrf_token %}<button class="smart-btn danger" type="submit"><i class="fa-solid fa-trash-can"></i> حذف</button></form>
-            </td>
-          </tr>
-          {% endwith %}
-        {% empty %}
-          <tr><td colspan="7" class="xs-departments-list-1">لا توجد أقسام بعد.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
- </div>
+<div class="twq-page departments-page" dir="rtl">
+  <a class="departments-page__back" href="{% url 'reports:admin_dashboard' %}">
+    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    العودة إلى لوحة المدرسة
+  </a>
 
-{% endblock content %}
+  <header class="twq-page-header departments-page__header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow">تهيئة المدرسة</span>
+      <h1 class="twq-page-header__title">إدارة الأقسام</h1>
+      <p class="twq-page-header__lead">نظّم فرق المدرسة، وحدد الأقسام المتاحة، ثم انتقل إلى إدارة أعضاء كل قسم عند الحاجة.</p>
+      {% if school %}
+        <dl class="twq-page-header__context departments-page__context">
+          <div><dt>المدرسة الحالية</dt><dd>{{ school.name }}</dd></div>
+          <div><dt>عدد الأقسام</dt><dd>{{ departments|length }}</dd></div>
+        </dl>
+      {% endif %}
+    </div>
+    {% if has_dept_model %}
+      <div class="twq-page-header__aside">
+        <a class="twq-btn twq-btn--primary" href="{% url 'reports:department_create' %}">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          إضافة قسم
+        </a>
+      </div>
+    {% endif %}
+  </header>
+
+  <section class="twq-section departments-page__section" aria-labelledby="departments-list-title">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">الهيكل التنظيمي</span>
+        <h2 class="twq-section__title" id="departments-list-title">أقسام المدرسة</h2>
+        <p class="twq-section__description">الحالة وعدد الأعضاء والنشاط المرتبط بكل قسم، مع إبقاء إدارة الأعضاء والتعديل كمسارين واضحين.</p>
+      </div>
+    </div>
+
+    {% if departments %}
+      <div class="twq-table-wrap departments-table-wrap" tabindex="0" aria-label="جدول أقسام المدرسة">
+        <table class="twq-table departments-table">
+          <caption class="departments-page__sr-only">أقسام {{ school.name|default:"المدرسة" }} وحالتها ومؤشرات استخدامها</caption>
+          <thead>
+            <tr>
+              <th scope="col">القسم</th>
+              <th scope="col">الحالة</th>
+              <th scope="col">الأعضاء</th>
+              <th scope="col">التقارير</th>
+              <th scope="col">الطلبات</th>
+              <th scope="col">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in departments %}
+              {% with code=d.slug|default:d.pk %}
+                <tr>
+                  <td data-label="القسم">
+                    <div class="departments-table__identity">
+                      <span class="departments-table__icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+                      <div><strong>{{ d.name|default:"—" }}</strong><span>قسم مدرسي</span></div>
+                    </div>
+                  </td>
+                  <td data-label="الحالة">
+                    {% if d.is_active %}
+                      <span class="twq-status" data-status="active"><i class="fa-solid fa-circle" aria-hidden="true"></i> نشط</span>
+                    {% else %}
+                      <span class="twq-status" data-status="warning"><i class="fa-solid fa-circle" aria-hidden="true"></i> غير نشط</span>
+                    {% endif %}
+                  </td>
+                  <td data-label="الأعضاء"><span class="departments-table__metric"><strong>{{ d.members_count|default:"0" }}</strong> عضو</span></td>
+                  <td data-label="التقارير"><span class="departments-table__metric"><strong>{{ d.reports_count|default:"0" }}</strong> تقرير</span></td>
+                  <td data-label="الطلبات">
+                    <span class="departments-table__tickets" aria-label="الطلبات: جديد، قيد المعالجة، منجز">
+                      <span><small>جديد</small><strong>{{ d.stats.open|default:"0" }}</strong></span>
+                      <span><small>قيد المعالجة</small><strong>{{ d.stats.in_progress|default:"0" }}</strong></span>
+                      <span><small>منجز</small><strong>{{ d.stats.done|default:"0" }}</strong></span>
+                    </span>
+                  </td>
+                  <td data-label="الإجراءات">
+                    <div class="twq-table__actions departments-table__actions">
+                      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:department_members' code=code %}"><i class="fa-solid fa-users" aria-hidden="true"></i> الأعضاء</a>
+                      <a class="twq-btn twq-btn--ghost" href="{% url 'reports:department_edit' code=code %}"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> تعديل</a>
+                      {% if code != "manager" %}
+                        <form method="post" action="{% url 'reports:department_delete' code=code %}" data-confirm="حذف قسم «{{ d.name|escapejs }}» إجراء دائم وقد يفصل السجلات المرتبطة به. هل تريد المتابعة؟">
+                          {% csrf_token %}
+                          <button class="twq-btn twq-btn--danger" type="submit"><i class="fa-solid fa-trash-can" aria-hidden="true"></i> حذف</button>
+                        </form>
+                      {% else %}
+                        <span class="departments-table__protected"><i class="fa-solid fa-lock" aria-hidden="true"></i> قسم محمي</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="twq-empty twq-empty--page departments-page__empty">
+        <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+        <h3 class="twq-empty__title">لا توجد أقسام في هذه المدرسة بعد</h3>
+        <p class="twq-empty__message">أنشئ القسم الأول ثم أضف أعضاءه وحدد أنواع التقارير المرتبطة به.</p>
+        {% if has_dept_model %}<a class="twq-btn twq-btn--primary" href="{% url 'reports:department_create' %}">إضافة أول قسم</a>{% endif %}
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
