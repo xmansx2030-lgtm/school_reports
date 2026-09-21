@@ -202,6 +202,18 @@ class TotpLoginGateTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_direct_module_url_cannot_bypass_the_pending_challenge(self):
+        self._submit_password()
+
+        response = self.client.get(reverse("reports:home"))
+
+        self.assertRedirects(
+            response,
+            f'{reverse("reports:login")}?next={reverse("reports:home")}',
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn("_auth_user_id", self.client.session)
+
     def test_a_code_cannot_be_replayed_in_a_new_session(self):
         """الرمز المُلتقَط لا يُعاد استعماله داخل نافذته."""
         code = self._current_code()

@@ -1,0 +1,142 @@
+.twq-auth__control--identifier,
+.twq-auth__control--password {
+  padding-inline: 2.875rem;
+}
+
+.twq-auth__submit,
+.twq-auth__passkey-button {
+  inline-size: 100%;
+  min-block-size: 3.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--twq-space-2);
+  padding: var(--twq-space-3) var(--twq-space-4);
+  border-radius: var(--twq-radius-md);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    color var(--twq-duration-fast) var(--twq-ease-standard),
+    border-color var(--twq-duration-fast) var(--twq-ease-standard),
+    background-color var(--twq-duration-fast) var(--twq-ease-standard),
+    box-shadow var(--twq-duration-fast) var(--twq-ease-standard);
+}
+
+.twq-auth__submit:disabled,
+.twq-auth__passkey-button:disabled {
+  opacity: 0.68;
+  cursor: progress;
+}
+
+.twq-auth__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--twq-space-3);
+  color: var(--twq-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.twq-auth__divider::before,
+.twq-auth__divider::after {
+  content: "";
+  flex: 1;
+  block-size: 1px;
+  background: var(--twq-border);
+}
+
+.twq-auth__divider[hidden],
+.twq-auth__passkey[hidden],
+.twq-auth__passkey-status[hidden] {
+  display: none;
+}
+
+.twq-auth__passkey {
+  display: grid;
+  gap: var(--twq-space-4);
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface-secondary);
+}
+
+.twq-auth__passkey-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--twq-space-3);
+}
+
+.twq-auth__passkey-icon {
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.twq-auth__passkey-heading h2,
+.twq-auth__passkey-heading p {
+  margin: 0;
+}
+
+.twq-auth__passkey-heading h2 {
+  color: var(--twq-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.twq-auth__passkey-heading p {
+  margin-block-start: var(--twq-space-1);
+  color: var(--twq-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.twq-auth__passkey-button {
+  border: 1px solid var(--twq-border-strong);
+  color: var(--twq-primary);
+  background: var(--twq-surface);
+}
+
+.twq-auth__passkey-button:hover {
+  border-color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.twq-auth__passkey-button:focus-visible {
+  outline: 3px solid var(--twq-focus);
+  outline-offset: 3px;
+}
+
+.twq-auth__passkey-status {
+  padding: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text-secondary);
+  background: var(--twq-surface);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.twq-auth__passkey-status.is-error {
+  border-color: var(--twq-danger);
+  color: var(--twq-danger);
+  background: var(--twq-danger-soft);
+}
+
+.twq-auth__recovery {
+  display: flex;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twq-auth__passkey-button {
+    transition-duration: 1ms;
+  }
+}

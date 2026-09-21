@@ -40,7 +40,7 @@ from ..middleware import (
     is_force_password_change_required,
 )
 from ..marketing_attribution import capture_marketing_attribution
-from ..models import WebAuthnCredential
+from ..models import TeacherTotpDevice, WebAuthnCredential
 from ..forms import AccountPasswordResetForm, AccountSetPasswordForm
 from ..email_identity import format_system_from_email
 from ..staff_workspace import build_staff_workspaces
@@ -1441,6 +1441,10 @@ def my_profile(request: HttpRequest) -> HttpResponse:
         "email_form": email_form,
         "pwd_form": pwd_form,
         "force_password_change": force_password_change,
+        "totp_device": TeacherTotpDevice.objects.filter(
+            teacher=request.user,
+            confirmed_at__isnull=False,
+        ).first(),
         "passkey_credentials": WebAuthnCredential.objects.filter(teacher=request.user, is_active=True).order_by("-created_at"),
         **build_staff_workspaces(request.user, active_school),
     }

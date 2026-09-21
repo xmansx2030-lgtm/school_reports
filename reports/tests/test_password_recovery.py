@@ -7,7 +7,9 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from reports.models import Teacher
+from reports.models import Teacher, TeacherTotpDevice, WebAuthnCredential
+from reports.totp import encrypt_secret, generate_secret
+from reports.webauthn import credential_hash
 
 
 @override_settings(
@@ -196,6 +198,39 @@ class PasswordRecoveryTests(TestCase):
 
         reused_response = self.client.get(original_reset_path, follow=True)
         self.assertContains(reused_response, "الرابط غير صالح")
+
+    def test_password_reset_preserves_totp_and_passkeys(self):
+        device = TeacherTotpDevice.objects.create(
+            teacher=self.user,
+            secret_encrypted=encrypt_secret(generate_secret()),
+            confirmed_at="2026-09-21T12:00:00+00:00",
+        )
+        credential_id = b"password-reset-passkey"
+        credential = WebAuthnCredential.objects.create(
+            teacher=self.user,
+            credential_id=credential_id,
+            credential_id_hash=credential_hash(credential_id),
+            public_key_cose=b"public-key",
+        )
+        self._request_reset(self.user.email)
+        original_reset_path = self._reset_path_from_email()
+        confirm_response = self.client.get(original_reset_path)
+
+        response = self.client.post(
+            confirm_response["Location"],
+            {
+                "new_password1": "Cedar!River-5938",
+                "new_password2": "Cedar!River-5938",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("reports:password_reset_complete"),
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(TeacherTotpDevice.objects.filter(pk=device.pk).exists())
+        self.assertTrue(WebAuthnCredential.objects.filter(pk=credential.pk).exists())
 
     def test_recovery_pages_are_not_indexable(self):
         for route_name in (

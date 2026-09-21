@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}حسابي{% endblock %}
 
@@ -675,109 +675,6 @@
     font-weight: 600;
   }
 
-  .profile-passkey-panel {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .profile-passkey-copy {
-    margin: 0;
-    color: var(--prof-text-light);
-    line-height: 1.9;
-    font-weight: 600;
-  }
-
-  .profile-passkey-list {
-    display: grid;
-    gap: .75rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .profile-passkey-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: .9rem 1rem;
-    border: 1px solid var(--prof-border);
-    border-radius: var(--prof-radius-md);
-    background: var(--prof-bg-secondary);
-  }
-
-  .profile-passkey-item strong {
-    display: block;
-    color: var(--prof-text);
-    font-weight: 800;
-  }
-
-  .profile-passkey-item span {
-    display: block;
-    color: var(--prof-text-light);
-    font-size: .84rem;
-    font-weight: 650;
-    margin-top: .2rem;
-  }
-
-  .profile-passkey-item > div:first-child { min-width: 0; }
-
-  .profile-passkey-meta {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    flex: 0 0 auto;
-  }
-
-  .profile-passkey-current {
-    padding: .2rem .5rem;
-    border-radius: 999px;
-    background: rgba(0,108,53,.1);
-    color: var(--prof-primary-dark);
-    font-size: .7rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  /* A lost or replaced phone must be revocable, otherwise enabling a passkey is
-     a one-way door. */
-  .profile-passkey-remove {
-    width: 38px;
-    height: 38px;
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    border: 1px solid var(--prof-border);
-    border-radius: var(--prof-radius-md);
-    color: var(--prof-danger-dark);
-    background: var(--prof-bg);
-    font-size: .9rem;
-    cursor: pointer;
-    transition: background .18s, border-color .18s;
-  }
-
-  .profile-passkey-remove:hover {
-    border-color: var(--prof-danger-dark);
-    background: rgba(239,68,68,.08);
-  }
-
-  .profile-passkey-remove:disabled { opacity: .55; cursor: wait; }
-
-  .profile-passkey-status {
-    display: none;
-    padding: .85rem 1rem;
-    border-radius: var(--prof-radius-md);
-    background: rgba(0,108,53,.08);
-    color: var(--prof-primary-dark);
-    line-height: 1.7;
-    font-weight: 700;
-  }
-
-  .profile-passkey-status.is-error {
-    background: rgba(239,68,68,.10);
-    color: var(--prof-danger-dark);
-  }
-  
   /* ========== Responsive Design ========== */
   
   @media (max-width: 1024px) {
@@ -930,20 +827,28 @@
   }
 
 </style>
+<link rel="stylesheet" href="{% static 'css/auth-password.css' %}?v=20260921.1">
+<link rel="stylesheet" href="{% static 'css/auth-security.css' %}?v=20260921.1">
 {% endblock %}
 
 {% block content %}
-<div class="profile-scope" dir="rtl">
+<div class="profile-scope{% if force_password_change %} profile-scope--forced{% endif %}" dir="rtl" data-password-mode="{% if force_password_change %}first-login{% else %}normal{% endif %}">
   <div class="profile-container">
 
     <!-- Page Header -->
     <header class="profile-header">
       <div class="profile-header-content">
         <h1 class="profile-title">
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-          <span>حسابي</span>
+          <i class="fa-solid {% if force_password_change %}fa-shield-halved{% else %}fa-user{% endif %}" aria-hidden="true"></i>
+          <span>{% if force_password_change %}تأمين الحساب{% else %}حسابي{% endif %}</span>
         </h1>
-        <p class="profile-subtitle">إدارة بيانات التواصل وكلمة المرور، وعرض المدارس المسندة لك.</p>
+        <p class="profile-subtitle">
+          {% if force_password_change %}
+            أنشئ كلمة مرور خاصة بك وأضف بريد الاستعادة قبل متابعة استخدام المنصة.
+          {% else %}
+            إدارة بيانات التواصل وكلمة المرور، وعرض المدارس المسندة لك.
+          {% endif %}
+        </p>
       </div>
     </header>
 
@@ -954,16 +859,14 @@
             <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
             <span>مطلوب الآن</span>
           </span>
-          <h2 class="profile-security-title">خطوة سريعة لحماية حسابك</h2>
+          <h2 class="profile-security-title">خطوة أمان إلزامية قبل المتابعة</h2>
           <p class="profile-security-text">
-            كلمة المرور الحالية ما زالت مطابقة لرقم الجوال، وهذا يجعل الوصول إلى الحساب أسهل من اللازم.
-            أضف بريدك الإلكتروني وغيّر كلمة المرور الآن حتى يبقى حسابك أكثر أمانًا وتتمكن من استعادته لاحقًا.
+            حدّث كلمة المرور المؤقتة التي استخدمتها للدخول، وأضف بريدًا يمكنك الوصول إليه عند الحاجة لاستعادة الحساب.
           </p>
           <ul class="profile-security-points">
             <li>أدخل بريدًا إلكترونيًا يمكنك الوصول إليه لاستعادة كلمة المرور لاحقًا.</li>
-            <li>اكتب رقم الجوال الحالي في خانة كلمة المرور القديمة.</li>
-            <li>اختر كلمة مرور جديدة لا يعرفها غيرك.</li>
-            <li>بعد الحفظ سيعود الحساب للعمل بشكل طبيعي.</li>
+            <li>استخدم كلمة المرور المؤقتة الحالية للتحقق من هويتك.</li>
+            <li>بعد الحفظ ستبقى مسجلًا ويمكنك متابعة استخدام المنصة.</li>
           </ul>
         </div>
         <div class="profile-security-icon" aria-hidden="true">
@@ -1058,10 +961,10 @@
     {% endif %}
 
     <!-- Profile Grid -->
-    <div class="profile-grid">
+    <div class="profile-grid{% if force_password_change %} profile-grid--forced{% endif %}">
       
       <!-- Info Card -->
-      <div class="profile-card">
+      <div class="profile-card profile-card--identity">
         <h2 class="profile-card-title">
           <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
           <span>بياناتي</span>
@@ -1115,10 +1018,10 @@
       </div>
 
       <!-- Update Forms Card -->
-      <div class="profile-card">
+      <div class="profile-card profile-card--account">
         <h2 class="profile-card-title">
           <i class="fa-solid fa-pen" aria-hidden="true"></i>
-          <span>تحديث البيانات</span>
+          <span>{% if force_password_change %}إكمال تأمين الحساب{% else %}تحديث البيانات{% endif %}</span>
         </h2>
 
         {% if force_password_change %}
@@ -1189,162 +1092,259 @@
         {% endif %}
 
         <!-- Password Update Form -->
-        <form
-          method="post"
-          class="profile-form"
-          novalidate
-          data-password-form
-          data-password-min-length="{{ pwd_form.password_min_length|default:'6' }}"
-        >
-          {% csrf_token %}
-
-          {% if pwd_form.non_field_errors %}
-            <div class="profile-form-errors-global">
-              {{ pwd_form.non_field_errors|striptags }}
+        <section class="twq-password" aria-labelledby="passwordUpdateTitle">
+          <header class="twq-password__header">
+            <div class="twq-password__heading">
+              <span class="twq-password__kicker">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                {% if force_password_change %}خطوة الدخول الأولى{% else %}أمان الحساب{% endif %}
+              </span>
+              <h3 class="twq-password__title" id="passwordUpdateTitle">
+                {% if force_password_change %}أنشئ كلمة مرور خاصة بك{% else %}تغيير كلمة المرور{% endif %}
+              </h3>
+              <p class="twq-password__description">
+                {% if force_password_change %}
+                  أكمل هذه الخطوة مرة واحدة، ثم تابع استخدام المنصة بالحساب نفسه.
+                {% else %}
+                  أدخل كلمة المرور الحالية للتحقق، ثم اختر كلمة جديدة وأكدها.
+                {% endif %}
+              </p>
             </div>
-          {% endif %}
+            <span class="twq-password__context{% if force_password_change %} twq-password__context--required{% endif %}">
+              <i class="fa-solid {% if force_password_change %}fa-circle-exclamation{% else %}fa-lock{% endif %}" aria-hidden="true"></i>
+              {% if force_password_change %}مطلوب قبل المتابعة{% else %}تغيير اختياري{% endif %}
+            </span>
+          </header>
 
-          {% if force_password_change %}
-            <div class="profile-form-group">
-              <label class="profile-form-label" for="{{ pwd_form.email.id_for_label }}">
-                <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-                <span>{{ pwd_form.email.label }}</span>
-              </label>
-              <input
-                type="email"
-                name="{{ pwd_form.email.html_name }}"
-                id="{{ pwd_form.email.id_for_label }}"
-                value="{{ pwd_form.email.value|default:'' }}"
-                class="profile-form-input"
-                autocomplete="email"
-                inputmode="email"
-                dir="ltr"
-                placeholder="name@example.com"
-                autofocus
-                required
-              >
-              <div class="profile-form-hint">سنستخدمه لاحقًا لمساعدتك في استعادة كلمة المرور وتأمين الحساب.</div>
-              {% if pwd_form.email.errors %}
-                <div class="profile-form-error">{{ pwd_form.email.errors|striptags }}</div>
-              {% endif %}
-            </div>
-          {% endif %}
+          <form method="post" class="twq-password__form" novalidate data-password-form>
+            {% csrf_token %}
 
-          <div class="profile-form-group">
-            <label class="profile-form-label" for="{{ pwd_form.old_password.id_for_label }}">
-              <i class="fa-solid fa-lock" aria-hidden="true"></i>
-              <span>{{ pwd_form.old_password.label }}</span>
-            </label>
-            <div class="profile-password-input-wrap">
-              <input
-                type="password"
-                name="{{ pwd_form.old_password.html_name }}"
-                id="{{ pwd_form.old_password.id_for_label }}"
-                class="profile-form-input"
-                autocomplete="current-password"
-                placeholder="أدخل كلمة المرور الحالية"
-                {% if pwd_form.old_password.field.required %}required{% endif %}
-              >
-              <button
-                type="button"
-                class="profile-password-toggle"
-                data-toggle-password
-                data-target="{{ pwd_form.old_password.id_for_label }}"
-                aria-label="إظهار كلمة المرور الحالية"
-                title="إظهار كلمة المرور الحالية"
-              >
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
-              </button>
-            </div>
+            {% if pwd_form.errors %}
+              <div class="twq-password__error-summary" role="alert" tabindex="-1">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <div>
+                  <strong>تعذر حفظ كلمة المرور.</strong>
+                  <span>راجع الحقول الموضحة أدناه ثم أعد المحاولة.</span>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if pwd_form.non_field_errors %}
+              <div class="twq-password__field-error" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <span>{{ pwd_form.non_field_errors|striptags }}</span>
+              </div>
+            {% endif %}
+
             {% if force_password_change %}
-              <div class="profile-form-hint">كلمة المرور الحالية هي رقم الجوال الحالي المسجّل على الحساب.</div>
+              <div class="twq-password__field">
+                <label class="twq-password__label" for="{{ pwd_form.email.id_for_label }}">
+                  <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                  <span>{{ pwd_form.email.label }}</span>
+                </label>
+                <input
+                  type="email"
+                  name="{{ pwd_form.email.html_name }}"
+                  id="{{ pwd_form.email.id_for_label }}"
+                  value="{{ pwd_form.email.value|default:'' }}"
+                  class="twq-password__input"
+                  autocomplete="email"
+                  inputmode="email"
+                  dir="ltr"
+                  placeholder="name@example.com"
+                  aria-describedby="passwordEmailHint{% if pwd_form.email.errors %} passwordEmailError{% endif %}"
+                  {% if pwd_form.email.errors %}aria-invalid="true"{% endif %}
+                  autofocus
+                  required
+                >
+                <p class="twq-password__help" id="passwordEmailHint">يُحفظ هذا البريد مع الحساب لاستخدامه في الاستعادة لاحقًا.</p>
+                {% if pwd_form.email.errors %}
+                  <p class="twq-password__field-error" id="passwordEmailError" role="alert">
+                    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                    <span>{{ pwd_form.email.errors|striptags }}</span>
+                  </p>
+                {% endif %}
+              </div>
             {% endif %}
-            {% if pwd_form.old_password.errors %}
-              <div class="profile-form-error">{{ pwd_form.old_password.errors|striptags }}</div>
+
+            <div class="twq-password__field">
+              <label class="twq-password__label" for="{{ pwd_form.old_password.id_for_label }}">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <span>{{ pwd_form.old_password.label }}</span>
+              </label>
+              <div class="twq-password__control twq-password__control--toggle">
+                <input
+                  type="password"
+                  name="{{ pwd_form.old_password.html_name }}"
+                  id="{{ pwd_form.old_password.id_for_label }}"
+                  class="twq-password__input"
+                  autocomplete="current-password"
+                  dir="ltr"
+                  spellcheck="false"
+                  placeholder="أدخل كلمة المرور الحالية"
+                  aria-describedby="passwordCurrentHint{% if pwd_form.old_password.errors %} passwordCurrentError{% endif %}"
+                  {% if pwd_form.old_password.errors %}aria-invalid="true"{% endif %}
+                  required
+                >
+                <button
+                  type="button"
+                  class="twq-password__toggle"
+                  data-password-toggle="{{ pwd_form.old_password.id_for_label }}"
+                  aria-label="إظهار كلمة المرور الحالية"
+                  aria-pressed="false"
+                  title="إظهار كلمة المرور الحالية"
+                >
+                  <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                </button>
+              </div>
+              <p class="twq-password__help" id="passwordCurrentHint">
+                {% if force_password_change %}استخدم كلمة المرور المؤقتة التي سجلت الدخول بها.{% else %}مطلوبة للتحقق من أن التغيير يصدر منك.{% endif %}
+              </p>
+              {% if pwd_form.old_password.errors %}
+                <p class="twq-password__field-error" id="passwordCurrentError" role="alert">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span>{{ pwd_form.old_password.errors|striptags }}</span>
+                </p>
               {% endif %}
-          </div>
+            </div>
 
-          <div class="profile-password-simplehint">
-            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            <span>اكتب كلمة مرور جديدة من <b>{{ pwd_form.password_min_length|default:'6' }} أحرف على الأقل</b>، ثم أعد كتابتها للتأكيد.</span>
-          </div>
+            <div class="twq-password__requirements" id="passwordRequirements">
+              <p class="twq-password__requirements-title">متطلبات كلمة المرور الجديدة</p>
+              <ul class="twq-password__requirements-list">
+                {% for requirement in pwd_form.password_requirements %}
+                  <li><i class="fa-solid fa-circle" aria-hidden="true"></i><span>{{ requirement.label }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
 
-          <div class="profile-form-group">
-            <label class="profile-form-label" for="{{ pwd_form.new_password1.id_for_label }}">
-              <i class="fa-solid fa-key" aria-hidden="true"></i>
-              <span>{{ pwd_form.new_password1.label }}</span>
-            </label>
-            <div class="profile-password-input-wrap">
-              <input
-                type="password"
-                name="{{ pwd_form.new_password1.html_name }}"
-                id="{{ pwd_form.new_password1.id_for_label }}"
-                class="profile-form-input"
-                autocomplete="new-password"
-                placeholder="أدخل كلمة مرور جديدة قوية"
-                data-password-primary
-                {% if pwd_form.new_password1.field.required %}required{% endif %}
-              >
-              <button
-                type="button"
-                class="profile-password-toggle"
-                data-toggle-password
-                data-target="{{ pwd_form.new_password1.id_for_label }}"
-                aria-label="إظهار كلمة المرور الجديدة"
-                title="إظهار كلمة المرور الجديدة"
-              >
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+            <div class="twq-password__field">
+              <label class="twq-password__label" for="{{ pwd_form.new_password1.id_for_label }}">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>{{ pwd_form.new_password1.label }}</span>
+              </label>
+              <div class="twq-password__control twq-password__control--toggle">
+                <input
+                  type="password"
+                  name="{{ pwd_form.new_password1.html_name }}"
+                  id="{{ pwd_form.new_password1.id_for_label }}"
+                  class="twq-password__input"
+                  autocomplete="new-password"
+                  dir="ltr"
+                  spellcheck="false"
+                  placeholder="أدخل كلمة المرور الجديدة"
+                  aria-describedby="passwordRequirements{% if pwd_form.new_password1.errors %} passwordNewError{% endif %}"
+                  {% if pwd_form.new_password1.errors %}aria-invalid="true"{% endif %}
+                  required
+                >
+                <button
+                  type="button"
+                  class="twq-password__toggle"
+                  data-password-toggle="{{ pwd_form.new_password1.id_for_label }}"
+                  aria-label="إظهار كلمة المرور الجديدة"
+                  aria-pressed="false"
+                  title="إظهار كلمة المرور الجديدة"
+                >
+                  <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                </button>
+              </div>
+              {% if pwd_form.new_password1.errors %}
+                <p class="twq-password__field-error" id="passwordNewError" role="alert">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span>{{ pwd_form.new_password1.errors|striptags }}</span>
+                </p>
+              {% endif %}
+            </div>
+
+            <div class="twq-password__field">
+              <label class="twq-password__label" for="{{ pwd_form.new_password2.id_for_label }}">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>{{ pwd_form.new_password2.label }}</span>
+              </label>
+              <div class="twq-password__control twq-password__control--toggle">
+                <input
+                  type="password"
+                  name="{{ pwd_form.new_password2.html_name }}"
+                  id="{{ pwd_form.new_password2.id_for_label }}"
+                  class="twq-password__input"
+                  autocomplete="new-password"
+                  dir="ltr"
+                  spellcheck="false"
+                  placeholder="أعد إدخال كلمة المرور الجديدة"
+                  aria-describedby="passwordConfirmHint{% if pwd_form.new_password2.errors %} passwordConfirmError{% endif %}"
+                  {% if pwd_form.new_password2.errors %}aria-invalid="true"{% endif %}
+                  required
+                >
+                <button
+                  type="button"
+                  class="twq-password__toggle"
+                  data-password-toggle="{{ pwd_form.new_password2.id_for_label }}"
+                  aria-label="إظهار تأكيد كلمة المرور"
+                  aria-pressed="false"
+                  title="إظهار تأكيد كلمة المرور"
+                >
+                  <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                </button>
+              </div>
+              <p class="twq-password__help" id="passwordConfirmHint">أعد كتابة الكلمة نفسها لتجنب خطأ الكتابة.</p>
+              {% if pwd_form.new_password2.errors %}
+                <p class="twq-password__field-error" id="passwordConfirmError" role="alert">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span>{{ pwd_form.new_password2.errors|striptags }}</span>
+                </p>
+              {% endif %}
+            </div>
+
+            <div class="twq-password__actions">
+              <button type="submit" name="update_password" class="profile-btn profile-btn-primary twq-password__submit">
+                <i class="fa-solid fa-lock-open" aria-hidden="true"></i>
+                <span>{% if force_password_change %}حفظ ومتابعة استخدام المنصة{% else %}تحديث كلمة المرور{% endif %}</span>
               </button>
             </div>
-            {% if pwd_form.new_password1.errors %}
-              <div class="profile-form-error">{{ pwd_form.new_password1.errors|striptags }}</div>
-            {% endif %}
-          </div>
 
-          <div class="profile-form-group">
-            <label class="profile-form-label" for="{{ pwd_form.new_password2.id_for_label }}">
-              <i class="fa-solid fa-key" aria-hidden="true"></i>
-              <span>{{ pwd_form.new_password2.label }}</span>
-            </label>
-            <div class="profile-password-input-wrap">
-              <input
-                type="password"
-                name="{{ pwd_form.new_password2.html_name }}"
-                id="{{ pwd_form.new_password2.id_for_label }}"
-                class="profile-form-input"
-                autocomplete="new-password"
-                placeholder="أعد إدخال كلمة المرور الجديدة"
-                data-password-confirm
-                {% if pwd_form.new_password2.field.required %}required{% endif %}
-              >
-              <button
-                type="button"
-                class="profile-password-toggle"
-                data-toggle-password
-                data-target="{{ pwd_form.new_password2.id_for_label }}"
-                aria-label="إظهار تأكيد كلمة المرور"
-                title="إظهار تأكيد كلمة المرور"
-              >
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
-              </button>
-            </div>
-            {% if pwd_form.new_password2.errors %}
-              <div class="profile-form-error">{{ pwd_form.new_password2.errors|striptags }}</div>
-            {% endif %}
-          </div>
-
-          <button type="submit" name="update_password" class="profile-btn profile-btn-primary">
-            <i class="fa-solid fa-lock-open" aria-hidden="true"></i>
-            <span>{% if force_password_change %}تغيير كلمة المرور الآن{% else %}تحديث كلمة المرور{% endif %}</span>
-          </button>
-        </form>
+            <p class="twq-password__session-note">
+              <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+              <span>بعد نجاح التغيير ستبقى مسجلًا في هذه الجلسة، ولن تعمل كلمة المرور السابقة.</span>
+            </p>
+          </form>
+        </section>
       </div>
 
-      <div class="profile-card" id="account-security" aria-labelledby="accountSecurityTitle">
+      <div class="profile-card profile-card--passkey" id="account-security" aria-labelledby="accountSecurityTitle">
         <h2 class="profile-card-title" id="accountSecurityTitle">
-          <i class="fa-solid fa-fingerprint" aria-hidden="true"></i>
-          <span>الدخول بالبصمة</span>
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          <span>أمان الحساب</span>
         </h2>
+        <div class="profile-security-methods">
+          <section class="profile-security-method" aria-labelledby="profileTotpTitle">
+            <div class="profile-security-method__head">
+              <div>
+                <h3 id="profileTotpTitle">المصادقة الثنائية</h3>
+                <p class="profile-passkey-copy">رمز متغير من تطبيق المصادقة بعد كلمة المرور.</p>
+              </div>
+              {% if totp_device %}
+                <span class="twq-security-status twq-security-status--enabled"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>مفعّلة</span>
+              {% else %}
+                <span class="twq-security-status twq-security-status--attention"><i class="fa-solid fa-circle-minus" aria-hidden="true"></i>غير مفعّلة</span>
+              {% endif %}
+            </div>
+            <a class="profile-btn profile-btn-secondary" href="{% url 'reports:totp_settings' %}">
+              <i class="fa-solid fa-key" aria-hidden="true"></i>
+              <span>{% if totp_device %}إدارة المصادقة الثنائية{% else %}تفعيل المصادقة الثنائية{% endif %}</span>
+            </a>
+          </section>
+
+          <section class="profile-security-method" aria-labelledby="profilePasskeyTitle">
+            <div class="profile-security-method__head">
+              <div>
+                <h3 id="profilePasskeyTitle">مفاتيح المرور</h3>
+                <p class="profile-passkey-copy">دخول بديل بكلمة مرور الجهاز أو بصمته دون إرسال بياناتك الحيوية إلى المنصة.</p>
+              </div>
+              {% if passkey_credentials %}
+                <span class="twq-security-status twq-security-status--enabled"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>{{ passkey_credentials|length }} مسجل</span>
+              {% else %}
+                <span class="twq-security-status"><i class="fa-solid fa-circle-minus" aria-hidden="true"></i>غير مسجلة</span>
+              {% endif %}
+            </div>
         <div
           class="profile-passkey-panel"
           id="profilePasskeyPanel"
@@ -1417,6 +1417,8 @@
             </p>
           {% endif %}
         </div>
+          </section>
+        </div>
       </div>
 
     </div>
@@ -1426,6 +1428,7 @@
 
 {% block scripts %}
   {{ block.super }}
+  <script src="{% static 'js/auth-password-toggle.js' %}?v=20260921.1" defer data-cfasync="false"></script>
   <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
     (function () {
       const root = document.getElementById('profilePasskeyPanel');
@@ -1506,163 +1509,6 @@
   </script>
   <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
     (function () {
-      const form = document.querySelector('[data-password-form]');
-      if (!form) return;
-
-      // إظهار/إخفاء كلمة المرور — يعمل دائمًا (مستقل عن أي عناصر أخرى)
-      form.querySelectorAll('[data-toggle-password]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          const target = document.getElementById(this.dataset.target || '');
-          if (!target) return;
-          const isHidden = target.type === 'password';
-          target.type = isHidden ? 'text' : 'password';
-          const icon = this.querySelector('i');
-          if (icon) {
-            icon.classList.toggle('fa-eye', !isHidden);
-            icon.classList.toggle('fa-eye-slash', isHidden);
-          }
-          const lbl = isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
-          this.setAttribute('aria-label', lbl);
-          this.setAttribute('title', lbl);
-        });
-      });
-
-      const primaryInput = form.querySelector('[data-password-primary]');
-      const confirmInput = form.querySelector('[data-password-confirm]');
-      const strengthText = form.querySelector('[data-password-strength-text]');
-      const strengthBar = form.querySelector('[data-password-strength-bar]');
-      // الواجهة المبسّطة لا تعرض مقياس القوة/الشروط؛ نكتفي بالأزرار أعلاه.
-      if (!primaryInput || !confirmInput || !strengthText || !strengthBar) return;
-
-      const userPhone = (form.dataset.userPhone || '').trim();
-      const userName = (form.dataset.userName || '').trim().toLowerCase();
-      const minLength = parseInt(form.dataset.passwordMinLength || '8', 10) || 8;
-
-      const ruleNodes = {
-        min_length: form.querySelector('[data-rule-key="min_length"]'),
-        not_numeric: form.querySelector('[data-rule-key="not_numeric"]'),
-        match: form.querySelector('[data-rule-key="match"]'),
-      };
-
-      const normalize = (value) => (value || '').trim();
-
-      const setRuleState = (node, state, text) => {
-        if (!node) return;
-        node.classList.remove('is-met', 'is-unmet');
-        if (state === 'met') node.classList.add('is-met');
-        if (state === 'unmet') node.classList.add('is-unmet');
-        const label = node.querySelector('[data-rule-status]');
-        if (label) label.textContent = text;
-      };
-
-      const updateStrength = (password) => {
-        const value = normalize(password);
-        const hasLetters = /[A-Za-z\u0600-\u06FF]/.test(value);
-        const hasNumbers = /\d/.test(value);
-        const hasSymbols = /[^A-Za-z0-9\u0600-\u06FF]/.test(value);
-
-        let score = 0;
-        if (value.length >= minLength) score += 1;
-        if (hasLetters && hasNumbers) score += 1;
-        if (hasSymbols) score += 1;
-        if (value.length >= 12) score += 1;
-
-        let width = '8%';
-        let label = 'ابدأ بكتابة كلمة المرور';
-        let gradient = 'linear-gradient(90deg, #cbd5e1 0%, #94a3b8 100%)';
-
-        if (value.length) {
-          if (score <= 1) {
-            width = '28%';
-            label = 'ضعيفة';
-            gradient = 'linear-gradient(90deg, #ef4444 0%, #f97316 100%)';
-          } else if (score === 2) {
-            width = '52%';
-            label = 'مقبولة';
-            gradient = 'linear-gradient(90deg, #b9975b 0%, #d4b16d 100%)';
-          } else if (score === 3) {
-            width = '76%';
-            label = 'جيدة';
-            gradient = 'linear-gradient(90deg, #0072bc 0%, #006c35 100%)';
-          } else {
-            width = '100%';
-            label = 'ممتازة';
-            gradient = 'linear-gradient(90deg, #16845b 0%, #16845b 100%)';
-          }
-
-          const lowered = value.toLowerCase();
-          const phoneLooksSimilar = userPhone && lowered.includes(userPhone);
-          const nameLooksSimilar = userName && userName.split(/\s+/).some((part) => part.length >= 3 && lowered.includes(part));
-          if (phoneLooksSimilar || nameLooksSimilar) {
-            label = 'تحتاج تحسينًا';
-          }
-        }
-
-        strengthText.textContent = label;
-        strengthBar.style.width = width;
-        strengthBar.style.background = gradient;
-      };
-
-      const updateRules = () => {
-        const password = normalize(primaryInput.value);
-        const confirm = normalize(confirmInput.value);
-
-        if (ruleNodes.min_length) {
-          if (!password) {
-            setRuleState(ruleNodes.min_length, '', 'بانتظار الإدخال');
-          } else if (password.length >= minLength) {
-            setRuleState(ruleNodes.min_length, 'met', 'متحقق');
-          } else {
-            setRuleState(ruleNodes.min_length, 'unmet', 'قصيرة');
-          }
-        }
-
-        if (ruleNodes.not_numeric) {
-          if (!password) {
-            setRuleState(ruleNodes.not_numeric, '', 'بانتظار الإدخال');
-          } else if (/^\d+$/.test(password)) {
-            setRuleState(ruleNodes.not_numeric, 'unmet', 'أرقام فقط');
-          } else {
-            setRuleState(ruleNodes.not_numeric, 'met', 'متحقق');
-          }
-        }
-
-        if (ruleNodes.match) {
-          if (!password && !confirm) {
-            setRuleState(ruleNodes.match, '', 'بانتظار الإدخال');
-          } else if (confirm && password === confirm) {
-            setRuleState(ruleNodes.match, 'met', 'متطابقة');
-          } else {
-            setRuleState(ruleNodes.match, 'unmet', 'غير متطابقة');
-          }
-        }
-
-        updateStrength(password);
-      };
-
-      form.querySelectorAll('[data-toggle-password]').forEach((button) => {
-        button.addEventListener('click', function () {
-          const target = document.getElementById(this.dataset.target || '');
-          if (!target) return;
-          const isHidden = target.type === 'password';
-          target.type = isHidden ? 'text' : 'password';
-          const icon = this.querySelector('i');
-          if (icon) {
-            icon.classList.toggle('fa-eye', !isHidden);
-            icon.classList.toggle('fa-eye-slash', isHidden);
-          }
-          this.setAttribute('aria-label', isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-          this.setAttribute('title', isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-        });
-      });
-
-      primaryInput.addEventListener('input', updateRules);
-      confirmInput.addEventListener('input', updateRules);
-      updateRules();
-    })();
-  </script>
-  <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-    (function () {
       const button = document.getElementById('registerPasskeyBtn');
       const statusBox = document.getElementById('profilePasskeyStatus');
       const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
@@ -1699,7 +1545,7 @@
         if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
           return 'لم يكتمل التفعيل. تأكد من تفعيل قفل الشاشة أو بصمة الجهاز، ثم أعد المحاولة.';
         }
-        return error && error.message ? error.message : 'تعذر تفعيل الدخول بالبصمة.';
+        return 'تعذر تفعيل مفتاح المرور. أعد المحاولة أو استخدم جهازًا آخر.';
       }
 
       function b64ToBuffer(value) {

@@ -3,37 +3,56 @@
 
 {% block title %}تفعيل المصادقة الثنائية | منصة توثيق{% endblock %}
 
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/auth-security.css' %}?v=20260921.1">
+{% endblock %}
+
 {% block content %}
-<div class="container u-mt-2xl">
-  <h1 class="u-m-0">خطوتان لتفعيل المصادقة الثنائية</h1>
-
-  <section class="card u-mt-lg">
-    <h2 class="u-mt-0">١ — أضف الحساب إلى تطبيق المصادقة</h2>
-
-    <p class="u-text-muted">
-      <strong>من هاتفك:</strong> انقر الرابط أدناه ليفتح تطبيق المصادقة ويضيف الحساب تلقائياً.
-    </p>
-    <p><a class="btn btn-primary" href="{{ otpauth_uri }}">فتح تطبيق المصادقة</a></p>
-
-    <p class="u-text-muted u-mt-lg">
-      <strong>من الحاسوب:</strong> افتح التطبيق في هاتفك، اختر «إضافة حساب» ثم
-      «إدخال المفتاح يدوياً»، وأدخل هذا المفتاح:
-    </p>
-    <pre class="u-p-4 u-radius-sm u-w-full">{{ secret }}</pre>
-  </section>
-
-  <section class="card u-mt-lg">
-    <h2 class="u-mt-0">٢ — أكّد بالرمز</h2>
-    <p class="u-text-muted">أدخل الرمز المعروض في التطبيق الآن، لنتأكّد أن الإعداد صحيح قبل تفعيله.</p>
-
-    <form method="post" action="{% url 'reports:totp_confirm_enrollment' %}">
-      {% csrf_token %}
-      <label for="totpCode" class="u-block u-fw-700 u-mb-2">الرمز (٦ أرقام)</label>
-      <input id="totpCode" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
-             maxlength="6" required autocomplete="one-time-code" autofocus
-             class="u-w-full u-mb-3">
-      <button type="submit" class="btn btn-primary">تأكيد وتفعيل</button>
-    </form>
-  </section>
+<div class="twq-page twq-security-page">
+  <div class="twq-security-page__inner">
+    <a class="twq-security-back" href="{% url 'reports:totp_settings' %}">
+      <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      العودة إلى إعدادات المصادقة الثنائية
+    </a>
+    <header class="twq-security-header">
+      <div class="twq-security-header__content">
+        <p class="twq-security-header__eyebrow">إعداد آمن من خطوتين</p>
+        <h1>تفعيل المصادقة الثنائية</h1>
+        <p>أضف الحساب إلى تطبيق المصادقة، ثم أدخل رمزًا حاليًا للتأكد من نجاح الإعداد قبل تفعيل الحماية.</p>
+      </div>
+    </header>
+    <section class="twq-security-section" aria-labelledby="enrollmentStepsHeading">
+      <h2 id="enrollmentStepsHeading" class="sr-only">خطوات التفعيل</h2>
+      <ol class="twq-security-steps">
+        <li>
+          <h2>أضف الحساب إلى تطبيق المصادقة</h2>
+          <p class="twq-security-copy">على الهاتف، افتح الرابط لإضافة الحساب مباشرة. إن كنت تعمل على الحاسوب، أدخل المفتاح يدويًا داخل التطبيق.</p>
+          <div class="twq-security-actions">
+            <a class="btn btn-primary" href="{{ otpauth_uri }}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>فتح تطبيق المصادقة</a>
+          </div>
+          <p class="twq-security-help">المفتاح اليدوي — لا تشاركه مع أي شخص:</p>
+          <code class="twq-security-secret" tabindex="0"><bdi>{{ secret }}</bdi></code>
+        </li>
+        <li>
+          <h2>أكّد الإعداد بالرمز الحالي</h2>
+          <p class="twq-security-copy">لن تُفعّل الحماية ولن يُحفظ الجهاز قبل قبول رمز صحيح من التطبيق.</p>
+          <form method="post" action="{% url 'reports:totp_confirm_enrollment' %}">
+            {% csrf_token %}
+            <div class="twq-security-field">
+              <label for="totpCode">رمز التحقق المكوّن من 6 أرقام</label>
+              <input id="totpCode" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
+                     maxlength="6" required autocomplete="one-time-code" autofocus dir="ltr"
+                     aria-describedby="totpCodeHelp">
+              <p class="twq-security-help" id="totpCodeHelp">يتغير الرمز كل 30 ثانية. أدخل الرمز الظاهر الآن.</p>
+            </div>
+            <div class="twq-security-actions">
+              <button type="submit" class="btn btn-primary">تأكيد وتفعيل</button>
+            </div>
+          </form>
+        </li>
+      </ol>
+    </section>
+  </div>
 </div>
 {% endblock %}

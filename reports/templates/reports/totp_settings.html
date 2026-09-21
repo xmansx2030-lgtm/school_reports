@@ -3,61 +3,106 @@
 
 {% block title %}المصادقة الثنائية | منصة توثيق{% endblock %}
 
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/auth-security.css' %}?v=20260921.1">
+{% endblock %}
+
 {% block content %}
-<div class="container u-mt-2xl">
-  <header class="u-mb-lg">
-    <h1 class="u-m-0">المصادقة الثنائية</h1>
-    <p class="u-text-muted u-mt-2">
-      طبقة ثانية بعد كلمة المرور: رمزٌ من تطبيق على هاتفك يتغيّر كل ثلاثين ثانية.
-      فمن سرق كلمة مرورك لا يدخل بها وحدها.
-    </p>
-  </header>
+<div class="twq-page twq-security-page">
+  <div class="twq-security-page__inner">
+    <a class="twq-security-back" href="{% url 'reports:my_profile' %}#account-security">
+      <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      العودة إلى أمان الحساب
+    </a>
+    <header class="twq-security-header">
+      <div class="twq-security-header__content">
+        <p class="twq-security-header__eyebrow">أمان الحساب</p>
+        <h1>المصادقة الثنائية</h1>
+        <p>أضف رمزًا متغيرًا من تطبيق المصادقة بعد كلمة المرور. كلمة المرور وحدها لن تنشئ جلسة دخول عند تفعيل هذه الحماية.</p>
+      </div>
+      {% if device and device.is_confirmed %}
+        <span class="twq-security-status twq-security-status--enabled"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>مفعّلة</span>
+      {% else %}
+        <span class="twq-security-status twq-security-status--attention"><i class="fa-solid fa-circle-minus" aria-hidden="true"></i>غير مفعّلة</span>
+      {% endif %}
+    </header>
 
-  {% if new_recovery_codes %}
-    <section class="card u-mb-lg" aria-labelledby="codesHeading">
-      <h2 id="codesHeading" class="u-mt-0">رموز الاسترجاع</h2>
-      <p class="section-degraded" role="status">
-        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-        احفظها الآن في مكان آمن. لن تُعرض مرة أخرى، وهي طريقك الوحيد للدخول إن فقدت هاتفك.
-      </p>
-      <ul class="u-mt-3">
-        {% for code in new_recovery_codes %}<li><code>{{ code }}</code></li>{% endfor %}
-      </ul>
-    </section>
-  {% endif %}
-
-  <section class="card">
-    {% if device and device.is_confirmed %}
-      <p class="u-fw-700">الحالة: مفعَّلة منذ {{ device.confirmed_at|hijri }}</p>
-      <p class="u-text-muted">
-        رموز الاسترجاع المتبقّية: {{ remaining_recovery_codes }}
-        {% if remaining_recovery_codes < 3 %}
-          — قليلة. أعد التفعيل للحصول على مجموعة جديدة.
-        {% endif %}
-      </p>
-
-      <form method="post" action="{% url 'reports:totp_disable' %}" class="u-mt-lg">
-        {% csrf_token %}
-        <label for="disablePassword" class="u-block u-fw-700 u-mb-2">
-          لإيقافها، أدخل كلمة المرور
-        </label>
-        <input id="disablePassword" name="password" type="password" required
-               autocomplete="current-password" class="u-w-full u-mb-3">
-        <button type="submit" class="btn btn-outline">إيقاف المصادقة الثنائية</button>
-      </form>
-    {% else %}
-      <p class="u-text-muted">
-        غير مفعَّلة. تحتاج تطبيق مصادقة على هاتفك — مثل Google Authenticator
-        أو Microsoft Authenticator.
-      </p>
-      <form method="post" action="{% url 'reports:totp_begin_enrollment' %}" class="u-mt-lg">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-          تفعيل المصادقة الثنائية
-        </button>
-      </form>
+    {% if new_recovery_codes %}
+      <section class="twq-security-section" aria-labelledby="recoveryCodesHeading">
+        <div class="twq-security-section__header">
+          <div>
+            <h2 id="recoveryCodesHeading">احفظ رموز الاسترجاع الآن</h2>
+            <p>تظهر هذه المجموعة مرة واحدة فقط، ويعمل كل رمز منها لدخول واحد عند فقدان الهاتف.</p>
+          </div>
+          <span class="twq-security-status twq-security-status--attention">عرض لمرة واحدة</span>
+        </div>
+        <div class="twq-security-notice" role="status">
+          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+          <span>احفظ الرموز في مكان آمن منفصل عن هاتفك. لن تتمكن المنصة من عرض هذه القيم مرة أخرى.</span>
+        </div>
+        <ul class="twq-security-codes" aria-label="رموز الاسترجاع الجديدة">
+          {% for code in new_recovery_codes %}<li><code><bdi>{{ code }}</bdi></code></li>{% endfor %}
+        </ul>
+      </section>
     {% endif %}
-  </section>
+
+    <section class="twq-security-section" aria-labelledby="totpStateHeading">
+      {% if device and device.is_confirmed %}
+        <div class="twq-security-section__header">
+          <div>
+            <h2 id="totpStateHeading">الحماية مفعّلة</h2>
+            <p>فُعّلت في {{ device.confirmed_at|hijri }} هـ. سيُطلب رمز تطبيق المصادقة بعد نجاح كلمة المرور.</p>
+          </div>
+        </div>
+        <div class="twq-security-notice twq-security-notice--safe">
+          <i class="fa-solid fa-key" aria-hidden="true"></i>
+          <span>رموز الاسترجاع المتبقية: <strong>{{ remaining_recovery_codes }}</strong>. {% if remaining_recovery_codes < 3 %}العدد منخفض؛ إعادة التفعيل تنشئ مجموعة جديدة وتلغي المجموعة القديمة.{% endif %}</span>
+        </div>
+        <div class="twq-security-sensitive">
+          <h3>إيقاف المصادقة الثنائية</h3>
+          <p>بعد الإيقاف، تعود كلمة المرور وحدها كافية للدخول. يتطلب هذا الإجراء تأكيد كلمة مرور حسابك.</p>
+          <form method="post" action="{% url 'reports:totp_disable' %}">
+            {% csrf_token %}
+            <div class="twq-security-field">
+              <label for="disablePassword">كلمة المرور الحالية</label>
+              <input id="disablePassword" name="password" type="password" required autocomplete="current-password">
+              <p class="twq-security-help">لن نعرض كلمة المرور أو نخزنها ضمن إعدادات العامل الثاني.</p>
+            </div>
+            <div class="twq-security-actions">
+              <button type="submit" class="btn btn-danger">إيقاف المصادقة الثنائية</button>
+            </div>
+          </form>
+        </div>
+      {% else %}
+        <div class="twq-security-section__header">
+          <div>
+            <h2 id="totpStateHeading">فعّل طبقة حماية إضافية</h2>
+            <p>تحتاج إلى تطبيق مصادقة يدعم الرموز الزمنية. يبدأ التفعيل بمفتاح مؤقت، ولا تصبح الحماية نافذة حتى تؤكد رمزًا صحيحًا.</p>
+          </div>
+        </div>
+        <div class="twq-security-grid">
+          <div class="twq-security-method">
+            <div class="twq-security-method__identity">
+              <span class="twq-security-method__icon" aria-hidden="true"><i class="fa-solid fa-mobile-screen-button"></i></span>
+              <div><h3>تطبيق مصادقة</h3><p>استخدم تطبيقًا متوافقًا مثل Google Authenticator أو Microsoft Authenticator.</p></div>
+            </div>
+          </div>
+          <div class="twq-security-method">
+            <div class="twq-security-method__identity">
+              <span class="twq-security-method__icon" aria-hidden="true"><i class="fa-solid fa-life-ring"></i></span>
+              <div><h3>رموز استرجاع</h3><p>ستحصل بعد التأكيد على رموز أحادية الاستخدام تحفظها للطوارئ.</p></div>
+            </div>
+          </div>
+        </div>
+        <form method="post" action="{% url 'reports:totp_begin_enrollment' %}">
+          {% csrf_token %}
+          <div class="twq-security-actions">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i>بدء التفعيل</button>
+          </div>
+        </form>
+      {% endif %}
+    </section>
+  </div>
 </div>
 {% endblock %}

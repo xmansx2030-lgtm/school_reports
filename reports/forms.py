@@ -367,6 +367,7 @@ class AccountPasswordResetForm(PasswordResetForm):
                 "dir": "ltr",
                 "placeholder": "name@example.com",
                 "autofocus": True,
+                "aria-describedby": "recoveryEmailHint recoveryEmailError",
             }
         ),
     )
@@ -392,6 +393,7 @@ class AccountSetPasswordForm(SetPasswordForm):
                 "autocomplete": "new-password",
                 "placeholder": "أدخل كلمة مرور جديدة",
                 "autofocus": True,
+                "aria-describedby": "newPasswordRequirements newPassword1Error",
             }
         )
         self.fields["new_password2"].widget.attrs.update(
@@ -399,6 +401,7 @@ class AccountSetPasswordForm(SetPasswordForm):
                 "class": "recovery-input",
                 "autocomplete": "new-password",
                 "placeholder": "أعد إدخال كلمة المرور الجديدة",
+                "aria-describedby": "newPassword2Hint newPassword2Error",
             }
         )
 

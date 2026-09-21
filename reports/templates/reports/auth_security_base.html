@@ -1,0 +1,63 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#eafaf3">
+  <meta name="color-scheme" content="light dark">
+  {% include "reports/partials/theme_bootstrap.html" %}
+  <title>{% block title %}التحقق الأمني{% endblock %} | منصة توثيق</title>
+  {% include "reports/partials/pwa_install_head.html" %}
+  <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+  {% include "reports/_identity.html" %}
+  <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
+  <link rel="stylesheet" href="{% static 'css/auth-core.css' %}?v=20260921.1">
+  <link rel="stylesheet" href="{% static 'css/auth-security.css' %}?v=20260921.1">
+  <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
+</head>
+<body class="auth-page">
+  <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
+  <main class="twq-auth twq-auth--challenge" id="mainContent">
+    <section class="twq-auth__card" aria-labelledby="securityTitle">
+      <div class="twq-auth__brand" aria-label="منصة توثيق">
+        <span class="twq-auth__mark" aria-hidden="true">
+          <img src="{% static 'img/brand-mark.svg' %}" alt="" class="twq-auth__logo">
+        </span>
+        <span class="twq-auth__product">منصة توثيق</span>
+        <span class="twq-auth__trust">تحقق إضافي لحماية حسابك</span>
+      </div>
+      <header class="twq-auth__header">
+        <p class="twq-auth__eyebrow">خطوة الحماية الثانية</p>
+        <h1 class="twq-auth__title" id="securityTitle">{% block heading %}التحقق بخطوتين{% endblock %}</h1>
+        <p class="twq-auth__lead">{% block lead %}{% endblock %}</p>
+      </header>
+      {% if messages %}
+        <div class="twq-auth__messages" role="region" aria-label="رسائل التحقق" aria-live="polite">
+          {% for message in messages %}
+            <div class="twq-auth__message twq-auth__message--{{ message.tags|default:'info' }}"
+                 role="{% if 'error' in message.tags or 'danger' in message.tags or 'warning' in message.tags %}alert{% else %}status{% endif %}">
+              {% if 'success' in message.tags %}<i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+              {% elif 'error' in message.tags or 'danger' in message.tags %}<i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+              {% elif 'warning' in message.tags %}<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+              {% else %}<i class="fa-solid fa-circle-info" aria-hidden="true"></i>{% endif %}
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+  <footer class="twq-auth__footer">
+    &copy; {% now "Y" %} جميع الحقوق محفوظة — منصة توثيق
+  </footer>
+  {% include "reports/partials/pwa_install.html" %}
+</body>
+</html>

@@ -12,777 +12,137 @@
   <title>{% if admin_login %}دخول مدير النظام{% else %}تسجيل الدخول{% endif %} | منصة توثيق</title>
   {% include "reports/partials/pwa_install_head.html" %}
 
-  <!-- Typography & Icons -->
-  {% comment %}الخط والأيقونات محلياً: لا طلب لطرف ثالث قبل أول حرف، ولا نطاق خارجي في سياسة المحتوى.{% endcomment %}
+  {% comment %}الخط والأيقونات محلياً ولا تضيف الصفحة أي طلب لطرف ثالث.{% endcomment %}
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-
-  <style nonce="{{ CSP_NONCE }}">
-    /* === Login — light mint identity, matching the public site === */
-    :root {
-      --brand: #0f7a56;
-      --brand-dark: #0d4a35;
-      --brand-bright: #12a06d;
-      --mint-100: #d8f3e7;
-      --mint-50: #eefaf4;
-      --ink: #0f2a21;
-      --ink-soft: #37514a;
-      --muted: #5d716a;
-      --border: #dcede4;
-      --radius: 16px;
-      --shadow-soft: 0 6px 18px rgba(13,74,53,.06);
-      --shadow-card: 0 30px 70px rgba(13,74,53,.12), 0 4px 12px rgba(13,74,53,.05);
-      --gradient-bg: linear-gradient(172deg, #eafaf3 0%, #f6fdfa 46%, #ffffff 100%);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: 'Cairo', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background: var(--gradient-bg);
-      color: var(--ink);
-    }
-
-    /* Two soft mint blooms instead of a flat wash — depth without decoration. */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(circle at 84% 8%, rgba(91,198,160,.28), transparent 42%),
-        radial-gradient(circle at 6% 92%, rgba(18,160,109,.14), transparent 44%);
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    .auth-wrapper {
-      flex: 1;
-      display: grid;
-      place-items: center;
-      padding: 24px 20px;
-      position: relative;
-    }
-
-    .auth-card {
-      width: 100%;
-      max-width: 452px;
-      background: #ffffff;
-      border-radius: 26px;
-      box-shadow: var(--shadow-card);
-      overflow: hidden;
-      border: 1px solid var(--border);
-      position: relative;
-      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .brand-stripe {
-      height: 4px;
-      background: linear-gradient(90deg, var(--brand-dark), var(--brand-bright) 55%, #5bc6a0);
-      width: 100%;
-    }
-
-    .card-body {
-      padding: 38px 34px 34px;
-    }
-
-    .brand-area {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .logo-circle {
-      width: 76px; height: 76px;
-      background: linear-gradient(150deg, var(--mint-50), #fff);
-      border-radius: 22px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 18px;
-      border: 1px solid var(--border);
-      box-shadow: 0 10px 26px rgba(13,74,53,.1);
-      font-size: 2rem;
-      color: var(--brand);
-    }
-
-    .brand-logo-img {
-      width: 48px; height: 48px; object-fit: contain;
-    }
-
-    .brand-title {
-      font-size: 1.55rem;
-      font-weight: 900;
-      color: var(--ink);
-      margin: 0 0 6px 0;
-      letter-spacing: -0.6px;
-    }
-
-    .brand-sub {
-      color: var(--muted);
-      font-size: 0.93rem;
-      font-weight: 600;
-    }
-
-    .form-group {
-      margin-bottom: 18px;
-      position: relative;
-    }
-
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 800;
-      font-size: 0.86rem;
-      color: var(--ink-soft);
-    }
-
-    .input-wrapper { position: relative; }
-
-    .form-input {
-      width: 100%;
-      min-height: 52px;
-      padding: 14px 46px 14px 14px; /* Right padding for icon */
-      background: #f7fcfa;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--ink);
-      transition: border-color .2s, background .2s, box-shadow .2s;
-    }
-
-    .form-input::placeholder { color: #9bada5; font-weight: 500; }
-
-    .form-input:focus {
-      outline: none;
-      background: #fff;
-      border-color: var(--brand-bright);
-      box-shadow: 0 0 0 4px rgba(18,160,109,.13);
-    }
-
-    .input-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9bada5;
-      pointer-events: none;
-      font-size: 1.05rem;
-      transition: color 0.2s;
-    }
-
-    .form-input:focus + .input-icon { color: var(--brand); }
-
-    .password-toggle {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #9bada5;
-      cursor: pointer;
-      font-size: 1rem;
-      width: 40px;
-      height: 40px;
-      display: grid;
-      place-items: center;
-      padding: 0;
-      border-radius: 10px;
-    }
-    .password-toggle:hover { color: var(--brand); background: var(--mint-50); }
-
-    .btn-login {
-      width: 100%;
-      min-height: 54px;
-      padding: 14px;
-      background: linear-gradient(135deg, var(--brand-bright), var(--brand));
-      color: #fff;
-      border: none;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 1.02rem;
-      cursor: pointer;
-      box-shadow: 0 12px 26px rgba(15,122,86,.24);
-      transition: transform .2s, box-shadow .2s, background .2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .btn-login:hover {
-      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-      transform: translateY(-2px);
-      box-shadow: 0 16px 32px rgba(15,122,86,.3);
-    }
-
-    .btn-login:active { transform: translateY(0); }
-    .btn-login:disabled { opacity: .7; cursor: progress; transform: none; }
-
-    /* ── Passkey block ──────────────────────────────────────────────────
-       Given its own panel rather than a bare second button: it is a distinct
-       way in, not an alternative submit for the password form. */
-    .passkey-divider {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-top: 22px;
-      color: #93a49d;
-      font-size: .74rem;
-      font-weight: 800;
-    }
-    .passkey-divider::before,
-    .passkey-divider::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
-    }
-    /* display:flex outranks the UA rule for [hidden]; without this the divider
-       stays visible on a browser that cannot do WebAuthn at all. */
-    .passkey-divider[hidden] { display: none; }
-
-    .passkey-panel {
-      margin-top: 14px;
-      padding: 16px 16px 15px;
-      border: 1px solid var(--mint-100);
-      border-radius: 18px;
-      background: linear-gradient(155deg, var(--mint-50), #fbfefd 72%, #fff);
-      box-shadow: var(--shadow-soft);
-    }
-    .passkey-panel[hidden] { display: none; }
-
-    .passkey-panel__head {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .passkey-panel__icon {
-      width: 44px;
-      height: 44px;
-      flex: 0 0 auto;
-      display: grid;
-      place-items: center;
-      border-radius: 14px;
-      color: #fff;
-      background: linear-gradient(140deg, var(--brand-bright), var(--brand-dark));
-      box-shadow: 0 8px 18px rgba(15,122,86,.24);
-      font-size: 1.15rem;
-    }
-
-    .passkey-panel__head strong {
-      display: block;
-      color: var(--ink);
-      font-size: .93rem;
-      font-weight: 900;
-      line-height: 1.4;
-    }
-
-    .passkey-panel__head small {
-      display: block;
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: .74rem;
-      font-weight: 600;
-      line-height: 1.6;
-    }
-
-    .btn-passkey {
-      width: 100%;
-      min-height: 50px;
-      border: 1px solid var(--mint-100);
-      border-radius: 13px;
-      background: #fff;
-      color: var(--brand-dark);
-      font-family: inherit;
-      font-size: .97rem;
-      font-weight: 900;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      box-shadow: 0 4px 12px rgba(13,74,53,.05);
-      transition: transform .2s, box-shadow .2s, border-color .2s, background .2s;
-    }
-    .btn-passkey i { color: var(--brand-bright); font-size: 1.1rem; }
-    .btn-passkey:hover {
-      background: #fff;
-      border-color: var(--brand-bright);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 22px rgba(15,122,86,.14);
-    }
-    .btn-passkey:disabled {
-      opacity: .72;
-      cursor: progress;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .passkey-status {
-      display: none;
-      margin-top: 12px;
-      padding: 11px 13px;
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid var(--mint-100);
-      color: var(--brand-dark);
-      font-size: .84rem;
-      font-weight: 700;
-      line-height: 1.7;
-    }
-    .passkey-status.is-error {
-      background: #fef2f2;
-      border-color: #fecaca;
-      color: #b91c1c;
-    }
-
-    /* Links */
-    .form-footer {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-    }
-
-    .link {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 700;
-      transition: color 0.2s;
-    }
-    .link:hover { color: var(--brand); text-decoration: underline; }
-    .form-footer .link {
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding-inline: 10px;
-    }
-
-    /* Messages/Toasts */
-    .messages-area { margin-bottom: 20px; }
-    .msg {
-      padding: 12px 16px;
-      border-radius: 12px;
-      font-size: 0.88rem;
-      font-weight: 700;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-      line-height: 1.7;
-    }
-    .msg.error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-    .msg.success { background: var(--mint-50); color: #0b5f42; border: 1px solid var(--mint-100); }
-    .msg.info { background: var(--mint-50); color: var(--brand-dark); border: 1px solid var(--mint-100); }
-
-    /* Footer */
-    .auth-footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
-    /* Responsive */
-    @media (max-width: 480px) {
-      .auth-footer { display: none; }
-      .auth-card {
-        box-shadow: none;
-        border: none;
-        background: transparent;
-      }
-      .card-body { padding: 0; }
-      body { background: var(--gradient-bg); min-height: 100dvh; overflow-y: auto; }
-      .auth-wrapper {
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        padding: max(20px, env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom));
-      }
-
-      .brand-title { font-size: 1.6rem; }
-      .logo-circle { width: 68px; height: 68px; border-radius: 20px; }
-      .brand-logo-img { width: 42px; height: 42px; }
-      .brand-area { margin-bottom: 24px; }
-      .form-footer { margin-top: 14px; }
-      .passkey-panel { padding: 14px; border-radius: 16px; }
-
-      .brand-stripe { display: none; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .auth-card { animation: none; }
-      *, *::before, *::after { transition-duration: .01ms !important; }
-      .btn-login:hover, .btn-passkey:hover { transform: none; }
-    }
-  </style>
-  {% comment %}
-    ‏`app.css` صار يقرأ رموز الهوية (`--id-*`)، وهذه الصفحة لا ترث `base.html`
-    فلا تصلها. تُضمَّن هنا كي لا تسقط قواعدُه صامتةً على صفحةٍ مستقلة.
-  {% endcomment %}
   {% include "reports/_identity.html" %}
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
-  <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}">
-<link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
-  <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
   <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
+  <link rel="stylesheet" href="{% static 'css/auth-core.css' %}?v=20260921.1">
+  <link rel="stylesheet" href="{% static 'css/auth-login.css' %}?v=20260921.1">
+  <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
+  <script src="{% static 'js/auth-login.js' %}?v=20260921.1" defer data-cfasync="false"></script>
 </head>
 <body class="auth-page">
   <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
 
-  <main class="auth-wrapper" id="mainContent">
-    <div class="auth-card">
-      <div class="brand-stripe"></div>
-      
-      <div class="card-body">
-        
-        <!-- Brand -->
-        <div class="brand-area">
-          <div class="logo-circle">
-            <img src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق" class="brand-logo-img">
+  <main class="twq-auth" id="mainContent">
+    <section class="twq-auth__card" aria-labelledby="loginTitle">
+      <div class="twq-auth__brand" aria-label="منصة توثيق">
+        <span class="twq-auth__mark" aria-hidden="true">
+          <img src="{% static 'img/brand-mark.svg' %}" alt="" class="twq-auth__logo">
+        </span>
+        <span class="twq-auth__product">منصة توثيق</span>
+        <span class="twq-auth__trust">المنصة الرسمية لإدارة أعمال المدرسة</span>
+      </div>
+
+      <header class="twq-auth__header">
+        <p class="twq-auth__eyebrow">الوصول الآمن للحساب</p>
+        <h1 class="twq-auth__title" id="loginTitle">
+          {% if admin_login %}دخول مدير النظام{% else %}تسجيل الدخول{% endif %}
+        </h1>
+        <p class="twq-auth__lead">
+          {% if admin_login %}
+            هذه البوابة مخصصة لإدارة المنصة.
+          {% else %}
+            استخدم رقم الجوال أو الهوية الوطنية للوصول إلى حسابك.
+          {% endif %}
+        </p>
+      </header>
+
+      {% if messages %}
+        <div class="twq-auth__messages" role="region" aria-label="رسائل تسجيل الدخول" aria-live="polite" aria-atomic="false">
+          {% for message in messages %}
+            <div
+              class="twq-auth__message twq-auth__message--{{ message.tags|default:'info' }}"
+              role="{% if 'error' in message.tags or 'danger' in message.tags or 'warning' in message.tags %}alert{% else %}status{% endif %}"
+            >
+              {% if 'success' in message.tags %}<i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+              {% elif 'error' in message.tags or 'danger' in message.tags %}<i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+              {% elif 'warning' in message.tags %}<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+              {% else %}<i class="fa-solid fa-circle-info" aria-hidden="true"></i>{% endif %}
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if form.errors %}
+        <div class="twq-auth__messages" role="region" aria-label="أخطاء تسجيل الدخول" aria-live="polite">
+          <div class="twq-auth__message twq-auth__message--error" role="alert">
+            <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+            <span>تعذر تسجيل الدخول. تحقق من البيانات ثم أعد المحاولة.</span>
           </div>
-          <h1 class="brand-title">{% if admin_login %}لوحة مدير النظام{% else %}منصة توثيق{% endif %}</h1>
-          <div class="brand-sub">
-            {% if admin_login %}
-              دخول مخصص للسوبر آدمن وإدارة المنصة
-            {% else %}
-              سجّل دخولك لمتابعة أعمالك
-            {% endif %}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url login_action_name|default:'reports:login' %}" id="loginForm" class="twq-auth__form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next|default:'' }}">
+
+        <div class="twq-auth__field">
+          <label for="identifier" class="twq-auth__label">رقم الجوال أو الهوية الوطنية</label>
+          <div class="twq-auth__control-wrap">
+            {% comment %}webauthn يتيح عرض مفتاح المرور المحفوظ داخل الإكمال التلقائي للحقل.{% endcomment %}
+            <input type="text" name="phone" id="identifier" class="twq-auth__control twq-auth__control--identifier"
+                   inputmode="numeric" dir="ltr" required autofocus autocomplete="username webauthn"
+                   aria-describedby="identifierHelp">
+            <i class="fa-regular fa-user twq-auth__field-icon" aria-hidden="true"></i>
+          </div>
+          <p class="twq-auth__help" id="identifierHelp">أدخل رقم الجوال المسجل أو رقم الهوية الوطنية.</p>
+        </div>
+
+        <div class="twq-auth__field">
+          <label for="password" class="twq-auth__label">كلمة المرور</label>
+          <div class="twq-auth__control-wrap">
+            <input type="password" name="password" id="password" class="twq-auth__control twq-auth__control--password"
+                   required autocomplete="current-password">
+            <i class="fa-solid fa-lock twq-auth__field-icon" aria-hidden="true"></i>
+            <button type="button" class="twq-auth__password-toggle" id="togglePass" title="إظهار كلمة المرور"
+                    aria-label="إظهار كلمة المرور" aria-pressed="false">
+              <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
 
-        <!-- Messages -->
-        {% if messages %}
-          <div class="messages-area" role="region" aria-label="رسائل النظام" aria-live="polite" aria-atomic="false">
-            {% for message in messages %}
-              <div
-                class="msg {{ message.tags|default:'info' }}"
-                role="{% if 'error' in message.tags or 'danger' in message.tags or 'warning' in message.tags %}alert{% else %}status{% endif %}"
-              >
-                {% if 'success' in message.tags %}<i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                {% elif 'error' in message.tags or 'danger' in message.tags %}<i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
-                {% elif 'warning' in message.tags %}<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                {% else %}<i class="fa-solid fa-circle-info" aria-hidden="true"></i>{% endif %}
-                <span>{{ message }}</span>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
+        <button type="submit" class="twq-auth__submit" id="loginSubmitBtn">
+          <span>{% if admin_login %}دخول لوحة الإدارة{% else %}تسجيل الدخول{% endif %}</span>
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        </button>
 
-        {% if form.errors %}
-          <div class="messages-area" role="region" aria-label="أخطاء تسجيل الدخول" aria-live="polite" aria-atomic="false">
-            <div class="msg error" role="alert">
-                <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
-                <span>اسم المستخدم أو كلمة المرور غير صحيحة.</span>
+        {% comment %}لا تظهر طريقة مفتاح المرور إلا حين يثبت المتصفح دعمه لها.{% endcomment %}
+        <div class="twq-auth__divider" id="passkeyDivider" hidden><span>أو</span></div>
+        <section class="twq-auth__passkey" id="passkeyPanel" aria-labelledby="passkeyTitle" hidden>
+          <div class="twq-auth__passkey-heading">
+            <span class="twq-auth__passkey-icon" aria-hidden="true"><i class="fa-solid fa-fingerprint"></i></span>
+            <div>
+              <h2 id="passkeyTitle">دخول بلا كلمة مرور</h2>
+              <p>استخدم بصمة الجهاز أو Face ID أو قفل الشاشة.</p>
             </div>
           </div>
-        {% endif %}
-
-        <!-- Form -->
-        <form method="post" action="{% url login_action_name|default:'reports:login' %}" id="loginForm">
-          {% csrf_token %}
-          <!-- Redirect Next -->
-          <input type="hidden" name="next" value="{{ next|default:'' }}">
-
-          <div class="form-group">
-            <label for="identifier" class="form-label">رقم الجوال </label>
-            <div class="input-wrapper">
-              {% comment %}
-                "webauthn" lets the browser surface a saved passkey inside the
-                field's own autofill list — the one-tap path.
-              {% endcomment %}
-              <input type="text" name="phone" id="identifier" class="form-input"
-                     placeholder="05XXXXXXXX " required autofocus autocomplete="username webauthn">
-              <i class="fa-regular fa-user input-icon"></i>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="password" class="form-label">كلمة المرور</label>
-            <div class="input-wrapper">
-              <input type="password" name="password" id="password" class="form-input" 
-                     placeholder="••••••••" required autocomplete="current-password">
-              <i class="fa-solid fa-lock input-icon"></i>
-              <button type="button" class="password-toggle" id="togglePass" title="إظهار كلمة المرور" aria-label="إظهار كلمة المرور">
-                <i class="fa-regular fa-eye-slash"></i>
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" class="btn-login" id="loginSubmitBtn">
-            {% if admin_login %}دخول لوحة الإدارة{% else %}تسجيل الدخول{% endif %} <i class="fa-solid fa-arrow-left"></i>
+          <button type="button" class="twq-auth__passkey-button" id="passkeyLoginBtn"
+                  data-options-url="{% url 'reports:passkey_login_options' %}"
+                  data-verify-url="{% url 'reports:passkey_login_verify' %}"
+                  data-label="{% if admin_login %}دخول الإدارة بالبصمة{% else %}الدخول بالبصمة{% endif %}">
+            <i class="fa-solid fa-fingerprint" aria-hidden="true"></i>
+            <span data-passkey-label>{% if admin_login %}دخول الإدارة بالبصمة{% else %}الدخول بالبصمة{% endif %}</span>
           </button>
+          <div class="twq-auth__passkey-status" id="passkeyStatus" role="status" aria-live="polite" hidden></div>
+        </section>
 
-          {% comment %}
-            Revealed by script only when the browser can actually do WebAuthn, so
-            an unsupported device never sees a door it cannot open.
-          {% endcomment %}
-          <div class="passkey-divider" id="passkeyDivider" hidden>أو</div>
-          <div class="passkey-panel" id="passkeyPanel" hidden>
-            <div class="passkey-panel__head">
-              <span class="passkey-panel__icon" aria-hidden="true"><i class="fa-solid fa-fingerprint"></i></span>
-              <div>
-                <strong>دخول بلا كلمة مرور</strong>
-                <small>أكّد هويتك ببصمتك أو Face ID أو قفل الشاشة — لا شيء يُكتب ولا شيء يُنسى.</small>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="btn-passkey"
-              id="passkeyLoginBtn"
-              data-options-url="{% url 'reports:passkey_login_options' %}"
-              data-verify-url="{% url 'reports:passkey_login_verify' %}"
-              data-label="{% if admin_login %}دخول الإدارة بالبصمة{% else %}الدخول بالبصمة{% endif %}"
-            >
-              <i class="fa-solid fa-fingerprint" aria-hidden="true"></i>
-              <span data-passkey-label>{% if admin_login %}دخول الإدارة بالبصمة{% else %}الدخول بالبصمة{% endif %}</span>
-            </button>
-            <div class="passkey-status" id="passkeyStatus" role="status" aria-live="polite"></div>
-          </div>
-
-          <div class="form-footer">
-             <a href="{% url 'reports:password_reset' %}" class="link">
-               هل نسيت كلمة المرور؟
-             </a>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="twq-auth__recovery">
+          <a href="{% url 'reports:password_reset' %}" class="twq-auth__link">هل نسيت كلمة المرور؟</a>
+        </div>
+      </form>
+    </section>
   </main>
 
-  <footer class="auth-footer">
+  <footer class="twq-auth__footer">
     &copy; {% now "Y" %} جميع الحقوق محفوظة — منصة توثيق
   </footer>
-
-  <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-    // Password Toggle
-    const toggleBtn = document.getElementById('togglePass');
-    const passInput = document.getElementById('password');
-    
-    if(toggleBtn && passInput){
-      toggleBtn.addEventListener('click', function(){
-        const isPass = passInput.type === 'password';
-        passInput.type = isPass ? 'text' : 'password';
-        toggleBtn.innerHTML = isPass ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
-        toggleBtn.setAttribute('aria-label', isPass ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-        toggleBtn.title = toggleBtn.getAttribute('aria-label');
-      });
-    }
-
-    // Prevent double-submit that can cause duplicate POST and stale CSRF failures.
-    (function(){
-      const form = document.getElementById('loginForm');
-      const btn = document.getElementById('loginSubmitBtn');
-      if (!form || !btn) return;
-
-      let submitted = false;
-      form.addEventListener('submit', function(){
-        if (submitted) return false;
-        submitted = true;
-        btn.disabled = true;
-        btn.setAttribute('aria-disabled', 'true');
-        btn.innerHTML = 'جارٍ تسجيل الدخول... <i class="fa-solid fa-spinner fa-spin"></i>';
-      });
-    })();
-
-    (function(){
-      const passkeyBtn = document.getElementById('passkeyLoginBtn');
-      const statusBox = document.getElementById('passkeyStatus');
-      const divider = document.getElementById('passkeyDivider');
-      const panel = document.getElementById('passkeyPanel');
-      const labelSpan = passkeyBtn ? passkeyBtn.querySelector('[data-passkey-label]') : null;
-      const identifier = document.getElementById('identifier');
-      const nextInput = document.querySelector('input[name="next"]');
-      const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-      if (!passkeyBtn || !statusBox || !window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) return;
-
-      if (divider) divider.hidden = false;
-      if (panel) panel.hidden = false;
-
-      const defaultLabel = passkeyBtn.dataset.label || 'الدخول بالبصمة';
-      /* Chrome refuses a second ceremony while one is pending, and the silent
-         autofill request stays pending for the whole page life — so the button
-         must cancel it before opening its own dialog. */
-      let autofillController = null;
-      let busy = false;
-
-      function showStatus(text, isError) {
-        statusBox.textContent = text;
-        statusBox.classList.toggle('is-error', !!isError);
-        statusBox.style.display = text ? 'block' : 'none';
-      }
-
-      function setBusy(isBusy, label) {
-        busy = isBusy;
-        passkeyBtn.disabled = isBusy;
-        passkeyBtn.setAttribute('aria-busy', isBusy ? 'true' : 'false');
-        if (labelSpan) labelSpan.textContent = isBusy ? (label || 'جارٍ التحقق...') : defaultLabel;
-      }
-
-      function passkeyErrorMessage(error, scoped) {
-        const site = window.location.origin;
-        if (error && (error.name === 'NotSupportedError' || error.name === 'ConstraintError')) {
-          return 'هذا الجهاز أو المتصفح لا يدعم الدخول بمفتاح المرور. سجّل الدخول بكلمة المرور، أو حدّث Chrome أو Safari وفعّل قفل الشاشة.';
-        }
-        if (error && error.name === 'SecurityError') {
-          return 'تعذر التحقق من نطاق المنصة. افتح ' + site + ' مباشرة في Chrome أو Safari ثم أعد المحاولة.';
-        }
-        if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
-          return scoped
-            ? 'لم يكتمل الدخول. تأكد من أن هذا الجهاز هو الذي فعّلت عليه البصمة، ثم أعد المحاولة.'
-            : 'لم نجد مفتاح مرور محفوظًا على هذا الجهاز. اكتب رقم الجوال ثم أعد المحاولة، أو استخدم كلمة المرور.';
-        }
-        return error && error.message ? error.message : 'تعذر تسجيل الدخول بالبصمة.';
-      }
-
-      function b64ToBuffer(value) {
-        const base64 = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
-        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-        const binary = atob(padded);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        return bytes.buffer;
-      }
-
-      function bufferToB64(buffer) {
-        const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
-        let binary = '';
-        bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-      }
-
-      function prepareRequestOptions(publicKey) {
-        publicKey.challenge = b64ToBuffer(publicKey.challenge);
-        if (publicKey.allowCredentials) {
-          publicKey.allowCredentials = publicKey.allowCredentials.map((item) => ({
-            ...item,
-            id: b64ToBuffer(item.id),
-          }));
-        }
-        return publicKey;
-      }
-
-      function credentialToJSON(credential) {
-        return {
-          id: credential.id,
-          rawId: bufferToB64(credential.rawId),
-          type: credential.type,
-          response: {
-            authenticatorData: bufferToB64(credential.response.authenticatorData),
-            clientDataJSON: bufferToB64(credential.response.clientDataJSON),
-            signature: bufferToB64(credential.response.signature),
-            userHandle: credential.response.userHandle ? bufferToB64(credential.response.userHandle) : null,
-          },
-          next: nextInput ? nextInput.value : '',
-        };
-      }
-
-      async function postJSON(url, payload) {
-        const response = await fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfInput ? csrfInput.value : '',
-          },
-          body: JSON.stringify(payload || {}),
-        });
-        const data = await response.json();
-        if (!response.ok || !data.ok) {
-          throw new Error(data.message || 'تعذر تنفيذ العملية.');
-        }
-        return data;
-      }
-
-      async function completeLogin(credential) {
-        const verified = await postJSON(passkeyBtn.dataset.verifyUrl, credentialToJSON(credential));
-        showStatus('تم التحقق، جارٍ فتح حسابك...', false);
-        window.location.href = verified.redirect || '/';
-      }
-
-      passkeyBtn.addEventListener('click', async function(){
-        if (busy) return;
-        /* An identifier narrows the ceremony to that account's keys, which lets
-           the server say "no passkey for this number" instead of leaving the
-           browser to fail silently. Empty means: offer whatever this device has. */
-        const identifierValue = identifier ? identifier.value.trim() : '';
-        const scoped = !!identifierValue;
-
-        if (autofillController) {
-          autofillController.abort();
-          autofillController = null;
-        }
-
-        try {
-          setBusy(true, 'في انتظار تأكيد الجهاز...');
-          showStatus('أكمل التحقق ببصمتك أو Face ID أو قفل الشاشة...', false);
-          const options = await postJSON(passkeyBtn.dataset.optionsUrl, {
-            identifier: identifierValue,
-          });
-          const credential = await navigator.credentials.get({
-            publicKey: prepareRequestOptions(options.publicKey),
-          });
-          if (!credential) throw new DOMException('Credential request returned no result', 'NotAllowedError');
-          await completeLogin(credential);
-        } catch (error) {
-          showStatus(passkeyErrorMessage(error, scoped), true);
-          setBusy(false);
-          startAutofill();
-        }
-      });
-
-      /* Conditional mediation: ask the browser to offer a saved passkey from
-         inside the identifier field. It resolves only if the user picks one, so
-         it costs nothing when they type a password instead. */
-      async function startAutofill() {
-        if (typeof PublicKeyCredential.isConditionalMediationAvailable !== 'function') return;
-        try {
-          if (!(await PublicKeyCredential.isConditionalMediationAvailable())) return;
-        } catch (error) {
-          return;
-        }
-
-        const controller = new AbortController();
-        autofillController = controller;
-        try {
-          const options = await postJSON(passkeyBtn.dataset.optionsUrl, {});
-          const credential = await navigator.credentials.get({
-            publicKey: prepareRequestOptions(options.publicKey),
-            mediation: 'conditional',
-            signal: controller.signal,
-          });
-          if (!credential) return;
-          setBusy(true, 'جارٍ التحقق...');
-          await completeLogin(credential);
-        } catch (error) {
-          // Aborting is the normal exit when the user chooses another method.
-          if (controller.signal.aborted) return;
-          if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) return;
-        } finally {
-          if (autofillController === controller) autofillController = null;
-        }
-      }
-
-      startAutofill();
-    })();
-  </script>
 
   {% include "reports/partials/pwa_install.html" %}
 </body>
