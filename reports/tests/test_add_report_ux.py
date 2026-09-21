@@ -69,6 +69,40 @@ class EvidenceFormsetShapeTests(SimpleTestCase):
         self.assertIn("env(safe-area-inset-left, 0px)", styles)
 
 
+class ReportAuthoringAssetTests(SimpleTestCase):
+    def test_create_template_uses_v1_structure_and_external_assets(self):
+        template = _template("reports/templates/reports/add_report.html")
+
+        self.assertIn(
+            'class="twq-page report-authoring-page add-report-page report-authoring--create"',
+            template,
+        )
+        self.assertIn("twq-page-header", template)
+        self.assertIn("twq-section", template)
+        self.assertIn("css/report-authoring.css", template)
+        self.assertIn("js/report-authoring.js", template)
+        self.assertNotRegex(template, r"<style\b")
+        self.assertNotRegex(template, r"<script(?![^>]*\bsrc=)[^>]*>")
+        self.assertNotRegex(template, r"\sstyle\s*=")
+
+    def test_authoring_css_uses_semantic_tokens_without_direct_colors(self):
+        styles = _template("static/css/report-authoring.css")
+
+        self.assertIn("var(--twq-primary)", styles)
+        self.assertIn("var(--twq-surface)", styles)
+        self.assertIn("inset-inline-start", styles)
+        self.assertNotRegex(styles, r"#[0-9a-fA-F]{3,8}\b")
+        self.assertNotRegex(styles, r"\b(?:rgb|rgba|hsl|hsla)\s*\(")
+
+    def test_authoring_js_uses_states_instead_of_direct_style_writes(self):
+        script = _template("static/js/report-authoring.js")
+
+        self.assertIn('form.addEventListener("submit", submitReport)', script)
+        self.assertIn("overlay.hidden = !submitting", script)
+        self.assertNotRegex(script, r"\.style\.[A-Za-z]+\s*=")
+        self.assertNotIn("innerHTML =", script)
+
+
 class AddReportPageTests(TestCase):
     def setUp(self):
         self.school = School.objects.create(name="مدرسة الواجهة", code="ux-add")

@@ -402,9 +402,17 @@ class TeacherExperienceTests(TestCase):
                 f"{template_name} must bypass Rocket Loader to preserve its CSP nonce",
             )
 
-            add_report_source = (templates_dir / "add_report.html").read_text(encoding="utf-8")
-            self.assertIn('d.addEventListener("input", syncDateFields);', add_report_source)
-            self.assertIn('d.addEventListener("change", syncDateFields);', add_report_source)
+            report_authoring_source = (
+                Path(settings.BASE_DIR) / "static/js/report-authoring.js"
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                'dateInput.addEventListener("input", syncDateFields);',
+                report_authoring_source,
+            )
+            self.assertIn(
+                'dateInput.addEventListener("change", syncDateFields);',
+                report_authoring_source,
+            )
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"])

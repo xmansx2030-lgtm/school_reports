@@ -1,995 +1,136 @@
-{# templates/reports/report_edit.html (أو اسم ملفك الحالي) #}
 {% extends "base.html" %}
-{% load static %}
-{% block title %}✏️ تعديل التقرير #{{ report.id }}{% endblock %}
+{% load static hijri_tags %}
+
+{% block title %}تعديل التقرير #{{ report.id }}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{% static 'css/report-details-limit.css' %}?v=20260825.1">
-{% if report_ai_enabled %}
-<link rel="stylesheet" href="{% static 'css/report-ai-improver.css' %}?v=20260813.2">
-{% endif %}
-{% if report_review_enabled %}
-<link rel="stylesheet" href="{% static 'css/report-review.css' %}?v=20260903.1">
-{% endif %}
+{% if report_ai_enabled %}<link rel="stylesheet" href="{% static 'css/report-ai-improver.css' %}?v=20260813.2">{% endif %}
+{% if report_review_enabled %}<link rel="stylesheet" href="{% static 'css/report-review.css' %}?v=20260903.1">{% endif %}
 <link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260903.6">
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     Report Edit (page-only polish)
-     - Scoped داخل .er-scope
-     - بدون إعادة تعريف .btn / .card العامة
-     - متوافق مع data-theme في base.html
-     ========================================================= */
-  .er-scope{
-    --er-radius: 18px;
-    --er-rsm: 12px;
-    --er-shadow: 0 16px 46px rgba(2,6,23,.10);
-    --er-shadow2: 0 18px 54px rgba(2,6,23,.16);
-    --er-t: var(--t-fast);
-
-    /* Fall back لو لم تتوفر متغيرات base */
-    --er-ink: var(--ink, #0f172a);
-    --er-ink2: var(--ink-2, #1f2937);
-    --er-muted: var(--muted, #64748b);
-    --er-line: var(--line, #e5e7eb);
-    --er-card: var(--card, #ffffff);
-    --er-line2: var(--line-2, #f1f5f9);
-    --er-brand: var(--brand, #006c35);
-    --er-danger: #ef4444;
-    --er-danger2: #dc2626;
-    --er-good: #16845b;
-  }
-
-  .er-scope .wrap{
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 20px 14px;
-  }
-
-  .er-scope .er-card{
-    border-radius: var(--er-radius);
-    box-shadow: var(--er-shadow);
-    overflow: hidden;
-  }
-
-  .er-scope .er-hd{
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--er-line);
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:12px;
-    flex-wrap:wrap;
-    background: linear-gradient(180deg, var(--er-line2), var(--er-card));
-  }
-
-  .er-scope .er-title{
-    margin: 0;
-    font-weight: 950;
-    color: var(--er-ink2);
-    font-size: 1.08rem;
-    letter-spacing: -.2px;
-  }
-
-  .er-scope .er-sub{
-    margin: 6px 0 0;
-    color: var(--er-muted);
-    font-weight: 850;
-    font-size: .95rem;
-    line-height: 1.6;
-  }
-
-  .er-scope .er-body{ padding: 20px; }
-
-  .er-scope .grid{ display:grid; gap: 18px; }
-  .er-scope .row{ display:flex; flex-direction:column; gap: 8px; }
-
-  .er-scope label{
-    font-weight: 950;
-    color: var(--er-ink2);
-  }
-
-  .er-scope .help{
-    font-size: .88rem;
-    color: var(--er-muted);
-    font-weight: 800;
-    margin-top: 2px;
-  }
-
-  /* Inputs styling (نضيف class control عبر JS) */
-  .er-scope .control{
-    width:100%;
-    padding: 12px 14px;
-    border: 1px solid var(--er-line);
-    border-radius: var(--er-rsm);
-    background: var(--er-card);
-    color: var(--er-ink2);
-    font-size: 1rem;
-    transition: border var(--er-t), box-shadow var(--er-t), background var(--er-t);
-  }
-  .er-scope textarea.control{ min-height: 120px; resize: vertical; }
-  .er-scope .control:focus{
-    outline:none;
-    border-color: rgba(0,108,53,.55);
-    box-shadow: 0 0 0 3px rgba(0,108,53,.18);
-  }
-
-  /* Messages */
-  .er-scope .msg{
-    border: 1px solid var(--er-line);
-    padding: 10px 12px;
-    border-radius: 12px;
-    font-weight: 900;
-    background: linear-gradient(180deg, var(--er-line2), var(--er-card));
-    color: var(--er-ink2);
-  }
-  .er-scope .msg.err{
-    border-color: rgba(239,68,68,.30);
-    background: rgba(239,68,68,.08);
-    color: var(--er-danger2);
-  }
-
-  /* Images */
-  .er-scope .images{
-    display:grid;
-    gap: 14px;
-  }
-  @media(min-width:720px){
-    .er-scope .images{ grid-template-columns: repeat(4, 1fr); }
-  }
-
-  .er-scope .img-card{
-    border: 1px dashed rgba(148,163,184,.55);
-    border-radius: 14px;
-    background: linear-gradient(180deg, var(--er-line2), var(--er-card));
-    padding: 12px;
-    display:flex;
-    flex-direction:column;
-    gap: 10px;
-    transition: transform var(--er-t), box-shadow var(--er-t), border-color var(--er-t);
-  }
-  .er-scope .img-card:hover{
-    transform: translateY(-2px);
-    box-shadow: var(--er-shadow2);
-    border-color: rgba(0,108,53,.35);
-  }
-
-  .er-scope .thumb{
-    width:100%;
-    height: 130px;
-    border-radius: 12px;
-    object-fit: cover;
-    display:block;
-    border: 1px solid var(--er-line);
-    background: var(--er-line2);
-    cursor: zoom-in;
-  }
-  .er-scope .thumb--empty{
-    height: 130px;
-    border-radius: 12px;
-    border: 1px solid var(--er-line);
-    background: var(--er-card);
-    display:grid;
-    place-items:center;
-    color: var(--er-muted);
-    font-weight: 950;
-    font-size: .9rem;
-  }
-
-  .er-scope .img-meta{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 8px;
-  }
-  .er-scope .img-meta small{
-    color: var(--er-muted);
-    font-weight: 900;
-  }
-  .er-scope .img-meta .links{
-    display:flex;
-    gap:10px;
-    align-items:center;
-  }
-  .er-scope .img-meta a{
-    font-size: .86rem;
-    color: var(--er-brand);
-    text-decoration:none;
-    font-weight: 950;
-  }
-  .er-scope .img-meta a:hover{ text-decoration: underline; }
-
-  .er-scope .img-actions{
-    display:flex;
-    gap: 8px;
-    align-items:center;
-    justify-content:space-between;
-    flex-wrap:wrap;
-  }
-
-  .er-scope .btn-file{
-    position: relative;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap: 8px;
-    padding: 9px 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(0,108,53,.25);
-    background: rgba(0,108,53,.08);
-    color: #073b2a;
-    font-weight: 950;
-    cursor: pointer;
-    min-height: 40px;
-  }
-  html[data-theme="dark"] .er-scope .btn-file{
-    background: rgba(0,108,53,.16);
-    color: #dbeafe;
-    border-color: rgba(0,108,53,.30);
-  }
-  .er-scope .btn-file input[type="file"]{
-    position:absolute;
-    inset:0;
-    opacity:0;
-    cursor:pointer;
-  }
-
-  .er-scope .clearbox{
-    display:flex;
-    align-items:center;
-    gap: 6px;
-  }
-  .er-scope .clearbox input{ width: 18px; height: 18px; }
-  .er-scope .clearbox span{ font-size: .9rem; color: var(--er-danger2); font-weight: 950; }
-
-  .er-scope .note{
-    font-size: .88rem;
-    color: var(--er-muted);
-    font-weight: 850;
-    background: linear-gradient(180deg, var(--er-card), var(--er-line2));
-    border: 1px solid var(--er-line);
-    border-radius: 12px;
-    padding: 10px 12px;
-  }
-
-  /* Actions (نستخدم أزرار base .btn) */
-  .er-scope .actions{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin-top: 8px;
-  }
-  @media(min-width:560px){
-    .er-scope .actions{ grid-template-columns: 1fr 1fr; }
-  }
-
-  /* Submit loading - Enhanced */
-  .er-scope .is-submitting{
-    opacity: .75;
-    pointer-events: none;
-    filter: saturate(.9);
-  }
-  
-  /* Upload Overlay - Enhanced Design */
-  .er-upload-overlay {
-    position: fixed; 
-    inset: 0; 
-    background: rgba(15, 23, 42, 0.85); 
-    backdrop-filter: blur(8px);
-    z-index: 9999; 
-    display: none; 
-    align-items: center; 
-    justify-content: center;
-    animation: fadeIn 0.3s ease;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  
-  .er-upload-modal {
-    background: var(--er-card); 
-    padding: 40px 32px;
-    border-radius: 24px;
-    width: 90%; 
-    max-width: 420px; 
-    text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  @keyframes slideUp {
-    from { 
-      opacity: 0; 
-      transform: translateY(20px) scale(0.95); 
-    }
-    to { 
-      opacity: 1; 
-      transform: translateY(0) scale(1); 
-    }
-  }
-  
-  .er-upload-modal-icon {
-    font-size: 3rem; 
-    color: var(--er-brand); 
-    margin-bottom: 16px;
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
-  }
-  
-  .er-upload-modal h3 {
-    margin: 0 0 8px;
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: var(--er-ink);
-  }
-  
-  .er-upload-modal p {
-    margin: 0 0 24px;
-    color: var(--er-muted);
-    font-size: 0.95rem;
-    font-weight: 600;
-  }
-  
-  .er-progress-container {
-    position: relative;
-    height: 8px; 
-    background: var(--er-line); 
-    border-radius: 12px; 
-    overflow: hidden;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
-  }
-  
-  .er-progress-fill {
-    height: 100%; 
-    width: 0; 
-    background: linear-gradient(90deg, var(--er-brand), #00542a);
-    border-radius: 12px;
-    transition: width 0.3s ease;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .er-progress-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-      90deg, 
-      transparent 0%, 
-      rgba(255,255,255,0.3) 50%, 
-      transparent 100%
-    );
-    animation: shimmer 2s infinite;
-  }
-  
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-  
-  .er-progress-labels {
-    display: flex; 
-    justify-content: space-between; 
-    font-size: 0.85rem; 
-    font-weight: 800; 
-    margin-top: 12px;
-  }
-  
-  .er-progress-label {
-    color: var(--er-muted);
-  }
-  
-  .er-progress-pct {
-    color: var(--er-brand);
-    font-size: 0.95rem;
-  }
-  
-  @media (max-width: 480px) {
-    .er-upload-modal {
-      padding: 32px 24px;
-      max-width: 340px;
-    }
-    .er-upload-modal-icon {
-      font-size: 2.5rem;
-    }
-    .er-upload-modal h3 {
-      font-size: 1.25rem;
-    }
-  }
-
-  /* Preview modal */
-  .er-scope .pm-overlay{
-    position: fixed;
-    inset: 0;
-    background: rgba(2,6,23,.65);
-    z-index: 12600;
-    display: none;
-    place-items: center;
-    padding: 14px;
-  }
-  .er-scope .pm-overlay.is-open{ display: grid; }
-  .er-scope .pm{
-    width: min(980px, 96vw);
-    max-height: 92vh;
-    background: var(--er-card);
-    border: 1px solid var(--er-line);
-    border-radius: 18px;
-    box-shadow: 0 40px 90px rgba(2,6,23,.30);
-    overflow: hidden;
-    display:flex;
-    flex-direction:column;
-  }
-  .er-scope .pm-hd{
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--er-line);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 10px;
-    background: linear-gradient(180deg, var(--er-line2), var(--er-card));
-  }
-  .er-scope .pm-hd .ttl{
-    margin: 0;
-    font-weight: 950;
-    color: var(--er-ink2);
-    display:flex;
-    gap: 8px;
-    align-items:center;
-  }
-  .er-scope .pm-close{
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
-    border: 1px solid var(--er-line);
-    background: var(--er-card);
-    cursor: pointer;
-    font-weight: 950;
-    color: var(--er-ink2);
-  }
-  .er-scope .pm-bd{
-    padding: 12px;
-    overflow:auto;
-  }
-  .er-scope .pm-img{
-    width: 100%;
-    height: auto;
-    display:block;
-    border-radius: 14px;
-    border: 1px solid var(--er-line);
-    background: var(--er-line2);
-  }
-  .er-scope .er-section-builder{padding:18px;border:1px solid var(--er-line);border-radius:16px;background:linear-gradient(135deg,rgba(0,108,53,.06),rgba(185,151,91,.08));}
-  .er-scope .er-section-builder h3{margin:0;color:var(--er-green);font-weight:950;}
-  .er-scope .er-section-builder p{margin:5px 0 14px;color:var(--er-muted);font-weight:750;}
-  .er-scope .er-section-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
-  .er-scope .er-section-option{position:relative;display:flex;align-items:center;gap:8px;padding:11px;border:1px solid var(--er-line);border-radius:13px;background:var(--er-card);cursor:pointer;font-weight:900;transition:.18s ease;}
-  .er-scope .er-section-option input{position:absolute;opacity:0;pointer-events:none;}
-  .er-scope .er-section-option i{color:var(--er-green);}
-  .er-scope .er-section-option.is-selected{border-color:var(--er-green);background:rgba(0,108,53,.09);box-shadow:0 5px 16px -12px var(--er-green);}
-  .er-scope [data-section-field]{padding:16px;border:1px solid var(--er-line);border-right:4px solid var(--er-green);border-radius:14px;background:var(--er-line2);}
-  .er-scope [data-section-field][hidden]{display:none !important;}
-  @media(max-width:720px){.er-scope .er-section-options{grid-template-columns:repeat(2,minmax(0,1fr));}}
-  @media(max-width:480px){.er-scope .er-section-options{grid-template-columns:1fr;}}
-</style>
+<link rel="stylesheet" href="{% static 'css/report-rail.css' %}?v=20260903.1">
+<link rel="stylesheet" href="{% static 'css/report-mobile-actions.css' %}?v=20260912.1">
+<link rel="stylesheet" href="{% static 'css/report-authoring.css' %}?v=20260921.2">
 {% endblock %}
 
 {% block content %}
-<div class="er-scope">
-  <div class="wrap" dir="rtl">
-    <div class="card er-card">
-      <div class="er-hd">
-        <div>
-          <h2 class="er-title">✏️ تعديل التقرير #{{ report.id }}</h2>
-          <p class="er-sub">حدّث بيانات التقرير، واستبدل الصور أو احذفها إن لزم.</p>
+<div class="twq-page report-authoring-page report-authoring--edit">
+  <div class="report-authoring-shell">
+    <header class="twq-page-header report-authoring-header">
+      <div class="twq-page-header__heading">
+        <p class="twq-page-header__eyebrow report-authoring-eyebrow"><i class="fa-solid fa-pen" aria-hidden="true"></i> مساحة تحرير تقرير قائم</p>
+        <h1 class="twq-page-header__title">تعديل التقرير</h1>
+        <p class="twq-page-header__lead">راجع بيانات التقرير وشواهده الحالية، ثم احفظ التعديلات دون تغيير حالة الاعتماد تلقائيًا.</p>
+        <dl class="twq-page-header__context report-authoring-context" aria-label="سياق التقرير الحالي">
+          <div><dt><i class="fa-solid fa-school" aria-hidden="true"></i> المدرسة</dt><dd>{{ SCHOOL_NAME|default:report.school.name|default:"المدرسة النشطة" }}</dd></div>
+          <div><dt><i class="fa-solid fa-user" aria-hidden="true"></i> مُعِدّ التقرير</dt><dd>{{ report.teacher_display_name|default:"—" }}</dd></div>
+          <div><dt><i class="fa-solid fa-layer-group" aria-hidden="true"></i> النوع</dt><dd>{{ report.category.name|default:"غير محدد" }}</dd></div>
+          <div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> التاريخ</dt><dd><bdi>{{ report.report_date|hijri }} هـ</bdi></dd></div>
+        </dl>
+      </div>
+      <div class="twq-page-header__aside report-edit-header-actions">
+        <span class="twq-status" data-status="{{ report.approval_state }}">{{ report.get_approval_state_display }}</span>
+        <a href="{% if next_url %}{{ next_url }}{% elif report.teacher_id == request.user.id %}{% url 'reports:my_reports' %}{% else %}{% url 'reports:admin_reports' %}{% endif %}" class="twq-button twq-button--secondary report-authoring-back"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>العودة</span></a>
+      </div>
+    </header>
+
+    {% if report.approval_state == "returned" or report.approval_state == "needs_info" %}
+      <section class="twq-alert twq-alert--warning report-edit-state-note" role="status" aria-labelledby="report-edit-state-title">
+        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+        <div><h2 id="report-edit-state-title">التقرير متاح للاستكمال</h2><p>{% if report.approval_state == "returned" %}أُعيد التقرير للملاحظة. عدّل المطلوب ثم احفظه؛ الحفظ وحده لا يعيد إرساله للاعتماد.{% else %}ينتظر التقرير استكمال البيانات. أضف المطلوب ثم احفظه؛ الحفظ وحده لا يعيد إرساله للاعتماد.{% endif %}</p>{% if report.review_note %}<blockquote>{{ report.review_note }}</blockquote>{% endif %}</div>
+      </section>
+    {% endif %}
+
+    <form id="report-form" class="report-authoring-form" method="post" enctype="multipart/form-data" novalidate
+          data-report-authoring-mode="edit"
+          data-has-report-types="{{ has_report_types|yesno:'true,false' }}"
+          data-pwa-draft-key="report-edit-{{ report.pk }}-u{{ request.user.id|default:0 }}"
+          data-success-url="{% if next_url %}{{ next_url }}{% elif report.teacher_id == request.user.id %}{% url 'reports:my_reports' %}{% else %}{% url 'reports:admin_reports' %}{% endif %}">
+      {% csrf_token %}
+      {{ form.section_selection_enabled }}
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+      {% if form.errors or evidence_formset.errors or evidence_formset.non_form_errors %}
+        <section class="twq-alert twq-alert--danger report-server-errors" role="alert" tabindex="-1" data-server-error-summary>
+          <div><h2>تعذّر حفظ التعديلات</h2><p>راجع الحقول الموضحة أدناه ثم أعد المحاولة.</p></div>
+          <ul>
+            {% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}
+            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for error in evidence_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for evidence_form in evidence_formset.forms %}{% for field in evidence_form.visible_fields %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">الشواهد — {{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      <section id="validationAlert" class="twq-alert twq-alert--danger report-client-errors" role="alert" aria-live="assertive" hidden tabindex="-1">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <div><h2>أكمل البيانات المطلوبة</h2><p id="validationAlertText">راجع الحقول المشار إليها قبل حفظ التعديلات.</p><ul id="validationAlertList"></ul></div>
+        <button type="button" id="validationAlertClose" class="report-client-errors__close" aria-label="إغلاق ملخص الأخطاء"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </section>
+
+      <div class="report-authoring-layout">
+        <div class="report-authoring-main">
+          <section class="twq-section report-authoring-section" aria-labelledby="report-context-title">
+            <header class="twq-section__header"><div><p class="report-section-kicker">الخطوة 1</p><h2 id="report-context-title">سياق التقرير</h2><p>حدّث النوع أو العنوان أو التاريخ ضمن الخيارات المتاحة للمدرسة الحالية.</p></div></header>
+            <p class="report-required-note"><span aria-hidden="true">*</span> الحقول المعلَّمة بنجمة مطلوبة.</p>
+            <div class="report-fields-grid report-fields-grid--two">
+              <div class="ar-field" data-group="category"><label for="{{ form.category.id_for_label }}">نوع التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>{{ form.category }}<p class="report-field-help" id="category-help">يمكن اختيار نوع نشط تابع للمدرسة، مع إبقاء النوع الحالي ظاهرًا إن عُطّل بعد إنشاء التقرير.</p>{% for error in form.category.errors %}<p class="ar-error-msg" id="category-error">{{ error }}</p>{% endfor %}</div>
+              <div class="ar-field" data-group="title"><label for="{{ form.title.id_for_label }}">عنوان التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>{{ form.title }}<p class="report-field-help">استخدم عنوانًا يصف العمل أو البرنامج باختصار.</p>{% for error in form.title.errors %}<p class="ar-error-msg" id="title-error">{{ error }}</p>{% endfor %}</div>
+              <div class="ar-field" data-group="report_date"><label for="{{ form.report_date.id_for_label }}">تاريخ التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>{{ form.report_date }}<div class="report-date-caption"><span id="reportDayEcho" class="report-date-day"></span><span id="reportDateHijri" aria-live="polite"></span></div><div class="ar-visually-hidden" aria-hidden="true">{{ form.day_name }}</div>{% for error in form.report_date.errors %}<p class="ar-error-msg" id="report-date-error">{{ error }}</p>{% endfor %}</div>
+              <div class="ar-field"><span class="report-field-label">مُعِدّ التقرير</span><p class="ar-static-value"><i class="fa-solid fa-user-check" aria-hidden="true"></i>{{ report.teacher_display_name|default:"—" }}</p><p class="report-field-help">هوية صاحب التقرير محفوظة ولا يمكن تغييرها من هذه الصفحة.</p></div>
+            </div>
+          </section>
+
+          <section class="twq-section report-authoring-section" aria-labelledby="sectionBuilderTitle">
+            <header class="twq-section__header report-section-builder-head"><div><p class="report-section-kicker">الخطوة 2</p><h2 id="sectionBuilderTitle">محتوى التقرير</h2><p>راجع البنود الظاهرة حاليًا، ثم حدّث محتواها أو اختيارها. يجب إبقاء بند واحد على الأقل.</p></div><span class="twq-status twq-status--warning">بند واحد على الأقل</span></header>
+            <fieldset class="report-section-picker"><legend class="ar-visually-hidden">اختر بنود محتوى التقرير</legend><div class="report-section-options" id="reportSectionOptions">
+              <label class="report-section-option" data-section-option="goal">{{ form.show_goal }}<span class="report-option-icon"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><span class="report-option-copy"><strong>الهدف</strong><small>الغاية المراد تحقيقها</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="details">{{ form.show_details }}<span class="report-option-icon"><i class="fa-solid fa-align-right" aria-hidden="true"></i></span><span class="report-option-copy"><strong>تفاصيل التقرير</strong><small>ملخص ما تم تنفيذه</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="implementation">{{ form.show_implementation }}<span class="report-option-icon"><i class="fa-solid fa-gears" aria-hidden="true"></i></span><span class="report-option-copy"><strong>آلية التنفيذ</strong><small>الخطوات والإجراءات</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="results">{{ form.show_results }}<span class="report-option-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span><span class="report-option-copy"><strong>النتائج</strong><small>المخرجات المتحققة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="recommendations">{{ form.show_recommendations }}<span class="report-option-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><span class="report-option-copy"><strong>التوصيات</strong><small>التحسينات والخطوات القادمة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="beneficiaries">{{ form.show_beneficiaries }}<span class="report-option-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span><span class="report-option-copy"><strong>عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</strong><small>حجم الفئة المستفيدة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+            </div></fieldset>
+            <div class="report-selected-fields">
+              <div class="report-section-field" data-section-field="goal"><div class="ar-field" data-group="goal"><label for="{{ form.goal.id_for_label }}"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> الهدف</label>{{ form.goal }}{% for error in form.goal.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field report-editor-field" data-section-field="details"><div class="ar-field" data-group="idea"><label for="{{ form.idea.id_for_label }}"><i class="fa-solid fa-align-right" aria-hidden="true"></i> تفاصيل التقرير</label>{{ form.idea }}{% include "reports/partials/report_details_limit.html" with target_id=form.idea.id_for_label %}{% for error in form.idea.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}{% if report_ai_enabled %}{% include "reports/partials/report_ai_improver.html" with target_id=form.idea.id_for_label %}{% endif %}</div></div>
+              <div class="report-section-field" data-section-field="implementation"><div class="ar-field" data-group="implementation_method"><label for="{{ form.implementation_method.id_for_label }}"><i class="fa-solid fa-gears" aria-hidden="true"></i> آلية التنفيذ</label>{{ form.implementation_method }}{% for error in form.implementation_method.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="results"><div class="ar-field" data-group="results"><label for="{{ form.results.id_for_label }}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> النتائج</label>{{ form.results }}{% for error in form.results.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="recommendations"><div class="ar-field" data-group="recommendations"><label for="{{ form.recommendations.id_for_label }}"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> التوصيات</label>{{ form.recommendations }}{% for error in form.recommendations.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="beneficiaries"><div class="ar-field" data-group="beneficiaries_count"><label for="{{ form.beneficiaries_count.id_for_label }}"><i class="fa-solid fa-users" aria-hidden="true"></i> عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</label>{{ form.beneficiaries_count }}{% for error in form.beneficiaries_count.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+            </div>
+          </section>
+
+          <section class="twq-section report-authoring-section report-authoring-evidence" aria-labelledby="report-evidence-title">
+            <header class="twq-section__header"><div><p class="report-section-kicker">الخطوة 3</p><h2 id="report-evidence-title">الشواهد والمرفقات</h2><p>احتفظ بالشواهد الحالية أو أعد ترتيبها أو استبدلها أو علّمها للإزالة، وأضف شاهدًا جديدًا عند الحاجة.</p></div><span class="twq-status twq-status--draft">حتى 8 شواهد</span></header>
+            {% include "reports/partials/report_evidence_formset.html" %}
+          </section>
         </div>
 
-        {# اختياري: رابط سريع للطباعة إن كان مناسبًا عندك #}
-        {# <a class="btn btn-ghost" href="{% url 'reports:report_print' report.id %}"><i class="fa-solid fa-print"></i> طباعة</a> #}
+        <aside class="report-authoring-side" aria-label="مراجعة التقرير وإجراءات الحفظ"><div class="twq-section report-authoring-rail">
+          {% include "reports/partials/report_summary_rail.html" %}
+          {% if report_review_enabled %}{% include "reports/partials/report_review_panel.html" %}{% endif %}
+          <div class="report-save-context"><h2>عند الحفظ</h2><p>ستُحدّث البيانات والشواهد مع إبقاء حالة الاعتماد الحالية. لا يرسل الحفظ التقرير للمراجعة ولا يعيد فتح مسار الاعتماد تلقائيًا.</p></div>
+          <button type="submit" id="submitBtn" class="ar-submit-btn"{% if not has_report_types %} disabled aria-disabled="true"{% endif %}><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i><span>حفظ التعديلات</span></button>
+          <a class="twq-button twq-button--secondary report-edit-cancel" href="{% if next_url %}{{ next_url }}{% elif report.teacher_id == request.user.id %}{% url 'reports:my_reports' %}{% else %}{% url 'reports:admin_reports' %}{% endif %}">إلغاء والعودة</a>
+        </div></aside>
       </div>
-
-      <div class="er-body">
-        {% if form.non_field_errors %}
-          <div class="msg err u-mb-3">
-            {% for e in form.non_field_errors %}• {{ e }}<br>{% endfor %}
-          </div>
-        {% endif %}
-
-        <form method="post" enctype="multipart/form-data" autocomplete="off" novalidate id="editReportForm"
-              data-pwa-draft-key="report-edit-{{ report.pk }}-u{{ request.user.id|default:0 }}">
-          {% csrf_token %}
-          {{ form.section_selection_enabled }}
-          {{ form.client_submission_id }}
-
-          <div class="grid">
-            <div class="row">
-              <label for="{{ form.category.id_for_label }}">نوع التقرير</label>
-              {{ form.category }}
-              {% if form.category.errors %}
-                <div class="msg err">{% for e in form.category.errors %}• {{ e }}<br>{% endfor %}</div>
-              {% endif %}
-            </div>
-
-            {% if form.fields.teacher_name %}
-              <div class="row">
-                <label for="id_teacher_name">اسم {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</label>
-                <input
-                  class="control"
-                  type="text"
-                  id="id_teacher_name"
-                  name="teacher_name"
-                  maxlength="120"
-                  value="{{ form.data.teacher_name|default:report.teacher_name|default:request.user.name }}"
-                >
-                <div class="help">يظهر هذا الاسم داخل الطباعة.</div>
-              </div>
-            {% endif %}
-
-            <div class="row">
-              <label for="{{ form.title.id_for_label }}">العنوان / البرنامج</label>
-              {{ form.title }}
-              {% if form.title.errors %}
-                <div class="msg err">{% for e in form.title.errors %}• {{ e }}<br>{% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div class="row">
-              <label for="{{ form.report_date.id_for_label }}">📅 التاريخ</label>
-              {{ form.report_date }}
-              <div id="reportDateHijri" aria-live="polite" class="xs-edit-report-1"></div>
-              {% if form.report_date.errors %}
-                <div class="msg err">{% for e in form.report_date.errors %}• {{ e }}<br>{% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div class="row">
-              <label for="{{ form.day_name.id_for_label }}">📌 اليوم</label>
-              {{ form.day_name }}
-              <div class="help">يُحدَّد تلقائيًا عند تغيير التاريخ (ويمكن تعديله يدويًا).</div>
-              {% if form.day_name.errors %}
-                <div class="msg err">{% for e in form.day_name.errors %}• {{ e }}<br>{% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div class="row er-section-builder">
-              <h3><i class="fa-solid fa-list-check"></i> البنود الظاهرة في التقرير</h3>
-              <p>فعّل البنود التي تريد ظهورها في النسخة النهائية، ثم حدّث محتواها أدناه.</p>
-              <div class="er-section-options">
-                <label class="er-section-option" data-section-option="goal">{{ form.show_goal }}<i class="fa-solid fa-bullseye"></i><span>الهدف</span></label>
-                <label class="er-section-option" data-section-option="details">{{ form.show_details }}<i class="fa-solid fa-align-right"></i><span>تفاصيل التقرير</span></label>
-                <label class="er-section-option" data-section-option="implementation">{{ form.show_implementation }}<i class="fa-solid fa-gears"></i><span>آلية التنفيذ</span></label>
-                <label class="er-section-option" data-section-option="results">{{ form.show_results }}<i class="fa-solid fa-chart-line"></i><span>النتائج</span></label>
-                <label class="er-section-option" data-section-option="recommendations">{{ form.show_recommendations }}<i class="fa-solid fa-lightbulb"></i><span>التوصيات</span></label>
-                <label class="er-section-option" data-section-option="beneficiaries">{{ form.show_beneficiaries }}<i class="fa-solid fa-users"></i><span>عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</span></label>
-              </div>
-            </div>
-
-            <div class="row" data-section-field="goal">
-              <label for="{{ form.goal.id_for_label }}">الهدف</label>
-              {{ form.goal }}
-              {% if form.goal.errors %}<div class="msg err">{% for e in form.goal.errors %}• {{ e }}<br>{% endfor %}</div>{% endif %}
-            </div>
-
-            <div class="row" data-section-field="details">
-              <label for="{{ form.idea.id_for_label }}">تفاصيل التقرير</label>
-              {{ form.idea }}
-              {% include "reports/partials/report_details_limit.html" with target_id=form.idea.id_for_label %}
-              {% if form.idea.errors %}
-                <div class="msg err">{% for e in form.idea.errors %}• {{ e }}<br>{% endfor %}</div>
-              {% endif %}
-              {% if report_ai_enabled %}
-                {% include "reports/partials/report_ai_improver.html" with target_id=form.idea.id_for_label %}
-              {% endif %}
-            </div>
-
-            <div class="row" data-section-field="implementation">
-              <label for="{{ form.implementation_method.id_for_label }}">آلية التنفيذ</label>
-              {{ form.implementation_method }}
-              {% if form.implementation_method.errors %}<div class="msg err">{% for e in form.implementation_method.errors %}• {{ e }}<br>{% endfor %}</div>{% endif %}
-            </div>
-
-            <div class="row" data-section-field="results">
-              <label for="{{ form.results.id_for_label }}">النتائج</label>
-              {{ form.results }}
-              {% if form.results.errors %}<div class="msg err">{% for e in form.results.errors %}• {{ e }}<br>{% endfor %}</div>{% endif %}
-            </div>
-
-            <div class="row" data-section-field="recommendations">
-              <label for="{{ form.recommendations.id_for_label }}">التوصيات</label>
-              {{ form.recommendations }}
-              {% if form.recommendations.errors %}<div class="msg err">{% for e in form.recommendations.errors %}• {{ e }}<br>{% endfor %}</div>{% endif %}
-            </div>
-
-            <div class="row" data-section-field="beneficiaries">
-              <label for="{{ form.beneficiaries_count.id_for_label }}">عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</label>
-              {{ form.beneficiaries_count }}
-              {% if form.beneficiaries_count.errors %}<div class="msg err">{% for e in form.beneficiaries_count.errors %}• {{ e }}<br>{% endfor %}</div>{% endif %}
-            </div>
-
-            <div class="row">
-              {% include "reports/partials/report_evidence_formset.html" %}
-            </div>
-
-            {% if report_review_enabled %}
-              <div class="row">
-                {% include "reports/partials/report_review_panel.html" %}
-              </div>
-            {% endif %}
-
-            {% if request.GET.next %}
-              <input type="hidden" name="next" value="{{ request.GET.next }}">
-            {% endif %}
-
-            <div class="actions">
-              <button type="submit" class="btn btn-primary" id="saveBtn">💾 حفظ التعديلات</button>
-              {% if request.GET.next %}
-                <a class="btn btn-ghost" href="{{ request.GET.next }}">↩ الرجوع</a>
-              {% else %}
-                <a class="btn btn-ghost" href="{% url 'reports:my_reports' %}">↩ الرجوع</a>
-              {% endif %}
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+      {% include "reports/partials/report_mobile_actions.html" with submit_label="حفظ التعديلات" %}
+    </form>
   </div>
 
-  {# Enhanced Upload Overlay #}
-  <div class="er-upload-overlay" id="uploadOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
-    <div class="er-upload-modal">
-      <div class="er-upload-modal-icon">
-        <i class="fa-solid fa-cloud-arrow-up"></i>
-      </div>
-      <h3 id="uploadTitle">جاري حفظ التعديلات</h3>
-      <p>يتم الآن رفع الصور والتغييرات، يرجى الانتظار...</p>
-      
-      <div class="er-progress-container">
-         <div id="upFill" class="er-progress-fill"></div>
-      </div>
-      
-      <div class="er-progress-labels">
-         <span id="upLabel" class="er-progress-label">جاري التحضير</span>
-         <span id="upPct" class="er-progress-pct">0%</span>
-      </div>
-    </div>
-  </div>
-
-  {# Preview modal #}
-  <div class="pm-overlay" id="pmOverlay" role="dialog" aria-modal="true" aria-label="معاينة الصورة">
-    <div class="pm" role="document">
-      <div class="pm-hd">
-        <h3 class="ttl"><i class="fa-regular fa-image"></i> معاينة</h3>
-        <button type="button" class="pm-close" id="pmClose" aria-label="إغلاق">✕</button>
-      </div>
-      <div class="pm-bd">
-        <img class="pm-img" id="pmImg" src="" alt="preview">
-      </div>
-    </div>
+  <div class="report-upload-overlay" id="uploadOverlay" role="dialog" aria-modal="true" aria-labelledby="uploadTitle" aria-describedby="uploadDescription" aria-hidden="true" hidden>
+    <div class="report-upload-dialog" tabindex="-1"><i class="fa-solid fa-cloud-arrow-up report-upload-icon" aria-hidden="true"></i><h2 id="uploadTitle">جاري حفظ التعديلات</h2><p id="uploadDescription">يتم رفع البيانات والشواهد بأمان. لا تغلق الصفحة الآن.</p><progress id="uploadProgress" max="100" value="0">0%</progress><div class="report-upload-labels"><span id="upLabel">جاري التحضير</span><span id="upPct" dir="ltr">0%</span></div></div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-{{ block.super }}
-{# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqHijri وقت التحليل. #}
 <script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script src="{% static 'js/report-details-limit.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
-{% if report_ai_enabled %}
-<script src="{% static 'js/report-ai-improver.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
-{% endif %}
-{% if report_review_enabled %}
-<script src="{% static 'js/report-review.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
-{% endif %}
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  // إضافة class control لمدخلات Django
-  (function(){
-    const form = document.getElementById('editReportForm');
-    if(!form) return;
-    const sel = 'input[type=text], input[type=number], input[type=date], input[type=email], input[type=tel], input[type=search], textarea, select';
-    form.querySelectorAll(sel).forEach(el=>{
-      if(!el.classList.contains('control')) el.classList.add('control');
-    });
-  })();
-
-  // مزامنة اختيار البنود مع حقولها
-  (function(){
-    const sections = [
-      {key:'goal', toggle:'id_show_goal'},
-      {key:'details', toggle:'id_show_details'},
-      {key:'implementation', toggle:'id_show_implementation'},
-      {key:'results', toggle:'id_show_results'},
-      {key:'recommendations', toggle:'id_show_recommendations'},
-      {key:'beneficiaries', toggle:'id_show_beneficiaries'}
-    ];
-    sections.forEach(section => {
-      const checkbox = document.getElementById(section.toggle);
-      const option = document.querySelector(`[data-section-option="${section.key}"]`);
-      const field = document.querySelector(`[data-section-field="${section.key}"]`);
-      if(!checkbox) return;
-      const sync = () => {
-        const selected = checkbox.checked;
-        if(option) option.classList.toggle('is-selected', selected);
-        if(field) field.hidden = !selected;
-      };
-      checkbox.addEventListener('change', sync);
-      sync();
-    });
-  })();
-
-  // منع الدبل-سبميت + Enhanced Upload Progress
-  (function(){
-    const form = document.getElementById('editReportForm');
-    const btn = document.getElementById('saveBtn');
-    const overlay = document.getElementById('uploadOverlay');
-    const fill = document.getElementById('upFill');
-    const pctEl = document.getElementById('upPct');
-    const labelEl = document.getElementById('upLabel');
-    
-    if(!form || !btn) return;
-
-    form.addEventListener('submit', function(e){
-      e.preventDefault();
-      
-      // Haptic feedback for mobile
-      if (navigator.vibrate) {
-        navigator.vibrate([50, 30, 50]);
-      }
-      
-      btn.disabled = true;
-      btn.textContent = '⏳ جارٍ الحفظ...';
-      form.classList.add('is-submitting');
-      
-      if(overlay) {
-        overlay.style.display = 'flex';
-        overlay.setAttribute('aria-hidden', 'false');
-      }
-      
-      // Prepare FormData
-      const fd = new FormData(form);
-      
-      if(labelEl) labelEl.textContent = "جاري التحضير";
-      
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', form.action || window.location.href, true);
-      xhr.timeout = 120000;
-      
-      const tok = form.querySelector('[name="csrfmiddlewaretoken"]');
-      if(tok) xhr.setRequestHeader('X-CSRFToken', tok.value);
-      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-      
-      xhr.upload.onprogress = function(ev){
-        if(ev.lengthComputable && fill && pctEl){
-          const p = Math.round((ev.loaded / ev.total) * 100);
-          fill.style.width = p + "%"; 
-          pctEl.textContent = p + "%";
-          
-          if(labelEl) {
-            if(p < 30) labelEl.textContent = "بدء الرفع";
-            else if(p < 70) labelEl.textContent = "جاري الرفع";
-            else if(p < 100) labelEl.textContent = "اقتراب الإكتمال";
-            else labelEl.textContent = "جاري الحفظ";
-          }
-        }
-      };
-      
-      xhr.onload = function(){
-        if(xhr.status >= 200 && xhr.status < 400){
-          form.dispatchEvent(new CustomEvent('tawtheeq:submit-success', {bubbles:true, detail:{form:form}}));
-          window.dispatchEvent(new CustomEvent('tawtheeq:task-complete', {detail:{kind:'report'}}));
-          if(labelEl) labelEl.textContent = "تم بنجاح!";
-          if(pctEl) pctEl.textContent = "100%";
-          if(fill) fill.style.width = "100%";
-          
-          // Success vibration
-          if (navigator.vibrate) {
-            navigator.vibrate([100, 50, 100]);
-          }
-          
-          setTimeout(function(){
-            // Check if response has redirect
-            if(xhr.responseURL && xhr.responseURL !== window.location.href){
-              window.location.href = xhr.responseURL;
-            } else {
-              window.location.reload();
-            }
-          }, 300);
-        } else {
-          const ct = xhr.getResponseHeader('Content-Type') || "";
-          if(ct.includes('text/html')){
-            document.open(); 
-            document.write(xhr.responseText); 
-            document.close();
-          } else {
-            window.rcAlert("حدث خطأ في الحفظ", {type:'danger'});
-            if(overlay) {
-              overlay.style.display = "none"; 
-              overlay.setAttribute("aria-hidden", "true");
-            }
-            btn.disabled = false;
-            btn.textContent = '💾 حفظ التعديلات';
-            form.classList.remove('is-submitting');
-          }
-        }
-      };
-      
-      xhr.onerror = function(){ 
-        window.rcAlert("خطأ في الاتصال بالشبكة", {type:'danger'});
-        if(overlay) {
-          overlay.style.display = "none"; 
-          overlay.setAttribute("aria-hidden", "true");
-        }
-        btn.disabled = false;
-        btn.textContent = '💾 حفظ التعديلات';
-        form.classList.remove('is-submitting');
-      };
-
-      xhr.ontimeout = function(){
-        window.rcAlert("طال وقت الرفع. بقيت المسودة والصور محفوظة على هذا الجهاز ويمكنك إعادة المحاولة.", {type:'warning'});
-        if(overlay) {
-          overlay.style.display = "none";
-          overlay.setAttribute("aria-hidden", "true");
-        }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ التعديلات';
-        form.classList.remove('is-submitting');
-      };
-      
-      xhr.send(fd);
-    }, { once: false }); // Changed from { once: true } to allow retry on error
-  })();
-
-  // تعيين اليوم تلقائيًا
-  (function(){
-    const dateInput = document.getElementById("id_report_date");
-    const dayInput  = document.getElementById("id_day_name");
-    const hijriEcho = document.getElementById("reportDateHijri");
-    if(!dateInput || !dayInput) return;
-
-    function setDay(v){
-      if(!v){ dayInput.value=""; if(hijriEcho) hijriEcho.textContent=""; return; }
-      const d = new Date(v);
-      const days = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-      if(!isNaN(d.getTime())){
-        dayInput.value = days[d.getDay()];
-        // التقويم الهجري: التنسيق في js/hijri-date.js — مصدر واحد لكل الشاشات.
-        if(hijriEcho && window.TawtheeqHijri) hijriEcho.textContent = window.TawtheeqHijri.echo(d);
-      }
-    }
-
-    setDay(dateInput.value);
-    dateInput.addEventListener("change", e => setDay(e.target.value));
-  })();
-
-  // معاينة فورية لكل خانة + إلغاء الإزالة عند اختيار ملف + إظهار placeholder عند تفعيل إزالة
-  (function(){
-    const slots = [1,2,3,4];
-
-    function makeEmpty(slot){
-      const old = document.getElementById(`thumb-${slot}`);
-      if(!old) return;
-
-      const box = document.createElement('div');
-      box.className = 'thumb--empty';
-      box.id = `thumb-${slot}`;
-      box.textContent = 'لا توجد صورة';
-      old.replaceWith(box);
-    }
-
-    function setThumb(slot, dataUrl){
-      const old = document.getElementById(`thumb-${slot}`);
-      if(!old) return;
-
-      if(old.tagName && old.tagName.toLowerCase() === 'img'){
-        old.src = dataUrl;
-        old.setAttribute('data-full', dataUrl);
-        return;
-      }
-
-      const img = document.createElement('img');
-      img.className = 'thumb';
-      img.id = `thumb-${slot}`;
-      img.src = dataUrl;
-      img.alt = `image${slot}`;
-      img.setAttribute('data-full', dataUrl);
-      old.replaceWith(img);
-    }
-
-    slots.forEach(n=>{
-      const input = document.getElementById(`id_image${n}`);
-      const clear = document.getElementById(`id_image${n}_clear`);
-      if(input){
-        input.addEventListener('change', function(e){
-          const file = e.target.files && e.target.files[0];
-          if(!file) return;
-
-          if(clear) clear.checked = false;
-
-          const reader = new FileReader();
-          reader.onload = ev => setThumb(n, ev.target.result);
-          reader.readAsDataURL(file);
-        });
-      }
-
-      if(clear){
-        clear.addEventListener('change', function(){
-          if(clear.checked){
-            // لو المستخدم فعّل إزالة، نعرض placeholder (بدون لمس الرابط)
-            makeEmpty(n);
-            // محاولة تنظيف اختيار الملف (إن وجد)
-            try{
-              if(input) input.value = '';
-            }catch(e){
-              // ignore
-            }
-          }
-        });
-      }
-    });
-  })();
-
-  // Modal معاينة
-  (function(){
-    const overlay = document.getElementById('pmOverlay');
-    const closeBtn = document.getElementById('pmClose');
-    const img = document.getElementById('pmImg');
-    if(!overlay || !closeBtn || !img) return;
-
-    function open(src){
-      if(!src) return;
-      img.src = src;
-      overlay.classList.add('is-open');
-      try{
-        if(window.__lockScroll) window.__lockScroll(true);
-      }catch(e){
-        // ignore
-      }
-    }
-
-    function close(){
-      overlay.classList.remove('is-open');
-      img.src = '';
-      try{
-        if(window.__lockScroll) window.__lockScroll(false);
-      }catch(e){
-        // ignore
-      }
-    }
-
-    document.addEventListener('click', function(ev){
-      const a = ev.target.closest && ev.target.closest('.er-preview');
-      if(a){
-        ev.preventDefault();
-        open(a.getAttribute('data-src'));
-        return;
-      }
-
-      const t = ev.target;
-      if(t && t.classList && t.classList.contains('thumb')){
-        const src = t.getAttribute('data-full') || t.src;
-        open(src);
-        return;
-      }
-
-      if(ev.target === overlay){
-        close();
-      }
-    });
-
-    closeBtn.addEventListener('click', close);
-
-    document.addEventListener('keydown', function(ev){
-      if(ev.key === 'Escape' && overlay.classList.contains('is-open')){
-        close();
-      }
-    });
-  })();
-</script>
+{% if report_ai_enabled %}<script src="{% static 'js/report-ai-improver.js' %}?v=20260825.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
+{% if report_review_enabled %}<script src="{% static 'js/report-review.js' %}?v=20260903.4" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
+<script src="{% static 'js/report-authoring.js' %}?v=20260921.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 <script src="{% static 'js/report-evidence-editor.js' %}?v=20260903.4" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-summary-rail.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

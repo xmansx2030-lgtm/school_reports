@@ -260,6 +260,26 @@ def approval_detail(request, pk: int):
 
     report = _report_for_review(request, pk, active_school)
 
+    evidence_items = list(report.evidences.all())
+    if not evidence_items:
+        evidence_items = [
+            {
+                "image": image,
+                "description": f"شاهد مصور {index}",
+                "order": index,
+                "show_in_print": True,
+            }
+            for index, field_name in enumerate(("image1", "image2", "image3", "image4"), start=1)
+            if (image := getattr(report, field_name, None))
+        ]
+
+    category = report.category
+    approval_route = (
+        getattr(category, "approval_route", ApprovalRoute.DIRECT)
+        if category is not None
+        else ApprovalRoute.DIRECT
+    )
+
     return render(
         request,
         "reports/approval_detail.html",
@@ -267,6 +287,12 @@ def approval_detail(request, pk: int):
             "active": "approval_inbox",
             "active_school": active_school,
             "report": report,
+            "evidence_items": evidence_items,
+            "approval_route": approval_route,
+            "approval_route_label": dict(ApprovalRoute.choices).get(
+                approval_route, dict(ApprovalRoute.choices)[ApprovalRoute.DIRECT]
+            ),
+            "approval_departments": list(category.departments.all()) if category else [],
             "actions": available_actions(report, request.user, school=active_school),
             "timeline": list(transitions_for(report)),
             "is_owner": report.teacher_id == request.user.pk,

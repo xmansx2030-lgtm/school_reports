@@ -2679,6 +2679,9 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
 
     # لا نجبر تغيير المدرسة النشطة بالجَلسة، لكن نستخدم مدرسة التقرير لتصفية الأنواع عند الحاجة.
     form_school = active_school or getattr(r, "school", None)
+    # قيمة العرض والعودة تُشتق من الحارس المشترك نفسه الذي يحكم redirect بعد
+    # الحفظ. لا نمرر ``request.GET.next`` الخام إلى رابط في القالب.
+    next_url = _safe_next_url(request.POST.get("next") or request.GET.get("next"))
     response_status = 200
 
     if request.method == "POST":
@@ -2716,6 +2719,8 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
                         "form": form,
                         "report": r,
                         "evidence_formset": evidence_formset,
+                        "has_report_types": form.fields["category"].queryset.exists(),
+                        "next_url": next_url,
                         **_report_ai_template_context(request.user),
                     },
                     status=(
@@ -2752,6 +2757,8 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
             "form": form,
             "report": r,
             "evidence_formset": evidence_formset,
+            "has_report_types": form.fields["category"].queryset.exists(),
+            "next_url": next_url,
             **_report_ai_template_context(request.user),
         },
         status=response_status,

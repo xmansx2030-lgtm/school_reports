@@ -1,327 +1,182 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}{{ report.title }} | المراجعة والاعتماد{% endblock %}
 
 {% block head %}
-{% include "reports/_approval_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .det-grid { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); align-items: start; }
-  @media (max-width: 980px) { .det-grid { grid-template-columns: 1fr; } }
-
-  /* لوحة القرار تلاصق أعلى الشاشة: التقرير قد يطول عشرات الأسطر، وإجبار
-     المراجع على العودة للأعلى بعد قراءته يجعل القرار رحلة تمرير. */
-  .det-side { position: sticky; top: 1rem; }
-  @media (max-width: 980px) { .det-side { position: static; } }
-  .det-required { font-size: .77rem; font-weight: 800; color: var(--apr-danger); margin-top: .4rem; }
-
-  .det-meta { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .det-meta__item { font-size: .82rem; }
-  .det-meta__label { color: var(--apr-muted); font-weight: 700; font-size: .74rem; }
-  .det-meta__value { font-weight: 800; margin-top: .12rem; }
-
-  .det-section { margin-top: 1rem; }
-  .det-section__name {
-    font-size: .76rem; font-weight: 900; color: var(--apr-green);
-    padding-bottom: .3rem; border-bottom: 1px solid var(--apr-line); margin-bottom: .5rem;
-  }
-  .det-section__body { font-size: .87rem; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
-
-  .det-note {
-    margin-top: 1rem; padding: .8rem .95rem; border-radius: 12px;
-    background: var(--apr-soft); border-inline-start: 3px solid var(--apr-gold);
-    font-size: .85rem; line-height: 1.85; white-space: pre-wrap;
-  }
-  .det-note__label { font-size: .74rem; font-weight: 900; color: var(--apr-gold); display: block; margin-bottom: .2rem; }
-
-  /* ── لوحة الإجراءات ───────────────────────────────────────── */
-  .det-actions { display: grid; gap: .5rem; }
-  .det-actions__row { display: flex; gap: .45rem; flex-wrap: wrap; }
-  .det-note-field {
-    width: 100%; min-height: 92px; padding: .6rem .75rem; border-radius: 11px;
-    border: 1px solid var(--apr-line); background: var(--apr-surface);
-    color: var(--apr-ink); font-family: inherit; font-size: .86rem; line-height: 1.8;
-    resize: vertical;
-  }
-  .det-note-field:focus { outline: 2px solid var(--apr-green); outline-offset: 1px; }
-
-  /* ── الخط الزمني ──────────────────────────────────────────── */
-  .det-timeline { list-style: none; margin: .6rem 0 0; padding: 0; padding-inline-start: 1.85rem; position: relative; }
-  .det-timeline::before {
-    content: ""; position: absolute; inset-block: .7rem; inset-inline-start: .8rem;
-    width: 2px; background: var(--apr-line); border-radius: 2px;
-  }
-  .det-step { position: relative; padding-bottom: .95rem; }
-  .det-step__dot {
-    position: absolute; inset-inline-start: -1.85rem; inset-block-start: .1rem;
-    width: 24px; height: 24px; border-radius: 50%;
-    display: grid; place-items: center; font-size: .66rem;
-    background: var(--apr-soft); color: var(--apr-green);
-    border: 2px solid var(--apr-surface); box-shadow: 0 0 0 1px var(--apr-line);
-  }
-  .det-step[data-action="return"] .det-step__dot,
-  .det-step[data-action="request_info"] .det-step__dot { color: var(--apr-gold); }
-  .det-step[data-action="recommend"] .det-step__dot { color: var(--apr-violet); }
-  .det-step__head { font-size: .85rem; font-weight: 800; display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; }
-  .det-step__who { font-size: .77rem; color: var(--apr-muted); margin-top: .15rem; }
-  .det-step__note { font-size: .82rem; line-height: 1.8; margin-top: .35rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .det-proxy {
-    font-size: .68rem; font-weight: 800; padding: .08rem .45rem; border-radius: 999px;
-    color: var(--apr-violet); border: 1px solid currentColor;
-  }
-</style>
+  <link rel="stylesheet" href="{% static 'css/report-approval.css' %}?v=20260921.1">
 {% endblock %}
 
 {% block content %}
-<div class="apr-page">
-
-  <header class="apr-hero">
-    <a class="apr-hero__eyebrow" href="{% url 'reports:approval_inbox' %}">
-      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-      صندوق المراجعة
-    </a>
-    <h1 class="apr-hero__title">{{ report.title }}</h1>
-    <p class="apr-hero__meta">
-      {{ report.teacher_display_name }}
-      {% if report.category %} · {{ report.category.name }}{% endif %}
-    </p>
+<div class="twq-page report-approval-page approval-detail-page">
+  <header class="twq-page-header approval-page-header" aria-labelledby="approvalDetailTitle">
+    <div class="twq-page-header__heading">
+      <a class="twq-page-header__eyebrow approval-back-link" href="{% url 'reports:approval_inbox' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> صندوق المراجعة والاعتماد</a>
+      <h1 class="twq-page-header__title" id="approvalDetailTitle"><bdi>{{ report.title }}</bdi></h1>
+      <p class="twq-page-header__lead">راجع محتوى التقرير وشواهده ومسار اعتماده، ثم نفّذ فقط الإجراء المتاح لك في حالته الحالية.</p>
+      <dl class="twq-page-header__context approval-page-context" aria-label="هوية التقرير">
+        <div><dt>مُعدّ التقرير</dt><dd><bdi>{{ report.teacher_display_name }}</bdi></dd></div>
+        <div><dt>نوع التقرير</dt><dd><bdi>{% if report.category %}{{ report.category.name }}{% else %}بدون نوع{% endif %}</bdi></dd></div>
+        <div><dt>المدرسة</dt><dd><bdi>{{ active_school.name }}</bdi></dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside approval-detail-header-state">
+      <span class="twq-status" data-status="{{ report.approval_tone }}">{{ report.get_approval_state_display }}</span>
+      {% if report.report_date %}<time datetime="{{ report.report_date|date:'Y-m-d' }}">{{ report.report_date|hijri }} هـ</time>{% endif %}
+    </div>
   </header>
 
-  <div class="det-grid">
+  <div class="approval-detail-layout">
+    <div class="approval-detail-main">
+      <section class="twq-section approval-context-section" aria-labelledby="approvalContextTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">سياق القرار</p>
+            <h2 class="twq-section__title" id="approvalContextTitle">مسار التقرير وحالته</h2>
+            <p class="twq-section__description">هذه البيانات يحددها التقرير ونوعه؛ لا تعيد الصفحة حساب المسار.</p>
+          </div>
+        </header>
+        <dl class="approval-context-grid">
+          <div><dt>الحالة الحالية</dt><dd><span class="twq-status" data-status="{{ report.approval_tone }}">{{ report.get_approval_state_display }}</span></dd></div>
+          <div><dt>مسار الاعتماد</dt><dd>{{ approval_route_label }}</dd></div>
+          <div><dt>السنة الدراسية</dt><dd><bdi>{{ report.academic_year|default:"غير محددة" }}</bdi></dd></div>
+          {% if report.submitted_at %}<div><dt>أُرسل للمراجعة</dt><dd><time datetime="{{ report.submitted_at|date:'c' }}">{{ report.submitted_at|hijri }} هـ — {{ report.submitted_at|time:"H:i" }}</time></dd></div>{% endif %}
+          {% if report.reviewed_by %}<div><dt>راجعه</dt><dd><bdi>{{ report.reviewed_by.name }}</bdi></dd></div>{% endif %}
+          {% if report.decided_by %}<div><dt>اعتمده</dt><dd><bdi>{{ report.decided_by.name }}</bdi></dd></div>{% endif %}
+        </dl>
+        {% if approval_departments %}
+          <div class="approval-department-scope"><strong>نطاق الأقسام:</strong><ul>{% for department in approval_departments %}<li><bdi>{{ department.name }}</bdi></li>{% endfor %}</ul></div>
+        {% elif approval_route != 'direct' %}
+          <p class="twq-alert twq-alert--warning approval-route-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>هذا المسار يعتمد على مراجعة الأقسام، ولا يظهر قسم مرتبط بنوع التقرير.</span></p>
+        {% endif %}
+      </section>
 
-    {# ═══ العمود الأول: التقرير ═════════════════════════════ #}
-    <div>
-      <section class="apr-card">
-        <div class="u-flex u-items-center u-gap-sm u-wrap u-mb-09">
-          <h2 class="apr-card__title u-m-0">تفاصيل التقرير</h2>
-          <span class="apr-state" data-tone="{{ report.approval_tone }}">
-            {{ report.get_approval_state_display }}
-          </span>
+      <article class="twq-section approval-report-document" aria-labelledby="approvalContentTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">محتوى التقرير</p>
+            <h2 class="twq-section__title" id="approvalContentTitle">التقرير المرسل للمراجعة</h2>
+            <p class="twq-section__description">محتوى للقراءة فقط؛ التعديل يتم من مساحة إعداد التقرير عندما تسمح الحالة.</p>
+          </div>
+        </header>
+        <dl class="approval-report-facts">
+          <div><dt>تاريخ التقرير</dt><dd>{{ report.report_date|hijri }} هـ</dd></div>
+          {% if report.day_name %}<div><dt>اليوم</dt><dd>{{ report.day_name }}</dd></div>{% endif %}
+          {% if report.beneficiaries_count != None %}<div><dt>عدد المستفيدين</dt><dd>{{ report.beneficiaries_count }}</dd></div>{% endif %}
+        </dl>
+
+        <div class="approval-content-sections">
+          {% if report.idea %}<section><h3>الوصف / فكرة التقرير</h3><p>{{ report.idea|linebreaksbr }}</p></section>{% endif %}
+          {% if report.goal %}<section><h3>الهدف</h3><p>{{ report.goal|linebreaksbr }}</p></section>{% endif %}
+          {% if report.implementation_method %}<section><h3>آلية التنفيذ</h3><p>{{ report.implementation_method|linebreaksbr }}</p></section>{% endif %}
+          {% if report.results %}<section><h3>النتائج</h3><p>{{ report.results|linebreaksbr }}</p></section>{% endif %}
+          {% if report.recommendations %}<section><h3>التوصيات</h3><p>{{ report.recommendations|linebreaksbr }}</p></section>{% endif %}
+          {% if not report.idea and not report.goal and not report.implementation_method and not report.results and not report.recommendations %}<p class="approval-muted-state">لا يحتوي التقرير على نص تفصيلي.</p>{% endif %}
         </div>
-
-        <div class="det-meta">
-          <div class="det-meta__item">
-            {% comment %} التاريخ هجري في كل شاشة — يحرسه اختبار في المشروع، والمعلّم
-               يجب أن يرى تاريخ تقريره نفسه هنا وفي «تقاريري». {% endcomment %}
-            <div class="det-meta__label">التاريخ</div>
-            <div class="det-meta__value">{{ report.report_date|hijri }}</div>
-          </div>
-          <div class="det-meta__item">
-            <div class="det-meta__label">السنة الدراسية</div>
-            <div class="det-meta__value">{{ report.academic_year|default:"—" }}</div>
-          </div>
-          {% if report.submitted_at %}
-            <div class="det-meta__item">
-              <div class="det-meta__label">أُرسل للمراجعة</div>
-              <div class="det-meta__value">{{ report.submitted_at|hijri }} هـ</div>
-            </div>
-          {% endif %}
-          {% if report.decided_by %}
-            <div class="det-meta__item">
-              <div class="det-meta__label">اعتمده</div>
-              <div class="det-meta__value">{{ report.decided_by.name }}</div>
-            </div>
-          {% endif %}
-        </div>
-
-        {% if report.idea %}
-          <div class="det-section">
-            <div class="det-section__name">الوصف</div>
-            <div class="det-section__body">{{ report.idea }}</div>
-          </div>
-        {% endif %}
-        {% if report.goal %}
-          <div class="det-section">
-            <div class="det-section__name">الهدف</div>
-            <div class="det-section__body">{{ report.goal }}</div>
-          </div>
-        {% endif %}
-        {% if report.results %}
-          <div class="det-section">
-            <div class="det-section__name">النتائج</div>
-            <div class="det-section__body">{{ report.results }}</div>
-          </div>
-        {% endif %}
-        {% if report.recommendations %}
-          <div class="det-section">
-            <div class="det-section__name">التوصيات</div>
-            <div class="det-section__body">{{ report.recommendations }}</div>
-          </div>
-        {% endif %}
 
         {% if report.review_note %}
-          <div class="det-note">
-            <span class="det-note__label">آخر ملاحظة</span>
-            {{ report.review_note }}
+          <aside class="approval-current-note" aria-labelledby="approvalCurrentNoteTitle"><h3 id="approvalCurrentNoteTitle">آخر ملاحظة في دورة الاعتماد</h3><p>{{ report.review_note|linebreaksbr }}</p></aside>
+        {% endif %}
+      </article>
+
+      <section class="twq-section approval-evidence-section" aria-labelledby="approvalEvidenceTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">الشواهد</p>
+            <h2 class="twq-section__title" id="approvalEvidenceTitle">الشواهد المصورة</h2>
+            <p class="twq-section__description">افتح الشاهد في نافذة مستقلة لمراجعته بالحجم الكامل. لا تتوفر إجراءات تعديل أو حذف في شاشة الاعتماد.</p>
           </div>
+          {% if evidence_items %}<span class="twq-status" data-status="draft">{{ evidence_items|length }} شاهد</span>{% endif %}
+        </header>
+        {% if evidence_items %}
+          <div class="approval-evidence-grid">
+            {% for evidence in evidence_items %}
+              <figure class="approval-evidence-item">
+                <a href="{{ evidence.image.url }}" target="_blank" rel="noopener" aria-label="فتح الشاهد: {{ evidence.description|default:'شاهد مصور' }}">
+                  <img src="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور مرفق بالتقرير' }}" loading="lazy" decoding="async">
+                </a>
+                <figcaption>
+                  <span><bdi>{{ evidence.description|default:"شاهد مصور" }}</bdi></span>
+                  <small>الترتيب {{ evidence.order }}{% if evidence.show_in_print %} · يظهر في الطباعة{% else %} · غير مدرج في الطباعة{% endif %}</small>
+                </figcaption>
+              </figure>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="twq-empty twq-empty--local approval-evidence-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-images"></i></span><h3 class="twq-empty__title">لا توجد شواهد مصورة</h3><p class="twq-empty__message">أُرسل التقرير دون شواهد مصورة.</p></div>
         {% endif %}
       </section>
 
-      {# ═══ تاريخ الاعتماد ═════════════════════════════════ #}
-      <section class="apr-card">
-        <h2 class="apr-card__title">تاريخ الاعتماد</h2>
-        <p class="apr-card__hint">
-          كل خطوة بمن نفّذها ووقتها وملاحظتها. لا يُعدَّل سطر منه بعد كتابته.
-        </p>
-
+      <section class="twq-section approval-history" aria-labelledby="approvalHistoryTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">سجل غير قابل للتعديل</p>
+            <h2 class="twq-section__title" id="approvalHistoryTitle">تاريخ الاعتماد</h2>
+            <p class="twq-section__description">كل خطوة بمن نفّذها ووقتها وملاحظتها.</p>
+          </div>
+        </header>
         {% if timeline %}
-          <ul class="det-timeline">
+          <ol class="approval-timeline">
             {% for step in timeline %}
-              <li class="det-step" data-action="{{ step.action }}">
-                <span class="det-step__dot" aria-hidden="true">
-                  {% if step.action == 'approve' %}<i class="fa-solid fa-check"></i>
-                  {% elif step.action == 'recommend' %}<i class="fa-solid fa-thumbs-up"></i>
-                  {% elif step.action == 'return' %}<i class="fa-solid fa-rotate-left"></i>
-                  {% elif step.action == 'request_info' %}<i class="fa-solid fa-circle-question"></i>
-                  {% elif step.action == 'submit' %}<i class="fa-solid fa-paper-plane"></i>
-                  {% elif step.action == 'withdraw' %}<i class="fa-solid fa-arrow-turn-down"></i>
-                  {% else %}<i class="fa-solid fa-eye"></i>{% endif %}
-                </span>
-                <div class="det-step__head">
-                  <span>{{ step.get_action_display }}</span>
-                  {% if step.by_proxy %}
-                    <span class="det-proxy">
-                      بالنيابة عن {{ step.on_behalf_of.name|default:"المدير" }}
-                    </span>
-                  {% endif %}
+              <li class="approval-timeline__item" data-action="{{ step.action }}">
+                <span class="approval-timeline__marker" aria-hidden="true"><i class="fa-solid {% if step.action == 'approve' %}fa-check{% elif step.action == 'recommend' %}fa-thumbs-up{% elif step.action == 'return' %}fa-rotate-left{% elif step.action == 'request_info' %}fa-circle-question{% elif step.action == 'submit' %}fa-paper-plane{% elif step.action == 'withdraw' %}fa-arrow-turn-down{% else %}fa-eye{% endif %}"></i></span>
+                <div class="approval-timeline__body">
+                  <h3>{{ step.get_action_display }}{% if step.by_proxy %}<span class="approval-proxy-label">بالنيابة عن <bdi>{{ step.on_behalf_of.name|default:"المدير" }}</bdi></span>{% endif %}</h3>
+                  <p class="approval-timeline__meta"><bdi>{{ step.actor_display }}</bdi>{% if step.actor_role %} · {{ step.actor_role }}{% endif %} · <time datetime="{{ step.created_at|date:'c' }}">{{ step.created_at|hijri }} هـ — {{ step.created_at|time:"H:i" }}</time></p>
+                  {% if step.note %}<p class="approval-timeline__note">{{ step.note|linebreaksbr }}</p>{% endif %}
                 </div>
-                <div class="det-step__who">
-                  {{ step.actor_display }}
-                  {% if step.actor_role %} · {{ step.actor_role }}{% endif %}
-                  · {{ step.created_at|hijri }} هـ — {{ step.created_at|time:"H:i" }}
-                </div>
-                {% if step.note %}
-                  <div class="det-step__note">{{ step.note }}</div>
-                {% endif %}
               </li>
             {% endfor %}
-          </ul>
+          </ol>
         {% else %}
-          <p class="apr-card__hint u-m-0">
-            لم تبدأ دورة الاعتماد بعد. ستظهر الخطوات هنا فور إرسال التقرير للمراجعة.
-          </p>
+          <p class="approval-muted-state">لم تبدأ دورة الاعتماد بعد. ستظهر الخطوات هنا فور إرسال التقرير للمراجعة.</p>
         {% endif %}
       </section>
     </div>
 
-    {# ═══ العمود الثاني: الإجراءات ══════════════════════════ #}
-    <div>
-      <section class="apr-card det-side u-mt-0">
-        <h2 class="apr-card__title">
-          {% if is_owner %}إجراءاتك على تقريرك{% else %}قرارك{% endif %}
-        </h2>
-        <p class="apr-card__hint">
-          {% if is_owner %}
-            هذا تقريرك — تستطيع إرساله وسحبه، ولا تستطيع اعتماده بنفسك.
-          {% else %}
-            الإعادة وطلب الاستكمال يستلزمان ملاحظة: قرارٌ بلا سبب يُرجع صاحبه حائراً.
-          {% endif %}
-        </p>
+    <aside class="approval-decision-column" aria-labelledby="approvalDecisionTitle">
+      <section class="twq-section approval-decision-panel">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">الخطوة التالية</p>
+            <h2 class="twq-section__title" id="approvalDecisionTitle">{% if is_owner %}إجراءاتك على تقريرك{% else %}اتخاذ القرار{% endif %}</h2>
+            <p class="twq-section__description">{% if is_owner %}يمكنك إرسال التقرير أو سحبه وفق حالته، ولا يمكنك اعتماد عملك بنفسك.{% else %}اختر فقط بعد مراجعة المحتوى والشواهد والسجل. الإعادة وطلب الاستكمال يتطلبان ملاحظة.{% endif %}</p>
+          </div>
+        </header>
 
         {% if actions %}
-          <form method="post" action="{% url 'reports:approval_action' report.pk %}" class="det-actions">
+          <form method="post" action="{% url 'reports:approval_action' report.pk %}" class="approval-decision-form" data-approval-decision-form novalidate>
             {% csrf_token %}
-            <input type="hidden" name="approval_action" id="approvalAction" value="">
-
             {% if not is_owner %}
-              <textarea name="note" id="approvalNote" class="det-note-field"
-                        placeholder="ملاحظتك على هذا العمل…"></textarea>
-              <div class="det-required" id="approvalNoteError" hidden></div>
+              <div class="twq-field approval-note-field">
+                <label for="approvalNote">ملاحظة المراجع <span>مطلوبة عند الإعادة أو طلب الاستكمال</span></label>
+                <textarea name="note" id="approvalNote" rows="5" aria-describedby="approvalNoteHelp approvalNoteError"></textarea>
+                <p class="twq-field__help" id="approvalNoteHelp">تظهر الملاحظة لصاحب التقرير وتُحفظ في سجل الاعتماد.</p>
+                <p class="twq-field__error" id="approvalNoteError" role="alert" hidden></p>
+              </div>
             {% endif %}
 
-            <div class="det-actions__row">
-              {% if 'submit' in actions %}
-                <button type="submit" class="apr-btn apr-btn--primary" data-approval="submit">
-                  <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                  إرسال للمراجعة
-                </button>
-              {% endif %}
-              {% if 'withdraw' in actions %}
-                <button type="submit" class="apr-btn apr-btn--ghost" data-approval="withdraw">
-                  <i class="fa-solid fa-arrow-turn-down" aria-hidden="true"></i>
-                  سحب للتعديل
-                </button>
-              {% endif %}
-              {% if 'start_review' in actions %}
-                <button type="submit" class="apr-btn apr-btn--ghost" data-approval="start_review">
-                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                  بدء المراجعة
-                </button>
-              {% endif %}
-              {% if 'recommend' in actions %}
-                <button type="submit" class="apr-btn apr-btn--violet" data-approval="recommend">
-                  <i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>
-                  توصية بالاعتماد
-                </button>
-              {% endif %}
-              {% if 'request_info' in actions %}
-                <button type="submit" class="apr-btn apr-btn--warn" data-approval="request_info">
-                  <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                  طلب استكمال
-                </button>
-              {% endif %}
-              {% if 'return' in actions %}
-                <button type="submit" class="apr-btn apr-btn--warn" data-approval="return">
-                  <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-                  إعادة للملاحظة
-                </button>
-              {% endif %}
-              {% if 'approve' in actions %}
-                <button type="submit" class="apr-btn apr-btn--primary" data-approval="approve">
-                  <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                  اعتماد نهائي
-                </button>
-              {% endif %}
+            <div class="approval-decision-actions">
+              {% if 'submit' in actions %}<button type="submit" name="approval_action" value="submit" class="twq-btn twq-btn--primary" data-approval-action="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i>إرسال للمراجعة</button>{% endif %}
+              {% if 'withdraw' in actions %}<button type="submit" name="approval_action" value="withdraw" class="twq-btn twq-btn--ghost" data-approval-action="withdraw"><i class="fa-solid fa-arrow-turn-down" aria-hidden="true"></i>سحب للتعديل</button>{% endif %}
+              {% if 'start_review' in actions %}<button type="submit" name="approval_action" value="start_review" class="twq-btn twq-btn--secondary" data-approval-action="start_review"><i class="fa-solid fa-eye" aria-hidden="true"></i>بدء المراجعة</button>{% endif %}
+              {% if 'recommend' in actions %}<button type="submit" name="approval_action" value="recommend" class="twq-btn twq-btn--secondary approval-action--recommend" data-approval-action="recommend"><i class="fa-solid fa-thumbs-up" aria-hidden="true"></i>توصية بالاعتماد</button>{% endif %}
+              {% if 'request_info' in actions %}<button type="submit" name="approval_action" value="request_info" class="twq-btn twq-btn--secondary approval-action--attention" data-approval-action="request_info"><i class="fa-solid fa-circle-question" aria-hidden="true"></i>طلب استكمال</button>{% endif %}
+              {% if 'return' in actions %}<button type="submit" name="approval_action" value="return" class="twq-btn twq-btn--secondary approval-action--attention" data-approval-action="return"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i>إعادة للملاحظة</button>{% endif %}
+              {% if 'approve' in actions %}<button type="submit" name="approval_action" value="approve" class="twq-btn twq-btn--primary" data-approval-action="approve"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>اعتماد نهائي</button>{% endif %}
             </div>
           </form>
-
-          <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-            /* زر واحد لكل إجراء، وحقل مخفي واحد يحمل أيّها ضُغط.
-               البديل — نموذج لكل زر — يكرّر حقل الملاحظة فيفقد المستخدم ما كتبه
-               عند اختيار إجراء آخر. */
-            (function () {
-              var form = document.querySelector('.det-actions');
-              if (!form) return;
-              var field = form.querySelector('#approvalAction');
-              var note = form.querySelector('#approvalNote');
-              var error = form.querySelector('#approvalNoteError');
-              // الإعادة وطلب الاستكمال يرفضهما الخادم بلا ملاحظة. قولُ ذلك هنا
-              // يوفّر على المراجع دورة ذهاب وإياب يفقد فيها ما كتبه.
-              var NEEDS_NOTE = { 'return': 1, 'request_info': 1 };
-
-              form.querySelectorAll('[data-approval]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                  field.value = button.getAttribute('data-approval');
-                });
-              });
-
-              form.addEventListener('submit', function (event) {
-                if (!note || !NEEDS_NOTE[field.value]) return;
-                if (note.value.trim()) {
-                  if (error) error.hidden = true;
-                  return;
-                }
-                event.preventDefault();
-                if (error) {
-                  error.textContent = 'اكتب سبب الإعادة — قرارٌ بلا سبب يُرجع صاحبه حائراً.';
-                  error.hidden = false;
-                }
-                note.focus();
-              });
-            })();
-          </script>
         {% else %}
-          <p class="apr-card__hint u-m-0">
-            {% if report.is_final %}
-              هذا التقرير معتمد. لا يُعدَّل ولا يُحذف بعد اعتماده.
-            {% else %}
-              لا توجد إجراءات متاحة لك على هذا التقرير في حالته الحالية.
-            {% endif %}
-          </p>
+          <div class="approval-no-actions"><i class="fa-solid {% if report.is_final %}fa-circle-check{% else %}fa-lock{% endif %}" aria-hidden="true"></i><div><h3>{% if report.is_final %}اكتمل الاعتماد{% else %}لا يوجد إجراء متاح{% endif %}</h3><p>{% if report.is_final %}هذا التقرير معتمد نهائيًا، ولا يُعدّل أو يُحذف بعد الاعتماد.{% else %}لا يتيح دورك أو حالة التقرير الحالية إجراءً إضافيًا.{% endif %}</p></div></div>
         {% endif %}
-      </section>
-    </div>
 
+        <a class="twq-btn twq-btn--ghost approval-return-link" href="{% url 'reports:approval_inbox' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i>العودة إلى الصندوق</a>
+      </section>
+    </aside>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'js/report-approval.js' %}?v=20260921.1" defer></script>
 {% endblock %}
