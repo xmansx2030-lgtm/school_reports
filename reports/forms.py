@@ -599,7 +599,49 @@ class ReportEvidenceForm(forms.ModelForm):
 class BaseReportEvidenceFormSet(BaseInlineFormSet):
     """يحفظ إعادة الترتيب دون اصطدام بالقيد الفريد أثناء تبديل موضعين."""
 
+    ownership_error_message = "أحد الشواهد المرسلة غير صالح لهذا التقرير."
+
+    def _validate_submitted_ownership(self):
+        """Reject submitted primary keys outside the bound report.
+
+        Django normally reports an out-of-queryset inline object as an invalid
+        choice.  A row marked for deletion is excluded from the formset's
+        validity calculation, however, so that field error can be ignored.
+        Validate the raw identifiers before DELETE or any other mutation is
+        considered.
+        """
+        if not self.is_bound:
+            return
+
+        pk_field = self.model._meta.pk
+        submitted_ids = set()
+        for form in self.forms:
+            raw_id = self.data.get(form.add_prefix(pk_field.name))
+            if raw_id in (None, ""):
+                continue
+            try:
+                submitted_ids.add(pk_field.to_python(raw_id))
+            except (TypeError, ValueError, ValidationError):
+                raise ValidationError(self.ownership_error_message) from None
+
+        if not submitted_ids:
+            return
+
+        owned_ids = set()
+        if self.instance.pk:
+            owned_ids = set(
+                self.model._default_manager.filter(
+                    **{
+                        f"{self.fk.name}_id": self.instance.pk,
+                        f"{pk_field.name}__in": submitted_ids,
+                    }
+                ).values_list(pk_field.name, flat=True)
+            )
+        if owned_ids != submitted_ids:
+            raise ValidationError(self.ownership_error_message)
+
     def clean(self):
+        self._validate_submitted_ownership()
         super().clean()
         if any(self.errors):
             return
