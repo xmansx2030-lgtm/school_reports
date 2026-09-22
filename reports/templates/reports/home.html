@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load hijri_tags static %}
 
 {% comment %} اللوحة ليست للمعلّم وحده: المدير له لوحته، ومن سواه — وكيلاً أو موظفاً
    إدارياً أو محضّر مختبر — يهبط هنا. فتُنادى الصفحة صاحبَها بما يُعرف به،
@@ -7,797 +7,12 @@
 {% block title %}مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* الأسماء `--th-*` باقية للقراءة، وقيمها من جذر الهوية لا من هنا: لوحةٌ
-     ثانية بجوار الأولى تعني أخضرين يفترقان عند أول تعديل. ولذلك لا كتلة
-     ليلية في هذا الملف — الجذر يتكفّل بها. */
-  .teacher-home {
-    --th-green: var(--id-accent);
-    --th-green-dark: var(--id-green-800);
-    --th-green-soft: var(--id-accent-wash);
-    --th-gold: var(--id-gold);
-    --th-blue: var(--id-tone-pending);
-    --th-orange: var(--id-tone-attention);
-    --th-red: var(--id-tone-danger);
-    --th-ink: var(--id-ink);
-    --th-muted: var(--id-muted);
-    --th-border: var(--id-line);
-    --th-card: var(--id-surface);
-    --th-surface: var(--id-surface-2);
-    --th-shadow: var(--id-e3);
-    max-width: 1320px;
-    margin: 0 auto;
-    padding: 26px 20px 92px;
-    color: var(--th-ink);
-  }
-
-  .th-hero {
-    position: relative;
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(260px, .55fr);
-    gap: 28px;
-    align-items: center;
-    min-height: 260px;
-    padding: 38px;
-    border: 1px solid var(--id-gold-line);
-    border-radius: var(--id-r5);
-    color: var(--id-hero-ink);
-    background:
-      radial-gradient(120% 150% at 92% -22%, rgba(212, 177, 109, .26), transparent 46%),
-      radial-gradient(90% 120% at 4% 108%, rgba(22, 149, 90, .34), transparent 52%),
-      linear-gradient(135deg, var(--id-hero-from) 0%, var(--id-hero-via) 56%, var(--id-hero-to) 100%);
-    box-shadow: var(--id-e4);
-  }
-
-  /* الخيط الذهبي — التوقيع نفسه الذي تحمله لوحة المدير، فتُقرأ اللوحتان
-     منصّةً واحدة لا شاشتين متجاورتين. */
-  .th-hero::before {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    inset-block-start: 0;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, var(--id-gold-500) 18%, var(--id-gold-300) 50%, var(--id-gold-500) 82%, transparent);
-    z-index: 2;
-  }
-
-  .th-hero::after {
-    content: "";
-    position: absolute;
-    inset-inline-end: -68px;
-    top: -90px;
-    width: 260px;
-    height: 260px;
-    border: 42px solid rgba(255, 255, 255, .055);
-    border-radius: 50%;
-    pointer-events: none;
-  }
-
-  .th-hero-main,
-  .th-hero-side { position: relative; z-index: 1; }
-
-  /* وسمُ الدور يأخذ كبسولة ذهبية كترويسة المدير: هي أول ما يقرؤه صاحب
-     الصفحة عن نفسه، ومناداته باسمه قرارٌ سبق أن اتُّخذ في هذه اللوحة. */
-  .th-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
-    padding: 7px 15px;
-    border: 1px solid rgba(212, 177, 109, .5);
-    border-radius: var(--id-pill);
-    background: rgba(212, 177, 109, .16);
-    color: var(--id-gold-300);
-    font-size: .78rem;
-    font-weight: 900;
-    letter-spacing: .2px;
-  }
-
-  .th-title {
-    margin: 0;
-    max-width: 760px;
-    font-size: clamp(1.7rem, 3vw, 2.55rem);
-    font-weight: 950;
-    line-height: 1.35;
-    letter-spacing: -.5px;
-    background: linear-gradient(92deg, #fff 0%, var(--id-gold-300) 96%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .th-lead {
-    max-width: 700px;
-    margin: 12px 0 22px;
-    color: var(--id-hero-ink-soft);
-    font-size: 1rem;
-    line-height: 1.9;
-  }
-
-  .th-context {
-    width: fit-content;
-    max-width: 100%;
-    margin: -12px 0 20px;
-    padding: 6px 11px;
-    border: 1px solid rgba(255, 255, 255, .18);
-    border-radius: var(--id-pill);
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--id-hero-ink-soft);
-    background: rgba(255, 255, 255, .07);
-    font-size: .76rem;
-    font-weight: 850;
-  }
-
-  .th-hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .th-btn {
-    min-height: 46px;
-    padding: 11px 18px;
-    border: 1px solid transparent;
-    border-radius: 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    font-weight: 900;
-    text-decoration: none;
-    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-  }
-
-  .th-btn:hover { transform: translateY(-2px); }
-  /* الإجراء الأول ذهبيٌّ كنظيره في لوحة المدير: لونٌ واحد يعني «ابدأ من هنا». */
-  .th-btn-primary {
-    color: var(--id-green-950);
-    background: linear-gradient(135deg, var(--id-gold-400), var(--id-gold-600));
-    box-shadow: 0 12px 26px -14px rgba(212, 177, 109, .9);
-  }
-  .th-btn-primary:hover { background: linear-gradient(135deg, var(--id-gold-300), var(--id-gold-500)); }
-  .th-btn-secondary {
-    color: var(--id-hero-ink);
-    border-color: rgba(255, 255, 255, .32);
-    background: rgba(255, 255, 255, .1);
-  }
-
-  .th-hero-side {
-    padding: 22px;
-    border: 1px solid var(--id-gold-line);
-    border-radius: var(--id-r4);
-    background: rgba(3, 32, 20, .3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
-  }
-
-  .th-side-label {
-    margin-bottom: 7px;
-    color: var(--id-gold-300);
-    font-size: .78rem;
-    font-weight: 900;
-  }
-  .th-side-value {
-    color: var(--id-hero-ink);
-    font-size: 1.05rem;
-    font-weight: 950;
-    line-height: 1.55;
-  }
-  .th-side-separator {
-    height: 1px;
-    margin: 16px 0;
-    background: rgba(255, 255, 255, .16);
-  }
-
-  /* الشبكة تتبع عدد المؤشرات لا رقماً مكتوباً: كانت ثلاثة أعمدة ثابتة، فلمّا
-     أُضيف مؤشر «التكليفات» صار الرابع سطراً وحده. و`auto-fit` يجعل إضافة
-     الخامس لاحقاً تعديلاً في لا شيء. */
-  .th-kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 14px;
-    margin-top: 18px;
-  }
-
-  .th-kpi {
-    min-width: 0;
-    padding: 19px;
-    border: 1px solid var(--th-border);
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    color: inherit;
-    background: var(--th-card);
-    box-shadow: var(--id-e2);
-    text-decoration: none;
-    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
-  }
-  .th-kpi:hover {
-    transform: translateY(-3px);
-    border-color: var(--id-gold-line);
-    box-shadow: var(--th-shadow);
-  }
-  .th-kpi-icon {
-    width: 48px;
-    height: 48px;
-    flex: 0 0 auto;
-    border-radius: 15px;
-    display: grid;
-    place-items: center;
-    color: var(--th-green);
-    background: var(--th-green-soft);
-    font-size: 1.12rem;
-  }
-  .th-kpi:nth-child(2) .th-kpi-icon { color: var(--th-blue); background: var(--id-tone-pending-wash); }
-  .th-kpi:nth-child(3) .th-kpi-icon { color: var(--th-orange); background: var(--id-tone-attention-wash); }
-  .th-kpi-value { font-size: 1.55rem; font-weight: 950; line-height: 1.15; }
-  .th-kpi-label { margin-top: 4px; color: var(--th-muted); font-size: .82rem; font-weight: 800; }
-
-  .th-deputy-hub {
-    position: relative;
-    overflow: hidden;
-    margin-top: 20px;
-    padding: 24px;
-    border: 1px solid color-mix(in srgb, var(--id-gold-500) 48%, var(--th-border));
-    border-radius: var(--id-r4);
-    background:
-      radial-gradient(90% 160% at 100% 0%, color-mix(in srgb, var(--id-gold-400) 17%, transparent), transparent 58%),
-      linear-gradient(145deg, var(--th-card), color-mix(in srgb, var(--th-green-soft) 48%, var(--th-card)));
-    box-shadow: var(--id-e3);
-  }
-  .th-deputy-hub::before {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-    width: 4px;
-    background: linear-gradient(var(--id-gold-400), var(--th-green));
-  }
-  .th-deputy-head {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 18px;
-  }
-  .th-deputy-title { margin: 0; font-size: 1.22rem; font-weight: 950; }
-  .th-deputy-lead { margin: 7px 0 0; color: var(--th-muted); line-height: 1.8; }
-  .th-deputy-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
-  .th-deputy-badge {
-    padding: 6px 10px;
-    border: 1px solid var(--th-border);
-    border-radius: var(--id-pill);
-    color: var(--th-green);
-    background: var(--th-card);
-    font-size: .72rem;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-  .th-deputy-alert {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 15px 17px;
-    margin-bottom: 16px;
-    border: 1px solid color-mix(in srgb, var(--th-orange) 42%, var(--th-border));
-    border-radius: 15px;
-    color: var(--th-ink);
-    background: var(--id-tone-attention-wash);
-    line-height: 1.75;
-  }
-  .th-deputy-alert i { margin-top: 4px; color: var(--th-orange); }
-  .th-deputy-alert strong { display: block; margin-bottom: 2px; }
-  .th-deputy-steps,
-  .th-deputy-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 11px;
-  }
-  .th-deputy-step,
-  .th-deputy-action {
-    min-width: 0;
-    padding: 15px;
-    border: 1px solid var(--th-border);
-    border-radius: 15px;
-    background: color-mix(in srgb, var(--th-card) 86%, transparent);
-  }
-  .th-deputy-step { display: flex; align-items: flex-start; gap: 10px; }
-  .th-deputy-step span:first-child {
-    display: grid;
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-    border-radius: 9px;
-    color: var(--id-green-950);
-    background: var(--id-gold-400);
-    font-weight: 950;
-  }
-  .th-deputy-step strong { display: block; margin-bottom: 3px; font-size: .84rem; }
-  .th-deputy-step small { color: var(--th-muted); line-height: 1.65; }
-  .th-deputy-action {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 11px;
-    color: inherit;
-    text-decoration: none;
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-  }
-  .th-deputy-action:hover {
-    transform: translateY(-2px);
-    border-color: var(--id-gold-line);
-    box-shadow: var(--id-e2);
-  }
-  .th-deputy-action__icon {
-    width: 42px;
-    height: 42px;
-    display: grid;
-    place-items: center;
-    border-radius: 13px;
-    color: var(--th-green);
-    background: var(--th-green-soft);
-  }
-  .th-deputy-action strong { display: block; font-size: .85rem; }
-  .th-deputy-action small { display: block; margin-top: 3px; color: var(--th-muted); line-height: 1.55; }
-  .th-deputy-action > i { color: var(--th-muted); font-size: .72rem; }
-  .th-deputy-capabilities { margin-top: 14px; color: var(--th-muted); font-size: .78rem; }
-  .th-deputy-capabilities summary { cursor: pointer; font-weight: 900; }
-  .th-deputy-capability-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .th-admin-hub::before { background: linear-gradient(var(--id-gold-400), #245c86); }
-  .th-admin-hub .th-deputy-action__icon { color: #1e5279; background: rgba(36, 92, 134, .1); }
-  .th-staff-section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 18px 0 10px;
-    color: var(--th-ink);
-    font-size: .9rem;
-    font-weight: 950;
-  }
-  .th-staff-section-title:first-child { margin-top: 0; }
-  .th-staff-section-title i { color: var(--th-green); }
-  .th-role-context {
-    margin-bottom: 16px;
-    padding: 13px 15px;
-    border: 1px solid color-mix(in srgb, #245c86 28%, var(--th-border));
-    border-radius: 14px;
-    color: var(--th-ink);
-    background: color-mix(in srgb, #e9f4fb 70%, var(--th-card));
-    line-height: 1.75;
-  }
-  .th-role-context strong { display: block; margin-bottom: 2px; }
-
-  .th-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(290px, .75fr);
-    gap: 18px;
-    align-items: start;
-    margin-top: 22px;
-  }
-
-  .th-stack { display: grid; gap: 18px; }
-  .th-card {
-    padding: 22px;
-    border: 1px solid var(--th-border);
-    border-radius: 21px;
-    background: var(--th-card);
-    box-shadow: var(--id-e2);
-  }
-  .th-card-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 17px;
-  }
-  .th-card-title {
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--th-ink);
-    font-size: 1.08rem;
-    font-weight: 950;
-  }
-  .th-card-title i { color: var(--th-green); }
-  .th-link {
-    color: var(--th-green);
-    font-size: .82rem;
-    font-weight: 900;
-    text-decoration: none;
-  }
-  .th-link:hover { text-decoration: underline; }
-
-  /* عنوان مجموعة داخل بطاقة المشاركات — أصغر من عنوان البطاقة كي يقرأ
-     كفاصلٍ بين التكليفات والاجتماعات والمبادرات، لا كبطاقة ثالثة. */
-  .th-subhead {
-    margin: 16px 0 9px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--th-ink);
-    font-size: .86rem;
-    font-weight: 950;
-  }
-  .th-subhead:first-of-type { margin-top: 4px; }
-  .th-subhead i { color: var(--th-green); }
-  .th-subhead .th-count {
-    margin-inline-start: auto;
-    height: 22px;
-    min-width: 0;
-    font-size: .68rem;
-    font-weight: 900;
-  }
-  .th-flag-late {
-    padding: 1px 7px;
-    border-radius: var(--id-pill);
-    color: var(--id-tone-danger);
-    background: var(--id-tone-danger-wash);
-    font-weight: 950;
-  }
-
-  /* شارة حالة الاعتماد — نغماتها من جذر الهوية. كانت مكتوبة هنا بقيمها
-     ومعها أربع قواعد ليلية، وهي القيم نفسها في `_approval_theme`: الحالة
-     الواحدة يجب أن تحمل اللون نفسه في اللوحة وفي صندوق المراجعة، وإلا صار
-     «مُعاد للملاحظة» إنذاراً هنا وخبراً هناك. */
-  .th-state {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 1px 8px;
-    border: 1px solid currentColor;
-    border-radius: var(--id-pill);
-    font-size: .68rem;
-    font-weight: 950;
-    white-space: nowrap;
-  }
-  .th-state[data-tone="draft"] { color: var(--id-tone-draft); }
-  .th-state[data-tone="pending"] { color: var(--id-tone-pending); }
-  .th-state[data-tone="attention"] { color: var(--id-tone-attention); }
-  .th-state[data-tone="recommended"] { color: var(--id-tone-recommended); }
-  .th-state[data-tone="approved"] {
-    color: var(--id-accent-ink);
-    border-color: transparent;
-    background: var(--id-tone-approved);
-  }
-
-  /* سطر خافت أسفل عنوان البطاقة: عددٌ ينتظر غيرك ليس بنداً عليك، فلا يأخذ
-     وزن البطاقات ولا لون الإنذار. */
-  .th-note {
-    margin: -6px 0 14px;
-    color: var(--th-muted);
-    font-size: .78rem;
-    font-weight: 800;
-    line-height: 1.9;
-  }
-  .th-note b { color: var(--th-ink); font-weight: 950; }
-  /* المسودة وحدها تُصبح رابطاً، فتُوسَم بما يُقرأ رابطاً — والخط السفلي
-     المتقطّع يميّزها عن جارتها الخبرية دون أن يرفع صوت السطر كله. */
-  .th-note-link {
-    color: inherit;
-    text-decoration: underline dotted;
-    text-underline-offset: 3px;
-  }
-  .th-note-link:hover { color: var(--th-ink); text-decoration-style: solid; }
-
-  .th-attention {
-    display: grid;
-    gap: 10px;
-  }
-  .th-attention-item {
-    padding: 13px;
-    border: 1px solid var(--th-border);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: inherit;
-    background: var(--th-surface);
-    text-decoration: none;
-    transition: border-color .18s ease, transform .18s ease;
-  }
-  .th-attention-item:hover { border-color: rgba(0, 108, 53, .4); transform: translateX(-2px); }
-  .th-attention-icon {
-    width: 39px;
-    height: 39px;
-    flex: 0 0 auto;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    color: var(--th-green);
-    background: var(--th-green-soft);
-  }
-  .th-attention-text { min-width: 0; flex: 1; }
-  .th-attention-name { font-size: .88rem; font-weight: 900; }
-  .th-attention-hint { margin-top: 2px; color: var(--th-muted); font-size: .73rem; }
-  .th-count {
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    color: var(--id-accent-ink);
-    background: var(--id-accent);
-    font-size: .76rem;
-    font-weight: 950;
-  }
-
-  .th-all-clear {
-    padding: 17px;
-    border: 1px dashed rgba(0, 108, 53, .35);
-    border-radius: 15px;
-    text-align: center;
-    color: var(--th-muted);
-    background: var(--th-green-soft);
-  }
-  .th-all-clear i { display: block; margin-bottom: 8px; color: var(--th-green); font-size: 1.45rem; }
-  .th-all-clear strong { display: block; margin-bottom: 4px; color: var(--th-ink); }
-
-  .th-report-list,
-  .th-ticket-list { display: grid; gap: 10px; }
-  .th-report,
-  .th-ticket {
-    padding: 14px;
-    border: 1px solid var(--th-border);
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    color: inherit;
-    background: var(--th-surface);
-    text-decoration: none;
-    transition: transform .18s ease, border-color .18s ease;
-  }
-  .th-report:hover,
-  .th-ticket:hover { transform: translateX(-3px); border-color: rgba(0, 108, 53, .38); }
-  .th-report-icon {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 auto;
-    border-radius: 13px;
-    display: grid;
-    place-items: center;
-    color: var(--th-green);
-    background: var(--th-green-soft);
-  }
-  .th-item-body { min-width: 0; flex: 1; }
-  .th-item-title {
-    overflow: hidden;
-    color: var(--th-ink);
-    font-size: .89rem;
-    font-weight: 900;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .th-item-meta {
-    margin-top: 5px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 9px;
-    color: var(--th-muted);
-    font-size: .73rem;
-  }
-  .th-item-arrow { color: var(--id-muted); font-size: .8rem; }
-  .th-open-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--th-green);
-    font-size: .7rem;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-
-  .th-empty {
-    padding: 28px 16px;
-    border: 1px dashed var(--th-border);
-    border-radius: 16px;
-    text-align: center;
-    color: var(--th-muted);
-    background: var(--th-surface);
-  }
-  .th-empty i { margin-bottom: 9px; color: var(--th-green); font-size: 1.6rem; }
-  .th-empty strong { display: block; margin-bottom: 5px; color: var(--th-ink); }
-  .th-empty .th-link { display: inline-block; margin-top: 10px; }
-
-  .th-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .th-action {
-    min-height: 105px;
-    padding: 15px;
-    border: 1px solid var(--th-border);
-    border-radius: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    color: inherit;
-    background: var(--th-surface);
-    text-decoration: none;
-    transition: transform .18s ease, border-color .18s ease, background .18s ease;
-  }
-  .th-action:hover { transform: translateY(-3px); border-color: rgba(0, 108, 53, .4); background: var(--th-green-soft); }
-  .th-action i { color: var(--th-green); font-size: 1.18rem; }
-  .th-action strong { font-size: .84rem; font-weight: 950; }
-
-  .th-request-summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .th-request-stat {
-    padding: 11px 7px;
-    border-radius: 12px;
-    text-align: center;
-    background: var(--th-surface);
-  }
-  .th-request-stat strong { display: block; font-size: 1.15rem; }
-  .th-request-stat span { color: var(--th-muted); font-size: .69rem; font-weight: 800; }
-
-  .th-status {
-    flex: 0 0 auto;
-    padding: 5px 8px;
-    border-radius: 999px;
-    color: var(--th-green);
-    background: var(--th-green-soft);
-    font-size: .66rem;
-    font-weight: 900;
-  }
-  /* ‎--th-orange‎ نغمةُ تنبيهٍ للأيقونات والحدود؛ وحملُها نصاً بـ‎10.5px‎ فوق
-     حشوتها الشفافة يعطي ‎3.16‎. فتأخذ الشارة ذهبَ الحبر — ‎4.55‎ — ويبقى
-     ‎--th-orange‎ حيث هو سطحٌ لا حبر.
-
-     وهو تعليق CSS لا تعليق قالب: هذا السطر داخل ‎<style>‎. */
-  .th-status.status-open { color: var(--id-gold-ink, var(--th-orange)); background: rgba(201, 106, 22, .1); }
-  .th-status.status-in_progress { color: var(--th-blue); background: rgba(37, 99, 235, .1); }
-  .th-status.status-rejected { color: var(--th-red); background: rgba(195, 59, 59, .1); }
-
-  .th-mobile-add {
-    display: none;
-    position: fixed;
-    inset-inline-start: 16px;
-    bottom: 18px;
-    z-index: 20;
-    width: 58px;
-    height: 58px;
-    border-radius: 18px;
-    align-items: center;
-    justify-content: center;
-    color: var(--id-accent-ink);
-    background: var(--id-accent);
-    box-shadow: var(--id-e3);
-    text-decoration: none;
-    font-size: 1.25rem;
-  }
-
-  .th-notification-overlay {
-    position: relative;
-    margin-bottom: 18px;
-  }
-  .th-notification {
-    width: 100%;
-    overflow: hidden;
-    border: 1px solid rgba(185, 151, 91, .45);
-    border-radius: 18px;
-    color: var(--th-ink);
-    background: var(--th-card);
-    box-shadow: var(--id-e1);
-  }
-  .th-notification-head {
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    color: var(--id-hero-ink);
-    background: linear-gradient(120deg, var(--id-hero-from), var(--id-hero-via));
-  }
-  .th-notification-head h2 { margin: 0; font-size: 1.05rem; font-weight: 950; }
-  .th-notification-body { padding: 22px; line-height: 1.9; }
-  .th-notification-title { margin-bottom: 8px; font-size: 1.08rem; font-weight: 950; }
-  .th-important,
-  .th-signature {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 9px;
-    border-radius: 999px;
-    color: var(--th-red);
-    background: rgba(195, 59, 59, .1);
-    font-size: .72rem;
-    font-weight: 900;
-  }
-  .th-signature { margin-top: 14px; color: var(--th-orange); background: rgba(201, 106, 22, .1); }
-  .th-notification-foot {
-    padding: 13px 20px;
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    color: var(--th-muted);
-    background: var(--th-surface);
-    font-size: .75rem;
-  }
-  .th-notification-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .th-notification-open {
-    min-height:40px; padding:8px 13px; border-radius:11px; display:inline-flex; align-items:center; gap:7px;
-    color:#fff; background:var(--th-green); text-decoration:none; font-weight:900;
-  }
-
-  @media (max-width: 960px) {
-    .th-hero { grid-template-columns: 1fr; }
-    .th-hero-side { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
-    .th-side-separator { width: 1px; height: 48px; margin: 0 18px; }
-    .th-layout {
-      grid-template-columns: minmax(0, 1fr);
-      min-width: 0;
-    }
-    /* على الجوال يبدأ يوم المنسوب بما يحتاج إجراءه، ثم يعود إلى السجل. */
-    .th-layout > aside { order: -1; }
-    .th-stack,
-    .th-card,
-    .th-card-head {
-      min-width: 0;
-      max-width: 100%;
-    }
-  }
-
-  @media (max-width: 680px) {
-    .teacher-home { padding: 12px 10px 90px; }
-    .th-hero { min-height: auto; padding: 25px 19px; border-radius: 21px; }
-    .th-title { font-size: 1.48rem; }
-    .th-lead { margin-bottom: 18px; font-size: .86rem; line-height: 1.75; }
-    .th-hero-actions .th-btn { flex: 1; padding-inline: 11px; }
-    .th-hero-side { padding: 15px; }
-    .th-kpis { grid-template-columns: 1fr; gap: 9px; }
-    .th-kpi { padding: 14px; }
-    .th-deputy-hub { padding: 18px 16px; }
-    .th-deputy-head { flex-direction: column; }
-    .th-deputy-badges { justify-content: flex-start; }
-    .th-deputy-steps,
-    .th-deputy-actions { grid-template-columns: minmax(0, 1fr); }
-    .th-card { padding: 16px; border-radius: 17px; }
-    .th-card-head { align-items: flex-start; flex-wrap: wrap; }
-    .th-link {
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-    }
-    .th-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    /* زر الإضافة في الهيرو واضح وقابل للوصول؛ إخفاء النسخة العائمة يمنعها من
-       تغطية بطاقات التقارير بجوار مساعد منصور. */
-    .th-mobile-add { display: none; }
-    .th-notification-foot { flex-direction: column; }
-  }
-
-  @media (max-width: 380px) {
-    .teacher-home { padding-inline: 8px; }
-    .th-actions { grid-template-columns: minmax(0, 1fr); }
-    .th-report,
-    .th-ticket { min-width: 0; padding: 12px 10px; gap: 9px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .teacher-home * { scroll-behavior: auto !important; transition: none !important; }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/teacher-home.css' %}?v=20260922.2">
 {% endblock %}
 
 {% block content %}
-<div class="teacher-home" dir="rtl">
-  {% if home_notification %}
+<div class="twq-page teacher-home{% if not is_deputy_workspace and not is_admin_staff_workspace %} teacher-home--daily{% endif %}" dir="rtl">
+  {% if home_notification and is_deputy_workspace or home_notification and is_admin_staff_workspace %}
     <div class="th-notification-overlay" id="homeNotification" role="region" aria-labelledby="homeNotificationTitle">
       <section class="th-notification">
         <header class="th-notification-head">
@@ -840,14 +55,14 @@
     </div>
   {% endif %}
 
-  <section class="th-hero" aria-labelledby="teacherHomeTitle">
-    <div class="th-hero-main">
-      <div class="th-eyebrow">
+  <section class="th-hero{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header teacher-daily-header{% endif %}" aria-labelledby="teacherHomeTitle">
+    <div class="th-hero-main{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__heading{% endif %}">
+      <div class="th-eyebrow{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__eyebrow{% endif %}">
         <i class="fa-solid {% if is_deputy_workspace %}fa-user-tie{% elif is_lab_technician_workspace %}fa-flask-vial{% elif is_admin_staff_workspace %}fa-user-gear{% else %}fa-chalkboard-user{% endif %}" aria-hidden="true"></i>
         مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}
       </div>
-      <h1 class="th-title" id="teacherHomeTitle">مرحبًا، {{ request.user.name|default:USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL }}</h1>
-      <p class="th-lead">
+      <h1 class="th-title{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__title{% endif %}" id="teacherHomeTitle">مرحبًا، {{ request.user.name|default:USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL }}</h1>
+      <p class="th-lead{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__lead{% endif %}">
         {% if is_deputy_workspace %}
           تابع ما ينتظر قرارك ضمن نطاقك، وأدر مهامك الإشرافية وعملك الشخصي من مساحة واحدة واضحة.
         {% elif is_lab_technician_workspace %}
@@ -858,7 +73,7 @@
           وثّق عملك، تابع طلباتك، واحتفظ بإنجازاتك من مكان واحد واضح.
         {% endif %}
       </p>
-      <div class="th-context" aria-label="سياق العمل الحالي">
+      <div class="th-context{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__context{% endif %}" aria-label="سياق العمل الحالي">
         <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
         <span>{% if active_school_role_labels %}{{ active_school_role_labels|join:" • " }}{% else %}{{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}{% endif %}</span>
         {% if is_deputy_workspace and deputy_domain_label %}<span aria-hidden="true">•</span><span>{{ deputy_domain_label }}</span>{% endif %}
@@ -888,7 +103,7 @@
         </a>
       </div>
     </div>
-    <aside class="th-hero-side" aria-label="{% if is_deputy_workspace %}ملخص نطاق الوكيل{% elif is_lab_technician_workspace %}ملخص عمل محضّر المختبر{% elif is_admin_staff_workspace %}ملخص عمل الموظف الإداري{% else %}ملخص المدرسة وآخر توثيق{% endif %}">
+    <aside class="th-hero-side{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__aside{% endif %}" aria-label="{% if is_deputy_workspace %}ملخص نطاق الوكيل{% elif is_lab_technician_workspace %}ملخص عمل محضّر المختبر{% elif is_admin_staff_workspace %}ملخص عمل الموظف الإداري{% else %}ملخص المدرسة وآخر توثيق{% endif %}">
       <div>
         <div class="th-side-label">{% if is_deputy_workspace %}نطاق الإشراف{% elif is_lab_technician_workspace %}مسؤولية المختبر{% elif is_admin_staff_workspace %}نطاق العمل{% else %}المدرسة الحالية{% endif %}</div>
         <div class="th-side-value">
@@ -908,6 +123,126 @@
       </div>
     </aside>
   </section>
+
+  {% if not is_deputy_workspace and not is_admin_staff_workspace %}
+    <section class="twq-section teacher-daily-attention" aria-labelledby="teacherAttentionTitle">
+      <div class="twq-section__header teacher-daily-section-head">
+        <div>
+          <div class="twq-section__kicker">الأولوية اليومية</div>
+          <h2 class="twq-section__title" id="teacherAttentionTitle">ما يحتاج انتباهك الآن</h2>
+          <p class="twq-section__description">ابدأ بما عاد إليك أو اقترب موعده، ثم انتقل إلى بقية عملك.</p>
+        </div>
+        <a class="twq-btn twq-btn--ghost teacher-daily-inbox-link" href="{% url 'reports:my_notifications' %}">
+          <i class="fa-regular fa-bell" aria-hidden="true"></i>
+          صندوق الإشعارات
+          {% if NAV_NOTIFICATIONS_UNREAD %}<span class="teacher-daily-count">{{ NAV_NOTIFICATIONS_UNREAD }}</span>{% endif %}
+        </a>
+      </div>
+
+      {% if home_notification or returned_reports_count or returned_achievement_count or overdue_targets_count or upcoming_meetings_count or pending_minutes_count or NAV_SIGNATURES_PENDING or NAV_ASSIGNED_TO_ME or active_requests_count %}
+        <div class="teacher-daily-attention-list" role="list">
+          {% if returned_reports_count %}
+            <a class="teacher-daily-attention-item" href="#reportsNeedingMe" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>تقارير أُعيدت إليك</strong><small>راجع الملاحظة واستكمل المطلوب قبل إعادة الإرسال.</small></span>
+              <span class="twq-status twq-status--warning">{{ returned_reports_count }} تحتاج إجراء</span>
+            </a>
+          {% endif %}
+          {% if SHOW_PERSONAL_ACHIEVEMENT and returned_achievement_count %}
+            {% for achievement_file in returned_achievement_files %}
+              <a class="teacher-daily-attention-item" href="{% url 'reports:achievement_file_detail' achievement_file.pk %}" role="listitem">
+                <span class="teacher-daily-attention-icon"><i class="fa-solid fa-briefcase" aria-hidden="true"></i></span>
+                <span class="teacher-daily-attention-copy">
+                  <strong>ملف الإنجاز معاد لاستكماله</strong>
+                  <small>{% if achievement_file.manager_notes %}{{ achievement_file.manager_notes|truncatechars:96 }}{% else %}راجع ملاحظات الإدارة وأكمل الشواهد المطلوبة.{% endif %}</small>
+                </span>
+                <span class="twq-status twq-status--warning">{{ achievement_file.academic_year }} هـ</span>
+              </a>
+            {% endfor %}
+            {% if returned_achievement_count > returned_achievement_files|length %}
+              <a class="teacher-daily-attention-item" href="{% url 'reports:achievement_my_files' %}" role="listitem">
+                <span class="teacher-daily-attention-icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></span>
+                <span class="teacher-daily-attention-copy"><strong>ملفات أخرى تحتاج استكمالًا</strong><small>راجع بقية الملفات المُعادة وملاحظات الإدارة.</small></span>
+                <span class="twq-status twq-status--warning">{{ returned_achievement_count|add:"-3" }} إضافي</span>
+              </a>
+            {% endif %}
+          {% endif %}
+          {% if overdue_targets_count %}
+            <a class="teacher-daily-attention-item" href="{% url 'reports:my_assignments' %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>تكليفات تجاوزت موعدها</strong><small>افتح التكليف وأرفق الإنجاز أو ما يوضح التأخير.</small></span>
+              <span class="twq-status twq-status--danger">{{ overdue_targets_count }} متأخر</span>
+            </a>
+          {% endif %}
+          {% if NAV_SIGNATURES_PENDING %}
+            <a class="teacher-daily-attention-item" href="{% url 'reports:my_circulars' %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-solid fa-signature" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>تعاميم تنتظر اطلاعك</strong><small>راجع الوثيقة ثم أكّد الاطلاع أو التوقيع المطلوب.</small></span>
+              <span class="twq-status twq-status--warning">{{ NAV_SIGNATURES_PENDING }} معلّق</span>
+            </a>
+          {% endif %}
+          {% if home_notification and home_notification_recipient_id %}
+            <a class="teacher-daily-attention-item" href="{% if home_notification.requires_signature %}{% url 'reports:my_circular_detail' home_notification_recipient_id %}{% else %}{% url 'reports:my_notification_detail' home_notification_recipient_id %}{% endif %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-regular fa-bell" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>{{ home_notification.title|default:"رسالة جديدة من المدرسة" }}</strong><small>{% firstof home_notification.created_by.name home_notification.created_by.phone "الإدارة" %} · {{ home_notification.created_at|hijri }} هـ</small></span>
+              <span class="twq-status twq-status--info">غير مقروء</span>
+            </a>
+          {% endif %}
+          {% if NAV_ASSIGNED_TO_ME %}
+            <a class="teacher-daily-attention-item" href="{% url 'reports:assigned_to_me' %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>طلبات مسندة إليك</strong><small>طلبات تحتاج ردك أو إجراءك بصفتك مسؤول قسم.</small></span>
+              <span class="twq-status twq-status--warning">{{ NAV_ASSIGNED_TO_ME }} مسند</span>
+            </a>
+          {% endif %}
+          {% if active_requests_count %}
+            <a class="teacher-daily-attention-item" href="{% url 'reports:my_requests' %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>طلباتك النشطة</strong><small>تابع المستجدات والردود من صندوق طلباتك.</small></span>
+              <span class="twq-status twq-status--info">{{ active_requests_count }} نشط</span>
+            </a>
+          {% endif %}
+          {% if upcoming_meetings_count %}
+            <a class="teacher-daily-attention-item" href="{% url 'reports:meeting_list' %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>اجتماعات قادمة</strong><small>راجع جدول الأعمال والموعد قبل الاجتماع.</small></span>
+              <span class="twq-status twq-status--neutral">{{ upcoming_meetings_count }} موعد</span>
+            </a>
+          {% endif %}
+          {% if pending_minutes_count %}
+            <a class="teacher-daily-attention-item" href="{% url 'reports:meeting_list' %}" role="listitem">
+              <span class="teacher-daily-attention-icon"><i class="fa-solid fa-file-signature" aria-hidden="true"></i></span>
+              <span class="teacher-daily-attention-copy"><strong>محاضر بانتظار تحريرها</strong><small>أكمل المحضر للاجتماعات التي نظمتها أو تسجلها.</small></span>
+              <span class="twq-status twq-status--warning">{{ pending_minutes_count }} محضر</span>
+            </a>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="twq-empty twq-empty--local teacher-daily-clear" role="status">
+          <span class="twq-empty__icon"><i class="fa-regular fa-circle-check" aria-hidden="true"></i></span>
+          <strong class="twq-empty__title">لا توجد عناصر عاجلة الآن</strong>
+          <span class="twq-empty__message">ابدأ توثيق عملك أو راجع المساحات اليومية المتاحة أدناه.</span>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="twq-section teacher-daily-actions" aria-labelledby="teacherActionsTitle">
+      <div class="twq-section__header teacher-daily-section-head">
+        <div>
+          <div class="twq-section__kicker">ابدأ العمل</div>
+          <h2 class="twq-section__title" id="teacherActionsTitle">إجراءاتك اليومية</h2>
+        </div>
+      </div>
+      <nav class="teacher-daily-action-grid" aria-label="الإجراءات اليومية للمعلم">
+        <a class="teacher-daily-action teacher-daily-action--primary" href="{% url 'reports:add_report' %}"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span><strong>إنشاء تقرير</strong><small>وثّق نشاطًا أو برنامجًا جديدًا</small></span></a>
+        <a class="teacher-daily-action" href="{% url 'reports:request_create' %}"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span><strong>طلب مدرسي جديد</strong><small>أرسل طلبك إلى القسم المختص</small></span></a>
+        <a class="teacher-daily-action" href="{% url 'reports:my_circulars' %}"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i><span><strong>التعاميم الواردة</strong><small>راجع ما وصلك وحالة الاطلاع</small></span></a>
+        <a class="teacher-daily-action" href="{% url 'reports:my_assignments' %}"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span><strong>تكليفاتي</strong><small>تابع المواعيد وارفع الشواهد</small></span></a>
+        {% if SHOW_PERSONAL_ACHIEVEMENT %}<a class="teacher-daily-action" href="{% url 'reports:achievement_my_files' %}"><i class="fa-solid fa-briefcase" aria-hidden="true"></i><span><strong>ملف الإنجاز</strong><small>نظّم الإنجازات والشواهد المهنية</small></span></a>{% endif %}
+        {% if IS_OFFICER %}<a class="teacher-daily-action" href="{% url 'reports:assigned_to_me' %}"><i class="fa-solid fa-inbox" aria-hidden="true"></i><span><strong>الطلبات المسندة</strong><small>عالج طلبات القسم المسموح بها</small></span></a>{% endif %}
+      </nav>
+    </section>
+  {% endif %}
 
   {% if is_deputy_workspace %}
     <section class="th-deputy-hub" id="deputyCommandCenter" aria-labelledby="deputyCommandTitle">
@@ -1042,7 +377,8 @@
     </section>
   {% endif %}
 
-  <section class="th-kpis" aria-label="{% if is_deputy_workspace or is_admin_staff_workspace %}مؤشرات عملي الشخصي{% else %}مؤشرات عملي{% endif %}">
+  {% if is_deputy_workspace or is_admin_staff_workspace %}
+  <section class="th-kpis" aria-label="مؤشرات عملي الشخصي">
     <a class="th-kpi" href="{% url 'reports:my_reports' %}">
       <span class="th-kpi-icon"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i></span>
       <span>
@@ -1072,6 +408,7 @@
       </span>
     </a>
   </section>
+  {% endif %}
 
   {% comment %} ═══ المختبر ═════════════════════════════════════════════════
      بطاقةٌ تُضاف إلى لوحة المحضّر لا تحلّ محلّها: هو معلّمٌ في كل ما سوى
@@ -1405,6 +742,7 @@
       {% endif %}
     </div>
 
+    {% if is_deputy_workspace or is_admin_staff_workspace %}
     <aside class="th-stack">
       <section class="th-card" aria-labelledby="todayFollowupTitle">
         <div class="th-card-head">
@@ -1577,6 +915,7 @@
         </div>
       </section>
     </aside>
+    {% endif %}
   </div>
 
   <a class="th-mobile-add" href="{% url 'reports:add_report' %}" aria-label="إضافة تقرير جديد">

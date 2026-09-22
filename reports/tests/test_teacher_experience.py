@@ -153,14 +153,24 @@ class TeacherExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "مساحة عمل المعلم")
-        self.assertContains(response, "متابعة اليوم")
+        self.assertContains(response, "ما يحتاج انتباهك الآن")
+        self.assertContains(response, "إجراءاتك اليومية")
         self.assertContains(response, "أحدث تقاريري")
         self.assertContains(response, "طلباتي المدرسية")
-        self.assertContains(response, "مساحة عملي")
         self.assertContains(response, "إضافة تقرير")
+        self.assertNotContains(response, "متابعة اليوم")
+        self.assertNotContains(response, "مساحة عملي")
         self.assertNotContains(response, "Premium 2026")
         self.assertNotContains(response, "أحدث النشاطات")
         self.assertEqual(len(re.findall(r"<h1\b", html, re.IGNORECASE)), 1)
+        self.assertLess(
+            html.index('id="teacherAttentionTitle"'),
+            html.index('id="teacherActionsTitle"'),
+        )
+        self.assertLess(
+            html.index('id="teacherActionsTitle"'),
+            html.index('id="recentReportsTitle"'),
+        )
         self.assertEqual(
             response.context["active_requests_count"],
             response.context["req_stats"]["open"] + response.context["req_stats"]["in_progress"],

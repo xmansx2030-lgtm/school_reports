@@ -68,7 +68,10 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
     if is_school_manager(request.user, active_school=school):
         return redirect("reports:admin_dashboard")
 
-    if capability_source(request.user, caps.VIEW_SCHOOL_DASHBOARD, school) is None:
+    dashboard_access_source = capability_source(
+        request.user, caps.VIEW_SCHOOL_DASHBOARD, school
+    )
+    if dashboard_access_source is None:
         messages.error(request, "لا تملك صلاحية الاطلاع على مؤشرات المدرسة.")
         return redirect("reports:home")
 
@@ -260,6 +263,12 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
         except Exception:
             departments = []
 
+    # Presentation-only grouping.  The underlying counts, permissions and
+    # destinations stay exactly as supplied above; the dashboard merely puts
+    # work that needs attention before calm informational summaries.
+    attention_cards = [card for card in cards if card.get("tone") == "warn"]
+    operational_cards = [card for card in cards if card.get("tone") != "warn"]
+
     return render(
         request,
         "reports/staff_dashboard.html",
@@ -267,6 +276,9 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
             "active": "staff_dashboard",
             "active_school": school,
             "cards": cards,
+            "attention_cards": attention_cards,
+            "operational_cards": operational_cards,
+            "dashboard_access_source": dashboard_access_source,
             "departments": departments,
             "supervised_count": len(supervised),
             "scoped_people": len(scoped_teacher_ids),

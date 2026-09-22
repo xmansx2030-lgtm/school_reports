@@ -332,7 +332,7 @@ class TeacherScreenPolishTests(TestCase):
 
     def test_the_open_status_badge_uses_the_ink_gold(self):
         """نغمةُ التنبيه سطحٌ وحدّ؛ وحملُها نصاً بـ‎10.5px‎ يعطي ‎3.16‎."""
-        source = self._source("reports/templates/reports/home.html")
+        source = self._source("static/css/teacher-home.css")
 
         self.assertIn(
             ".th-status.status-open { color: var(--id-gold-ink, var(--th-orange));",
