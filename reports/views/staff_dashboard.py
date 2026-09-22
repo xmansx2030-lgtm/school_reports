@@ -24,7 +24,6 @@ from ._helpers import _get_active_school
 from .. import capabilities as caps
 from ..model_parts.approvals import ApprovalState, PENDING_REVIEW_STATES
 from ..model_parts.assignments import AssignmentTarget
-from ..model_parts.documents import Document
 from ..model_parts.meetings import Meeting
 from ..model_parts.plans import PlanTask
 from ..coverage import pending_documenters, school_staff_queryset
@@ -34,6 +33,7 @@ from ..permissions import (
     is_school_manager,
     supervised_department_ids,
 )
+from ..services_documents import visible_documents
 
 __all__ = ["staff_dashboard"]
 
@@ -199,8 +199,8 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
             )
 
         if granted["documents"]:
-            pending_docs = Document.objects.filter(
-                school=school, approval_state__in=PENDING_REVIEW_STATES
+            pending_docs = visible_documents(request.user, school).filter(
+                approval_state__in=PENDING_REVIEW_STATES
             ).count()
             cards.append(
                 {
