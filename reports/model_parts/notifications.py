@@ -219,6 +219,55 @@ class Notification(models.Model):
         return self.title or (self.message[:30] + ("..." if len(self.message) > 30 else ""))
 
 
+class NotificationSendSubmission(models.Model):
+    """Durable idempotency record for one logical notification send.
+
+    The row is reserved in the same transaction that creates the notification
+    and its recipients.  A committed row with ``notification=None`` therefore
+    means the notification was deleted later; it is intentionally retained as
+    a tombstone so an old browser retry cannot recreate the send.
+    """
+
+    submission_key = models.UUIDField("معرّف عملية الإرسال")
+    sender = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name="notification_send_submissions",
+        verbose_name="المرسل",
+    )
+    school = models.ForeignKey(
+        School,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notification_send_submissions",
+        verbose_name="نطاق المدرسة",
+    )
+    payload_fingerprint = models.CharField("بصمة الطلب", max_length=64)
+    notification = models.OneToOneField(
+        Notification,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="send_submission",
+        verbose_name="الإشعار الناتج",
+    )
+    created_at = models.DateTimeField("أُنشئ في", auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "reports_notification_send_submission"
+        ordering = ("-created_at", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("sender", "submission_key"),
+                name="uniq_notif_send_sender_key",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.sender_id}:{self.submission_key}"
+
+
 class NotificationRecipient(models.Model):
     class DeliverySource(models.TextChoices):
         ORIGINAL = "original", "ضمن قائمة الإصدار الأصلية"

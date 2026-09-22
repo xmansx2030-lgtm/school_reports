@@ -895,6 +895,7 @@
             <form method="post" enctype="multipart/form-data" action="" id="notifyForm" novalidate
                   data-has-recipients="{% if IS_SCHOOL_MANAGER and not form.teachers.field.queryset %}false{% else %}true{% endif %}">
               {% csrf_token %}
+              {{ form.submission_key }}
 
               {% if form.non_field_errors %}
                 <div class="errors">{{ form.non_field_errors }}</div>

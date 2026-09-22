@@ -2128,6 +2128,7 @@ class FlexibleModelMultipleChoiceField(forms.ModelMultipleChoiceField):
 
 
 class NotificationCreateForm(forms.Form):
+    submission_key = forms.UUIDField(required=False, widget=forms.HiddenInput())
     communication_type = forms.ChoiceField(
         label="نوع التواصل",
         choices=(
@@ -2212,12 +2213,22 @@ class NotificationCreateForm(forms.Form):
         user = kwargs.pop("user", None)
         active_school = kwargs.pop("active_school", None)
         mode = (kwargs.pop("mode", None) or "notification").strip().lower()
+        require_submission_key = bool(kwargs.pop("require_submission_key", False))
         super().__init__(*args, **kwargs)
 
         self.user = user
         self.active_school = active_school
         self.mode = mode if mode in {"notification", "circular"} else "notification"
         is_circular = self.mode == "circular"
+
+        if is_circular:
+            # Circular issuance has its own audited workflow and is explicitly
+            # outside notification-send idempotency.
+            self.fields.pop("submission_key", None)
+        else:
+            self.fields["submission_key"].required = require_submission_key
+            if not self.is_bound:
+                self.fields["submission_key"].initial = uuid.uuid4()
 
         requested_kind = (
             "circular"
@@ -2462,7 +2473,13 @@ class NotificationCreateForm(forms.Form):
                     )
         return cleaned
 
-    def save(self, creator, default_school=None, force_requires_signature: Optional[bool] = None):
+    def save(
+        self,
+        creator,
+        default_school=None,
+        force_requires_signature: Optional[bool] = None,
+        dispatch_realtime_on_commit: bool = False,
+    ):
         from core.task_dispatch import enqueue_named_task
         from django.db import transaction
 
@@ -2570,17 +2587,27 @@ class NotificationCreateForm(forms.Form):
                     [NotificationRecipient(notification=n, teacher_id=tid) for tid in teacher_ids],
                     ignore_conflicts=True,
                 )
-                try:
-                    from .realtime_notifications import push_new_notification_to_teachers
 
-                    push_new_notification_to_teachers(notification=n, teacher_ids=teacher_ids)
-                except Exception:
-                    logger.exception("Immediate realtime notification dispatch failed for notification %s", n.pk)
-                with soft_fail("forms.invalidate_recipient_caches", count=len(teacher_ids)):
-                    from .cache_utils import invalidate_user_notifications
+                def _publish_recipient_change():
+                    try:
+                        from .realtime_notifications import push_new_notification_to_teachers
 
-                    for tid in teacher_ids:
-                        invalidate_user_notifications(int(tid))
+                        push_new_notification_to_teachers(notification=n, teacher_ids=teacher_ids)
+                    except Exception:
+                        logger.exception(
+                            "Immediate realtime notification dispatch failed for notification %s",
+                            n.pk,
+                        )
+                    with soft_fail("forms.invalidate_recipient_caches", count=len(teacher_ids)):
+                        from .cache_utils import invalidate_user_notifications
+
+                        for tid in teacher_ids:
+                            invalidate_user_notifications(int(tid))
+
+                if dispatch_realtime_on_commit:
+                    transaction.on_commit(_publish_recipient_change)
+                else:
+                    _publish_recipient_change()
             except Exception:
                 logger.exception("Immediate notification recipient creation failed for notification %s", n.pk)
 

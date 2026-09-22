@@ -16,6 +16,12 @@ from ..handwritten_signature import (
 )
 
 from ..coverage import pending_documenters
+from ..services_notification_idempotency import (
+    NotificationSubmissionConflict,
+    notification_submission_fingerprint,
+    reserve_notification_submission,
+    validate_submission_fingerprint,
+)
 
 from ._helpers import *
 from ._helpers import (
@@ -132,6 +138,7 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
         active_school=active_school,
         initial=initial,
         mode=mode,
+        require_submission_key=not is_circular,
     )
     if request.method == "POST":
         if form.is_valid():
@@ -154,19 +161,60 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
                     },
                 )
             try:
+                existing_notification = None
+                reservation_created = True
                 with transaction.atomic():
-                    form.save(
-                        creator=request.user,
-                        default_school=active_school,
-                        force_requires_signature=True if is_circular else None,
-                    )
+                    if is_circular:
+                        form.save(
+                            creator=request.user,
+                            default_school=active_school,
+                            force_requires_signature=True,
+                        )
+                    else:
+                        payload_fingerprint, submission_school = (
+                            notification_submission_fingerprint(
+                                cleaned_data=form.cleaned_data,
+                                sender=request.user,
+                                default_school=active_school,
+                                mode=mode,
+                            )
+                        )
+                        submission, reservation_created = reserve_notification_submission(
+                            sender=request.user,
+                            submission_key=form.cleaned_data["submission_key"],
+                            school=submission_school,
+                            payload_fingerprint=payload_fingerprint,
+                        )
+                        if reservation_created:
+                            notification = form.save(
+                                creator=request.user,
+                                default_school=active_school,
+                                dispatch_realtime_on_commit=True,
+                            )
+                            submission.notification = notification
+                            submission.save(update_fields=["notification"])
+                        else:
+                            validate_submission_fingerprint(submission, payload_fingerprint)
+                            existing_notification = submission.notification
+
                 sent_label = "التعميم" if is_circular else ("النشرة" if is_newsletter else "الإشعار")
+                if not is_circular and not reservation_created:
+                    messages.success(request, f"تم إرسال {sent_label} مسبقًا، ولم يُكرر الإرسال.")
+                    if existing_notification is not None:
+                        return redirect(_sent_list_url(existing_notification))
+                    return redirect("reports:notifications_sent")
                 messages.success(request, f"تم إرسال {sent_label} إلى المستلمين المحددين.")
                 if is_circular:
                     return redirect("reports:circulars_sent")
                 if is_newsletter:
                     return redirect(f"{reverse('reports:notifications_sent')}?kind=newsletter")
                 return redirect("reports:notifications_sent")
+            except NotificationSubmissionConflict:
+                conflict_message = (
+                    "تعذّر إعادة استخدام طلب الإرسال. أعد فتح نموذج الإرسال وحاول مرة أخرى."
+                )
+                form.add_error(None, conflict_message)
+                messages.error(request, conflict_message)
             except Exception:
                 logger.exception("notifications_create failed")
                 messages.error(request, "تعذّر الإرسال. جرّب لاحقًا.")
