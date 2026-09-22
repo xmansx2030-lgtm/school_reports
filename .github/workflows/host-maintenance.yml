@@ -181,6 +181,9 @@ jobs:
           test ! -s /tmp/failed-units.after
           test ! -e /var/run/reboot-required
           docker compose ls
+          for container in mizaan-beta-web mizaan-beta-scanner mizaan-beta-garage; do
+            docker inspect --format '{{.Name}} exposed={{json .Config.ExposedPorts}} networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}' "$container"
+          done
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
             python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
@@ -209,6 +212,9 @@ jobs:
           test ! -s /tmp/failed-units.verify
           test ! -e /var/run/reboot-required
           docker compose ls
+          for container in mizaan-beta-web mizaan-beta-scanner mizaan-beta-garage; do
+            docker inspect --format '{{.Name}} exposed={{json .Config.ExposedPorts}} networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}' "$container"
+          done
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
             python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
