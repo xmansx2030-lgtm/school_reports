@@ -77,6 +77,11 @@ HIJRI_ECHO_TEMPLATES = (
     "reports/templates/reports/assignment_create.html",
 )
 
+EXTERNAL_HIJRI_ECHO_TEMPLATES = (
+    "reports/templates/reports/add_report.html",
+    "reports/templates/reports/edit_report.html",
+)
+
 
 class HijriEchoTests(SimpleTestCase):
     """صدى التاريخ الهجري: مُنسّقٌ واحد، وعلامة حقبةٍ واحدة."""
@@ -101,8 +106,14 @@ class HijriEchoTests(SimpleTestCase):
             with self.subTest(template=template_path):
                 source = _source(template_path)
                 self.assertNotIn("islamic-umalqura", source)
-                self.assertIn("TawtheeqHijri", source)
                 self.assertIn("js/hijri-date.js", source)
+
+                if template_path in EXTERNAL_HIJRI_ECHO_TEMPLATES:
+                    self.assertIn("js/report-authoring.js", source)
+                    self.assertIn('id="reportDayEcho"', source)
+                    self.assertIn('id="reportDateHijri"', source)
+                else:
+                    self.assertIn("window.TawtheeqHijri", source)
 
     def test_no_template_doubles_the_era_marker(self):
         doubled = re.compile(r"\.format\([^)]*\)\s*\+\s*['\"] هـ")
@@ -110,17 +121,32 @@ class HijriEchoTests(SimpleTestCase):
             with self.subTest(template=template_path):
                 self.assertIsNone(doubled.search(_source(template_path)))
 
-    def test_the_helper_loads_before_the_inline_script_that_calls_it(self):
-        # ‎defer‎ يؤجّل التنفيذ إلى ما بعد تحليل الصفحة، والسكربت المضمّن يعمل
-        # وقت التحليل — فلو أُجّل المساعد لَناداه المضمّن قبل وجوده.
+    def test_the_helper_loads_before_the_script_that_calls_it(self):
         for template_path in HIJRI_ECHO_TEMPLATES:
             with self.subTest(template=template_path):
                 source = _source(template_path)
                 tag = re.search(r"<script[^>]*js/hijri-date\.js[^>]*>", source)
                 self.assertIsNotNone(tag)
                 self.assertNotIn("defer", tag.group(0))
-                # نقيس أول *استدعاء* فعلي، لا أول ذكرٍ للاسم في تعليق.
-                self.assertLess(tag.start(), source.index("window.TawtheeqHijri"))
+
+                if template_path in EXTERNAL_HIJRI_ECHO_TEMPLATES:
+                    authoring_tag = re.search(
+                        r"<script[^>]*js/report-authoring\.js[^>]*>", source
+                    )
+                    self.assertIsNotNone(authoring_tag)
+                    self.assertIn("defer", authoring_tag.group(0))
+                    self.assertLess(tag.start(), authoring_tag.start())
+                else:
+                    # نقيس أول *استدعاء* فعلي، لا أول ذكرٍ للاسم في تعليق.
+                    self.assertLess(tag.start(), source.index("window.TawtheeqHijri"))
+
+    def test_external_authoring_script_keeps_the_hijri_echo_contract(self):
+        source = _source("static/js/report-authoring.js")
+
+        self.assertIn('document.getElementById("id_report_date")', source)
+        self.assertIn('document.getElementById("reportDayEcho")', source)
+        self.assertIn('document.getElementById("reportDateHijri")', source)
+        self.assertIn("window.TawtheeqHijri.echo(value)", source)
 
 
 class HijriDisplayConsistencyTests(SimpleTestCase):
