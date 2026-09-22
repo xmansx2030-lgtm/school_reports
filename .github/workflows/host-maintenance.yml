@@ -252,19 +252,27 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
         run: |
           set -euo pipefail
-          tar czf - deploy/hetzner/Caddyfile.fragment \
-          | ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
-              "set -eu; cd '$DEPLOY_PATH'; \
-               cp deploy/hetzner/Caddyfile.fragment deploy/hetzner/Caddyfile.fragment.before-proxy-reload; \
-               tar xzf -; \
-               if docker compose -f compose.hetzner.yaml -f compose.caddy.yaml exec -T caddy \
-                    caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
-                  && docker compose -f compose.hetzner.yaml -f compose.caddy.yaml exec -T caddy \
-                    caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; then \
-                 rm -f deploy/hetzner/Caddyfile.fragment.before-proxy-reload; \
-               else \
-                 mv deploy/hetzner/Caddyfile.fragment.before-proxy-reload deploy/hetzner/Caddyfile.fragment; \
-                 docker compose -f compose.hetzner.yaml -f compose.caddy.yaml exec -T caddy \
-                   caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; \
-                 exit 1; \
-               fi"
+          candidate="$DEPLOY_PATH/deploy/hetzner/Caddyfile.fragment.candidate"
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+            "cat > '$candidate'" < deploy/hetzner/Caddyfile.fragment
+
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+            "set -eu; cd '$DEPLOY_PATH'; \
+             current=deploy/hetzner/Caddyfile.fragment; \
+             backup=deploy/hetzner/Caddyfile.fragment.before-proxy-reload; \
+             docker cp '$candidate' school-reports-caddy-1:/tmp/Caddyfile.candidate; \
+             docker exec school-reports-caddy-1 \
+               caddy validate --config /tmp/Caddyfile.candidate --adapter caddyfile; \
+             cp \"\$current\" \"\$backup\"; \
+             cat '$candidate' > \"\$current\"; \
+             if docker exec school-reports-caddy-1 \
+                  caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; then \
+               rm -f '$candidate' \"\$backup\"; \
+               docker exec school-reports-caddy-1 rm -f /tmp/Caddyfile.candidate; \
+             else \
+               cat \"\$backup\" > \"\$current\"; \
+               docker exec school-reports-caddy-1 \
+                 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; \
+               rm -f '$candidate' \"\$backup\"; \
+               exit 1; \
+             fi"
