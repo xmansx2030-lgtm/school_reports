@@ -57,7 +57,7 @@ jobs:
           test ! -s /tmp/failed-units.before
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
-            python -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
 
           for service in \
             school-reports-postgres-backup.service \
@@ -170,7 +170,7 @@ jobs:
           docker compose ls
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
-            python -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
           free -h
           swapon --show
           docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
