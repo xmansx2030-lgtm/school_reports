@@ -16,6 +16,7 @@ on:
           - full
           - verify
           - post
+          - proxy
 
 permissions:
   contents: read
@@ -33,6 +34,9 @@ jobs:
     environment: production
 
     steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
       - name: Configure SSH
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -47,7 +51,7 @@ jobs:
           ssh-keygen -lf ~/.ssh/id_deploy.pub | awk '{print $2}' > ~/.ssh/id_deploy.fingerprint
 
       - name: Pre-maintenance checks and fresh backups
-        if: inputs.mode != 'post'
+        if: inputs.mode != 'post' && inputs.mode != 'proxy'
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
           SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
@@ -227,3 +231,28 @@ jobs:
           REMOTE
 
           echo host-maintenance-verified
+
+      - name: Transactionally reload the shared edge proxy
+        if: inputs.mode == 'proxy'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
+        run: |
+          set -euo pipefail
+          tar czf - deploy/hetzner/Caddyfile.fragment \
+          | ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+              "set -eu; cd '$DEPLOY_PATH'; \
+               cp deploy/hetzner/Caddyfile.fragment deploy/hetzner/Caddyfile.fragment.before-proxy-reload; \
+               tar xzf -; \
+               if docker compose -f compose.hetzner.yaml -f compose.caddy.yaml exec -T caddy \
+                    caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
+                  && docker compose -f compose.hetzner.yaml -f compose.caddy.yaml exec -T caddy \
+                    caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; then \
+                 rm -f deploy/hetzner/Caddyfile.fragment.before-proxy-reload; \
+               else \
+                 mv deploy/hetzner/Caddyfile.fragment.before-proxy-reload deploy/hetzner/Caddyfile.fragment; \
+                 docker compose -f compose.hetzner.yaml -f compose.caddy.yaml exec -T caddy \
+                   caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; \
+                 exit 1; \
+               fi"
