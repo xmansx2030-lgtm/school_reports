@@ -1,0 +1,183 @@
+name: Hetzner host maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type UPDATE-REBOOT to run production host maintenance
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hetzner-host-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    name: Update, clean and reboot host
+    if: inputs.confirmation == 'UPDATE-REBOOT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/id_deploy > ~/.ssh/id_deploy.pub
+          ssh-keygen -lf ~/.ssh/id_deploy.pub | awk '{print $2}' > ~/.ssh/id_deploy.fingerprint
+
+      - name: Pre-maintenance checks and fresh backups
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          deploy_fingerprint="$(cat ~/.ssh/id_deploy.fingerprint)"
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_TARGET" \
+            "DEPLOY_FINGERPRINT='$deploy_fingerprint' sudo -n env DEPLOY_FINGERPRINT='$deploy_fingerprint' bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+
+          echo "host=$(hostname) user=${SUDO_USER:-$(whoami)} kernel=$(uname -r)"
+          test "$(docker ps -q | wc -l)" -eq 28
+          test -z "$(docker ps --filter health=unhealthy -q)"
+          systemctl --failed --no-legend --no-pager | tee /tmp/failed-units.before
+          test ! -s /tmp/failed-units.before
+          cd /opt/school_reports
+          docker compose -f compose.hetzner.yaml exec -T worker-media \
+            python -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
+
+          for service in \
+            school-reports-postgres-backup.service \
+            school-reports-media-backup.service \
+            school-display-offsite-backup.service \
+            mizaan-beta-offsite-backup.service \
+            tanal-offsite-backup.service
+          do
+            systemctl start "$service"
+            test "$(systemctl show "$service" -p Result --value)" = success
+            test "$(systemctl show "$service" -p ExecMainStatus --value)" = 0
+            echo "backup_ok=$service"
+          done
+
+          # Remove the old temporary root key only when it is not the key used
+          # by this maintenance/deployment connection.
+          auth=/root/.ssh/authorized_keys
+          if test -f "$auth" && grep -q 'codex-mizaan-temporary' "$auth"; then
+            tmp=$(mktemp)
+            keep_tmp=$(mktemp)
+            chmod 600 "$tmp" "$keep_tmp"
+            while IFS= read -r line; do
+              if printf '%s\n' "$line" | grep -q 'codex-mizaan-temporary'; then
+                fingerprint=$(printf '%s\n' "$line" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}')
+                if test "$fingerprint" = "$DEPLOY_FINGERPRINT"; then
+                  printf '%s\n' "$line" >> "$tmp"
+                  printf '%s\n' retained-active-deploy-key >> "$keep_tmp"
+                else
+                  printf '%s\n' removed-obsolete-temporary-key >> "$keep_tmp"
+                fi
+              else
+                printf '%s\n' "$line" >> "$tmp"
+              fi
+            done < "$auth"
+            install -m 600 -o root -g root "$tmp" "$auth"
+            cat "$keep_tmp"
+            rm -f "$tmp" "$keep_tmp"
+          else
+            echo temporary-root-key-not-present
+          fi
+
+          free -h
+          docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
+            | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          REMOTE
+
+      - name: Install updates, prune safe cache, and schedule reboot
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_TARGET" 'sudo -n bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+
+          apt-get update
+          apt-get -y -o Dpkg::Options::=--force-confold upgrade
+
+          # Build cache is disposable. Only old unused images are removed so
+          # the current and recent rollback images remain available.
+          docker builder prune -af
+          docker image prune -af --filter until=168h
+          docker system df
+
+          shutdown -r +1 'Authorized production maintenance'
+          REMOTE
+
+      - name: Wait for reboot and verify all projects
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          sleep 30
+          offline=0
+          for attempt in $(seq 1 20); do
+            if ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+              -o BatchMode=yes -o ConnectTimeout=5 \
+              "$SSH_TARGET" 'true' 2>/dev/null; then
+              sleep 10
+            else
+              offline=1
+              break
+            fi
+          done
+          test "$offline" -eq 1
+
+          online=0
+          for attempt in $(seq 1 40); do
+            if ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+              -o BatchMode=yes -o ConnectTimeout=10 \
+              "$SSH_TARGET" 'true' 2>/dev/null; then
+              online=1
+              break
+            fi
+            sleep 15
+          done
+          test "$online" -eq 1
+
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" 'sudo -n bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          test "$(docker ps -q | wc -l)" -eq 28
+          test -z "$(docker ps --filter health=unhealthy -q)"
+          systemctl --failed --no-legend --no-pager | tee /tmp/failed-units.after
+          test ! -s /tmp/failed-units.after
+          test ! -e /var/run/reboot-required
+          docker compose ls
+          cd /opt/school_reports
+          docker compose -f compose.hetzner.yaml exec -T worker-media \
+            python -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
+          free -h
+          swapon --show
+          docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
+            | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          curl -fsS --retry 10 --retry-delay 3 https://tawtheeq-ksa.com/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 3 https://school-display.com/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
+          echo all-projects-healthy-after-reboot
+          REMOTE
