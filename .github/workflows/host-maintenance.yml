@@ -193,7 +193,20 @@ jobs:
             | sed -n '1,45p' || true
           echo mizaan-caddy-log-begin
           docker logs school-reports-caddy-1 --since 20m 2>&1 \
+            | grep -v '"logger":"http.log.access' \
             | grep -Ei 'mizaan|certificate|tls|acme|error' | tail -n 120 || true
+          echo mizaan-caddy-config-begin
+          docker exec school-reports-caddy-1 caddy adapt \
+            --config /etc/caddy/Caddyfile --adapter caddyfile --pretty 2>/dev/null \
+            | grep -n -A8 -B4 'mizaanlegal' | head -n 160 || true
+          echo mizaan-certificate-files-begin
+          find /opt/mizaan-v2 /opt/mizaan-beta /opt/mizaan* -maxdepth 5 -type f \
+            \( -iname '*.crt' -o -iname '*.pem' -o -iname '*.key' \) \
+            -printf '%p\n' 2>/dev/null | sort -u || true
+          docker exec school-reports-caddy-1 find /data/caddy/certificates -maxdepth 6 -type f \
+            -printf '%p\n' 2>/dev/null | grep -i mizaan || true
+          docker inspect school-reports-caddy-1 \
+            --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
             python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
@@ -230,7 +243,20 @@ jobs:
             | sed -n '1,45p' || true
           echo mizaan-caddy-log-begin
           docker logs school-reports-caddy-1 --since 20m 2>&1 \
+            | grep -v '"logger":"http.log.access' \
             | grep -Ei 'mizaan|certificate|tls|acme|error' | tail -n 120 || true
+          echo mizaan-caddy-config-begin
+          docker exec school-reports-caddy-1 caddy adapt \
+            --config /etc/caddy/Caddyfile --adapter caddyfile --pretty 2>/dev/null \
+            | grep -n -A8 -B4 'mizaanlegal' | head -n 160 || true
+          echo mizaan-certificate-files-begin
+          find /opt/mizaan-v2 /opt/mizaan-beta /opt/mizaan* -maxdepth 5 -type f \
+            \( -iname '*.crt' -o -iname '*.pem' -o -iname '*.key' \) \
+            -printf '%p\n' 2>/dev/null | sort -u || true
+          docker exec school-reports-caddy-1 find /data/caddy/certificates -maxdepth 6 -type f \
+            -printf '%p\n' 2>/dev/null | grep -i mizaan || true
+          docker inspect school-reports-caddy-1 \
+            --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
             python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
