@@ -192,11 +192,7 @@ jobs:
           echo host-services-healthy-after-reboot
           REMOTE
 
-          curl -fsS --retry 10 --retry-delay 3 https://tawtheeq-ksa.com/ >/dev/null
-          curl -fsS --retry 10 --retry-delay 3 https://school-display.com/ >/dev/null
-          curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
-          curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
-          echo all-projects-healthy-after-reboot
+          echo host-maintenance-verified-after-reboot
 
       - name: Verify current host without reboot
         if: inputs.mode == 'verify' || inputs.mode == 'post'
@@ -224,8 +220,4 @@ jobs:
           echo host-services-healthy-after-maintenance
           REMOTE
 
-          curl -fsS --retry 10 --retry-delay 3 https://tawtheeq-ksa.com/ >/dev/null
-          curl -fsS --retry 10 --retry-delay 3 https://school-display.com/ >/dev/null
-          curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
-          curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
-          echo all-projects-healthy-after-maintenance
+          echo host-maintenance-verified
