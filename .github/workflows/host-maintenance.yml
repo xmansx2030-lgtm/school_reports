@@ -7,6 +7,14 @@ on:
         description: Type UPDATE-REBOOT to run production host maintenance
         required: true
         type: string
+      mode:
+        description: Run full maintenance or verification/backups only
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - verify
 
 permissions:
   contents: read
@@ -57,7 +65,8 @@ jobs:
           test ! -s /tmp/failed-units.before
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
-            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
+            < /dev/null
 
           for service in \
             school-reports-postgres-backup.service \
@@ -105,6 +114,7 @@ jobs:
           REMOTE
 
       - name: Install updates, prune safe cache, and schedule reboot
+        if: inputs.mode == 'full'
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
           SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
@@ -129,6 +139,7 @@ jobs:
           REMOTE
 
       - name: Wait for reboot and verify all projects
+        if: inputs.mode == 'full'
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
           SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
@@ -170,7 +181,8 @@ jobs:
           docker compose ls
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
-            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])'
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
+            < /dev/null
           free -h
           swapon --show
           docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
@@ -180,4 +192,34 @@ jobs:
           curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
           echo all-projects-healthy-after-reboot
+          REMOTE
+
+      - name: Verify current host without reboot
+        if: inputs.mode == 'verify'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" 'sudo -n bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          test "$(docker ps -q | wc -l)" -eq 28
+          test -z "$(docker ps --filter health=unhealthy -q)"
+          systemctl --failed --no-legend --no-pager | tee /tmp/failed-units.verify
+          test ! -s /tmp/failed-units.verify
+          test ! -e /var/run/reboot-required
+          docker compose ls
+          cd /opt/school_reports
+          docker compose -f compose.hetzner.yaml exec -T worker-media \
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
+            < /dev/null
+          free -h
+          swapon --show
+          docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
+            | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          curl -fsS --retry 10 --retry-delay 3 https://tawtheeq-ksa.com/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 3 https://school-display.com/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
+          curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
+          echo all-projects-healthy-after-maintenance
           REMOTE
