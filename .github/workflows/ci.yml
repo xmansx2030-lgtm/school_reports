@@ -237,12 +237,20 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
         run: |
           # env.production holds live secrets and exists only on the server —
-          # excluded so a deploy can never clobber it.
+          # excluded so a deploy can never clobber it. The Caddyfile is also
+          # streamed separately: truncating it in place preserves the inode
+          # held by Docker's bind mount, so a reload cannot see stale routes.
           tar czf - \
             --exclude='deploy/hetzner/env.production' \
+            --exclude='deploy/hetzner/Caddyfile.fragment' \
             compose.hetzner.yaml compose.caddy.yaml deploy/hetzner \
           | ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
               "mkdir -p '$DEPLOY_PATH' && tar xzf - -C '$DEPLOY_PATH'"
+
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+            "mkdir -p '$DEPLOY_PATH/deploy/hetzner' && \
+             cat > '$DEPLOY_PATH/deploy/hetzner/Caddyfile.fragment'" \
+            < deploy/hetzner/Caddyfile.fragment
 
       - name: Bind the server to this repository
         env:
