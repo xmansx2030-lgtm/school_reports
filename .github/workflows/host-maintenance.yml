@@ -188,6 +188,12 @@ jobs:
           for container in mizaan-beta-web mizaan-beta-scanner mizaan-beta-garage; do
             docker inspect --format '{{.Name}} exposed={{json .Config.ExposedPorts}} networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}' "$container"
           done
+          echo mizaan-origin-tls-begin
+          timeout 12 openssl s_client -connect 127.0.0.1:443 -servername mizaanlegal.com -showcerts < /dev/null 2>&1 \
+            | sed -n '1,45p' || true
+          echo mizaan-caddy-log-begin
+          docker logs school-reports-caddy-1 --since 20m 2>&1 \
+            | grep -Ei 'mizaan|certificate|tls|acme|error' | tail -n 120 || true
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
             python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
@@ -219,6 +225,12 @@ jobs:
           for container in mizaan-beta-web mizaan-beta-scanner mizaan-beta-garage; do
             docker inspect --format '{{.Name}} exposed={{json .Config.ExposedPorts}} networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}' "$container"
           done
+          echo mizaan-origin-tls-begin
+          timeout 12 openssl s_client -connect 127.0.0.1:443 -servername mizaanlegal.com -showcerts < /dev/null 2>&1 \
+            | sed -n '1,45p' || true
+          echo mizaan-caddy-log-begin
+          docker logs school-reports-caddy-1 --since 20m 2>&1 \
+            | grep -Ei 'mizaan|certificate|tls|acme|error' | tail -n 120 || true
           cd /opt/school_reports
           docker compose -f compose.hetzner.yaml exec -T worker-media \
             python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
