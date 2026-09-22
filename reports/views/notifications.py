@@ -388,6 +388,7 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
     sig_total = 0
     sig_signed = 0
     sig_read = 0
+    recipient_read = 0
     if NotificationRecipient is not None:
         # اكتشف اسم FK للإشعار
         notif_fk = None
@@ -424,6 +425,8 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
                 name = getattr(t, "name", None) or getattr(t, "phone", None) or getattr(t, "username", None) or f"مستخدم #{getattr(t, 'pk', '')}"
                 role_label = effective_user_role_label(t, active_school=active_school)
                 is_read, read_at_str = _recipient_is_read(r)
+                if is_read:
+                    recipient_read += 1
 
                 signed = bool(getattr(r, "is_signed", False))
                 signed_at_str = None
@@ -510,6 +513,14 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
             "unread": int(max(sig_total - sig_read, 0)),
             "signed_percentage": int(round((sig_signed / sig_total) * 100)) if sig_total else 0,
             "read_percentage": int(round((sig_read / sig_total) * 100)) if sig_total else 0,
+        },
+        "recipient_stats": {
+            "total": len(recipients),
+            "read": int(recipient_read),
+            "unread": int(max(len(recipients) - recipient_read, 0)),
+            "read_percentage": (
+                int(round((recipient_read / len(recipients)) * 100)) if recipients else 0
+            ),
         },
         "can_add_recipients": can_add_recipients,
         "eligible_new_recipients": eligible_new_recipients,

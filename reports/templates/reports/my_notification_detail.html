@@ -2,704 +2,113 @@
 {% load hijri_tags %}
 {% load static %}
 
-{% block title %}{% if n.requires_signature %}تفاصيل التعميم{% else %}تفاصيل الإشعار{% endif %}{% endblock %}
+{% block title %}تفاصيل الإشعار{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'css/handwritten-signature.css' %}">
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     My Notification Detail — Premium 2026 Design
-     ========================================================= */
-  /* رموز هذه الشاشة مشتقّة من جذر الهوية، فلا تحتاج كتلةً ليلية خاصة:
-     ‏`--id-*` وحدها ما يُعاد تعريفه تحت `data-theme="dark"`. */
-  .mnd-scope {
-    --mnd-ink:         var(--id-ink);
-    --mnd-ink-soft:    var(--id-ink-soft);
-    --mnd-muted:       var(--id-muted);
-    --mnd-line:        var(--id-line);
-    --mnd-line-soft:   var(--id-line-soft);
-    --mnd-card:        var(--id-surface);
-    --mnd-bg:          var(--id-canvas);
-    --mnd-brand:       var(--id-accent);
-    --mnd-brand-2:     var(--id-accent-strong);
-    --mnd-brand-mid:   #0f8f87;
-    --mnd-brand-soft:  var(--id-accent-wash);
-    --mnd-success:     var(--id-tone-approved);
-    --mnd-danger:      var(--id-tone-danger);
-    --mnd-warn:        var(--id-tone-attention);
-    --mnd-radius-sm:   var(--id-r1);
-    --mnd-radius:      var(--id-r3);
-    --mnd-radius-lg:   var(--id-r4);
-    --mnd-shadow-xs:   var(--id-e1);
-    --mnd-shadow:      var(--id-e2);
-    --mnd-shadow-md:   var(--id-e3);
-    --mnd-shadow-lg:   var(--id-e4);
-    --mnd-t:           .2s cubic-bezier(.4,0,.2,1);
-  }
-
-  /* ── Layout ── */
-  .mnd-scope { background: var(--mnd-bg); min-height: 100vh; }
-  .mnd-page  { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
-
-  /* ── Hero Header ── */
-  .mnd-hero {
-    position: relative;
-    background: linear-gradient(135deg, var(--mnd-brand) 0%, var(--mnd-brand-2) 60%, #073b2a 100%);
-    border-radius: var(--mnd-radius-lg);
-    padding: 36px 36px 96px;
-    margin-bottom: -68px;
-    overflow: hidden;
-  }
-  .mnd-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 70% 80% at 90% 20%, rgba(255,255,255,.10) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 60% at 10% 80%, rgba(255,255,255,.06) 0%, transparent 50%);
-    pointer-events: none;
-  }
-  .mnd-hero-inner {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .mnd-hero-icon {
-    width: 54px; height: 54px;
-    background: rgba(255,255,255,.15);
-    border: 1px solid rgba(255,255,255,.25);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; color: #fff;
-    backdrop-filter: blur(8px);
-    flex-shrink: 0;
-  }
-  .mnd-hero-text { flex: 1; min-width: 0; }
-  .mnd-hero-title {
-    margin: 0 0 6px;
-    font-size: clamp(1.4rem, 3vw, 1.9rem);
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -.02em;
-  }
-  .mnd-hero-sub {
-    font-size: .92rem;
-    color: rgba(255,255,255,.78);
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .mnd-back-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 20px;
-    background: rgba(255,255,255,.15);
-    border: 1px solid rgba(255,255,255,.25);
-    border-radius: var(--mnd-radius-sm);
-    color: #fff;
-    font-weight: 600;
-    font-size: .9rem;
-    text-decoration: none;
-    backdrop-filter: blur(8px);
-    transition: background var(--mnd-t), transform var(--mnd-t);
-    white-space: nowrap;
-    align-self: flex-start;
-    min-height: 44px;
-  }
-  .mnd-back-btn:hover { background: rgba(255,255,255,.26); transform: translateY(-1px); }
-
-  /* ── Content ── */
-  .mnd-content { position: relative; z-index: 1; }
-
-  /* ── Card ── */
-  .mnd-card {
-    background: var(--mnd-card);
-    border: 1px solid var(--mnd-line);
-    border-radius: var(--mnd-radius);
-    box-shadow: var(--mnd-shadow-md);
-    overflow: hidden;
-    margin-bottom: 18px;
-  }
-  .mnd-card:last-child { margin-bottom: 0; }
-  .mnd-card-hd {
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--mnd-line);
-    background: linear-gradient(180deg, var(--mnd-line-soft) 0%, var(--mnd-card) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .mnd-card-hd-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--mnd-ink);
-  }
-  .mnd-card-hd-icon {
-    width: 36px; height: 36px;
-    background: var(--mnd-brand-soft);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--mnd-brand);
-    font-size: .95rem;
-    flex-shrink: 0;
-  }
-  .mnd-card-bd { padding: 22px; }
-
-  /* ── Notification Title ── */
-  .mnd-notif-title {
-    font-size: 1.2rem;
-    font-weight: 750;
-    color: var(--mnd-ink);
-    margin: 0 0 14px;
-    line-height: 1.45;
-  }
-
-  /* ── Pills row ── */
-  .mnd-pills-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-    align-items: center;
-  }
-  .mnd-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: .82rem;
-    font-weight: 650;
-    border: 1px solid var(--mnd-line);
-    background: var(--mnd-line-soft);
-    color: var(--mnd-ink-soft);
-    white-space: nowrap;
-  }
-  .mnd-pill.imp      { background: rgba(220,38,38,.08);  border-color: rgba(220,38,38,.20);  color: #b91c1c; }
-  .mnd-pill.blue     { background: var(--mnd-brand-soft); border-color: rgba(0,108,53,.20); color: var(--mnd-brand-2); }
-  .mnd-pill.signed   { background: rgba(22,132,91,.08);  border-color: rgba(22,132,91,.20);  color: #065f46; }
-  .mnd-pill.unsigned { background: rgba(220,38,38,.06);  border-color: rgba(220,38,38,.18);  color: #991b1b; }
-  .mnd-pill.read     { background: rgba(22,132,91,.07);  border-color: rgba(22,132,91,.18);  color: #065f46; }
-
-  /* ── Message Body — multi-line aware ── */
-  .mnd-msg-body {
-    background: linear-gradient(160deg, var(--mnd-line-soft) 0%, var(--mnd-card) 100%);
-    border: 1px solid var(--mnd-line);
-    border-radius: 14px;
-    padding: 22px 24px;
-    line-height: 2.05;
-    color: var(--mnd-ink-soft);
-    font-size: .97rem;
-    font-weight: 500;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    position: relative;
-    margin-bottom: 20px;
-  }
-  .mnd-msg-body::before {
-    content: '\275D';
-    position: absolute;
-    top: 10px;
-    right: 14px;
-    font-size: 2.4rem;
-    color: var(--mnd-brand);
-    opacity: .12;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  /* ── Meta grid ── */
-  .mnd-meta-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-    gap: 10px;
-  }
-  .mnd-meta-item {
-    background: var(--mnd-line-soft);
-    border: 1px solid var(--mnd-line);
-    border-radius: 12px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  .mnd-meta-label {
-    font-size: .74rem;
-    font-weight: 600;
-    color: var(--mnd-muted);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-  }
-  .mnd-meta-value {
-    font-size: .92rem;
-    font-weight: 650;
-    color: var(--mnd-ink);
-  }
-
-  /* ── Deadline badge ── */
-  .mnd-deadline {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px;
-    background: rgba(217,119,6,.08);
-    border: 1px solid rgba(217,119,6,.22);
-    border-radius: 999px;
-    color: var(--mnd-warn);
-    font-size: .86rem;
-    font-weight: 650;
-    margin-bottom: 18px;
-  }
-
-  /* ── Signature acknowledgment ── */
-  .mnd-sig-ack {
-    background: linear-gradient(160deg, var(--mnd-line-soft) 0%, var(--mnd-card) 100%);
-    border: 1px solid var(--mnd-line);
-    border-radius: 14px;
-    padding: 18px 22px;
-    line-height: 1.95;
-    color: var(--mnd-ink-soft);
-    font-size: .95rem;
-    font-weight: 500;
-    margin-bottom: 18px;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-
-  /* ── Form ── */
-  .mnd-form-grid { display: grid; gap: 14px; }
-  .mnd-field-label {
-    display: block;
-    font-weight: 700;
-    font-size: .9rem;
-    color: var(--mnd-ink);
-    margin-bottom: 7px;
-  }
-  .mnd-input {
-    width: 100%;
-    min-height: 48px;
-    border: 1px solid var(--mnd-line);
-    border-radius: var(--mnd-radius-sm);
-    padding: 11px 14px;
-    font: inherit;
-    font-size: .95rem;
-    background: var(--mnd-card);
-    color: var(--mnd-ink);
-    font-weight: 600;
-    outline: none;
-    transition: border-color var(--mnd-t), box-shadow var(--mnd-t);
-  }
-  .mnd-input:focus {
-    border-color: rgba(0,108,53,.4);
-    box-shadow: 0 0 0 4px rgba(0,108,53,.10);
-  }
-  .mnd-input-note {
-    margin-top: 6px;
-    font-size: .82rem;
-    color: var(--mnd-muted);
-    font-weight: 500;
-  }
-  .mnd-input-error {
-    margin-top: 5px;
-    font-size: .83rem;
-    font-weight: 700;
-    color: var(--mnd-danger);
-    display: none;
-  }
-  .mnd-check-wrap {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 16px;
-    background: var(--mnd-line-soft);
-    border: 1px solid var(--mnd-line);
-    border-radius: var(--mnd-radius-sm);
-    cursor: pointer;
-    transition: border-color var(--mnd-t), background var(--mnd-t);
-  }
-  .mnd-check-wrap:has(input:checked) {
-    border-color: rgba(0,108,53,.3);
-    background: var(--mnd-brand-soft);
-  }
-  .mnd-check-wrap input[type="checkbox"] {
-    width: 18px; height: 18px;
-    margin-top: 2px;
-    cursor: pointer;
-    accent-color: var(--mnd-brand);
-    flex-shrink: 0;
-  }
-  .mnd-check-label {
-    font-weight: 700;
-    font-size: .95rem;
-    color: var(--mnd-ink);
-    line-height: 1.6;
-    cursor: pointer;
-  }
-
-  /* ── Buttons ── */
-  .mnd-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-  .mnd-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 20px;
-    border-radius: var(--mnd-radius-sm);
-    border: 1px solid var(--mnd-line);
-    background: var(--mnd-card);
-    color: var(--mnd-ink);
-    font: inherit;
-    font-size: .9rem;
-    font-weight: 650;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all var(--mnd-t);
-    min-height: 44px;
-    white-space: nowrap;
-  }
-  .mnd-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--mnd-shadow);
-    border-color: rgba(0,108,53,.3);
-  }
-  .mnd-btn:disabled {
-    opacity: .5;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
-    pointer-events: none;
-  }
-  .mnd-btn.primary {
-    background: linear-gradient(135deg, var(--mnd-brand) 0%, var(--mnd-brand-2) 100%);
-    border-color: transparent;
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(0,108,53,.35);
-  }
-  .mnd-btn.primary:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(0,108,53,.45); }
-
-  /* ── Submit note ── */
-  .mnd-submit-note {
-    font-size: .82rem;
-    color: var(--mnd-muted);
-    font-weight: 500;
-  }
-
-  /* ── Signed success banner ── */
-  .mnd-signed-banner {
-    display: flex; align-items: center; gap: 16px;
-    padding: 18px 22px;
-    background: var(--id-tone-approved-wash);
-    border: 1px solid rgba(22,132,91,.2);
-    border-radius: 14px;
-    color: var(--id-tone-approved);
-  }
-  .mnd-signed-icon {
-    width: 46px; height: 46px;
-    background: rgba(22,132,91,.12);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
-  .mnd-signed-title { font-weight: 800; font-size: .97rem; margin-bottom: 3px; }
-  .mnd-signed-sub   { font-size: .84rem; opacity: .82; }
-
-  /* ── Responsive ── */
-  @media (max-width: 640px) {
-    .mnd-page { padding: 14px 10px 44px; }
-    .mnd-hero { padding: 20px 16px 74px; margin-bottom: -56px; border-radius: 16px; }
-    .mnd-hero-icon { width: 42px; height: 42px; border-radius: 11px; font-size: 1.1rem; }
-    .mnd-hero-title { font-size: 1.15rem; margin-bottom: 4px; }
-    .mnd-hero-sub { font-size: .78rem; }
-    .mnd-back-btn { min-height: 38px; padding: 8px 12px; font-size: .8rem; border-radius: 8px; }
-    .mnd-card { border-radius: 12px; margin-bottom: 12px; }
-    .mnd-card-hd { padding: 12px 14px; }
-    .mnd-card-bd { padding: 14px; }
-    .mnd-card-hd-title { font-size: .9rem; gap: 8px; }
-    .mnd-card-hd-icon { width: 30px; height: 30px; border-radius: 8px; font-size: .82rem; }
-    .mnd-notif-title { font-size: 1rem; margin-bottom: 10px; }
-    .mnd-pill { font-size: .74rem; padding: 4px 9px; }
-    .mnd-msg-body { padding: 14px 16px; font-size: .87rem; line-height: 1.9; border-radius: 10px; margin-bottom: 14px; }
-    .mnd-msg-body::before { font-size: 1.8rem; }
-    .mnd-meta-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .mnd-meta-item { padding: 9px 10px; border-radius: 9px; }
-    /* ‎.65rem‎ = ‎10.4px‎ على الجوال، وهو دون ما يُقرأ بيسر. والصفحة تُقرأ على
-       الهاتف أساساً، فالتصغير هنا يعمل ضدّ موضعه. */
-    .mnd-meta-label { font-size: .72rem; }
-    .mnd-meta-value { font-size: .8rem; }
-    .mnd-sig-ack { padding: 14px; font-size: .88rem; border-radius: 10px; }
-    .mnd-input { min-height: 42px; font-size: .88rem; }
-    .mnd-btn { min-height: 40px; padding: 9px 14px; font-size: .84rem; }
-    .mnd-signed-banner { padding: 12px 14px; gap: 12px; border-radius: 10px; }
-    .mnd-signed-icon { width: 38px; height: 38px; border-radius: 10px; font-size: 1rem; }
-  }
-  @media (max-width: 400px) {
-    .mnd-meta-grid { grid-template-columns: 1fr; }
-    .mnd-hero { padding: 16px 12px 64px; }
-    .mnd-hero-title { font-size: 1.05rem; }
-    .mnd-actions { flex-direction: column; }
-    .mnd-btn { width: 100%; justify-content: center; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .mnd-btn, .mnd-back-btn, .mnd-input,
-    .mnd-check-wrap { transition: none !important; }
-    .mnd-btn:hover, .mnd-back-btn:hover { transform: none !important; }
-  }
-
-  /* 👑 ROYAL OVERLAY — تفاصيل إشعاري */
-  .mnd-scope .mnd-hero{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 160% at 92% -30%, rgba(212,177,109,.24), transparent 50%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:22px !important; box-shadow:0 24px 56px -26px rgba(5,46,26,.7) !important;
-    color:#fff !important;
-  }
-  .mnd-scope .mnd-hero::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px; z-index:2;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .mnd-scope .mnd-hero h1, .mnd-scope .mnd-hero h2{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .mnd-scope .mnd-hero-icon{
-    background:linear-gradient(135deg,#e6cf9a,#d4b16d) !important; color:#063d22 !important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 10px 22px -12px rgba(185,151,91,.9) !important;
-  }
-  .mnd-scope .mnd-btn.primary, .mnd-scope .btn-primary{
-    background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important;
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/notifications-user.css' %}">
+{% if n.requires_signature %}<link rel="stylesheet" href="{% static 'css/handwritten-signature.css' %}">{% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="mnd-scope" dir="rtl">
-  <div class="mnd-page">
-
-    <!-- ═══ Hero Banner ═══ -->
-    <div class="mnd-hero">
-      <div class="mnd-hero-inner">
-        <div class="xs-my-notification-detail-1">
-          <div class="mnd-hero-icon">
-            {% if n.requires_signature %}
-              <i class="fa-solid fa-file-signature"></i>
-            {% else %}
-              <i class="fa-solid fa-envelope-open-text"></i>
-            {% endif %}
-          </div>
-          <div class="mnd-hero-text">
-            <h1 class="mnd-hero-title">
-              {% if n.requires_signature %}تفاصيل التعميم{% else %}تفاصيل الإشعار{% endif %}
-            </h1>
-            <p class="mnd-hero-sub">{{ n.title|default:"رسالة" }}{% if n.is_important %}&nbsp;·&nbsp;هام وعاجل{% endif %}</p>
-          </div>
-        </div>
-        <a class="mnd-back-btn" href="{% url 'reports:my_notifications' %}">
-          <i class="fa-solid fa-arrow-right"></i> رجوع
-        </a>
-      </div>
+<div class="twq-page notification-detail-page" dir="rtl" aria-labelledby="notificationDetailTitle" data-notifications-page="detail">
+  <header class="twq-page-header notification-detail-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i> رسالة واردة</p>
+      <h1 class="twq-page-header__title" id="notificationDetailTitle">{{ n.title|default:"تفاصيل الإشعار" }}</h1>
+      <p class="twq-page-header__lead">اقرأ الرسالة كاملة، وراجع مصدرها وتاريخها وأي مرفق مرتبط بها.</p>
+      <dl class="twq-page-header__context notification-detail-header__context" aria-label="بيانات الإشعار الأساسية">
+        <div><dt>الحالة</dt><dd>مقروء</dd></div>
+        <div><dt>النوع</dt><dd>{% if n.is_newsletter %}نشرة{% else %}إشعار{% endif %}</dd></div>
+        <div><dt>المرسل</dt><dd>{% firstof sender_name "الإدارة" %}</dd></div>
+      </dl>
     </div>
-    <!-- ═════════════════════════════ -->
+    <div class="twq-page-header__aside notification-detail-header__aside">
+      <span class="twq-status" data-status="completed"><i class="fa-solid fa-check-double" aria-hidden="true"></i> تمت القراءة</span>
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:my_notifications' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى الإشعارات</a>
+    </div>
+  </header>
 
-    <div class="mnd-content">
-
-      <!-- ══ بطاقة محتوى الرسالة ══ -->
-      <section class="mnd-card" aria-label="محتوى الإشعار">
-        <div class="mnd-card-hd">
-          <div class="mnd-card-hd-title">
-            <div class="mnd-card-hd-icon">
-              <i class="fa-solid fa-envelope-open-text"></i>
-            </div>
-            محتوى الرسالة
-          </div>
-          {% if r.is_read %}
-            <span class="mnd-pill read"><i class="fa-solid fa-check-double xs-my-notification-detail-2"></i> مقروء</span>
-          {% else %}
-            <span class="mnd-pill"><i class="fa-regular fa-circle xs-my-notification-detail-2"></i> غير مقروء</span>
-          {% endif %}
+  <div class="notification-detail-layout">
+    <section class="twq-section notification-message" aria-labelledby="notificationMessageTitle">
+      <div class="twq-section__header notification-message__header">
+        <div>
+          <span class="twq-section__kicker">محتوى الرسالة</span>
+          <h2 class="twq-section__title" id="notificationMessageTitle">{{ n.title|default:"رسالة من الإدارة" }}</h2>
         </div>
-        <div class="mnd-card-bd">
-
-          <!-- عنوان + شارات -->
-          <h2 class="mnd-notif-title">{{ n.title|default:"رسالة" }}</h2>
-          <div class="mnd-pills-row">
-            {% if n.is_important %}
-              <span class="mnd-pill imp"><i class="fa-solid fa-circle-exclamation"></i> هام وعاجل</span>
-            {% endif %}
-            {% if n.requires_signature %}
-              <span class="mnd-pill blue"><i class="fa-solid fa-pen-to-square"></i> يتطلب توقيع</span>
-            {% endif %}
-          </div>
-
-          <!-- نص الرسالة — متعدد الأسطر -->
-          {% if body %}
-            <div class="mnd-msg-body">{{ body|linebreaksbr }}</div>
-          {% else %}
-            <div class="xs-my-notification-detail-3">
-              <i class="fa-regular fa-comment-dots xs-my-notification-detail-4"></i>
-              <span class="u-fs-md">لا يوجد محتوى نصي.</span>
-            </div>
-          {% endif %}
-
-          <!-- بيانات وصفية -->
-          <div class="mnd-meta-grid">
-            {% if r.created_at %}
-              <div class="mnd-meta-item">
-                <span class="mnd-meta-label"><i class="fa-regular fa-calendar"></i> تاريخ الإرسال</span>
-                <span class="mnd-meta-value">{{ r.created_at|hijri }} هـ · {{ r.created_at|time:"H:i" }}</span>
-              </div>
-            {% endif %}
-            <div class="mnd-meta-item">
-              <span class="mnd-meta-label"><i class="fa-regular fa-user"></i> المرسِل</span>
-              <span class="mnd-meta-value">{% firstof sender_name "الإدارة" %}{% if sender_role_label %} — {{ sender_role_label }}{% endif %}</span>
-            </div>
-            {% if r.read_at %}
-              <div class="mnd-meta-item">
-                <span class="mnd-meta-label"><i class="fa-regular fa-eye"></i> وقت القراءة</span>
-                <span class="mnd-meta-value">{{ r.read_at|hijri }} هـ · {{ r.read_at|time:"H:i" }}</span>
-              </div>
-            {% endif %}
-            {% if n.requires_signature %}
-              {% if r.signed_at %}
-                <div class="mnd-meta-item">
-                  <span class="mnd-meta-label"><i class="fa-solid fa-pen-nib"></i> وقت التوقيع</span>
-                  <span class="mnd-meta-value">{{ r.signed_at|hijri }} هـ · {{ r.signed_at|time:"H:i" }}</span>
-                </div>
-              {% endif %}
-              {% if n.signature_deadline_at and not r.is_signed %}
-                <div class="mnd-meta-item">
-                  <span class="mnd-meta-label"><i class="fa-solid fa-hourglass-half"></i> آخر موعد للتوقيع</span>
-                  <span class="mnd-meta-value xs-my-notification-detail-5">{{ n.signature_deadline_at|hijri }} هـ · {{ n.signature_deadline_at|time:"H:i" }}</span>
-                </div>
-              {% endif %}
-            {% endif %}
-          </div>
-
+        <div class="notification-message__labels" aria-label="تصنيف الإشعار">
+          <span class="notification-type"><i class="{% if n.is_newsletter %}fa-regular fa-newspaper{% else %}fa-regular fa-bell{% endif %}" aria-hidden="true"></i> {% if n.is_newsletter %}نشرة{% else %}إشعار{% endif %}</span>
+          {% if n.is_important %}<span class="twq-status" data-status="danger"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> مهم</span>{% endif %}
         </div>
-      </section>
+      </div>
 
-      <!-- ══ بطاقة التوقيع ══ -->
-      {% if n.requires_signature %}
-        <section class="mnd-card" aria-label="التوقيع على التعميم">
-          <div class="mnd-card-hd">
-            <div class="mnd-card-hd-title">
-              <div class="mnd-card-hd-icon" {% if r.is_signed %}style="background:rgba(22,132,91,.1);color:#16845b"{% endif %}>
-                <i class="fa-solid fa-pen-nib"></i>
-              </div>
-              التوقيع على التعميم
-            </div>
-            {% if r.is_signed %}
-              <span class="mnd-pill signed"><i class="fa-solid fa-check-circle"></i> تم التوقيع</span>
-            {% else %}
-              <span class="mnd-pill unsigned"><i class="fa-solid fa-clock"></i> بانتظار التوقيع</span>
-            {% endif %}
-          </div>
-          <div class="mnd-card-bd">
-
-            {% if r.is_signed %}
-              <div class="mnd-signed-banner">
-                <div class="mnd-signed-icon"><i class="fa-solid fa-check-double"></i></div>
-                <div>
-                  <div class="mnd-signed-title">تم اعتماد توقيعك بنجاح</div>
-                  <div class="mnd-signed-sub">
-                    {% if r.signed_at %}وُقِّع بتاريخ {{ r.signed_at|hijri }} هـ · {{ r.signed_at|time:"H:i" }}{% else %}تم تسجيل توقيعك على هذا التعميم.{% endif %}
-                  </div>
-                </div>
-              </div>
-
-            {% else %}
-
-              {% if n.signature_deadline_at %}
-                <div class="mnd-deadline">
-                  <i class="fa-solid fa-hourglass-half"></i>
-                  آخر موعد للتوقيع: {{ n.signature_deadline_at|hijri }} هـ · {{ n.signature_deadline_at|time:"H:i" }}
-                </div>
-              {% endif %}
-
-              <!-- نص الإقرار — متعدد الأسطر -->
-              <div class="mnd-sig-ack">
-                {% if n.signature_ack_text %}
-                  {{ n.signature_ack_text|linebreaksbr }}
-                {% else %}
-                  أقرّ بأنني اطلعت على هذا التعميم وفهمت ما ورد فيه وأتعهد بالالتزام به.
-                {% endif %}
-              </div>
-
-              <form class="mnd-form-grid" method="post" action="{% url 'reports:notification_sign' r.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{% url 'reports:my_notification_detail' r.pk %}">
-
-                {% include "reports/partials/handwritten_signature_pad.html" %}
-
-                <label class="mnd-check-wrap" for="sig_ack">
-                  <input id="sig_ack" name="ack" type="checkbox" required>
-                  <span class="mnd-check-label">أقرّ بصحة البيانات وأوافق على الإقرار أعلاه.</span>
-                </label>
-
-                <div class="mnd-actions">
-                  <button id="sigSubmit" class="mnd-btn primary" type="submit" disabled>
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    اعتماد التوقيع
-                  </button>
-                  <a class="mnd-btn" href="{% url 'reports:my_notifications' %}">
-                    <i class="fa-solid fa-arrow-right"></i>
-                    رجوع
-                  </a>
-                </div>
-                <div class="mnd-submit-note" id="sigSubmitHint">
-                  بالضغط على "اعتماد التوقيع" سيتم تسجيل إقرارك ووقت التوقيع بشكل رسمي.
-                </div>
-              </form>
-
-            {% endif %}
-          </div>
-        </section>
+      {% if body %}
+        <div class="notification-message__body">{{ body|linebreaksbr }}</div>
+      {% else %}
+        <div class="twq-empty twq-empty--local notification-message__empty" role="status">
+          <span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-comment-dots"></i></span>
+          <div><h3 class="twq-empty__title">لا يوجد محتوى نصي</h3><p class="twq-empty__message">راجع بيانات الرسالة أو المرفق إن كان متاحًا.</p></div>
+        </div>
       {% endif %}
 
-    </div><!-- /.mnd-content -->
-  </div><!-- /.mnd-page -->
-</div><!-- /.mnd-scope -->
+      <dl class="notification-detail-meta">
+        <div><dt>المرسل</dt><dd>{% firstof sender_name "الإدارة" %}{% if sender_role_label %} <span>· {{ sender_role_label }}</span>{% endif %}</dd></div>
+        {% if r.created_at %}<div><dt>تاريخ الوصول</dt><dd><time datetime="{{ r.created_at|date:'c' }}">{{ r.created_at|hijri }} هـ · {{ r.created_at|time:"H:i" }}</time></dd></div>{% endif %}
+        {% if r.read_at %}<div><dt>تاريخ القراءة</dt><dd><time datetime="{{ r.read_at|date:'c' }}">{{ r.read_at|hijri }} هـ · {{ r.read_at|time:"H:i" }}</time></dd></div>{% endif %}
+        {% if n.expires_at %}<div><dt>متاح حتى</dt><dd><time datetime="{{ n.expires_at|date:'c' }}">{{ n.expires_at|hijri }} هـ · {{ n.expires_at|time:"H:i" }}</time></dd></div>{% endif %}
+      </dl>
+    </section>
+
+    {% if n.attachment %}
+    <section class="twq-section notification-attachment" aria-labelledby="notificationAttachmentTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">ملف مرتبط</span>
+          <h2 class="twq-section__title" id="notificationAttachmentTitle">مرفق الإشعار</h2>
+          <p class="twq-section__description">الرابط مخصص للملف الذي أرفقه المرسل بهذه الرسالة.</p>
+        </div>
+      </div>
+      <div class="twq-document-item notification-attachment__item">
+        <span class="twq-document-item__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></span>
+        <div class="twq-document-item__content"><h3>ملف مرفق</h3><p><bdi>{{ n.attachment.name|default:"مرفق الإشعار" }}</bdi></p></div>
+        <div class="twq-document-item__actions">
+          <a class="twq-btn twq-btn--secondary" href="{{ n.attachment.url }}" target="_blank" rel="noopener" aria-label="فتح أو تنزيل مرفق {{ n.title|default:'الإشعار' }}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> فتح أو تنزيل</a>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if n.requires_signature %}
+    <section class="twq-section notification-signature" aria-labelledby="notificationSignatureTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">إقرار المستلم</span>
+          <h2 class="twq-section__title" id="notificationSignatureTitle">التوقيع على الرسالة</h2>
+          <p class="twq-section__description">أكمل التوقيع فقط بعد قراءة المحتوى والمرفق المرتبط.</p>
+        </div>
+        <span class="twq-status" data-status="{% if r.is_signed %}completed{% else %}pending{% endif %}">{% if r.is_signed %}تم التوقيع{% else %}بانتظار التوقيع{% endif %}</span>
+      </div>
+      {% if r.is_signed %}
+        <div class="twq-alert twq-alert--success notification-signature__success" role="status"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><div><strong>تم اعتماد توقيعك.</strong>{% if r.signed_at %}<p>سُجّل بتاريخ {{ r.signed_at|hijri }} هـ · {{ r.signed_at|time:"H:i" }}.</p>{% endif %}</div></div>
+      {% elif signing_closed %}
+        <div class="twq-alert twq-alert--warning" role="status"><i class="fa-solid fa-clock" aria-hidden="true"></i><span>انتهت مهلة التوقيع على هذه الرسالة.</span></div>
+      {% else %}
+        <div class="notification-signature__ack">{{ n.signature_ack_text|default:"أقرّ بأنني اطلعت على هذه الرسالة وفهمت ما ورد فيها."|linebreaksbr }}</div>
+        <form class="notification-signature-form" method="post" action="{% url 'reports:notification_sign' r.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'reports:my_notification_detail' r.pk %}">
+          {% include "reports/partials/handwritten_signature_pad.html" %}
+          <label class="notification-signature__check" for="sig_ack"><input id="sig_ack" name="ack" type="checkbox" required><span>أقرّ بصحة البيانات وأوافق على الإقرار أعلاه.</span></label>
+          <div class="notification-signature__actions"><button id="sigSubmit" class="twq-btn twq-btn--primary" type="submit" disabled><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> اعتماد التوقيع</button></div>
+        </form>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/handwritten-signature.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  (function(){
-    'use strict';
-    var form       = document.querySelector('form.mnd-form-grid');
-    var ackInput   = document.getElementById('sig_ack');
-    var submitBtn  = document.getElementById('sigSubmit');
-    if (!form || !ackInput || !submitBtn) return;
-    var signature = window.HandwrittenSignature.init(form, updateState);
-    function updateState(){
-      var okAck   = !!ackInput.checked;
-      submitBtn.disabled = !(signature && signature.valid() && okAck) || submitBtn.dataset.busy==='1';
-    }
-    ackInput.addEventListener('change', updateState);
-    form.addEventListener('submit', async function(e){
-      updateState();
-      if (submitBtn.disabled){ e.preventDefault(); return; }
-      if (form.dataset.signatureConfirmed !== '1') {
-        e.preventDefault();
-        var confirmed = await window.rcConfirm({
-          message: 'سيتم تسجيل إقرارك ووقت التوقيع رسميًا. هل تريد اعتماد التوقيع الآن؟',
-          type: 'warning',
-          title: 'اعتماد التوقيع',
-          okText: 'اعتماد التوقيع'
-        });
-        if (!confirmed) return;
-        if (!signature.prepare()) return;
-        form.dataset.signatureConfirmed = '1';
-        form.requestSubmit(submitBtn);
-        return;
-      }
-      submitBtn.dataset.busy='1';
-      submitBtn.disabled=true;
-      submitBtn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> جارٍ اعتماد التوقيع…';
-    });
-    updateState();
-  })();
-</script>
+{{ block.super }}
+{% if n.requires_signature %}<script src="{% static 'js/handwritten-signature.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>{% endif %}
+<script src="{% static 'js/notifications-user.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

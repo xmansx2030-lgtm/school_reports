@@ -1,4 +1,3 @@
-{# templates/reports/my_notifications.html #}
 {% extends "base.html" %}
 {% load hijri_tags %}
 {% load static %}
@@ -6,1229 +5,142 @@
 {% block title %}إشعاراتي{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* ═══════════════════════════════════════════════════════════════════
-     الطبقة الأساس لهذه الشاشة — نُقلت من `app.css` الذي يُحمَّل على كل صفحة،
-     وهذه الشاشة وحدها تستعملها. ترتيبها أولاً هنا يطابق ترتيبها هناك:
-     ورقة القاعدة تسبق أنماط الصفحة، فما بعدها يظل هو المُرجَّح.
-     ═══════════════════════════════════════════════════════════════════ */
-/* ===== Notifications: reports/templates/reports/my_notifications.html ===== */
-.notif-scope{
-  --primary: #006c35;
-  --secondary:#b9975b;
-  --success:#16845b;
-  --danger:#ef4444;
-
-  --bg: var(--bg, #f8fafc);
-  --card: var(--card, #ffffff);
-  --text: var(--ink, #0f172a);
-  --text-light: var(--muted, #64748b);
-  --border: var(--line, #e2e8f0);
-
-  --radius-lg:20px;
-  --radius-md:12px;
-  --shadow: 0 10px 40px rgba(2,6,23,.08);
-  --gradient: linear-gradient(135deg,var(--primary),var(--secondary));
-  --t: var(--t-fast, all .25s ease);
-
-  --safe-top: env(safe-area-inset-top,0px);
-  --safe-bottom: env(safe-area-inset-bottom,0px);
-}
-
-html[data-theme="dark"] .notif-scope{
-  --bg: var(--bg, #0b1223);
-  --card: var(--card, var(--id-surface-2));
-  --text: var(--ink, #e5e7eb);
-  --text-light: var(--muted, #a3b2c7);
-  --border: var(--line, var(--id-line));
-  --shadow: 0 18px 55px rgba(0,0,0,.35);
-}
-
-.notif-scope .notif-container{
-  max-width: 1400px;
-  margin-inline: auto;
-  padding: 20px;
-}
-
-.notif-scope .page-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin: 0 0 22px;
-  flex-wrap:wrap;
-}
-
-.notif-scope .page-title{
-  margin:0;
-  font-size: clamp(1.45rem, 2.6vw, 2rem);
-  font-weight: 950;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  background: var(--gradient);
-  background-clip:text;
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-}
-
-.notif-scope .chip{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-weight: 950;
-  font-size: .9rem;
-  border: 1px solid var(--border);
-  background: rgba(15,143,135,.08);
-  color: #00542a;
-}
-html[data-theme="dark"] .notif-scope .chip{
-  background: rgba(15,143,135,.16);
-  color: #c7d2fe;
-}
-
-.notif-scope .chip.danger{
-  background: rgba(239,68,68,.10);
-  border-color: rgba(239,68,68,.25);
-  color: #b91c1c;
-}
-html[data-theme="dark"] .notif-scope .chip.danger{
-  color: #fecaca;
-}
-
-.notif-scope .chip.muted{
-  background: rgba(148,163,184,.10);
-  border-color: var(--border);
-  color: var(--text-light);
-}
-
-.notif-scope .head-actions{
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
-  align-items:center;
-}
-
-.notif-scope .btn-outline{
-  padding: 12px 18px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--card);
-  font-weight: 900;
-  color: var(--text);
-  cursor: pointer;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  transition: var(--t);
-}
-.notif-scope .btn-outline:hover{
-  border-color: rgba(0,108,53,.55);
-  box-shadow: 0 8px 22px rgba(2,6,23,.08);
-  transform: translateY(-2px);
-}
-
-.notif-scope .toggle{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  font-weight: 900;
-  color: var(--text);
-  user-select:none;
-}
-.notif-scope .toggle input{ width:18px; height:18px; }
-
-.notif-scope .cards{ display:grid; gap:20px; }
-@media (min-width:768px){ .notif-scope .cards{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (min-width:1200px){ .notif-scope .cards{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
-
-.notif-scope .n-card{
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  gap:16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  box-shadow: var(--shadow);
-  transition: var(--t);
-  overflow:hidden;
-}
-.notif-scope .n-card::before{
-  content:"";
-  position:absolute;
-  inset: 0 0 auto 0;
-  height: 5px;
-  background: var(--gradient);
-}
-.notif-scope .n-card:hover{
-  transform: translateY(-4px);
-  box-shadow: 0 22px 60px rgba(2,6,23,.12);
-}
-html[data-theme="dark"] .notif-scope .n-card:hover{
-  box-shadow: 0 28px 80px rgba(0,0,0,.45);
-}
-
-.notif-scope .n-card.read{
-  background:
-    linear-gradient(180deg, rgba(15,143,135,.06), transparent),
-    var(--card);
-}
-
-.notif-scope .n-head{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.notif-scope .n-title{
-  margin:0;
-  font-weight: 950;
-  color: var(--text);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  font-size: 1.12rem;
-  line-height: 1.35;
-}
-
-.notif-scope .n-time{
-  white-space:nowrap;
-  color: var(--text-light);
-  font-weight: 850;
-  font-size: .9rem;
-  display:flex;
-  align-items:center;
-  gap:6px;
-}
-
-.notif-scope .n-body{
-  color: var(--text);
-  font-weight: 800;
-  line-height: 1.85;
-  overflow-wrap:anywhere;
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  --lines:6;
-  line-clamp: var(--lines);
-  -webkit-line-clamp: var(--lines);
-  overflow:hidden;
-  margin: 2px 0 4px;
-  background: rgba(148,163,184,.08);
-  padding: 12px;
-  border-radius: 12px;
-  border-inline-start: 4px solid rgba(0,108,53,.95);
-}
-@media (max-width:900px){ .notif-scope .n-body{ --lines:5; } }
-@media (max-width:600px){ .notif-scope .n-body{ --lines:4; } }
-html[data-theme="dark"] .notif-scope .n-body{
-  background: rgba(148,163,184,.10);
-  border-inline-start-color: rgba(15,143,135,.9);
-}
-
-.notif-scope .sender{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  color: var(--text);
-  flex-wrap:wrap;
-}
-
-.notif-scope .avatar-dot{
-  width:12px;height:12px;border-radius:50%;
-  background: rgba(0,108,53,.95);
-  box-shadow: 0 0 0 3px rgba(0,108,53,.20);
-}
-.notif-scope .read .avatar-dot{
-  background: rgba(16,185,129,.95);
-  box-shadow: 0 0 0 3px rgba(16,185,129,.20);
-}
-
-.notif-scope .sender-name{ font-weight: 950; }
-.notif-scope .sender-role{ color: var(--text-light); font-weight: 850; font-size: .9rem; }
-
-.notif-scope .n-actions{
-  margin-top:auto;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.notif-scope .n-actions .left{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-
-.notif-scope .btn-sm{
-  padding:10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  font-weight: 900;
-  text-decoration:none;
-  color: var(--text);
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  transition: var(--t);
-  font-size: .9rem;
-  cursor:pointer;
-}
-.notif-scope .btn-sm:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(2,6,23,.10);
-}
-
-.notif-scope .btn-sm.primary{
-  background: rgba(0,108,53,.95);
-  border-color: rgba(0,108,53,.95);
-  color:#fff;
-}
-
-.notif-scope .btn-sm.ghost{
-  background: rgba(15,143,135,.10);
-  border-color: rgba(15,143,135,.20);
-  color: #00542a;
-}
-html[data-theme="dark"] .notif-scope .btn-sm.ghost{
-  color: #c7d2fe;
-}
-
-.notif-scope .btn-sm.success{
-  background: rgba(16,185,129,.12);
-  border-color: rgba(16,185,129,.22);
-  color: #065f46;
-}
-html[data-theme="dark"] .notif-scope .btn-sm.success{
-  color: #bbf7d0;
-}
-
-.notif-scope .time-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:10px 14px;
-  border-radius: 999px;
-  background: rgba(0,108,53,.08);
-  border: 1px solid rgba(0,108,53,.18);
-  color: #073b2a;
-  font-weight: 950;
-  font-size: .9rem;
-}
-html[data-theme="dark"] .notif-scope .time-badge{
-  color: #c7d2fe;
-  background: rgba(15,143,135,.14);
-  border-color: rgba(15,143,135,.22);
-}
-
-.notif-scope .empty{
-  padding: 40px 20px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  text-align:center;
-  color: var(--text-light);
-  font-weight: 950;
-  font-size: 1.05rem;
-}
-.notif-scope .empty i{
-  font-size: 3rem;
-  margin-bottom: 16px;
-  opacity: .5;
-  display:block;
-}
-
-.notif-scope .pager{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:center;
-  margin-top: 28px;
-  flex-wrap:wrap;
-}
-.notif-scope .pager a,
-.notif-scope .pager span{
-  padding:10px 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--card);
-  font-weight: 950;
-  text-decoration:none;
-  color: var(--text);
-  transition: var(--t);
-}
-.notif-scope .pager a:hover{
-  background: rgba(0,108,53,.95);
-  color:#fff;
-  border-color: rgba(0,108,53,.95);
-}
-.notif-scope .pager .on{
-  background: var(--gradient);
-  color:#fff;
-  border-color: rgba(0,108,53,.55);
-}
-
-  /* =========================================================
-     Premium Notifications Design System - 2026
-     Elegant, Modern, Fully Responsive
-     ========================================================= */
-  /* رموز هذه الشاشة — مقصورة على حاويتها ومشتقّة من جذر الهوية. كانت معلنة
-     على `:root` عاماً ثم تُصحَّح بكتلة ليلية بدرجات رصاصية؛ و`--id-*` وحدها
-     ما يُعاد تعريفه تحت `data-theme="dark"` فاستغنت الشاشة عن الكتلتين. */
-  .notif-scope {
-    --notif-primary: var(--id-accent);
-    --notif-primary-dark: var(--id-accent-strong);
-    --notif-gradient: linear-gradient(135deg, var(--id-hero-via) 0%, var(--id-hero-from) 100%);
-    --notif-success: var(--id-tone-approved);
-    --notif-success-dark: var(--id-tone-approved);
-    --notif-warning: var(--id-gold);
-    --notif-danger: var(--id-tone-danger);
-    --notif-danger-dark: var(--id-tone-danger);
-    --notif-surface: var(--id-surface);
-    --notif-background: var(--id-canvas);
-    --notif-border: var(--id-line);
-    --notif-border-light: var(--id-line-soft);
-    --notif-text: var(--id-ink);
-    --notif-text-soft: var(--id-muted);
-    --notif-shadow-sm: var(--id-e1);
-    --notif-shadow-md: var(--id-e2);
-    --notif-shadow-lg: var(--id-e3);
-    --notif-shadow-xl: var(--id-e4);
-    --notif-radius-sm: var(--id-r1);
-    --notif-radius-md: var(--id-r2);
-    --notif-radius-lg: var(--id-r3);
-    --notif-radius-xl: var(--id-r4);
-    --notif-radius-full: var(--id-pill);
-  }
-
-  /* Page Layout */
-  .notif-scope {
-    background: var(--notif-background);
-    min-height: calc(100vh - 120px);
-    padding: 32px 20px 60px;
-  }
-
-  .notif-scope .notif-container {
-    max-width: 1000px;
-    margin: 0 auto;
-  }
-
-  /* Header Section */
-  .notif-scope .page-head {
-    margin-bottom: 32px;
-    padding: 32px 28px;
-    background: var(--notif-surface);
-    border: 2px solid var(--notif-border);
-    border-radius: var(--notif-radius-xl);
-    box-shadow: var(--notif-shadow-md);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .notif-scope .page-head::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--notif-gradient);
-    opacity: 0.03;
-  }
-
-  .notif-scope .page-title {
-    margin: 0 0 20px;
-    font-weight: 900;
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-    background: var(--notif-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    position: relative;
-  }
-
-  .notif-scope .head-actions {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex-wrap: wrap;
-    position: relative;
-  }
-
-  /* Toggle Switch */
-  .notif-scope .toggle {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--notif-text);
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .notif-scope .toggle input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    accent-color: var(--notif-primary);
-  }
-
-  /* Buttons */
-  .notif-scope .btn-outline {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border-radius: var(--notif-radius-md);
-    font-weight: 800;
-    font-size: 0.95rem;
-    border: 2px solid var(--notif-border);
-    background: transparent;
-    color: var(--notif-text-soft);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    min-height: 44px;
-  }
-
-  .notif-scope .btn-outline:hover {
-    background: var(--notif-primary);
-    color: white;
-    border-color: var(--notif-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 108, 53, 0.3);
-  }
-
-  .notif-scope .btn-sm {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: var(--notif-radius-md);
-    font-weight: 700;
-    font-size: 0.85rem;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-  }
-
-  .notif-scope .btn-sm.primary {
-    background: var(--notif-gradient);
-    color: white;
-    box-shadow: 0 2px 8px rgba(0, 108, 53, 0.3);
-  }
-
-  .notif-scope .btn-sm.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 108, 53, 0.4);
-  }
-
-  .notif-scope .btn-sm.success {
-    background: linear-gradient(135deg, var(--notif-success), var(--notif-success-dark));
-    color: white;
-    pointer-events: none;
-  }
-
-  .notif-scope .btn-sm.ghost {
-    background: var(--notif-border-light);
-    color: var(--notif-text);
-    border: 2px solid var(--notif-border);
-  }
-
-  .notif-scope .btn-sm.ghost:hover {
-    background: var(--notif-primary);
-    color: white;
-    border-color: var(--notif-primary);
-  }
-
-  /* Chips/Badges */
-  .notif-scope .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: var(--notif-radius-full);
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-  }
-
-  .notif-scope .chip.success {
-    background: rgba(16, 185, 129, 0.1);
-    border: 2px solid rgba(16, 185, 129, 0.3);
-    color: #166534;
-  }
-
-  .notif-scope .chip.info {
-    background: rgba(0, 108, 53, 0.1);
-    border: 2px solid rgba(0, 108, 53, 0.3);
-    color: #00542a;
-  }
-
-  .notif-scope .chip.danger {
-    background: rgba(239, 68, 68, 0.1);
-    border: 2px solid rgba(239, 68, 68, 0.3);
-    color: #991b1b;
-    font-weight: 900;
-  }
-
-  .notif-scope .chip.muted {
-    background: var(--notif-border-light);
-    border: 2px solid var(--notif-border);
-    color: var(--notif-text-soft);
-  }
-
-  /* Cards Container */
-  .notif-scope .cards {
-    display: grid;
-    gap: 20px;
-  }
-
-  /* Notification Card */
-  .notif-scope .n-card {
-    background: linear-gradient(135deg, var(--notif-surface) 0%, var(--notif-background) 100%);
-    border: 2px solid var(--notif-border);
-    border-radius: var(--notif-radius-xl);
-    padding: 24px;
-    box-shadow: var(--notif-shadow-md);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .notif-scope .n-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 5px;
-    background: var(--notif-gradient);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-
-  .notif-scope .n-card:not(.read)::before {
-    transform: translateX(0);
-  }
-
-  .notif-scope .n-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--notif-shadow-xl);
-    border-color: var(--notif-primary);
-  }
-
-  .notif-scope .n-card.read {
-    opacity: 0.7;
-  }
-
-  /* Card Header */
-  .notif-scope .n-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-
-  .notif-scope .n-title {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 900;
-    color: var(--notif-text);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    flex: 1;
-  }
-
-  .notif-scope .n-time {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--notif-text-soft);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-  }
-
-  /* Card Body */
-  .notif-scope .n-body {
-    margin: 16px 0;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--notif-border-light), var(--notif-background));
-    border: 2px solid var(--notif-border);
-    border-radius: var(--notif-radius-lg);
-    font-size: 0.95rem;
-    line-height: 1.8;
-    color: var(--notif-text);
-    font-weight: 600;
-  }
-
-  /* Sender Info */
-  .notif-scope .sender {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 16px 0;
-    padding: 12px 16px;
-    background: var(--notif-background);
-    border-radius: var(--notif-radius-md);
-    font-size: 0.9rem;
-  }
-
-  .notif-scope .avatar-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--notif-primary);
-    flex-shrink: 0;
-  }
-
-  .notif-scope .sender-name {
-    font-weight: 800;
-    color: var(--notif-text);
-  }
-
-  .notif-scope .sender-role {
-    font-weight: 600;
-    color: var(--notif-text-soft);
-  }
-
-  /* Card Actions */
-  .notif-scope .n-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 2px solid var(--notif-border-light);
-    flex-wrap: wrap;
-  }
-
-  .notif-scope .n-actions .left,
-  .notif-scope .n-actions .right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .notif-scope .time-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: var(--notif-border-light);
-    border-radius: var(--notif-radius-md);
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--notif-text-soft);
-  }
-
-  .notif-scope .mark-one-form {
-    display: inline-block;
-    margin: 0;
-  }
-
-  /* Empty State */
-  .notif-scope .empty {
-    padding: 80px 20px;
-    text-align: center;
-    color: var(--notif-text-soft);
-    font-size: 1.25rem;
-    font-weight: 700;
-  }
-
-  .notif-scope .empty i {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    opacity: 0.3;
-    display: block;
-  }
-
-  /* Pagination */
-  .notif-scope .pager {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 2px solid var(--notif-border-light);
-    flex-wrap: wrap;
-  }
-
-  .notif-scope .pager a {
-    padding: 10px 20px;
-    border: 2px solid var(--notif-border);
-    border-radius: var(--notif-radius-md);
-    background: var(--notif-surface);
-    color: var(--notif-text);
-    text-decoration: none;
-    font-weight: 800;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .notif-scope .pager a:hover {
-    background: var(--notif-primary);
-    color: white;
-    border-color: var(--notif-primary);
-    transform: translateY(-2px);
-  }
-
-  .notif-scope .pager .on {
-    color: var(--notif-text-soft);
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  /* Responsive Design */
-  @media(max-width: 768px) {
-    .notif-scope {
-      padding: 20px 12px 50px;
-    }
-
-    .notif-scope .page-head {
-      padding: 24px 20px;
-    }
-
-    .notif-scope .page-title {
-      font-size: 1.5rem;
-    }
-
-    .notif-scope .head-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .notif-scope .btn-outline {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .notif-scope .n-card {
-      padding: 20px 16px;
-    }
-
-    .notif-scope .n-head {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .notif-scope .n-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .notif-scope .n-actions .left,
-    .notif-scope .n-actions .right {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-
-  /* Accessibility */
-  @media (prefers-reduced-motion: reduce) {
-    .notif-scope .n-card,
-    .notif-scope .btn-outline,
-    .notif-scope .btn-sm,
-    .notif-scope .pager a {
-      transition: none !important;
-    }
-
-    .notif-scope .n-card:hover,
-    .notif-scope .btn-outline:hover,
-    .notif-scope .btn-sm:hover,
-    .notif-scope .pager a:hover {
-      transform: none !important;
-    }
-  }
-
-  /* ===== بحث داخل الإشعارات ===== */
-  .notif-scope .notif-search {
-    position: relative;
-    flex: 1 1 220px;
-    min-width: 180px;
-  }
-  .notif-scope .notif-search i {
-    position: absolute;
-    top: 50%;
-    right: 14px;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: #e6cf9a;
-  }
-  .notif-scope .notif-search input {
-    width: 100%;
-    padding: 12px 40px 12px 16px;
-    border: 1px solid rgba(212,177,109,.5);
-    border-radius: var(--notif-radius-md);
-    background: rgba(255,255,255,.12);
-    color: #fff;
-    font: inherit;
-    font-weight: 600;
-    min-height: 44px;
-  }
-  .notif-scope .notif-search input::placeholder { color: rgba(255,255,255,.7); }
-  .notif-scope .notif-search input:focus {
-    outline: none;
-    border-color: #e6cf9a;
-    box-shadow: 0 0 0 4px rgba(212,177,109,.25);
-  }
-
-  /* ===== تحسين تباين عناصر الترويسة على الخلفية الخضراء الملكية ===== */
-  .notif-scope .page-head .toggle { color: #fdf6e6; }
-  .notif-scope .page-head .toggle input[type="checkbox"] { accent-color: #d4b16d; }
-  .notif-scope .page-head .btn-outline {
-    color: #fdf6e6;
-    border-color: rgba(212,177,109,.55);
-    background: rgba(255,255,255,.10);
-  }
-  .notif-scope .page-head .btn-outline:hover {
-    background: #d4b16d;
-    color: #063d22;
-    border-color: #d4b16d;
-    box-shadow: 0 8px 20px rgba(0,0,0,.2);
-  }
-
-  /* ===== رسالة عدم وجود نتائج للفلترة ===== */
-  .notif-scope .filter-empty {
-    display: none;
-    padding: 48px 20px;
-    text-align: center;
-    color: var(--notif-text-soft);
-    font-size: 1.05rem;
-    font-weight: 700;
-    border: 2px dashed var(--notif-border);
-    border-radius: var(--notif-radius-xl);
-    background: var(--notif-surface);
-  }
-  .notif-scope .filter-empty i { font-size: 2.5rem; display: block; margin-bottom: 14px; opacity: .4; }
-
-  /* Final inbox polish: the page has legacy layers above; these rules are the
-     intentional last word for hierarchy, unread state, and small screens. */
-  .notif-scope .page-head-copy{position:relative;min-width:min(100%,320px);flex:1}
-  .notif-scope .page-eyebrow{display:inline-flex;align-items:center;gap:7px;margin-bottom:8px;color:#e6cf9a;font-size:.78rem;font-weight:950}
-  .notif-scope .page-subtitle{position:relative;margin:0;color:rgba(255,255,255,.78);font-size:.84rem;font-weight:750;line-height:1.75}
-  .notif-scope .head-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .notif-scope .head-summary span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.74rem;font-weight:850}
-  .notif-scope .head-summary i{color:#e6cf9a}
-  .notif-scope .inbox-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-  .notif-scope .inbox-nav a{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid var(--notif-border);border-radius:12px;background:var(--notif-surface);color:var(--notif-text);font-size:.8rem;font-weight:900;text-decoration:none;transition:transform .18s ease,border-color .18s ease,color .18s ease}
-  .notif-scope .inbox-nav a:hover{border-color:var(--notif-primary);color:var(--notif-primary);transform:translateY(-1px)}
-  .notif-scope .n-card:not(.read){border-color:rgba(10,92,51,.38);box-shadow:0 16px 34px -24px rgba(10,92,51,.72)}
-  .notif-scope .n-card:not(.read) .n-title::after{content:'جديد';display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(10,92,51,.1);color:var(--notif-primary);font-size:.65rem;font-weight:950}
-  .notif-scope .n-card.read{opacity:.82}
-  .notif-scope .n-actions .btn-sm{min-height:42px}
-  @media(max-width:768px){
-    .notif-scope .page-head-copy{width:100%}
-    .notif-scope .head-summary span{flex:1;justify-content:center}
-    .notif-scope .n-actions .btn-sm,.notif-scope .n-actions form{flex:1;justify-content:center}
-  }
-  @media(prefers-reduced-motion:reduce){.notif-scope .inbox-nav a{transition:none}}
-</style>
+<link rel="stylesheet" href="{% static 'css/notifications-user.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="notif-scope">
-  <div class="notif-container" dir="rtl">
-
-    <header class="page-head">
-      <div class="page-head-copy">
-        <div class="page-eyebrow"><i class="fa-solid fa-inbox" aria-hidden="true"></i> مركز التنبيهات</div>
-        <h1 class="page-title">
-          <i class="fa-solid fa-bell" aria-hidden="true"></i>
-          الإشعارات والنشرات
-        </h1>
-        {% with unread=NAV_NOTIFICATIONS_UNREAD|default_if_none:"0"|add:"0" %}
-          <span class="chip" id="unreadCount" aria-live="polite" {% if unread == 0 %}style="display:none"{% endif %} data-initial="{{ unread }}">
-            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-            <span id="unreadCountNum">{{ unread }}</span>
-            غير مقروءة
-          </span>
-        {% endwith %}
-        <p class="page-subtitle">تابع رسائل الإدارة والنشرات المرفقة، وأكمل التوقيع عندما تطلبه النشرة.</p>
-        <div class="head-summary">
-          <span><i class="fa-solid fa-bell" aria-hidden="true"></i> تواصل المدرسة</span>
-          <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> عزل حسب المدرسة النشطة</span>
+<div class="twq-page notifications-page" dir="rtl" aria-labelledby="notificationsTitle" data-notifications-page="inbox">
+  <header class="twq-page-header notifications-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-bell" aria-hidden="true"></i> صندوق التواصل الوارد</p>
+      <h1 class="twq-page-header__title" id="notificationsTitle">الإشعارات والنشرات</h1>
+      <p class="twq-page-header__lead">راجع ما وصلك من المدرسة، وميّز الجديد، ثم افتح الرسالة للاطلاع على كامل محتواها ومرفقاتها.</p>
+      <dl class="twq-page-header__context notifications-header__context" aria-label="سياق صندوق الإشعارات">
+        <div>
+          <dt>المدرسة الحالية</dt>
+          <dd>{{ SCHOOL_NAME|default:"النطاق العام" }}</dd>
         </div>
-      </div>
-
-      <div class="head-actions">
-        <div class="notif-search">
-          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-          <input type="search" id="notifSearch" placeholder="ابحث في الإشعارات والنشرات…" aria-label="بحث في التواصل الوارد">
+        <div>
+          <dt>غير المقروء</dt>
+          <dd><span id="unreadCountNum">{{ NAV_NOTIFICATIONS_UNREAD|default:0 }}</span> إشعار</dd>
         </div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside notifications-header__aside">
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:my_circulars' %}">
+        <i class="fa-solid fa-file-signature" aria-hidden="true"></i>
+        سجل التعاميم
+      </a>
+      <form class="notifications-mark-all" method="post" action="{% url 'reports:notifications_mark_all_read' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'reports:my_notifications' %}">
+        <button class="twq-btn twq-btn--primary" type="submit" data-mark-all-button {% if not NAV_NOTIFICATIONS_UNREAD %}disabled{% endif %}>
+          <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+          تحديد الكل كمقروء
+        </button>
+      </form>
+    </div>
+  </header>
 
-        <label class="toggle" for="onlyUnread">
-          <input type="checkbox" id="onlyUnread">
-          إظهار غير المقروء فقط
-        </label>
-
-        <form class="head-actions mark-all" method="post" action="{% url 'reports:notifications_mark_all_read' %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{% url 'reports:my_notifications' %}">
-          <button class="btn-outline" type="submit" id="markAllBtn">
-            <i class="fa-solid fa-check-double" aria-hidden="true"></i>
-            تحديد الكل كمقروء
-          </button>
-        </form>
+  <section class="twq-section notifications-workspace" aria-labelledby="notificationsListTitle">
+    <div class="twq-section__header notifications-section-header">
+      <div>
+        <span class="twq-section__kicker">الوارد الشخصي</span>
+        <h2 class="twq-section__title" id="notificationsListTitle">الرسائل الأحدث</h2>
+        <p class="twq-section__description">لا تُعد الرسالة مقروءة من مجرد ظهورها هنا؛ تُسجّل القراءة عند فتح التفاصيل أو عبر الإجراء الصريح.</p>
       </div>
-    </header>
-
-    <nav class="inbox-nav" aria-label="التنقل بين الوارد">
-      <a href="{% url 'reports:my_notifications' %}"><i class="fa-solid fa-bell" aria-hidden="true"></i> الإشعارات والنشرات</a>
-      <a href="{% url 'reports:my_circulars' %}"><i class="fa-solid fa-file-signature" aria-hidden="true"></i> التعاميم والتوقيعات</a>
-    </nav>
+      {% if page_obj %}<span class="notifications-results-count">{{ page_obj.paginator.count }} رسالة</span>{% endif %}
+    </div>
 
     {% if page_obj and page_obj.object_list %}
-      <section class="cards" id="cards">
+      <div class="notifications-filter-panel" aria-label="أدوات العرض داخل الصفحة الحالية">
+        <div class="notifications-local-search twq-field">
+          <label class="twq-label" for="notificationSearch">بحث في الصفحة الحالية</label>
+          <div class="twq-toolbar__control">
+            <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input class="twq-control" id="notificationSearch" type="search" placeholder="العنوان أو المرسل أو نص الرسالة" autocomplete="off" data-notification-search>
+          </div>
+        </div>
+        <label class="notifications-unread-filter" for="onlyUnread">
+          <input id="onlyUnread" type="checkbox" data-only-unread>
+          <span><strong>غير المقروء فقط</strong><small>ضمن هذه الصفحة</small></span>
+        </label>
+      </div>
+
+      <ul class="notifications-list" id="notificationList" role="list">
         {% for r in page_obj %}
           {% with n=r.notification %}
-          <article class="n-card {% if r.is_read %}read{% endif %}" data-read="{% if r.is_read %}1{% else %}0{% endif %}">
-            <div class="n-head">
-              <h3 class="n-title">
-                {% if n.is_newsletter %}
-                  <span class="chip info"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> نشرة</span>
-                {% endif %}
-                {% if n.is_important %}
-                  <span class="chip danger"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> هام</span>
-                {% endif %}
-                {{ n.title|default:"رسالة من الإدارة" }}
-              </h3>
+          <li class="notification-item{% if not r.is_read %} notification-item--unread{% endif %}" data-notification-item data-read="{% if r.is_read %}1{% else %}0{% endif %}">
+            <article class="notification-card" aria-labelledby="notificationTitle{{ r.pk }}">
+              <div class="notification-card__state" aria-hidden="true"><i class="{% if r.is_read %}fa-regular fa-envelope-open{% else %}fa-solid fa-envelope{% endif %}"></i></div>
+              <div class="notification-card__content">
+                <div class="notification-card__head">
+                  <div class="notification-card__identity">
+                    <div class="notification-card__labels" aria-label="تصنيف وحالة الرسالة">
+                      <span class="notification-type"><i class="{% if n.is_newsletter %}fa-regular fa-newspaper{% else %}fa-regular fa-bell{% endif %}" aria-hidden="true"></i> {% if n.is_newsletter %}نشرة{% else %}إشعار{% endif %}</span>
+                      <span class="twq-status" data-status="{% if r.is_read %}completed{% else %}pending{% endif %}">{% if r.is_read %}مقروء{% else %}غير مقروء{% endif %}</span>
+                      {% if n.is_important %}<span class="twq-status" data-status="danger"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> مهم</span>{% endif %}
+                      {% if n.attachment %}<span class="notification-has-attachment"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> مرفق</span>{% endif %}
+                    </div>
+                    <h3 class="notification-card__title" id="notificationTitle{{ r.pk }}">{{ n.title|default:"رسالة من الإدارة" }}</h3>
+                  </div>
+                  <time class="notification-card__time" datetime="{{ r.created_at|date:'c' }}"><span>{{ r.created_at|hijri }} هـ</span><span>{{ r.created_at|time:"H:i" }}</span></time>
+                </div>
 
-              <time class="n-time" datetime="{{ r.created_at|date:'c' }}">
-                <i class="fa-regular fa-clock" aria-hidden="true"></i>
-                {{ r.created_at|hijri }} هـ · {{ r.created_at|time:"H:i" }}
-              </time>
-            </div>
+                {% firstof n.message n.body n.content n.text n.details as body %}
+                {% if body %}<p class="notification-card__excerpt">{{ body|striptags|truncatechars:180 }}</p>{% endif %}
 
-            {% firstof n.message n.body n.content n.text n.details as body %}
-            {% if body %}
-              <div class="n-body">{{ body|linebreaksbr }}</div>
-            {% endif %}
-
-            <div class="sender" aria-label="المرسِل">
-              <span class="avatar-dot" aria-hidden="true"></span>
-
-              <span class="sender-name">
-                {% firstof r.sender_name "الإدارة" %}
-              </span>
-
-              <span class="sender-role">
-                {% if r.sender_role_label %}— {{ r.sender_role_label }}{% endif %}
-              </span>
-            </div>
-
-            <div class="n-actions">
-              <div class="left">
-                <a
-                  class="btn-sm ghost"
-                  aria-label="عرض {% if n.is_newsletter %}النشرة{% else %}الإشعار{% endif %} كاملًا"
-                  href="{% url 'reports:my_notification_detail' r.pk %}"
-                >
-                  <i class="fa-regular fa-eye" aria-hidden="true"></i>
-                  عرض التفاصيل
-                </a>
+                <dl class="notification-card__meta">
+                  <div><dt>المرسل</dt><dd>{% firstof r.sender_name "الإدارة" %}{% if r.sender_role_label %} <span>· {{ r.sender_role_label }}</span>{% endif %}</dd></div>
+                  {% if r.read_at %}<div><dt>قُرئت في</dt><dd><time datetime="{{ r.read_at|date:'c' }}">{{ r.read_at|hijri }} هـ · {{ r.read_at|time:"H:i" }}</time></dd></div>{% endif %}
+                </dl>
               </div>
 
-              <div class="right">
+              <div class="notification-card__actions">
+                <a class="twq-btn twq-btn--secondary" href="{% url 'reports:my_notification_detail' r.pk %}" aria-label="فتح تفاصيل {{ n.title|default:'الإشعار' }}">فتح التفاصيل <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
                 {% if n.requires_signature and not r.is_signed %}
-                  <span class="btn-sm primary">
-                    <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
-                    توقيع مطلوب
-                  </span>
+                  <span class="notification-action-note"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> توقيع مطلوب</span>
                 {% elif n.requires_signature and r.is_signed %}
-                  <span class="btn-sm success">
-                    <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
-                    تم التوقيع
-                  </span>
-                {% elif r.is_read %}
-                  <span class="btn-sm success">
-                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                    مقروء
-                  </span>
-                  {% if r.read_at %}
-                    <span class="chip muted">
-                      <i class="fa-regular fa-clock" aria-hidden="true"></i>
-                      {{ r.read_at|hijri }} هـ · {{ r.read_at|time:"H:i" }}
-                    </span>
-                  {% endif %}
-                {% else %}
-                  <form method="post" action="{% url 'reports:notification_mark_read' r.pk %}" class="mark-one-form">
+                  <span class="notification-action-note notification-action-note--complete"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> تم التوقيع</span>
+                {% elif not r.is_read %}
+                  <form method="post" action="{% url 'reports:notification_mark_read' r.pk %}" class="notification-mark-one">
                     {% csrf_token %}
-                    <button class="btn-sm primary mark-one" type="submit">
-                      <i class="fa-solid fa-check" aria-hidden="true"></i>
-                      تمت القراءة
-                    </button>
+                    <input type="hidden" name="next" value="{% url 'reports:my_notifications' %}?page={{ page_obj.number }}">
+                    <button class="twq-btn twq-btn--ghost" type="submit" data-mark-one-button><i class="fa-solid fa-check" aria-hidden="true"></i> تمت القراءة</button>
                   </form>
                 {% endif %}
               </div>
-            </div>
-          </article>
+            </article>
+          </li>
           {% endwith %}
         {% endfor %}
-      </section>
+      </ul>
 
-      <div class="filter-empty" id="filterEmpty">
-        <i class="fa-regular fa-face-smile" aria-hidden="true"></i>
-        لا توجد إشعارات مطابقة للبحث/الفلتر الحالي.
+      <div class="twq-empty twq-empty--local notifications-filter-empty" data-filter-empty role="status" hidden>
+        <span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-bell-slash"></i></span>
+        <div><h3 class="twq-empty__title">لا توجد رسائل مطابقة في هذه الصفحة</h3><p class="twq-empty__message">غيّر عبارة البحث أو ألغِ فلتر غير المقروء.</p></div>
       </div>
 
       {% if page_obj.paginator.num_pages > 1 %}
-        <nav class="pager" aria-label="التنقل بين الصفحات">
-          {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-              السابق
-            </a>
-          {% endif %}
-
-          <span class="on">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
-
-          {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">
-              التالي
-              <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-            </a>
-          {% endif %}
-        </nav>
+      <nav class="twq-pagination notifications-pagination" aria-label="ترقيم صفحات الإشعارات">
+        {% if page_obj.has_previous %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}
+        <span class="twq-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ page_obj.next_page_number }}">التالي</a>{% endif %}
+      </nav>
       {% endif %}
-
     {% else %}
-      <div class="empty empty-state" data-empty-state role="status">
-        <i class="fa-regular fa-bell" aria-hidden="true"></i>
-        <h2>لا توجد إشعارات أو نشرات حتى الآن</h2>
-        <p>ستظهر هنا رسائل الإدارة والنشرات الجديدة فور إرسالها.</p>
-        <a class="btn btn-secondary" href="{% url 'reports:my_circulars' %}">عرض التعاميم</a>
+      <div class="twq-empty twq-empty--page notifications-empty" role="status">
+        <span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-bell"></i></span>
+        <h2 class="twq-empty__title">لا توجد إشعارات أو نشرات حتى الآن</h2>
+        <p class="twq-empty__message">ستظهر هنا رسائل المدرسة الموجهة إليك فور إرسالها.</p>
+        <a class="twq-btn twq-btn--secondary" href="{% url 'reports:my_circulars' %}">عرض التعاميم</a>
       </div>
     {% endif %}
-  </div>
-
+  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ block.super }}
-<script{% if CSP_NONCE %} nonce="{{ CSP_NONCE }}"{% endif %} data-cfasync="false">
-document.addEventListener('DOMContentLoaded', function(){
-  const $  = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
-
-  const LS_ONLY_KEY = 'notif_only_unread_v1';
-
-  const unreadCountEl = $('#unreadCount');
-  const unreadNumEl   = $('#unreadCountNum');
-
-  let unreadTotal = Number(unreadCountEl && unreadCountEl.dataset.initial || 0);
-
-  function renderUnread(){
-    if(!unreadCountEl || !unreadNumEl) return;
-    unreadNumEl.textContent = String(unreadTotal);
-    unreadCountEl.style.display = (unreadTotal > 0) ? '' : 'none';
-    ['notifDot', 'notifDotMobile'].forEach(function(id){
-      const dot = document.getElementById(id);
-      if(!dot) return;
-      dot.textContent = String(unreadTotal);
-      dot.style.display = unreadTotal > 0 ? 'flex' : 'none';
-      dot.setAttribute('aria-label', unreadTotal + ' إشعار غير مقروء');
-    });
-  }
-
-  const onlyUnread = $('#onlyUnread');
-  const searchInput = $('#notifSearch');
-  const filterEmpty = $('#filterEmpty');
-
-  function applyFilters(){
-    const only = !!(onlyUnread && onlyUnread.checked);
-    const term = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
-    let visible = 0;
-    $$('.n-card').forEach(c=>{
-      const isRead = c.classList.contains('read');
-      const passUnread = !only || !isRead;
-      const passSearch = !term || (c.textContent || '').toLowerCase().indexOf(term) !== -1;
-      const show = passUnread && passSearch;
-      c.style.display = show ? '' : 'none';
-      if(show) visible++;
-    });
-    // رسالة "لا نتائج" تظهر فقط عند وجود بطاقات لكنها مخفية بالفلترة
-    if(filterEmpty){
-      const hasCards = $$('.n-card').length > 0;
-      filterEmpty.style.display = (hasCards && visible === 0) ? '' : 'none';
-    }
-  }
-
-  if(onlyUnread){
-    try{
-      const saved = localStorage.getItem(LS_ONLY_KEY);
-      if(saved === '1') onlyUnread.checked = true;
-    }catch(e){
-      // ignore
-    }
-
-    onlyUnread.addEventListener('change', function(){
-      try{ localStorage.setItem(LS_ONLY_KEY, onlyUnread.checked ? '1' : '0'); }catch(e){}
-      applyFilters();
-    });
-  }
-
-  if(searchInput){
-    let _t = null;
-    searchInput.addEventListener('input', function(){
-      if(_t) clearTimeout(_t);
-      _t = setTimeout(applyFilters, 80);
-    });
-  }
-
-  // زر "تحديد الكل" — UI optimistic
-  const markAllForm = document.querySelector('form.mark-all');
-  const markAllBtn  = $('#markAllBtn');
-  if(markAllForm && markAllBtn){
-    markAllForm.addEventListener('submit', function(){
-      markAllBtn.disabled = true;
-      markAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> جاري المعالجة...';
-      $$('.n-card').forEach(c => c.classList.add('read'));
-      unreadTotal = 0;
-      renderUnread();
-      applyFilters();
-    });
-  }
-
-  // وسم إشعار واحد محليًا + منع النقر المزدوج
-  $$('.mark-one-form').forEach(function(f){
-    f.addEventListener('submit', function(){
-      const btn = f.querySelector('.mark-one');
-      if(btn){
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> جاري المعالجة...';
-      }
-      const card = f.closest('.n-card');
-      if(card && !card.classList.contains('read')){
-        card.classList.add('read');
-        unreadTotal = Math.max(0, unreadTotal - 1);
-      }
-      renderUnread();
-      applyFilters();
-    });
-  });
-
-  renderUnread();
-  applyFilters();
-});
-</script>
+<script src="{% static 'js/notifications-user.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

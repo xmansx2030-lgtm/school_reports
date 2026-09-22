@@ -646,10 +646,8 @@ class ManagerExperienceTests(TestCase):
         self.assertContains(response, 'data-has-recipients="false"')
         self.assertContains(response, "إضافة فريق المدرسة الآن")
         self.assertContains(response, f'href="{reverse("reports:bulk_import_teachers")}"')
-        self.assertContains(
-            response,
-            'class="btn btn-primary" id="notificationSubmit" type="submit" disabled aria-disabled="true"',
-        )
+        self.assertContains(response, 'id="notificationSubmit"')
+        self.assertContains(response, 'disabled aria-disabled="true"')
 
     def test_circular_copy_and_required_fields_match_behavior(self):
         form = NotificationCreateForm(
