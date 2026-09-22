@@ -15,6 +15,7 @@ on:
         options:
           - full
           - verify
+          - post
 
 permissions:
   contents: read
@@ -46,6 +47,7 @@ jobs:
           ssh-keygen -lf ~/.ssh/id_deploy.pub | awk '{print $2}' > ~/.ssh/id_deploy.fingerprint
 
       - name: Pre-maintenance checks and fresh backups
+        if: inputs.mode != 'post'
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
           SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
@@ -187,15 +189,17 @@ jobs:
           swapon --show
           docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
             | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          echo host-services-healthy-after-reboot
+          REMOTE
+
           curl -fsS --retry 10 --retry-delay 3 https://tawtheeq-ksa.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://school-display.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
           echo all-projects-healthy-after-reboot
-          REMOTE
 
       - name: Verify current host without reboot
-        if: inputs.mode == 'verify'
+        if: inputs.mode == 'verify' || inputs.mode == 'post'
         env:
           SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
           SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
@@ -217,9 +221,11 @@ jobs:
           swapon --show
           docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
             | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          echo host-services-healthy-after-maintenance
+          REMOTE
+
           curl -fsS --retry 10 --retry-delay 3 https://tawtheeq-ksa.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://school-display.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://mizaanlegal.com/ >/dev/null
           curl -fsS --retry 10 --retry-delay 3 https://xmansx.com/ >/dev/null
           echo all-projects-healthy-after-maintenance
-          REMOTE
