@@ -291,14 +291,15 @@ jobs:
                caddy validate --config /tmp/Caddyfile.candidate --adapter caddyfile; \
              cp \"\$current\" \"\$backup\"; \
              cat '$candidate' > \"\$current\"; \
-             if docker exec school-reports-caddy-1 \
-                  caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; then \
+             if docker compose -f compose.hetzner.yaml -f compose.caddy.yaml \
+                  up -d --no-deps --force-recreate caddy && \
+                docker exec school-reports-caddy-1 \
+                  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then \
                rm -f '$candidate' \"\$backup\"; \
-               docker exec school-reports-caddy-1 rm -f /tmp/Caddyfile.candidate; \
              else \
                cat \"\$backup\" > \"\$current\"; \
-               docker exec school-reports-caddy-1 \
-                 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; \
+               docker compose -f compose.hetzner.yaml -f compose.caddy.yaml \
+                 up -d --no-deps --force-recreate caddy; \
                rm -f '$candidate' \"\$backup\"; \
                exit 1; \
              fi"
