@@ -14,6 +14,7 @@ from .models import (
     ServerMetricSnapshot,
 )
 from .push import send_incident_push
+from .payment_links import reconcile_open_payment_links
 from .services import capture_server_metrics, probe_all_projects
 from .task_names import SEND_INCIDENT_PUSH_TASK, STORE_CAPACITY_SNAPSHOT_TASK
 
@@ -42,6 +43,13 @@ def sync_deployed_revisions_task() -> dict[str, int]:
         values["deployed_image"] = release_image[:300]
     updated = ManagedProject.objects.filter(slug="tawtheeq", is_active=True).update(**values)
     return {"updated": updated}
+
+
+@shared_task(ignore_result=True)
+def reconcile_payment_links_task() -> dict[str, int | bool]:
+    if not getattr(settings, "MOYASAR_ENABLED", False):
+        return {"enabled": False, "checked": 0, "updated": 0, "failed": 0}
+    return {"enabled": True, **reconcile_open_payment_links(limit=100)}
 
 
 @shared_task(ignore_result=True)

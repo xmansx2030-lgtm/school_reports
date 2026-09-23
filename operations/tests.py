@@ -1,4 +1,6 @@
 from unittest.mock import patch
+from datetime import timedelta
+from decimal import Decimal
 
 from django.core.cache import cache
 from django.test import TestCase, override_settings
@@ -18,9 +20,11 @@ from .models import (
     MobileDevice,
     OperationAction,
     OperationsMembership,
+    OperationsPaymentLink,
     ProjectMetricSnapshot,
     ServerMetricSnapshot,
 )
+from .payment_links import callback_token
 from .services import capture_server_metrics
 
 
@@ -138,6 +142,172 @@ class OperationsApiTests(TestCase):
         self.assertEqual(metric["cpu_percent"], "12.5")
         self.assertEqual(metric["memory_used_mb"], "384.0")
         self.assertEqual(metric["running_container_count"], 3)
+
+    @override_settings(
+        MOYASAR_ENABLED=True,
+        MOYASAR_ENVIRONMENT="test",
+        MOYASAR_SECRET_KEY="sk_test_example",
+    )
+    @patch("operations.views.create_moyasar_invoice")
+    def test_admin_can_create_project_payment_link_without_exposing_contact_metadata(
+        self,
+        create_invoice,
+    ):
+        create_invoice.return_value = {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "status": "initiated",
+            "amount": 25000,
+            "currency": "SAR",
+            "url": "https://checkout.moyasar.com/invoices/example",
+            "payments": [],
+        }
+        token = self._login()
+
+        response = self.client.post(
+            reverse("operations:payment-links"),
+            {
+                "project_id": self.project.pk,
+                "customer_name": "عميل تجريبي",
+                "customer_phone": "+966500000000",
+                "customer_email": "customer@example.com",
+                "amount": "250.00",
+                "description": "خدمة تطوير ودعم",
+                "internal_reference": "Q-2026-15",
+                "expires_at": (timezone.now() + timedelta(days=3)).isoformat(),
+            },
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        link = OperationsPaymentLink.objects.get()
+        self.assertEqual(link.project, self.project)
+        self.assertEqual(link.amount, Decimal("250.00"))
+        self.assertEqual(link.status, OperationsPaymentLink.Status.INITIATED)
+        self.assertEqual(link.gateway_url, "https://checkout.moyasar.com/invoices/example")
+        sent = create_invoice.call_args.kwargs
+        self.assertEqual(sent["metadata"]["project"], self.project.slug)
+        self.assertNotIn("customer_phone", sent["metadata"])
+        self.assertNotIn("customer_email", sent["metadata"])
+        self.assertIn(str(link.public_id), sent["callback_url"])
+
+    @override_settings(MOYASAR_ENABLED=True)
+    @patch("operations.views.create_moyasar_invoice")
+    def test_operator_cannot_create_or_list_payment_links(self, create_invoice):
+        OperationsMembership.objects.create(
+            user=self.regular,
+            role=OperationsMembership.Role.OPERATOR,
+            created_by=self.admin,
+        )
+        _, token = MobileAccessToken.issue(user=self.regular, device_name="test")
+
+        list_response = self.client.get(
+            reverse("operations:payment-links"),
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+        create_response = self.client.post(
+            reverse("operations:payment-links"),
+            {
+                "project_id": self.project.pk,
+                "customer_name": "Client",
+                "customer_phone": "+966500000000",
+                "amount": "10.00",
+                "description": "Service",
+            },
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+
+        self.assertEqual(list_response.status_code, 403)
+        self.assertEqual(create_response.status_code, 403)
+        create_invoice.assert_not_called()
+
+    @override_settings(MOYASAR_ENABLED=True)
+    @patch("operations.payment_links.fetch_invoice")
+    def test_payment_link_callback_refetches_provider_and_marks_link_paid(self, fetch_invoice):
+        link = OperationsPaymentLink.objects.create(
+            project=self.project,
+            customer_name="Client",
+            customer_phone="+966500000000",
+            amount=Decimal("250.00"),
+            description="Service",
+            gateway_invoice_id="11111111-1111-1111-1111-111111111111",
+            gateway_url="https://checkout.moyasar.com/invoices/example",
+            status=OperationsPaymentLink.Status.INITIATED,
+            created_by=self.admin,
+        )
+        fetch_invoice.return_value = {
+            "id": link.gateway_invoice_id,
+            "status": "paid",
+            "amount": 25000,
+            "currency": "SAR",
+            "url": link.gateway_url,
+            "updated_at": timezone.now().isoformat(),
+            "payments": [{"status": "paid", "updated_at": timezone.now().isoformat()}],
+        }
+
+        response = self.client.post(
+            reverse(
+                "operations:payment-link-callback",
+                args=[link.public_id, callback_token(link.public_id)],
+            )
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        link.refresh_from_db()
+        self.assertEqual(link.status, OperationsPaymentLink.Status.PAID)
+        self.assertIsNotNone(link.paid_at)
+
+    @override_settings(MOYASAR_ENABLED=True)
+    @patch("operations.payment_links.fetch_invoice")
+    def test_payment_link_callback_rejects_an_invalid_token(self, fetch_invoice):
+        link = OperationsPaymentLink.objects.create(
+            project=self.project,
+            customer_name="Client",
+            customer_phone="+966500000000",
+            amount=Decimal("10.00"),
+            description="Service",
+            gateway_invoice_id="22222222-2222-2222-2222-222222222222",
+            gateway_url="https://checkout.moyasar.com/invoices/example-two",
+            status=OperationsPaymentLink.Status.INITIATED,
+            created_by=self.admin,
+        )
+
+        response = self.client.post(
+            reverse(
+                "operations:payment-link-callback",
+                args=[link.public_id, "invalid-token"],
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        fetch_invoice.assert_not_called()
+
+    @override_settings(MOYASAR_ENABLED=True)
+    @patch("operations.views.cancel_moyasar_invoice")
+    def test_cancel_payment_link_requires_exact_confirmation(self, cancel_invoice):
+        link = OperationsPaymentLink.objects.create(
+            project=self.project,
+            customer_name="Client",
+            customer_phone="+966500000000",
+            amount=Decimal("10.00"),
+            description="Service",
+            gateway_invoice_id="33333333-3333-3333-3333-333333333333",
+            gateway_url="https://checkout.moyasar.com/invoices/example-three",
+            status=OperationsPaymentLink.Status.INITIATED,
+            created_by=self.admin,
+        )
+        token = self._login()
+
+        response = self.client.post(
+            reverse("operations:payment-link-cancel", args=[link.public_id]),
+            {"confirmation": "wrong"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+
+        self.assertEqual(response.status_code, 409)
+        cancel_invoice.assert_not_called()
 
     def test_project_detail_does_not_present_server_usage_as_project_usage(self):
         ServerMetricSnapshot.objects.create(

@@ -1,3 +1,7 @@
+import re
+from decimal import Decimal
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import (
@@ -7,6 +11,7 @@ from .models import (
     ManagedServer,
     ManagedService,
     OperationAction,
+    OperationsPaymentLink,
     ProjectMetricSnapshot,
     ServerMetricSnapshot,
 )
@@ -100,3 +105,76 @@ class OperationActionSerializer(serializers.ModelSerializer):
             "id", "request_id", "action", "action_label", "status", "requested_by_name",
             "result_summary", "error_code", "requested_at", "started_at", "finished_at",
         )
+
+
+class OperationsPaymentLinkSerializer(serializers.ModelSerializer):
+    project_id = serializers.IntegerField(read_only=True)
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    project_slug = serializers.CharField(source="project.slug", read_only=True)
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    created_by_name = serializers.CharField(source="created_by.name", read_only=True)
+    can_cancel = serializers.BooleanField(read_only=True)
+    cancellation_confirmation = serializers.SerializerMethodField()
+
+    def get_cancellation_confirmation(self, obj):
+        return str(obj.public_id)[:8]
+
+    class Meta:
+        model = OperationsPaymentLink
+        fields = (
+            "id",
+            "public_id",
+            "project_id",
+            "project_name",
+            "project_slug",
+            "customer_name",
+            "customer_phone",
+            "customer_email",
+            "amount",
+            "currency",
+            "description",
+            "internal_reference",
+            "expires_at",
+            "gateway_invoice_id",
+            "gateway_url",
+            "status",
+            "status_label",
+            "provider_error",
+            "created_by_name",
+            "paid_at",
+            "last_synced_at",
+            "created_at",
+            "updated_at",
+            "can_cancel",
+            "cancellation_confirmation",
+        )
+
+
+class OperationsPaymentLinkCreateSerializer(serializers.Serializer):
+    project_id = serializers.PrimaryKeyRelatedField(
+        source="project",
+        queryset=ManagedProject.objects.filter(is_active=True),
+    )
+    customer_name = serializers.CharField(max_length=160, trim_whitespace=True)
+    customer_phone = serializers.CharField(max_length=32, trim_whitespace=True)
+    customer_email = serializers.EmailField(required=False, allow_blank=True, max_length=254)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("1.00"))
+    description = serializers.CharField(max_length=255, trim_whitespace=True)
+    internal_reference = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=120,
+        trim_whitespace=True,
+    )
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate_customer_phone(self, value):
+        digits = re.sub(r"\D", "", value)
+        if not 8 <= len(digits) <= 15:
+            raise serializers.ValidationError("أدخل رقم جوال صالحًا مع مفتاح الدولة.")
+        return value
+
+    def validate_expires_at(self, value):
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError("يجب أن يكون تاريخ الانتهاء في المستقبل.")
+        return value

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -85,19 +86,23 @@ def create_invoice(
     success_url: str,
     back_url: str,
     metadata: dict[str, str],
+    expired_at: datetime | str | None = None,
 ) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "amount": _amount_in_halalas(amount),
+        "currency": "SAR",
+        "description": str(description)[:255],
+        "callback_url": callback_url,
+        "success_url": success_url,
+        "back_url": back_url,
+        "metadata": {str(key)[:40]: str(value)[:500] for key, value in metadata.items()},
+    }
+    if expired_at:
+        payload["expired_at"] = expired_at.isoformat() if isinstance(expired_at, datetime) else str(expired_at)
     response = _request(
         "/invoices",
         method="POST",
-        payload={
-            "amount": _amount_in_halalas(amount),
-            "currency": "SAR",
-            "description": str(description)[:255],
-            "callback_url": callback_url,
-            "success_url": success_url,
-            "back_url": back_url,
-            "metadata": {str(key)[:40]: str(value)[:500] for key, value in metadata.items()},
-        },
+        payload=payload,
     )
     if not response.get("id") or not response.get("url"):
         raise MoyasarGatewayError("Moyasar invoice response is missing invoice details.")
@@ -109,3 +114,8 @@ def fetch_invoice(invoice_id: str) -> dict[str, Any]:
         raise MoyasarGatewayError("Moyasar invoice id is required.")
     return _request(f"/invoices/{invoice_id}")
 
+
+def cancel_invoice(invoice_id: str) -> dict[str, Any]:
+    if not invoice_id:
+        raise MoyasarGatewayError("Moyasar invoice id is required.")
+    return _request(f"/invoices/{invoice_id}/cancel", method="PUT")

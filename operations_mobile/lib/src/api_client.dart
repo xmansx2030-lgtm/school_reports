@@ -156,6 +156,62 @@ class OperationsApi {
     );
   }
 
+  Future<PaymentLinksData> paymentLinks() async => PaymentLinksData.fromJson(
+    await _request(() => _dio.get<Map<String, dynamic>>('/payment-links/')),
+  );
+
+  Future<PaymentLinkInfo> createPaymentLink({
+    required int projectId,
+    required String customerName,
+    required String customerPhone,
+    required double amount,
+    required String description,
+    String customerEmail = '',
+    String internalReference = '',
+    DateTime? expiresAt,
+  }) async {
+    return PaymentLinkInfo.fromJson(
+      await _request(
+        () => _dio.post<Map<String, dynamic>>(
+          '/payment-links/',
+          data: {
+            'project_id': projectId,
+            'customer_name': customerName,
+            'customer_phone': customerPhone,
+            'customer_email': customerEmail,
+            'amount': amount.toStringAsFixed(2),
+            'description': description,
+            'internal_reference': internalReference,
+            if (expiresAt != null)
+              'expires_at': expiresAt.toUtc().toIso8601String(),
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<PaymentLinkInfo> syncPaymentLink(String publicId) async {
+    return PaymentLinkInfo.fromJson(
+      await _request(
+        () => _dio.post<Map<String, dynamic>>('/payment-links/$publicId/sync/'),
+      ),
+    );
+  }
+
+  Future<PaymentLinkInfo> cancelPaymentLink(
+    String publicId, {
+    required String confirmation,
+  }) async {
+    return PaymentLinkInfo.fromJson(
+      await _request(
+        () => _dio.post<Map<String, dynamic>>(
+          '/payment-links/$publicId/cancel/',
+          data: {'confirmation': confirmation},
+        ),
+      ),
+    );
+  }
+
   Future<List<OperationsAccount>> accounts() async {
     final data = await _request(
       () => _dio.get<Map<String, dynamic>>('/accounts/'),

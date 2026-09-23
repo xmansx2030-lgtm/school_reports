@@ -10,6 +10,7 @@ from .models import (
     MobileDevice,
     OperationAction,
     OperationsMembership,
+    OperationsPaymentLink,
     ProjectMetricSnapshot,
     ServerMetricSnapshot,
 )
@@ -63,3 +64,36 @@ class OperationsMembershipAdmin(admin.ModelAdmin):
 class MobileAccessTokenAdmin(admin.ModelAdmin):
     list_display = ("user", "device_name", "created_at", "expires_at", "last_used_at", "revoked_at")
     readonly_fields = ("public_id", "token_hash", "created_at", "last_used_at")
+
+
+@admin.register(OperationsPaymentLink)
+class OperationsPaymentLinkAdmin(admin.ModelAdmin):
+    list_display = (
+        "customer_name",
+        "project",
+        "amount",
+        "currency",
+        "status",
+        "created_by",
+        "created_at",
+        "last_synced_at",
+    )
+    list_filter = ("status", "currency", "project")
+    search_fields = (
+        "customer_name",
+        "customer_phone",
+        "customer_email",
+        "internal_reference",
+        "gateway_invoice_id",
+    )
+    readonly_fields = (
+        "public_id",
+        "gateway_invoice_id",
+        "gateway_url",
+        "status",
+        "provider_error",
+        "paid_at",
+        "last_synced_at",
+        "created_at",
+        "updated_at",
+    )

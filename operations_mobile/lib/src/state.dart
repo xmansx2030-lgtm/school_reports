@@ -191,6 +191,12 @@ final accountsProvider = FutureProvider.autoDispose<List<OperationsAccount>>((
   return ref.watch(apiProvider).accounts();
 });
 
+final paymentLinksProvider = FutureProvider.autoDispose<PaymentLinksData>((
+  ref,
+) {
+  return ref.watch(apiProvider).paymentLinks();
+});
+
 final notificationProvider = Provider<NotificationService>((ref) {
   final service = NotificationService(ref.watch(apiProvider));
   ref.onDispose(service.dispose);

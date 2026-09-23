@@ -9,6 +9,7 @@ import '../state.dart';
 import '../widgets/status_widgets.dart';
 import 'accounts_screen.dart';
 import 'change_password_screen.dart';
+import 'payment_links_screen.dart';
 import 'project_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -152,6 +153,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   List<Widget> _overviewTab(DashboardData data) => [
     _Overview(data: data),
+    if (data.currentUser.can('view_payment_links')) ...[
+      const SizedBox(height: 16),
+      const _PaymentLinksLauncher(),
+    ],
     const SizedBox(height: 16),
     _DeploymentPanel(canRunActions: data.currentUser.can('run_actions')),
   ];
@@ -176,6 +181,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         )
         .toList();
+  }
+}
+
+class _PaymentLinksLauncher extends StatelessWidget {
+  const _PaymentLinksLauncher();
+
+  @override
+  Widget build(BuildContext context) {
+    final ops = context.ops;
+    return Card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: ops.mint,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Icon(Icons.add_link_rounded, color: ops.forest),
+        ),
+        title: Text(
+          'روابط الدفع للمشاريع',
+          style: TextStyle(color: ops.ink, fontWeight: FontWeight.w900),
+        ),
+        subtitle: const Text(
+          'إنشاء رابط ميّسر ومتابعة التحصيل ومشاركته عبر واتساب',
+        ),
+        trailing: const Icon(Icons.chevron_left_rounded),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PaymentLinksScreen())),
+      ),
+    );
   }
 }
 

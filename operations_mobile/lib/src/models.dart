@@ -521,6 +521,8 @@ class OperationsAccount {
       'run_actions',
       'acknowledge_incidents',
       'manage_team',
+      'view_payment_links',
+      'manage_payment_links',
     },
     activeDevices: 0,
   );
@@ -543,4 +545,160 @@ class OperationsAccount {
         dateJoined: _date(json['date_joined']),
         lastSeenAt: _date(json['last_seen_at']),
       );
+}
+
+class PaymentProjectOption {
+  const PaymentProjectOption({
+    required this.id,
+    required this.name,
+    required this.slug,
+  });
+
+  final int id;
+  final String name;
+  final String slug;
+
+  factory PaymentProjectOption.fromJson(Map<String, dynamic> json) =>
+      PaymentProjectOption(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: '${json['name'] ?? ''}',
+        slug: '${json['slug'] ?? ''}',
+      );
+}
+
+class PaymentLinkInfo {
+  const PaymentLinkInfo({
+    required this.publicId,
+    required this.projectId,
+    required this.projectName,
+    required this.customerName,
+    required this.customerPhone,
+    required this.customerEmail,
+    required this.amount,
+    required this.currency,
+    required this.description,
+    required this.internalReference,
+    required this.gatewayUrl,
+    required this.status,
+    required this.statusLabel,
+    required this.createdByName,
+    required this.canCancel,
+    required this.cancellationConfirmation,
+    this.expiresAt,
+    this.paidAt,
+    this.lastSyncedAt,
+    this.createdAt,
+  });
+
+  final String publicId;
+  final int projectId;
+  final String projectName;
+  final String customerName;
+  final String customerPhone;
+  final String customerEmail;
+  final double amount;
+  final String currency;
+  final String description;
+  final String internalReference;
+  final String gatewayUrl;
+  final String status;
+  final String statusLabel;
+  final String createdByName;
+  final bool canCancel;
+  final String cancellationConfirmation;
+  final DateTime? expiresAt;
+  final DateTime? paidAt;
+  final DateTime? lastSyncedAt;
+  final DateTime? createdAt;
+
+  bool get isPayable => status == 'initiated' || status == 'on_hold';
+
+  factory PaymentLinkInfo.fromJson(Map<String, dynamic> json) =>
+      PaymentLinkInfo(
+        publicId: '${json['public_id'] ?? ''}',
+        projectId: (json['project_id'] as num?)?.toInt() ?? 0,
+        projectName: '${json['project_name'] ?? ''}',
+        customerName: '${json['customer_name'] ?? ''}',
+        customerPhone: '${json['customer_phone'] ?? ''}',
+        customerEmail: '${json['customer_email'] ?? ''}',
+        amount: _double(json['amount']) ?? 0,
+        currency: '${json['currency'] ?? 'SAR'}',
+        description: '${json['description'] ?? ''}',
+        internalReference: '${json['internal_reference'] ?? ''}',
+        gatewayUrl: '${json['gateway_url'] ?? ''}',
+        status: '${json['status'] ?? 'provisioning'}',
+        statusLabel: '${json['status_label'] ?? ''}',
+        createdByName: '${json['created_by_name'] ?? ''}',
+        canCancel: json['can_cancel'] == true,
+        cancellationConfirmation: '${json['cancellation_confirmation'] ?? ''}',
+        expiresAt: _date(json['expires_at']),
+        paidAt: _date(json['paid_at']),
+        lastSyncedAt: _date(json['last_synced_at']),
+        createdAt: _date(json['created_at']),
+      );
+}
+
+class PaymentLinksData {
+  const PaymentLinksData({
+    required this.links,
+    required this.projects,
+    required this.gatewayEnabled,
+    required this.canManage,
+  });
+
+  final List<PaymentLinkInfo> links;
+  final List<PaymentProjectOption> projects;
+  final bool gatewayEnabled;
+  final bool canManage;
+
+  factory PaymentLinksData.fromJson(
+    Map<String, dynamic> json,
+  ) => PaymentLinksData(
+    links: (json['payment_links'] as List? ?? const [])
+        .map(
+          (item) =>
+              PaymentLinkInfo.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList(),
+    projects: (json['projects'] as List? ?? const [])
+        .map(
+          (item) => PaymentProjectOption.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList(),
+    gatewayEnabled: json['gateway_enabled'] == true,
+    canManage: json['can_manage'] == true,
+  );
+}
+
+String normalizeWhatsAppPhone(String value) {
+  var digits = value.replaceAll(RegExp(r'\D'), '');
+  if (digits.startsWith('00')) digits = digits.substring(2);
+  if (digits.length == 10 && digits.startsWith('05')) {
+    digits = '966${digits.substring(1)}';
+  } else if (digits.length == 9 && digits.startsWith('5')) {
+    digits = '966$digits';
+  }
+  return digits;
+}
+
+Uri paymentLinkWhatsAppUri(PaymentLinkInfo link) {
+  final expiry = link.expiresAt == null
+      ? ''
+      : '\nصلاحية الرابط حتى: ${link.expiresAt!.toIso8601String().split('T').first}';
+  final reference = link.internalReference.isEmpty
+      ? ''
+      : '\nالمرجع: ${link.internalReference}';
+  final message =
+      'السلام عليكم ${link.customerName}،\n'
+      'هذا رابط دفع خاص بخدمات ${link.projectName}.\n'
+      '${link.description}\n'
+      'المبلغ: ${link.amount.toStringAsFixed(2)} ${link.currency}'
+      '$reference$expiry\n'
+      '${link.gatewayUrl}\n'
+      'يرجى عدم مشاركة رابط الدفع مع الآخرين.';
+  return Uri.https('wa.me', '/${normalizeWhatsAppPhone(link.customerPhone)}', {
+    'text': message,
+  });
 }

@@ -1,28 +1,63 @@
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.http import JsonResponse
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
 from reports.models import TeacherTotpDevice
+from reports.moyasar_gateway import (
+    MoyasarGatewayError,
+    cancel_invoice as cancel_moyasar_invoice,
+    create_invoice as create_moyasar_invoice,
+    is_enabled as moyasar_is_enabled,
+)
 from reports.totp import decrypt_secret, verify_code
 
 from .authentication import OperationsTokenAuthentication, has_operations_access
 from .deployments import DeploymentIntegrationError, GitHubDeploymentClient, all_deployment_states
-from .models import Incident, ManagedProject, ManagedServer, MobileAccessToken, MobileDevice, OperationAction, OperationsMembership
+from .models import (
+    Incident,
+    ManagedProject,
+    ManagedServer,
+    MobileAccessToken,
+    MobileDevice,
+    OperationAction,
+    OperationsMembership,
+    OperationsPaymentLink,
+)
+from .payment_links import (
+    PaymentLinkIntegrityError,
+    apply_invoice_state,
+    callback_token,
+    callback_token_is_valid,
+    sync_payment_link,
+)
 from .serializers import (
     IncidentSerializer,
     ManagedProjectSerializer,
     ManagedServerSerializer,
     OperationActionSerializer,
+    OperationsPaymentLinkCreateSerializer,
+    OperationsPaymentLinkSerializer,
     ProjectMetricSerializer,
 )
 from .services import probe_project
+
+
+logger = logging.getLogger(__name__)
 
 
 class OperationsLoginThrottle(AnonRateThrottle):
@@ -30,8 +65,24 @@ class OperationsLoginThrottle(AnonRateThrottle):
 
 
 ROLE_CAPABILITIES = {
-    "owner": ("view", "run_checks", "run_actions", "acknowledge_incidents", "manage_team"),
-    OperationsMembership.Role.ADMIN: ("view", "run_checks", "run_actions", "acknowledge_incidents", "manage_team"),
+    "owner": (
+        "view",
+        "run_checks",
+        "run_actions",
+        "acknowledge_incidents",
+        "manage_team",
+        "view_payment_links",
+        "manage_payment_links",
+    ),
+    OperationsMembership.Role.ADMIN: (
+        "view",
+        "run_checks",
+        "run_actions",
+        "acknowledge_incidents",
+        "manage_team",
+        "view_payment_links",
+        "manage_payment_links",
+    ),
     OperationsMembership.Role.OPERATOR: ("view", "run_checks", "run_actions", "acknowledge_incidents"),
     OperationsMembership.Role.VIEWER: ("view",),
 }
@@ -233,6 +284,164 @@ def dashboard(request):
         "servers": ManagedServerSerializer(servers, many=True).data,
         "incidents": IncidentSerializer(incidents, many=True).data,
     })
+
+
+def _payment_link_queryset():
+    return OperationsPaymentLink.objects.select_related("project", "created_by")
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([OperationsTokenAuthentication])
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def payment_links(request):
+    capability = "manage_payment_links" if request.method == "POST" else "view_payment_links"
+    if not _has_capability(request.user, capability):
+        return Response(
+            {"detail": "لا تملك صلاحية إدارة روابط الدفع."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if request.method == "GET":
+        queryset = _payment_link_queryset()
+        project_id = str(request.query_params.get("project_id") or "").strip()
+        link_status = str(request.query_params.get("status") or "").strip().lower()
+        if project_id:
+            if not project_id.isdigit():
+                return Response({"detail": "معرف المشروع غير صالح."}, status=400)
+            queryset = queryset.filter(project_id=int(project_id))
+        if link_status:
+            if link_status not in OperationsPaymentLink.Status.values:
+                return Response({"detail": "حالة رابط الدفع غير صالحة."}, status=400)
+            queryset = queryset.filter(status=link_status)
+        projects = ManagedProject.objects.filter(is_active=True).order_by("sort_order", "name")
+        return Response(
+            {
+                "payment_links": OperationsPaymentLinkSerializer(queryset[:100], many=True).data,
+                "projects": [{"id": project.pk, "name": project.name, "slug": project.slug} for project in projects],
+                "gateway_enabled": moyasar_is_enabled(),
+                "can_manage": _has_capability(request.user, "manage_payment_links"),
+            }
+        )
+
+    if not moyasar_is_enabled():
+        return Response(
+            {"detail": "ميّسر غير مفعّل على خادم مركز العمليات."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    serializer = OperationsPaymentLinkCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    values = serializer.validated_data
+    project = values.pop("project")
+    link = OperationsPaymentLink.objects.create(
+        project=project,
+        created_by=request.user,
+        **values,
+    )
+    callback_path = reverse(
+        "operations:payment-link-callback",
+        args=[link.public_id, callback_token(link.public_id)],
+    )
+    callback_url = request.build_absolute_uri(callback_path)
+    redirect_url = str(project.base_url or getattr(settings, "SITE_URL", "") or callback_url).rstrip("/")
+    metadata = {
+        "operations_payment_link": str(link.public_id),
+        "project": project.slug,
+    }
+    if link.internal_reference:
+        metadata["reference"] = link.internal_reference
+    try:
+        invoice = create_moyasar_invoice(
+            amount=link.amount,
+            description=f"{project.name}: {link.description}"[:255],
+            callback_url=callback_url,
+            success_url=redirect_url,
+            back_url=redirect_url,
+            metadata=metadata,
+            expired_at=link.expires_at,
+        )
+        with transaction.atomic():
+            locked = OperationsPaymentLink.objects.select_for_update().get(pk=link.pk)
+            link = apply_invoice_state(locked, invoice)
+    except (MoyasarGatewayError, ImproperlyConfigured, PaymentLinkIntegrityError):
+        logger.exception("Could not create operations payment link %s", link.public_id)
+        OperationsPaymentLink.objects.filter(pk=link.pk).update(
+            status=OperationsPaymentLink.Status.FAILED,
+            provider_error="تعذّر إنشاء رابط الدفع لدى ميّسر.",
+            last_synced_at=timezone.now(),
+        )
+        return Response(
+            {"detail": "تعذّر إنشاء رابط الدفع لدى ميّسر. لم يتم إرسال شيء للعميل."},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+    return Response(OperationsPaymentLinkSerializer(link).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([OperationsTokenAuthentication])
+@ratelimit(key="user", rate="30/m", method="POST", block=True)
+def sync_payment_link_status(request, public_id):
+    if not _has_capability(request.user, "view_payment_links"):
+        return Response({"detail": "لا تملك صلاحية عرض روابط الدفع."}, status=403)
+    link = _payment_link_queryset().filter(public_id=public_id).first()
+    if link is None:
+        return Response({"detail": "رابط الدفع غير موجود."}, status=404)
+    try:
+        link = sync_payment_link(link)
+    except (MoyasarGatewayError, ImproperlyConfigured, PaymentLinkIntegrityError):
+        logger.exception("Could not sync operations payment link %s", public_id)
+        return Response({"detail": "تعذّر التحقق من حالة الرابط لدى ميّسر."}, status=502)
+    return Response(OperationsPaymentLinkSerializer(link).data)
+
+
+@api_view(["POST"])
+@authentication_classes([OperationsTokenAuthentication])
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def cancel_payment_link(request, public_id):
+    if not _has_capability(request.user, "manage_payment_links"):
+        return Response({"detail": "لا تملك صلاحية إلغاء روابط الدفع."}, status=403)
+    link = _payment_link_queryset().filter(public_id=public_id).first()
+    if link is None:
+        return Response({"detail": "رابط الدفع غير موجود."}, status=404)
+    if not link.can_cancel:
+        return Response({"detail": "حالة رابط الدفع الحالية لا تسمح بإلغائه."}, status=409)
+    confirmation = str(request.data.get("confirmation") or "").strip()
+    expected_confirmation = str(link.public_id)[:8]
+    if confirmation != expected_confirmation:
+        return Response(
+            {
+                "detail": f"اكتب {expected_confirmation} لتأكيد إلغاء الرابط.",
+                "confirmation_required": expected_confirmation,
+            },
+            status=409,
+        )
+    try:
+        invoice = cancel_moyasar_invoice(str(link.gateway_invoice_id))
+        with transaction.atomic():
+            locked = OperationsPaymentLink.objects.select_for_update().get(pk=link.pk)
+            link = apply_invoice_state(locked, invoice)
+    except (MoyasarGatewayError, ImproperlyConfigured, PaymentLinkIntegrityError):
+        logger.exception("Could not cancel operations payment link %s", public_id)
+        return Response({"detail": "تعذّر إلغاء الرابط لدى ميّسر."}, status=502)
+    return Response(OperationsPaymentLinkSerializer(link).data)
+
+
+@csrf_exempt
+@ratelimit(key="ip", rate="60/m", method="POST", block=True)
+@require_POST
+def payment_link_callback(request, public_id, token: str):
+    if not callback_token_is_valid(public_id, token):
+        return JsonResponse({"detail": "Invalid callback token."}, status=404)
+    if not moyasar_is_enabled():
+        return JsonResponse({"detail": "Moyasar is disabled."}, status=404)
+    link = OperationsPaymentLink.objects.filter(public_id=public_id).first()
+    if link is None:
+        return JsonResponse({"detail": "Payment link not found."}, status=404)
+    try:
+        link = sync_payment_link(link)
+    except (MoyasarGatewayError, ImproperlyConfigured, PaymentLinkIntegrityError):
+        logger.exception("Operations payment-link callback failed for %s", public_id)
+        return JsonResponse({"detail": "Could not verify invoice."}, status=502)
+    return JsonResponse({"ok": True, "status": link.status})
 
 
 @api_view(["GET"])

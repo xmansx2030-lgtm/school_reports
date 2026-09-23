@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -255,6 +256,71 @@ class OperationAction(models.Model):
 
     class Meta:
         ordering = ("-requested_at", "-id")
+
+
+class OperationsPaymentLink(models.Model):
+    """A Moyasar-hosted payment request created from the operations app."""
+
+    class Status(models.TextChoices):
+        PROVISIONING = "provisioning", "قيد الإنشاء"
+        INITIATED = "initiated", "بانتظار الدفع"
+        PAID = "paid", "مدفوعة"
+        FAILED = "failed", "فشلت"
+        REFUNDED = "refunded", "مستردّة"
+        CANCELED = "canceled", "ملغاة"
+        ON_HOLD = "on_hold", "معلّقة"
+        EXPIRED = "expired", "منتهية"
+        VOIDED = "voided", "مبطلة"
+
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    project = models.ForeignKey(
+        ManagedProject,
+        on_delete=models.PROTECT,
+        related_name="payment_links",
+    )
+    customer_name = models.CharField(max_length=160)
+    customer_phone = models.CharField(max_length=32)
+    customer_email = models.EmailField(blank=True, default="")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3, default="SAR")
+    description = models.CharField(max_length=255)
+    internal_reference = models.CharField(max_length=120, blank=True, default="", db_index=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    gateway_invoice_id = models.CharField(max_length=64, null=True, blank=True, unique=True)
+    gateway_url = models.URLField(max_length=500, blank=True, default="")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PROVISIONING,
+        db_index=True,
+    )
+    provider_error = models.CharField(max_length=300, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="operations_payment_links",
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        indexes = [
+            models.Index(fields=("project", "status", "-created_at")),
+            models.Index(fields=("status", "last_synced_at")),
+        ]
+
+    @property
+    def can_cancel(self) -> bool:
+        return bool(self.gateway_invoice_id) and self.status in {
+            self.Status.INITIATED,
+            self.Status.ON_HOLD,
+        }
+
+    def __str__(self) -> str:
+        return f"{self.project.name}: {self.amount} {self.currency} - {self.customer_name}"
 
 
 class OperationsMembership(models.Model):
