@@ -693,6 +693,33 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
         complaints_pending
     )
 
+    # Presentation-only chart rows keep every visual data series available as
+    # readable HTML.  Building them from the already-computed payload adds no
+    # queries and leaves the dashboard/cache contracts unchanged.
+    stage_labels = json.loads(charts.get("stage_labels") or "[]")
+    stage_values = json.loads(charts.get("stage_data") or "[]")
+    platform_dashboard_chart_data = {
+        "stages": {
+            "labels": stage_labels,
+            "data": stage_values,
+        }
+    }
+    revenue_chart_rows = list(
+        zip(
+            period_payload["charts"]["revenue"]["labels"],
+            period_payload["charts"]["revenue"]["data"],
+            strict=False,
+        )
+    )
+    reports_chart_rows = list(
+        zip(
+            period_payload["charts"]["reports"]["labels"],
+            period_payload["charts"]["reports"]["data"],
+            strict=False,
+        )
+    )
+    stage_chart_rows = list(zip(stage_labels, stage_values, strict=False))
+
     wants_json = (
         request.GET.get("format") == "json"
         or request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -714,6 +741,10 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
         "recent_activities": recent_activities,
         "initial_period": selected_period,
         "dashboard_period_payload": json.dumps(period_payload, ensure_ascii=False),
+        "platform_dashboard_chart_data": platform_dashboard_chart_data,
+        "revenue_chart_rows": revenue_chart_rows,
+        "reports_chart_rows": reports_chart_rows,
+        "stage_chart_rows": stage_chart_rows,
         "total_revenue": period_payload["kpis"]["total_revenue"],
         "reports_count": period_payload["kpis"]["reports_count"],
         "tickets_total": period_payload["kpis"]["tickets_total"],
