@@ -82,12 +82,16 @@ class OperationsApiTests(TestCase):
         return response.json()["token"]
 
     def test_incident_push_task_name_is_stable(self):
-        from operations.task_names import SEND_INCIDENT_PUSH_TASK
-        from operations.tasks import send_incident_push_task
+        from operations.task_names import SEND_INCIDENT_PUSH_TASK, SEND_PAYMENT_PAID_PUSH_TASK
+        from operations.tasks import send_incident_push_task, send_payment_paid_push_task
 
         self.assertEqual(
             send_incident_push_task.name,
             SEND_INCIDENT_PUSH_TASK,
+        )
+        self.assertEqual(
+            send_payment_paid_push_task.name,
+            SEND_PAYMENT_PAID_PUSH_TASK,
         )
 
     def test_login_is_restricted_to_operations_members(self):
@@ -246,17 +250,75 @@ class OperationsApiTests(TestCase):
             "payments": [{"status": "paid", "updated_at": timezone.now().isoformat()}],
         }
 
-        response = self.client.post(
-            reverse(
-                "operations:payment-link-callback",
-                args=[link.public_id, callback_token(link.public_id)],
+        with (
+            patch("operations.payment_links.enqueue_named_task") as enqueue_task,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            response = self.client.post(
+                reverse(
+                    "operations:payment-link-callback",
+                    args=[link.public_id, callback_token(link.public_id)],
+                )
             )
-        )
 
         self.assertEqual(response.status_code, 200, response.content)
         link.refresh_from_db()
         self.assertEqual(link.status, OperationsPaymentLink.Status.PAID)
         self.assertIsNotNone(link.paid_at)
+        enqueue_task.assert_called_once_with(
+            "operations.tasks.send_payment_paid_push_task",
+            args=(link.pk,),
+        )
+
+    @patch("operations.tasks.send_payment_paid_push")
+    def test_paid_notification_task_is_idempotent(self, send_push):
+        from operations.tasks import send_payment_paid_push_task
+
+        link = OperationsPaymentLink.objects.create(
+            project=self.project,
+            customer_name="Client",
+            customer_phone="+966500000000",
+            amount=Decimal("250.00"),
+            description="Service",
+            gateway_invoice_id="44444444-4444-4444-4444-444444444444",
+            gateway_url="https://checkout.moyasar.com/invoices/example-four",
+            status=OperationsPaymentLink.Status.PAID,
+            paid_at=timezone.now(),
+            created_by=self.admin,
+        )
+        send_push.return_value = {"sent": 2, "failed": 0, "disabled": 0}
+
+        first = send_payment_paid_push_task.run(link.pk)
+        second = send_payment_paid_push_task.run(link.pk)
+
+        self.assertEqual(first["sent"], 2)
+        self.assertEqual(second["skipped"], 1)
+        send_push.assert_called_once()
+        link.refresh_from_db()
+        self.assertIsNotNone(link.paid_notification_sent_at)
+
+    @override_settings(MOYASAR_ENABLED=True)
+    @patch("operations.tasks.send_payment_paid_push_task.delay")
+    def test_reconciliation_queues_a_paid_link_missing_its_notification(self, delay):
+        from operations.tasks import reconcile_payment_links_task
+
+        link = OperationsPaymentLink.objects.create(
+            project=self.project,
+            customer_name="Client",
+            customer_phone="+966500000000",
+            amount=Decimal("250.00"),
+            description="Service",
+            gateway_invoice_id="55555555-5555-5555-5555-555555555555",
+            gateway_url="https://checkout.moyasar.com/invoices/example-five",
+            status=OperationsPaymentLink.Status.PAID,
+            paid_at=timezone.now(),
+            created_by=self.admin,
+        )
+
+        result = reconcile_payment_links_task.run()
+
+        self.assertEqual(result["notifications_queued"], 1)
+        delay.assert_called_once_with(link.pk)
 
     @override_settings(MOYASAR_ENABLED=True)
     @patch("operations.payment_links.fetch_invoice")

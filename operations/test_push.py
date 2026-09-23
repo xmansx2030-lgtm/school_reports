@@ -5,8 +5,15 @@ from django.test import TestCase, override_settings
 
 from reports.models import Teacher
 
-from .models import Incident, ManagedProject, ManagedServer, MobileDevice
-from .push import send_incident_push
+from .models import (
+    Incident,
+    ManagedProject,
+    ManagedServer,
+    MobileDevice,
+    OperationsMembership,
+    OperationsPaymentLink,
+)
+from .push import send_incident_push, send_payment_paid_push
 
 
 @override_settings(FCM_PROJECT_ID="isolated-project")
@@ -29,6 +36,19 @@ class IncidentPushContractTests(TestCase):
             title="تنبيه تشغيلي",
             message="نص الحالة التشغيلي الأصلي",
             severity=Incident.Severity.CRITICAL,
+        )
+        OperationsMembership.objects.create(user=self.user, role=OperationsMembership.Role.ADMIN)
+        self.payment_link = OperationsPaymentLink.objects.create(
+            project=project,
+            customer_name="Private Customer",
+            customer_phone="+966500000000",
+            customer_email="private@example.com",
+            amount="250.00",
+            description="Private service details",
+            gateway_invoice_id="66666666-6666-6666-6666-666666666666",
+            gateway_url="https://checkout.moyasar.com/invoices/private-link",
+            status=OperationsPaymentLink.Status.PAID,
+            created_by=self.user,
         )
 
     def _device(self, identifier: str, token: str) -> MobileDevice:
@@ -98,3 +118,55 @@ class IncidentPushContractTests(TestCase):
         credentials.refresh.assert_called_once()
         self.incident.refresh_from_db()
         self.assertIsNotNone(self.incident.last_notified_at)
+
+    @patch("google.oauth2.service_account.Credentials.from_service_account_file")
+    @patch("requests.post")
+    @patch.dict(
+        "os.environ",
+        {"GOOGLE_APPLICATION_CREDENTIALS": "isolated-service-account.json"},
+        clear=False,
+    )
+    def test_payment_paid_push_targets_every_admin_and_excludes_private_data(
+        self,
+        post: Mock,
+        credentials_factory: Mock,
+    ):
+        second_admin = Teacher.objects.create_user(
+            phone="0500000098",
+            name="Second Manager",
+            password="strong-test-password",  # noqa: S106 - synthetic test credential.
+        )
+        operator = Teacher.objects.create_user(
+            phone="0500000097",
+            name="Operator",
+            password="strong-test-password",  # noqa: S106 - synthetic test credential.
+        )
+        OperationsMembership.objects.create(user=second_admin, role=OperationsMembership.Role.ADMIN)
+        OperationsMembership.objects.create(user=operator, role=OperationsMembership.Role.OPERATOR)
+        self._device("admin-one", "token-admin-one")
+        MobileDevice.objects.create(
+            user=second_admin,
+            device_id="admin-two",
+            fcm_token="token-admin-two",  # noqa: S106 - synthetic FCM token.
+        )
+        MobileDevice.objects.create(
+            user=operator,
+            device_id="operator",
+            fcm_token="token-operator",  # noqa: S106 - synthetic FCM token.
+        )
+        credentials_factory.return_value = SimpleNamespace(
+            token="short-lived-test-token",  # noqa: S106 - synthetic OAuth token.
+            refresh=Mock(),
+        )
+        post.return_value = SimpleNamespace(ok=True, status_code=200, text="")
+
+        result = send_payment_paid_push(self.payment_link)
+
+        self.assertEqual(result, {"sent": 2, "failed": 0, "disabled": 0})
+        sent_tokens = {call.kwargs["json"]["message"]["token"] for call in post.call_args_list}
+        self.assertEqual(sent_tokens, {"token-admin-one", "token-admin-two"})
+        serialized_payloads = " ".join(str(call.kwargs["json"]) for call in post.call_args_list)
+        self.assertNotIn(self.payment_link.customer_name, serialized_payloads)
+        self.assertNotIn(self.payment_link.customer_phone, serialized_payloads)
+        self.assertNotIn(self.payment_link.customer_email, serialized_payloads)
+        self.assertNotIn(self.payment_link.gateway_url, serialized_payloads)

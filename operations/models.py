@@ -301,6 +301,7 @@ class OperationsPaymentLink(models.Model):
         related_name="operations_payment_links",
     )
     paid_at = models.DateTimeField(null=True, blank=True)
+    paid_notification_sent_at = models.DateTimeField(null=True, blank=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)

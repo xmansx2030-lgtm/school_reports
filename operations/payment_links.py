@@ -12,9 +12,11 @@ from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.utils.dateparse import parse_datetime
 
+from core.task_dispatch import enqueue_named_task
 from reports.moyasar_gateway import MoyasarGatewayError, fetch_invoice
 
 from .models import OperationsPaymentLink
+from .task_names import SEND_PAYMENT_PAID_PUSH_TASK
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +87,10 @@ def apply_invoice_state(link: OperationsPaymentLink, invoice: dict) -> Operation
     if provider_url:
         provider_url = validate_checkout_url(provider_url)
 
+    should_notify_paid = (
+        provider_status == OperationsPaymentLink.Status.PAID
+        and link.paid_notification_sent_at is None
+    )
     link.gateway_invoice_id = invoice_id
     link.gateway_url = provider_url
     link.status = provider_status
@@ -103,6 +109,13 @@ def apply_invoice_state(link: OperationsPaymentLink, invoice: dict) -> Operation
             "updated_at",
         )
     )
+    if should_notify_paid:
+        transaction.on_commit(
+            lambda link_id=link.pk: enqueue_named_task(
+                SEND_PAYMENT_PAID_PUSH_TASK,
+                args=(link_id,),
+            )
+        )
     return link
 
 

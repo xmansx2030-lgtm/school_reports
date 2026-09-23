@@ -1192,6 +1192,7 @@ CELERY_TASK_ROUTES = {
     "operations.tasks.sync_deployed_revisions_task": {"queue": "periodic"},
     "operations.tasks.monitor_deployment_state_task": {"queue": "periodic"},
     "operations.tasks.send_incident_push_task": {"queue": "notifications"},
+    "operations.tasks.send_payment_paid_push_task": {"queue": "notifications"},
     "operations.tasks.cleanup_operations_history_task": {"queue": "periodic"},
     "reports.tasks.cleanup_generated_exports_task": {"queue": "periodic"},
     # Core is deliberately independent from the media worker it may need to rescue.

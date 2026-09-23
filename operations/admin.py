@@ -93,6 +93,7 @@ class OperationsPaymentLinkAdmin(admin.ModelAdmin):
         "status",
         "provider_error",
         "paid_at",
+        "paid_notification_sent_at",
         "last_synced_at",
         "created_at",
         "updated_at",

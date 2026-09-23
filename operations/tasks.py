@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from .deployments import all_deployment_states
 from .models import (
@@ -10,13 +11,14 @@ from .models import (
     ManagedProject,
     ManagedServer,
     OperationAction,
+    OperationsPaymentLink,
     ProjectMetricSnapshot,
     ServerMetricSnapshot,
 )
-from .push import send_incident_push
+from .push import send_incident_push, send_payment_paid_push
 from .payment_links import reconcile_open_payment_links
 from .services import capture_server_metrics, probe_all_projects
-from .task_names import SEND_INCIDENT_PUSH_TASK, STORE_CAPACITY_SNAPSHOT_TASK
+from .task_names import SEND_INCIDENT_PUSH_TASK, SEND_PAYMENT_PAID_PUSH_TASK, STORE_CAPACITY_SNAPSHOT_TASK
 
 
 @shared_task(ignore_result=True)
@@ -48,8 +50,17 @@ def sync_deployed_revisions_task() -> dict[str, int]:
 @shared_task(ignore_result=True)
 def reconcile_payment_links_task() -> dict[str, int | bool]:
     if not getattr(settings, "MOYASAR_ENABLED", False):
-        return {"enabled": False, "checked": 0, "updated": 0, "failed": 0}
-    return {"enabled": True, **reconcile_open_payment_links(limit=100)}
+        return {"enabled": False, "checked": 0, "updated": 0, "failed": 0, "notifications_queued": 0}
+    summary = reconcile_open_payment_links(limit=100)
+    due_ids = list(
+        OperationsPaymentLink.objects.filter(
+            status=OperationsPaymentLink.Status.PAID,
+            paid_notification_sent_at__isnull=True,
+        ).values_list("pk", flat=True)[:100]
+    )
+    for link_id in due_ids:
+        send_payment_paid_push_task.delay(link_id)
+    return {"enabled": True, **summary, "notifications_queued": len(due_ids)}
 
 
 @shared_task(ignore_result=True)
@@ -101,6 +112,34 @@ def monitor_deployment_state_task() -> dict[str, object]:
 def send_incident_push_task(incident_id: int) -> dict[str, int]:
     incident = Incident.objects.filter(pk=incident_id).first()
     return send_incident_push(incident) if incident is not None else {"sent": 0, "failed": 0, "disabled": 0}
+
+
+@shared_task(
+    name=SEND_PAYMENT_PAID_PUSH_TASK,
+    ignore_result=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_kwargs={"max_retries": 3},
+)
+def send_payment_paid_push_task(payment_link_id: int) -> dict[str, int]:
+    with transaction.atomic():
+        link = (
+            OperationsPaymentLink.objects.select_for_update()
+            .select_related("project")
+            .filter(pk=payment_link_id)
+            .first()
+        )
+        if link is None or link.status != OperationsPaymentLink.Status.PAID:
+            return {"sent": 0, "failed": 0, "disabled": 0, "skipped": 1}
+        if link.paid_notification_sent_at is not None:
+            return {"sent": 0, "failed": 0, "disabled": 0, "skipped": 1}
+
+        result = send_payment_paid_push(link)
+        if result["failed"] and not result["sent"]:
+            raise RuntimeError("FCM rejected every payment-paid notification.")
+        link.paid_notification_sent_at = timezone.now()
+        link.save(update_fields=("paid_notification_sent_at", "updated_at"))
+        return {**result, "skipped": 0}
 
 
 @shared_task(ignore_result=True)
