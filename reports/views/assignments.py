@@ -18,6 +18,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -48,7 +49,6 @@ from ..services_assignments import (
     update_progress,
 )
 from ._helpers import *  # noqa: F401,F403
-from ._helpers import _get_active_school
 from ._helpers import active_school_or_redirect as _school_or_redirect
 
 __all__ = [
@@ -218,6 +218,10 @@ def assignment_create(request):
 def _assignment_for(request, pk: int, school) -> Assignment:
     """التكليف مع فحص من يحق له عرضه.
 
+    ملكية التكليف تمنح سلطةً داخل سياق المدرسة النشطة فقط، ولا تتجاوز حدّ
+    المستأجر. لذلك تدخل المدرسة في الاستعلام نفسه قبل فحص المالك أو المكلَّف
+    أو المراجع، فلا تكشف الاستجابة وجود سجل في مدرسة أخرى.
+
     الحقّ في العرض أوسع من الحقّ في الإجراء: المكلِّف، ومدير المدرسة التي وقع
     فيها، والمكلَّف نفسه، ومن يراجع تنفيذه. ومن لا يملك واحدة منها لا يعلم أن
     التكليف موجود أصلاً — ولذلك ``Http404`` لا رسالة منع.
@@ -225,16 +229,15 @@ def _assignment_for(request, pk: int, school) -> Assignment:
     assignment = get_object_or_404(
         Assignment.objects.select_related("issuer", "department", "school", "group"),
         pk=pk,
+        school=school,
     )
 
     if assignment.issuer_id == request.user.pk:
         return assignment
     if assignment.targets.filter(assignee=request.user).exists():
         return assignment
-    if school is not None and is_school_manager(request.user, active_school=school):
-        # تكليف المجموعة لا مدرسةَ له، فيُعرف بمدرسة مكلَّفيه.
-        if assignment.school_id == school.pk or assignment.targets.filter(school=school).exists():
-            return assignment
+    if is_school_manager(request.user, active_school=school):
+        return assignment
     if any(
         target.can_review_approval(request.user, school)
         for target in assignment.targets.select_related("assignment", "school")
@@ -278,7 +281,10 @@ def _assignment_context(request, assignment, school) -> dict:
 @require_http_methods(["GET"])
 def assignment_view(request, pk: int):
     """التكليف كوثيقة واحدة: نصّه وشروطه وجدول من صدر إليهم."""
-    school = _get_active_school(request)
+    school, redirect_response = _school_or_redirect(request)
+    if redirect_response is not None:
+        return redirect_response
+
     assignment = _assignment_for(request, pk, school)
 
     context = _assignment_context(request, assignment, school)
@@ -301,7 +307,10 @@ def assignment_view(request, pk: int):
 @require_http_methods(["GET"])
 def assignment_print(request, pk: int):
     """نسخة A4 من التكليف — ما يُوقَّع ويُحفَظ في الملف الورقي."""
-    school = _get_active_school(request)
+    school, redirect_response = _school_or_redirect(request)
+    if redirect_response is not None:
+        return redirect_response
+
     assignment = _assignment_for(request, pk, school)
 
     moe_logo_url = (getattr(settings, "MOE_LOGO_URL", "") or "").strip()
@@ -343,18 +352,28 @@ def assignment_cancel(request, pk: int):
 # التفصيل
 # ─────────────────────────────────────────────────────────────────────────────
 def _target_for(request, pk: int, school) -> AssignmentTarget:
-    """المكلَّف مع فحص أن الطالب صاحبه أو من يحق له متابعته."""
+    """المكلَّف في المدرسة النشطة مع فحص من يحق له متابعته.
+
+    تكليف المدرسة يُحسم من مدرسة الأب لا من ``target.school`` وحدها، حتى لا
+    يسمح سجل هدف غير متسق بتجاوز سياق المدرسة. أمّا تكليف المجموعة فأبوه لا
+    يحمل مدرسة واحدة بطبيعته، لذا يبقى مقيداً بمدرسة الهدف كما يقتضي مساره
+    القائم. وفي الحالتين يسبق قيد المدرسة اختصارات المالك والمكلَّف والمراجع.
+    """
     target = get_object_or_404(
-        AssignmentTarget.objects.select_related(
-            "assignment", "assignment__issuer", "assignee", "school"
-        ),
+        AssignmentTarget.objects.filter(
+            Q(assignment__school=school)
+            | Q(
+                assignment__scope=Assignment.Scope.GROUP,
+                assignment__school__isnull=True,
+                school=school,
+            )
+        ).select_related("assignment", "assignment__issuer", "assignee", "school"),
         pk=pk,
     )
     if target.assignee_id == request.user.pk:
         return target
     if is_school_manager(request.user, active_school=school):
-        if target.school_id == school.pk or target.assignment.school_id == school.pk:
-            return target
+        return target
     if target.assignment.issuer_id == request.user.pk:
         return target
     if target.can_review_approval(request.user, school):
