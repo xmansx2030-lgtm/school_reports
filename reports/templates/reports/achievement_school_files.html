@@ -1,514 +1,70 @@
-{# reports/templates/reports/achievement_school_files.html #}
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}ملفات الإنجاز - المدرسة{% endblock %}
+{% block title %}مراجعة ملفات الإنجاز{% endblock %}
 
 {% block head %}
-{% comment %}الخط والأيقونات محلياً: لا طلب لطرف ثالث قبل أول حرف، ولا نطاق خارجي في سياسة المحتوى.{% endcomment %}
-<link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
-<style nonce="{{ CSP_NONCE }}">
-  :root {
-    --primary: #006c35;
-    --primary-dark: #00542a;
-    --secondary: #ec4899;
-    --accent: #b9975b;
-    --success: #16845b;
-    --warning: #b9975b;
-    --danger: #ef4444;
-    --dark-bg: #0f172a;
-    --light-bg: var(--id-canvas);
-    --card-bg: var(--id-surface);
-    --glass-border: var(--id-line);
-    --text-main: var(--id-ink);
-    --text-muted: var(--id-muted);
-    --shadow-sm: var(--id-e1);
-    --shadow-md: var(--id-e2);
-    --shadow-lg: var(--id-e3);
-  }
-
-  body {
-    font-family: 'Cairo', sans-serif;
-    background-color: var(--light-bg);
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(0, 108, 53, 0.10) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.10) 0px, transparent 50%);
-    background-attachment: fixed;
-    color: var(--text-main);
-  }
-
-  .page-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1.5rem;
-    direction: rtl;
-  }
-
-  /* Header */
-  .header-section {
-    margin-bottom: 2.5rem;
-    position: relative;
-    z-index: 2;
-  }
-
-  .page-title {
-    font-size: 2.2rem;
-    font-weight: 900;
-    margin: 0 0 0.5rem;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .page-subtitle {
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    font-weight: 500;
-  }
-
-  /* Controls Bar */
-  .controls-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-      background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      padding: 1.5rem;
-      border-radius: 24px;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 2rem;
-      align-items: flex-end;
-  }
-
-  .control-group {
-      flex: 1;
-      min-width: 250px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-  }
-
-  .control-label {
-      font-weight: 800;
-      font-size: 0.9rem;
-      color: var(--text-main);
-      margin-inline-start: 4px;
-  }
-
-  .glass-input {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 14px;
-      border: 2px solid transparent;
-      background: rgba(255,255,255,0.6);
-      font-family: inherit;
-      font-weight: 600;
-      font-size: 1rem;
-      color: var(--text-main);
-      transition: 0.3s;
-      outline: none;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-  }
-  
-  [data-theme="dark"] .glass-input { background: rgba(0,0,0,0.2); }
-
-  .glass-input:focus {
-      background: white;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(0, 108, 53, 0.1);
-  }
-
-  .btn-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: 14px;
-      text-decoration: none;
-      font-weight: 800;
-      transition: 0.3s;
-      cursor: pointer;
-      border: none;
-  }
-
-  .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: white;
-      box-shadow: 0 4px 12px rgba(0, 108, 53, 0.3);
-  }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0, 108, 53, 0.4); }
-
-  .btn-dashboard {
-      background: white;
-      color: var(--text-main);
-      box-shadow: var(--shadow-sm);
-  }
-  .btn-dashboard:hover { transform: translateY(-2px); color: var(--primary); }
-
-  /* Stats Chips */
-  .stats-row {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      overflow-x: auto;
-      padding-bottom: 5px;
-  }
-  
-  .stat-chip {
-      background: rgba(255,255,255,0.5);
-      border: 1px solid var(--glass-border);
-      padding: 8px 16px;
-      border-radius: 50px;
-      font-weight: 700;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-      color: var(--text-main);
-  }
-  
-  .stat-chip i { color: var(--primary); }
-
-  /* Grid for Teachers */
-  .teachers-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
-  }
-
-  .teacher-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 1.5rem;
-      transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-  }
-
-  .teacher-card:hover {
-      transform: translateY(-5px) scale(1.02);
-      box-shadow: var(--shadow-lg);
-      border-color: rgba(0, 108, 53, 0.3);
-  }
-  
-  .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1rem;
-  }
-
-  .avatar-placeholder {
-      width: 50px; height: 50px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #e0e7ff, #eef2ff);
-      color: var(--primary);
-      display: grid;
-      place-items: center;
-      font-size: 1.25rem;
-      font-weight: 800;
-  }
-
-  .status-dot {
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 800;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-  }
-  
-  .st-approved { background: rgba(16, 185, 129, 0.15); color: #16845b; }
-  .st-rejected { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
-  .st-submitted { background: rgba(245, 158, 11, 0.15); color: #d97706; }
-  .st-draft { background: rgba(100, 116, 139, 0.15); color: #475569; }
-
-  .t-name {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--text-main);
-      margin-bottom: 4px;
-  }
-
-  .t-info {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 1.5rem;
-  }
-
-  .card-actions {
-      margin-top: auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-  }
-
-  .btn-card {
-      padding: 10px;
-      border-radius: 10px;
-      text-align: center;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      transition: 0.2s;
-  }
-
-  .btn-view { background: rgba(0, 108, 53, 0.1); color: var(--primary); }
-  .btn-view:hover { background: var(--primary); color: white; }
-
-  .btn-print { background: rgba(248, 250, 252, 0.8); color: var(--text-muted); border: 1px solid transparent; }
-  .btn-print:hover { border-color: var(--text-muted); color: var(--text-main); }
-  
-  .empty-state {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 4rem 2rem;
-      background: var(--card-bg);
-      border-radius: 24px;
-      border: 1px dashed var(--glass-border);
-  }
-
-  @media (max-width: 768px) {
-    .controls-bar { flex-direction: column; align-items: stretch; }
-  }
-
-  /* 👑 ROYAL OVERLAY — ملفات إنجاز المدرسة */
-  .page-container .header-section{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 150% at 92% -20%, rgba(212,177,109,.22), transparent 48%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:22px !important; padding:26px 24px !important; color:#fff !important;
-    box-shadow:0 24px 56px -26px rgba(5,46,26,.7) !important;
-  }
-  .page-container .header-section::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .page-container .page-title{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .page-container .page-subtitle{ color:rgba(255,255,255,.82) !important; font-weight:800 !important; }
-  .page-container .controls-bar{
-    border:1px solid rgba(185,151,91,.2) !important;
-    box-shadow:0 14px 34px -26px rgba(10,92,51,.4) !important;
-  }
-  .page-container .glass-input:focus{ border-color:rgba(185,151,91,.7) !important; box-shadow:0 0 0 3px rgba(212,177,109,.2) !important; }
-  .page-container .btn-primary{ background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important; }
-</style>
+<link rel="stylesheet" href="{% static 'css/achievement.css' %}?v=20260923.1">
 {% endblock %}
 
 {% block content %}
-<div class="page-container">
+<div class="twq-page achievement-page achievement-review-page" aria-labelledby="achievementReviewTitle">
+  <header class="twq-page-header achievement-page-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>قائمة مراجعة تشغيلية</span></p>
+      <h1 class="twq-page-header__title" id="achievementReviewTitle">مراجعة ملفات الإنجاز</h1>
+      <p class="twq-page-header__lead">ابدأ بالملفات المرسلة للاعتماد، ثم تابع الملفات المُعادة وما لم يبدأ بعد ضمن نطاقك المصرح.</p>
+      <dl class="twq-page-header__context" aria-label="سياق قائمة المراجعة">
+        <div><dt>المدرسة النشطة</dt><dd><bdi>{{ current_school.name }}</bdi></dd></div>
+        <div><dt>السنة</dt><dd><bdi>{{ year|default:"—" }}</bdi>{% if year %} هـ{% endif %}</dd></div>
+        <div><dt>النتائج</dt><dd><bdi>{{ rows|length }}</bdi> من الكادر</dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside">
+      <div class="twq-page-header__mark" aria-hidden="true"><img src="{% static 'img/brand-mark.svg' %}" alt=""></div>
+      {% if is_manager %}<a class="twq-btn twq-btn--secondary achievement-hero-action" href="{% url 'reports:admin_dashboard' %}"><i class="fa-solid fa-gauge" aria-hidden="true"></i><span>لوحة المدرسة</span></a>{% endif %}
+    </div>
+  </header>
 
-  <!-- Header -->
-  <div class="header-section">
-      <h1 class="page-title">ملفات إنجاز {{ SCHOOL_TEACHERS_OBJ_LABEL|default:"المعلمين" }}</h1>
-      <div class="page-subtitle">استعراض ومتابعة ملفات الإنجاز للكادر التعليمي حسب السنة الدراسية</div>
-  </div>
+  <section class="twq-section achievement-review-filters" aria-labelledby="achievementFiltersTitle">
+    <div class="twq-section__header">
+      <div><span class="twq-section__kicker">تحديد النطاق</span><h2 class="twq-section__title" id="achievementFiltersTitle">فرز قائمة العمل</h2><p class="twq-section__description">البحث والمرشحات تنفذ على الخادم داخل المدرسة والنطاق المسموحين.</p></div>
+      {% if q or status %}<a class="twq-btn twq-btn--ghost" href="{% url 'reports:achievement_school_files' %}?year={{ year|urlencode }}"><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i><span>مسح التصفية</span></a>{% endif %}
+    </div>
+    <form class="twq-toolbar achievement-toolbar" id="achievementReviewFilter" method="get">
+      <div class="twq-toolbar__field twq-field"><label class="twq-label" for="achievementYearFilter">السنة الدراسية</label>{% if year_choices %}<select class="twq-control" name="year" id="achievementYearFilter">{% for choice in year_choices %}<option value="{{ choice }}" {% if choice == year %}selected{% endif %}>{{ choice }} هـ</option>{% endfor %}</select>{% else %}<input class="twq-control" name="year" id="achievementYearFilter" value="{{ year }}" inputmode="numeric" placeholder="1447-1448">{% endif %}</div>
+      <div class="twq-toolbar__search twq-field"><label class="twq-label" for="achievementTeacherSearch">اسم أو جوال {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</label><div class="twq-toolbar__control"><i class="fa-solid fa-magnifying-glass twq-toolbar__icon" aria-hidden="true"></i><input class="twq-control" type="search" id="achievementTeacherSearch" name="q" value="{{ q }}" placeholder="ابحث داخل نطاقك..."></div></div>
+      <div class="twq-toolbar__field twq-field"><label class="twq-label" for="achievementStatusFilter">حالة الملف</label><select class="twq-control" name="status" id="achievementStatusFilter"><option value="">جميع الحالات</option><option value="missing" {% if status == 'missing' %}selected{% endif %}>لم ينشئ ملفًا</option>{% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="twq-toolbar__actions"><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-filter" aria-hidden="true"></i><span>تطبيق</span></button></div>
+    </form>
+  </section>
 
-  <!-- Tools & Filters -->
-  <div class="controls-bar">
-      <!-- Filter Form -->
-      <form id="filterForm" method="get" class="xs-achievement-school-files-1">
-          <div class="control-group">
-              <label class="control-label" id="achievementYearLabel">السنة الدراسية</label>
-              {% if year_choices %}
-                <select name="year" id="achievementYearSelect" class="glass-input" aria-labelledby="achievementYearLabel">
-                  {% for y in year_choices %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }} هـ</option>
-                  {% endfor %}
-                </select>
-              {% else %}
-                <input name="year" id="achievementYearInput" class="glass-input" value="{{ year }}" placeholder="1447-1448" aria-labelledby="achievementYearLabel">
-              {% endif %}
-          </div>
-
-          <div class="control-group">
-              <label class="control-label" for="searchInput">بحث عن {{ SCHOOL_TEACHER_LABEL|default:"معلم" }}</label>
-              <div class="xs-achievement-school-files-2">
-                  <input type="search" id="searchInput" name="q" value="{{ q }}" class="glass-input xs-achievement-school-files-3" placeholder="اكتب اسم {{ SCHOOL_TEACHER_LABEL|default:'المعلم' }} للبحث السريع...">
-                  <i class="fa-solid fa-search xs-achievement-school-files-4"></i>
-              </div>
-          </div>
-
-          <div class="control-group">
-              <label class="control-label" for="achievementStatusSelect">حالة الملف</label>
-              <select name="status" id="achievementStatusSelect" class="glass-input">
-                <option value="">جميع الحالات</option>
-                <option value="missing" {% if status == "missing" %}selected{% endif %}>لم ينشئ ملفًا</option>
-                {% for value, label in status_choices %}
-                  <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-          </div>
-
-          <div class="control-group u-self-end">
-              <button type="submit" class="btn-action btn-view">
-                <i class="fa-solid fa-filter" aria-hidden="true"></i> تطبيق
-              </button>
-          </div>
-      </form>
-
-      <!-- Dashboard Button -->
-      {% if is_manager %}
-      <div class="xs-achievement-school-files-5">
-          <a href="{% url 'reports:admin_dashboard' %}" class="btn-action btn-dashboard">
-              <i class="fa-solid fa-gauge"></i> لوحة المدرسة
-          </a>
+  <section class="twq-section achievement-review-results" aria-labelledby="achievementQueueTitle">
+    <div class="twq-section__header"><div><span class="twq-section__kicker">الأولوية التالية</span><h2 class="twq-section__title" id="achievementQueueTitle">قائمة المراجعة</h2><p class="twq-section__description">الملفات المرسلة تظهر أولًا. حالة “اكتمال التوثيق” مؤشر محتوى وليست قرار اعتماد.</p></div><span class="twq-section__meta"><bdi>{{ rows|length }}</bdi> نتيجة</span></div>
+    {% if rows %}
+      <div class="twq-table-wrap achievement-review-table-wrap">
+        <table class="twq-table achievement-review-table">
+          <thead><tr><th scope="col">{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</th><th scope="col">الحالة</th><th scope="col">تقدم التوثيق</th><th scope="col">الإجراء التالي</th><th scope="col">الإجراءات</th></tr></thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td data-label="{{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}"><div class="achievement-review-identity"><span class="achievement-avatar" aria-hidden="true">{{ row.teacher.name|slice:":1" }}</span><div><strong><bdi>{{ row.teacher.name }}</bdi></strong><span dir="ltr">{{ row.teacher.phone }}</span></div></div></td>
+                <td data-label="الحالة">{% if row.file %}<span class="twq-status" data-status="{{ row.file.status_tone }}"><i class="fa-solid fa-circle" aria-hidden="true"></i><span>{{ row.file.get_status_display }}</span></span>{% else %}<span class="twq-status" data-status="draft"><i class="fa-solid fa-circle" aria-hidden="true"></i><span>لا يوجد ملف</span></span>{% endif %}</td>
+                <td data-label="تقدم التوثيق">{% if row.file %}<div class="twq-progress achievement-review-progress"><div class="twq-progress__label"><span>{{ row.file.documented_section_count }}/{{ row.file.total_section_count }} محورًا</span><strong><bdi>{{ row.file.progress_percent }}%</bdi></strong></div><progress class="twq-progress__bar" value="{{ row.file.progress_percent }}" max="100" aria-label="تقدم توثيق ملف {{ row.teacher.name }}: {{ row.file.progress_percent }} بالمئة">{{ row.file.progress_percent }}%</progress></div>{% else %}<span class="achievement-muted">لم يبدأ</span>{% endif %}</td>
+                <td data-label="الإجراء التالي">{% if row.file %}<span class="achievement-next-step">{{ row.file.next_action_label }}</span>{% else %}<span class="achievement-next-step">ينشئه {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }} من حسابه</span>{% endif %}</td>
+                <td data-label="الإجراءات">{% if row.file %}<div class="twq-table__actions"><a class="twq-btn {% if row.file.status == 'submitted' %}twq-btn--primary{% else %}twq-btn--secondary{% endif %}" href="{% url 'reports:achievement_file_detail' row.file.pk %}"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>{% if row.file.status == 'submitted' %}مراجعة الآن{% else %}فتح الملف{% endif %}</span></a><a class="twq-btn twq-btn--ghost" href="{% url 'reports:achievement_file_print' row.file.pk %}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i><span>طباعة</span></a></div>{% else %}<span class="achievement-muted">لا يوجد إجراء</span>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      {% endif %}
-  </div>
-
-  <!-- Stats Strip -->
-  <div class="stats-row">
-      <div class="stat-chip">
-          <i class="fa-regular fa-calendar-check"></i>
-          السنة: {{ year|default:"-" }}
-      </div>
-      <div class="stat-chip">
-          <i class="fa-solid fa-users-viewfinder"></i>
-          <span id="resultCount">{{ rows|length }}</span> {{ SCHOOL_TEACHER_LABEL|default:"معلم" }}
-      </div>
-      {% if q or status %}
-      <a href="{% url 'reports:achievement_school_files' %}?year={{ year }}" class="stat-chip xs-achievement-school-files-6">
-          <i class="fa-solid fa-times"></i> مسح التصفية
-      </a>
-      {% endif %}
-  </div>
-
-  <!-- Content Grid -->
-  <div class="teachers-grid" id="teachersGrid">
-      {% for row in rows %}
-      <div class="teacher-card item-row" 
-           data-name="{{ row.teacher.name|default:'' }}" 
-           data-phone="{{ row.teacher.phone|default:'' }}">
-          
-          <div class="card-header">
-              <div class="avatar-placeholder">
-                  {{ row.teacher.name|slice:":1" }}
-              </div>
-              
-              <!-- Status Badge -->
-              {% if row.file %}
-                  {% if row.file.status == "approved" %}
-                      <div class="status-dot st-approved"><i class="fa-solid fa-check-circle"></i> معتمد</div>
-                  {% elif row.file.status == "rejected" %}
-                      <div class="status-dot st-rejected"><i class="fa-solid fa-circle-xmark"></i> مرفوض</div>
-                  {% elif row.file.status == "submitted" %}
-                      <div class="status-dot st-submitted"><i class="fa-solid fa-clock"></i> للمراجعة</div>
-                  {% elif row.file.status == "draft" %}
-                      <div class="status-dot st-draft"><i class="fa-solid fa-pencil"></i> مسودة</div>
-                  {% else %}
-                      <div class="status-dot st-draft">{{ row.file.get_status_display }}</div>
-                  {% endif %}
-              {% else %}
-                  <div class="status-dot st-draft xs-achievement-school-files-7">لا يوجد ملف</div>
-              {% endif %}
-          </div>
-
-          <div class="t-name" title="{{ row.teacher.name }}">{{ row.teacher.name }}</div>
-          <div class="t-info">
-              <i class="fa-solid fa-phone"></i> 
-              <span dir="ltr">{{ row.teacher.phone }}</span>
-          </div>
-
-          {% if row.file %}
-          <div class="card-actions">
-              <a href="{% url 'reports:achievement_file_detail' row.file.pk %}" class="btn-card btn-view">
-                  <i class="fa-solid fa-folder-open"></i> فتح الملف
-              </a>
-              <a href="{% url 'reports:achievement_file_print' row.file.pk %}" target="_blank" class="btn-card btn-print">
-                  <i class="fa-solid fa-print"></i> PDF
-              </a>
-          </div>
-          {% else %}
-          <div class="xs-achievement-school-files-8">
-              لم يتم إنشاء ملف لهذا العام
-          </div>
-          {% endif %}
-      </div>
-      {% empty %}
-      <div class="empty-state">
-           <i class="fa-solid fa-person-chalkboard xs-achievement-school-files-9"></i>
-           <h3>لا توجد حسابات للكادر التعليمي</h3>
-           <p class="u-text-muted">تأكد من إضافة حسابات الكادر التعليمي إلى المدرسة أو تغيير سنة البحث</p>
-      </div>
-      {% endfor %}
-  </div>
-
-  <div id="noResultsMsg" class="empty-state u-hidden">
-      <i class="fa-solid fa-search xs-achievement-school-files-10"></i>
-      <h3>لا توجد نتائج مطابقة</h3>
-      <p class="u-text-muted">حاول البحث باسم مختلف أو رقم جوال آخر</p>
-  </div>
-
+    {% else %}
+      <div class="twq-empty twq-empty--page"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span><h3 class="twq-empty__title">لا توجد نتائج ضمن هذا النطاق</h3><p class="twq-empty__message">غيّر السنة أو المرشحات، أو تحقق من نطاق الأقسام الممنوح لهذا الحساب.</p></div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const grid = document.getElementById('teachersGrid');
-    const filterForm = document.getElementById('filterForm');
-    const yearSelect = document.getElementById('achievementYearSelect');
-    const yearInput = document.getElementById('achievementYearInput');
-    const statusSelect = document.getElementById('achievementStatusSelect');
-    const items = grid.querySelectorAll('.item-row');
-    const noResults = document.getElementById('noResultsMsg');
-    const countLabel = document.getElementById('resultCount');
-
-    if (yearSelect && filterForm) {
-        yearSelect.addEventListener('change', () => filterForm.submit());
-    }
-    if (yearInput && filterForm) {
-        yearInput.addEventListener('change', () => filterForm.submit());
-    }
-    if (statusSelect && filterForm) {
-        statusSelect.addEventListener('change', () => filterForm.submit());
-    }
-
-    searchInput.addEventListener('input', function(e) {
-        const query = e.target.value.toLowerCase().trim();
-        let visibleCount = 0;
-
-        items.forEach(item => {
-            const name = (item.dataset.name || '').toLowerCase();
-            const phone = (item.dataset.phone || '').toLowerCase();
-            
-            if (name.includes(query) || phone.includes(query)) {
-                item.style.display = 'flex';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        // Update UI states
-        if (visibleCount === 0 && items.length > 0) {
-            noResults.style.display = 'block';
-        } else {
-            noResults.style.display = 'none';
-        }
-        
-        if (countLabel) countLabel.textContent = visibleCount;
-    });
-});
-</script>
+<script src="{% static 'js/achievement.js' %}?v=20260923.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

@@ -1,49 +1,19 @@
-{# reports/templates/reports/partials/achievement_report_picker_list.html #}
-
 {% if reports %}
-  <div class="af-report-list u-grid u-gap-4">
-    {% for r in reports %}
-      <div class="af-report-item royal-panel xs-achievement-report-picker-list-1">
-        <div class="u-min-w-0 u-text-start">
-          <div class="xs-achievement-report-picker-list-2">
-            {{ r.title|default:"(بدون عنوان)" }}
+  <p class="achievement-picker-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>النتائج لأول 50 تقريرًا مطابقًا يملكها صاحب الملف في المدرسة النشطة.</span></p>
+  <ul class="achievement-document-list achievement-picker-list" aria-label="التقارير المتاحة للربط">
+    {% for report in reports %}
+      <li>
+        <article class="twq-document-item">
+          <div class="twq-document-item__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></div>
+          <div class="twq-document-item__content"><h3>{{ report.title|default:"بدون عنوان" }}</h3><p>{% if report.category %}<span>{{ report.category.name }}</span>{% endif %}{% if report.created_at %}<time datetime="{{ report.created_at|date:'c' }}"><bdi>{{ report.created_at|date:"Y/m/d" }}</bdi></time>{% endif %}</p></div>
+          <div class="twq-document-item__actions">
+            {% if report.id in already_ids %}<button class="twq-btn twq-btn--ghost" type="button" disabled><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>مضاف مسبقًا</span></button>{% else %}<form method="post" action="{% url 'reports:achievement_file_detail' file.pk %}">{% csrf_token %}<input type="hidden" name="action" value="add_report_evidence"><input type="hidden" name="section_id" value="{{ section.pk }}"><input type="hidden" name="report_id" value="{{ report.pk }}"><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-link" aria-hidden="true"></i><span>ربط كشاهد</span></button></form>{% endif %}
+            <a class="twq-btn twq-btn--ghost" href="{% url 'reports:report_print' report.pk %}" target="_blank" rel="noopener"><i class="fa-solid fa-eye" aria-hidden="true"></i><span>معاينة</span></a>
           </div>
-          <div class="u-mt-2 u-text-muted-alt u-fw-800 u-fs-md u-flex u-gap-3 u-wrap u-justify-end">
-            {% if r.category %}
-              <span class="royal-status">{{ r.category.name }}</span>
-            {% endif %}
-            {% if r.created_at %}
-              <span class="royal-status warn">{{ r.created_at|date:"Y-m-d" }}</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="u-flex u-gap-2 u-wrap u-justify-start">
-          {% if r.id in already_ids %}
-            <button class="btn btn-outline xs-achievement-report-picker-list-3" type="button" disabled>
-              <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-              مضاف مسبقاً
-            </button>
-          {% else %}
-            <form method="post" action="{% url 'reports:achievement_file_detail' file.pk %}" class="u-m-0">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="add_report_evidence" />
-              <input type="hidden" name="section_id" value="{{ section.id }}" />
-              <input type="hidden" name="report_id" value="{{ r.id }}" />
-              <button class="btn btn-primary" type="submit">
-                <i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة كشاهد
-              </button>
-            </form>
-          {% endif %}
-          <a class="btn btn-outline" href="{% url 'reports:report_print' r.pk %}" target="_blank" rel="noopener">
-            <i class="fa-solid fa-print" aria-hidden="true"></i> معاينة
-          </a>
-        </div>
-      </div>
+        </article>
+      </li>
     {% endfor %}
-  </div>
+  </ul>
 {% else %}
-  <div class="royal-empty xs-achievement-report-picker-list-4">
-    لا توجد تقارير مطابقة.
-  </div>
+  <div class="twq-empty twq-empty--local"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span><h3 class="twq-empty__title">لا توجد تقارير مطابقة</h3><p class="twq-empty__message">جرّب عبارة بحث أخرى. لا يعرض المنتقي تقارير مستخدم أو مدرسة أخرى.</p></div>
 {% endif %}

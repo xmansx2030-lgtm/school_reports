@@ -2171,7 +2171,21 @@ def report_share_manage(request: HttpRequest, pk: int) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 def achievement_share_manage(request: HttpRequest, pk: int) -> HttpResponse:
     """تفعيل/إلغاء مشاركة ملف الإنجاز (PDF) عبر رابط عام صالح لمدة محددة (اختياري للمعلم)."""
-    ach_file = get_object_or_404(TeacherAchievementFile.objects.select_related("school"), pk=pk, teacher=request.user)
+    active_school = _get_active_school(request)
+    if active_school is None:
+        messages.error(request, "فضلاً اختر مدرسة أولاً.")
+        return redirect("reports:select_school")
+
+    # إدارة الرابط سطحٌ خاص بالمالك في عقد Achievement الحالي. ويبدأ lookup
+    # من المدرسة النشطة حتى لا تكفي ملكية المستخدم لفتح ملف مدرسة أخرى في
+    # جلسة متعددة المدارس. مسار الرمز العام أدناه مستقل عن هذا السياق عمداً.
+    ach_file = get_object_or_404(
+        TeacherAchievementFile.objects.select_related("school").filter(
+            school=active_school,
+            teacher=request.user,
+        ),
+        pk=pk,
+    )
 
     expiry_days = get_share_link_default_days(school=ach_file.school)
 
@@ -2225,7 +2239,11 @@ def achievement_share_manage(request: HttpRequest, pk: int) -> HttpResponse:
             return redirect("reports:achievement_share_manage", pk=ach_file.pk)
 
         if action == "disable" and active_link is not None:
-            ShareLink.objects.filter(pk=active_link.pk).update(is_active=False)
+            ShareLink.objects.filter(
+                pk=active_link.pk,
+                kind=ShareLink.Kind.ACHIEVEMENT,
+                achievement_file=ach_file,
+            ).update(is_active=False)
             messages.success(request, "تم إيقاف رابط مشاركة ملف الإنجاز.")
             return redirect("reports:achievement_share_manage", pk=ach_file.pk)
 
