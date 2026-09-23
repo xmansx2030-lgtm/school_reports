@@ -20,9 +20,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .. import capabilities as caps
+from ..audit_labels import attach_views
 from ..forms_staff_roles import DelegationForm, StaffRoleAssignForm, StaffScopeForm
 from ..gender_labels import school_gender_labels
-from ..models import Delegation, SchoolMembership, StaffScope
+from ..models import AuditLog, Delegation, SchoolMembership, StaffScope
 from ..permissions import prefetch_memberships_for_school, role_required
 from ._helpers import *  # noqa: F401,F403 — نفس مدخلات بقية شاشات المدير
 from ._helpers import _get_active_school, _user_manager_schools
@@ -112,6 +113,11 @@ def _roster(school) -> list[dict]:
         row["primary"] = primary
         row["kind"], row["role_label"] = _display_role(primary, labels)
         row["scope"] = getattr(primary, "scope", None)
+        row["permission_role_label"] = primary.get_role_type_display()
+        row["job_title_label"] = primary.get_job_title_display()
+        row["scope_capability_count"] = len(
+            getattr(row["scope"], "capabilities", None) or []
+        )
         row["can_have_scope"] = primary.role_type in {
             SchoolMembership.RoleType.DEPUTY,
             SchoolMembership.RoleType.ADMIN_STAFF,
@@ -235,6 +241,16 @@ def _delegation_capability_groups() -> list[tuple[str, list]]:
     return list(groups.items())
 
 
+def _mark_invalid_fields(form) -> None:
+    """اربط أخطاء الخادم بحقولها دون نقل التحقق إلى JavaScript."""
+    for name in form.errors:
+        if name not in form.fields:
+            continue
+        attrs = form.fields[name].widget.attrs
+        attrs["aria-invalid"] = "true"
+        attrs["aria-describedby"] = f"{form[name].id_for_label}-errors"
+
+
 @login_required(login_url="reports:login")
 @role_required({"manager"})
 @require_http_methods(["GET", "POST"])
@@ -290,13 +306,31 @@ def staff_roles(request):
             return redirect("reports:staff_roles")
 
     school_labels = school_gender_labels(active_school)
+    _mark_invalid_fields(assign_form)
+    _mark_invalid_fields(delegation_form)
     delegations = list(
         Delegation.objects.filter(school=active_school)
         .select_related("delegate", "delegator")
         .order_by("-starts_at", "-id")[:25]
     )
+    for delegation in delegations:
+        delegation.capability_labels = [
+            caps.BY_CODE[code].label
+            for code in delegation.capabilities
+            if code in caps.BY_CODE
+        ]
     live_delegations = [d for d in delegations if d.state in {"active", "scheduled"}]
     past_delegations = [d for d in delegations if d.state not in {"active", "scheduled"}]
+
+    access_audit_logs = list(
+        AuditLog.objects.filter(
+            school=active_school,
+            model_name__in=("SchoolMembership", "StaffScope", "Delegation"),
+        )
+        .select_related("teacher")
+        .order_by("-timestamp")[:8]
+    )
+    attach_views(access_audit_logs)
 
     # كشفٌ من مئتَي منسوب لا يُقرأ دفعةً واحدة: يُبحث فيه ويُصفّى ثم يُصفَّح.
     needle = (request.GET.get("q") or "").strip()
@@ -333,6 +367,7 @@ def staff_roles(request):
             "delegations": delegations,
             "live_delegations": live_delegations,
             "past_delegations": past_delegations,
+            "access_audit_logs": access_audit_logs,
             # اللوحة التي تُفتح أولاً: حيث وقع الخطأ إن وقع، وإلا فالكشف.
             "open_tab": (
                 "delegate"
@@ -457,6 +492,7 @@ def staff_role_scope(request, pk: int):
         "لا يضيف المستخدمين ولا يغيّر أدوارهم أو اشتراك المدرسة.",
         "لا يرى بيانات مدرسة أخرى أو أقسامًا خارج نطاقه.",
     ]
+    _mark_invalid_fields(form)
 
     return render(
         request,
