@@ -52,7 +52,7 @@
         </ul>
       </div>
       <div class="staff-access-summary__group" data-tone="denied">
-        <h3><i class="fa-solid fa-lock" aria-hidden="true"></i> حدود ثابتة</h3>
+        <h3><i class="fa-solid fa-lock" aria-hidden="true"></i> لا يستطيع</h3>
         <ul id="scopeDeniedList">
           {% for item in capability_summary %}
             <li data-capability="{{ item.code }}" {% if item.allowed %}hidden{% endif %}>لا يملك: {{ item.label }}</li>

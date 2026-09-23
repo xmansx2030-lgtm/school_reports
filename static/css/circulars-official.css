@@ -525,3 +525,14 @@ html[data-theme="dark"] .cir-empty__icon { background: #332a18; color: #efd396; 
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   text-align: left;
 }
+
+.cir-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.cir-filters .cir-btn[aria-current="page"] {
+  border-color: currentColor;
+  font-weight: 700;
+}

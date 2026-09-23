@@ -733,6 +733,10 @@
             <span>الاشتراكات</span>
             <i class="fa-solid fa-file-invoice-dollar"></i>
           </a>
+          <a class="{% if active == 'platform_conversion_dashboard' or active == 'platform_conversion_school' or active == 'platform_conversion_generate' or active == 'platform_conversion_send' %}is-active{% endif %}" href="{% url 'reports:platform_conversion_dashboard' %}">
+            <span>التحويل الذكي</span>
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </a>
           <a class="{% if active == 'platform_payments_list' or active == 'platform_payment_detail' %}is-active{% endif %}" href="{% url 'reports:platform_payments_list' %}">
             <span>المالية</span>
             <i class="fa-solid fa-receipt"></i>

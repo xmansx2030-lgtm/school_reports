@@ -7,6 +7,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 
 from reports.models import Report, School, SchoolMembership, Teacher
@@ -114,6 +115,56 @@ class OfficialReportPrintDesignTests(TestCase):
         self.assertIn("object-fit: contain", styles)
         self.assertIn("signature_anchor_y = bottom_margin + 112", fallback_pdf_source)
 
+    def test_print_pilot_keeps_pdf_css_self_contained_and_screen_controls_separate(self):
+        template = self._source("reports/templates/reports/report_print.html")
+        document_css = self._source(
+            "reports/templates/reports/partials/report_print_official_styles.html"
+        )
+        screen_css = self._source("static/css/report-print.css")
+
+        self.assertEqual(template.count('<style nonce="{{ CSP_NONCE }}">'), 1)
+        self.assertIn('include "reports/partials/report_print_official_styles.html"', template)
+        self.assertIn('{% if not for_pdf %}<link rel="stylesheet" href="{% static \'css/report-print.css\' %}', template)
+        self.assertIn('class="toolbar twq-print-actions no-print"', template)
+        self.assertIn('<main class="page', template)
+        self.assertIn('id="btnPrint"', template)
+        self.assertIn('btn-print--secondary{% endif %}', template)
+        self.assertIn('report_approval_enabled and is_report_owner and r.is_editable_by_owner', template)
+        self.assertIn('id="btnBack"', template)
+        self.assertIn('window.print()', template)
+        self.assertIn('class="section report-comments no-print"', template)
+        self.assertIn('@page {', document_css)
+        self.assertIn('size: A4;', document_css)
+        self.assertRegex(document_css, r'@page\s*\{[^}]*background:\s*#fff;')
+        self.assertIn('html[data-theme="dark"] body { color-scheme: light !important;', document_css)
+        self.assertIn('break-inside: avoid', document_css)
+        self.assertNotIn('print-color-adjust: exact', document_css)
+        self.assertIn('@media screen', screen_css)
+        self.assertNotIn('@media print', screen_css)
+
+    def test_print_pilot_preserves_fields_evidence_dates_and_signatures(self):
+        template = self._source("reports/templates/reports/report_print.html")
+        evidence = self._source("reports/templates/reports/partials/report_evidence_print.html")
+        for field in (
+            'r.title', 'SCHOOL_NAME', 'MOE_LOGO_URL', 'r.academic_year',
+            'r.report_date|hijri', 'r.category.name', 'r.show_beneficiaries',
+            'r.show_goal', 'r.show_details', 'r.show_implementation',
+            'r.show_results', 'r.show_recommendations', 'head_decision',
+            'SCHOOL_PRINCIPAL', 'executor_name', 'EVIDENCE_SEPARATE_PAGE',
+            'reports/partials/report_evidence_print.html',
+        ):
+            with self.subTest(field=field):
+                self.assertIn(field, template)
+        self.assertIn('src="{{ evidence.src }}"', evidence)
+        self.assertIn('alt="{{ evidence.description }}"', evidence)
+        self.assertIn('class="img-fit--{{ evidence.fit_mode }}"', evidence)
+        self.assertIn('name="action" value="private_comment_create"', template)
+        self.assertIn('name="action" value="private_comment_update"', template)
+        self.assertIn('name="action" value="private_comment_delete"', template)
+        self.assertIn('{% csrf_token %}', template)
+        self.assertIn('<h1 id="reportTitle">', template)
+        self.assertIn('<h2 class="section-h">', template)
+
     def test_pdf_context_uses_gendered_labels_and_counts_evidence(self):
         for index in range(1, 5):
             setattr(
@@ -134,6 +185,57 @@ class OfficialReportPrintDesignTests(TestCase):
         self.assertEqual(context["SCHOOL_MANAGER_LABEL"], "مديرة المدرسة")
         self.assertEqual(context["SCHOOL_HEAD_OF_DEPARTMENT_LABEL"], "رئيسة القسم")
         self.assertTrue(context["PDF_IMAGE1_URL"].startswith("data:image/png;base64,"))
+
+    def test_chrome_print_pagination_selects_block_flow_only_when_needed(self):
+        template_name = "reports/report_print.html"
+
+        short_html = render_to_string(
+            template_name, build_report_print_context(self.report)
+        )
+        self.assertIn('<main class="page">', short_html)
+
+        self.report.goal = "تقرير تفصيلي " * 80
+        long_html = render_to_string(
+            template_name, build_report_print_context(self.report)
+        )
+        self.assertIn('page--natural-print-flow', long_html)
+
+        self.report.goal = ""
+        for index in range(1, 5):
+            setattr(
+                self.report,
+                f"image{index}",
+                SimpleUploadedFile(
+                    f"pagination-evidence-{index}.png",
+                    ONE_PIXEL_PNG,
+                    content_type="image/png",
+                ),
+            )
+        self.report.save(update_fields=["goal", *[f"image{i}" for i in range(1, 5)]])
+        evidence_html = render_to_string(
+            template_name, build_report_print_context(self.report)
+        )
+        self.assertIn('page--dense-evidence page--natural-print-flow', evidence_html)
+        self.assertEqual(evidence_html.count('class="img-box '), 4)
+        self.assertIn('class="approval-block"', evidence_html)
+
+    def test_print_breaks_gallery_row_not_the_whole_evidence_section(self):
+        styles = self._source(
+            "reports/templates/reports/partials/report_print_official_styles.html"
+        )
+        self.assertRegex(styles, r"\.evidence-section\s*\{\s*break-inside:\s*auto;")
+        self.assertRegex(styles, r"\.img-box\s*\{[^}]*break-inside:\s*avoid;")
+        self.assertRegex(
+            styles,
+            r"\.images-grid--4 \.img-box:nth-child\(3\)\s*\{[^}]*break-before:\s*page;",
+        )
+        self.assertRegex(
+            styles, r"\.page\.page--natural-print-flow\s*\{\s*display:\s*block;"
+        )
+        self.assertRegex(
+            styles, r"\.images-grid--1 \.img-box img\s*\{\s*height:\s*auto;"
+        )
+        self.assertRegex(styles, r"\.approval-block\s*\{[^}]*break-inside:\s*avoid;")
 
     def test_fallback_pdf_is_one_page_for_a_short_report_without_images(self):
         context = build_report_print_context(self.report)

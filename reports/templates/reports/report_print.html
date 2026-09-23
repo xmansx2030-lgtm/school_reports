@@ -1,7 +1,7 @@
 {% load static %}
 {% load hijri_tags %}
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme-toggle="off">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -12,6 +12,8 @@
     <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
     <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
+    <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   {% endif %}
 
   <style nonce="{{ CSP_NONCE }}">
@@ -52,9 +54,9 @@
     .page::before {
       content: "";
       position: absolute;
-      top: 0; left: 0; right: 0;
+      inset-block-start: 0; inset-inline: 0;
       height: 6px;
-      background: linear-gradient(90deg, #006c35 0%, #b9975b 100%);
+      background: #006c35;
       border-radius: 6px 6px 0 0;
     }
 
@@ -102,9 +104,7 @@
       .signatures, .report-footer, .meta-table, .approval-block { break-inside: avoid; page-break-inside: avoid; }
       .section-h { break-after: avoid; page-break-after: avoid; }
       .section-body, td { overflow-wrap: anywhere; word-break: normal; }
-      .page::before { display: none !important; } /* إخفاء شريط الهوية في الطباعة */
       .no-print { display: none !important; }
-      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
       /* ضغط التخطيط لزيادة فرصة الطباعة في صفحة واحدة (مع إبقاء الوضوح) */
       .title { margin: 8px 0 4px; }
@@ -116,76 +116,6 @@
       .img-box img { height: 100px; }
       .images-grid { gap: 6px; }
       .signature-spacer { min-height: 16px; }
-    }
-
-    /* Toolbar (screen only) */
-    .toolbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: linear-gradient(135deg, #006c35 0%, #00532a 60%, #073b2a 100%);
-      color: #fff;
-      padding: 12px 16px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      font-weight: 800;
-      box-shadow: 0 6px 22px rgba(2, 6, 23, 0.18);
-    }
-    .toolbar .tb-title {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 900;
-      font-size: 14px;
-      margin-inline-end: auto;
-      white-space: nowrap;
-    }
-    .toolbar .tb-title i { color: #e6cf9a; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: #fff;
-      color: #111;
-      border: 1px solid rgba(0,0,0,0.12);
-      padding: 10px 18px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-family: inherit;
-      font-weight: 900;
-      text-decoration: none;
-      font-size: 14px;
-      min-height: 44px;
-      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-    }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.16); }
-    .btn-print { background: #e6cf9a; color: #063d22; border-color: #e6cf9a; }
-    .btn-back { background: rgba(255,255,255,0.14); color: #fff; border-color: rgba(255,255,255,0.30); }
-    .btn-back:hover { background: rgba(255,255,255,0.26); }
-
-    /* الإرسال أهمّ ما في هذا الشريط لمن تقريره مسودة، فيسبق الطباعة بصرياً:
-       طباعةُ ما لم يُرسل توثيقٌ لا يبلغ أحداً. والحالةُ حين لا إرسال تُعرض
-       خافتةً — خبرٌ يُطمئن لا زرٌّ يُنقر باحثاً عن فعل. */
-    .btn-send { background: #1f6feb; color: #fff; border-color: #1f6feb; }
-    .btn-send:hover { background: #1a5fd0; border-color: #1a5fd0; }
-    .btn-state { background: rgba(255,255,255,0.10); color: #fff; border-color: rgba(255,255,255,0.24); }
-    .btn-state:hover { background: rgba(255,255,255,0.20); }
-
-    @media (max-width: 600px) {
-      .toolbar { padding: 10px 12px; gap: 8px; }
-      .toolbar .tb-title {
-        width: 100%;
-        margin: 0 0 2px;
-        justify-content: center;
-        white-space: normal;
-        text-align: center;
-      }
-      .toolbar .btn { flex: 1; }
-      .page { overflow-wrap: anywhere; }
     }
 
     /* Official header */
@@ -269,8 +199,8 @@
       font-weight: 1000;
       font-size: 14px;
       margin: 0 0 6px;
-      border-right: 4px solid #006c35;
-      padding-right: 8px;
+      border-inline-start: 4px solid #006c35;
+      padding-inline-start: 8px;
     }
     .section-body {
       font-size: 14px;
@@ -346,7 +276,7 @@
     .signatures.one-sig {
       grid-template-columns: 1fr;
       max-width: 45%;
-      margin-right: auto;
+      margin-inline-end: auto;
     }
     .sig {
       border: none;
@@ -357,7 +287,7 @@
       align-items: center;
       text-align: center;
     }
-    .sig h4 {
+    .sig h3 {
       margin: 0;
       font-size: 13.5px;
       font-weight: 1000;
@@ -385,7 +315,7 @@
       font-size: 11px;
       color: var(--muted);
       font-weight: 700;
-      margin-left: 3px;
+      margin-inline-start: 3px;
     }
 
     /* اسم فريد لتفادي التعارض مع .footer العام في app.css (خلفية خضراء داكنة !important) */
@@ -401,38 +331,40 @@
       background: transparent;
     }
     .report-footer div { color: var(--muted); }
-  </style>
-  <style nonce="{{ CSP_NONCE }}">
     {% include "reports/partials/report_print_official_styles.html" %}
   </style>
 <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1">
 <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1">
+{% if not for_pdf %}<link rel="stylesheet" href="{% static 'css/report-print.css' %}?v=20260919.1">{% endif %}
 </head>
 <body>
 
   <!-- Screen Toolbar -->
-  <div class="toolbar no-print">
-    <span class="tb-title"><i class="fa-solid fa-file-lines"></i> معاينة التقرير — جاهز للطباعة (A4)</span>
+  <div class="toolbar twq-print-actions no-print" role="group" aria-label="إجراءات معاينة التقرير">
+    <span class="tb-title"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> معاينة التقرير — جاهز للطباعة (A4)</span>
     {% if report_approval_enabled and is_report_owner %}
       {% if r.is_editable_by_owner %}
         <a href="{% url 'reports:approval_detail' r.pk %}" class="btn btn-send">
-          <i class="fa-solid fa-paper-plane"></i> إرسال للاعتماد
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> إرسال للاعتماد
         </a>
       {% else %}
         <a href="{% url 'reports:approval_detail' r.pk %}" class="btn btn-state" data-tone="{{ r.approval_tone }}">
-          <i class="fa-solid fa-circle-info"></i> {{ r.get_approval_state_display }}
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ r.get_approval_state_display }}
         </a>
       {% endif %}
     {% endif %}
-    <button type="button" id="btnPrint" class="btn btn-print">
-      <i class="fas fa-print"></i> طباعة / حفظ PDF
+    <button type="button" id="btnPrint" class="btn btn-print{% if report_approval_enabled and is_report_owner and r.is_editable_by_owner %} btn-print--secondary{% endif %}">
+      <i class="fas fa-print" aria-hidden="true"></i> طباعة / حفظ PDF
     </button>
     <button type="button" id="btnBack" class="btn btn-back">
-      <i class="fas fa-arrow-right"></i> رجوع
+      <i class="fas fa-arrow-right" aria-hidden="true"></i> رجوع
     </button>
   </div>
 
-  <div class="page{% if EVIDENCE_COUNT >= 3 %} page--dense-evidence{% endif %}">
+  {% comment %}Long copy and evidence need block fragmentation in Chrome print;
+    compact text-only reports retain the bottom-aligned signature layout.
+    These classes only select presentation; no report data or action changes.{% endcomment %}
+  <main class="page{% if EVIDENCE_COUNT >= 3 %} page--dense-evidence{% endif %}{% if EVIDENCE_COUNT == 1 %} page--single-evidence{% elif EVIDENCE_COUNT == 2 %} page--paired-evidence{% endif %}{% if EVIDENCE_COUNT or r.show_goal and r.goal|length > 700 or r.show_details and r.idea|length > 700 or r.show_implementation and r.implementation_method|length > 700 or r.show_results and r.results|length > 700 or r.show_recommendations and r.recommendations|length > 700 %} page--natural-print-flow{% endif %}">
     <header class="header">
       <div class="hdr-block hdr-right">
         <div>المملكة العربية السعودية</div>
@@ -451,7 +383,7 @@
       <div class="hdr-block hdr-left">
         {% if r.academic_year %}
           <div class="hdr-academic-label">العام الدراسي</div>
-          <div class="hdr-academic-year">{{ r.academic_year }} هـ</div>
+          <div class="hdr-academic-year"><bdi>{{ r.academic_year }}</bdi> هـ</div>
         {% endif %}
       </div>
     </header>
@@ -459,17 +391,17 @@
     <section class="report-identity" aria-labelledby="reportTitle">
       <h1 id="reportTitle">{% firstof r.title "تقرير مدرسي" %}</h1>
       <div class="identity-tags">
-        <span><i class="fa-solid fa-hashtag" aria-hidden="true"></i> رقم التقرير: <b>REP-{{ r.id }}</b></span>
+        <span><i class="fa-solid fa-hashtag" aria-hidden="true"></i> رقم التقرير: <b><bdi>REP-{{ r.id }}</bdi></b></span>
         <span><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> تاريخ التنفيذ: <b>{% if r.day_name %}{{ r.day_name }} - {% endif %}{{ r.report_date|hijri }} هـ</b></span>
       </div>
     </section>
 
     <table class="meta-table meta-table--compact">
       <tr>
-        <th>التصنيف</th>
+        <th scope="row">التصنيف</th>
         <td{% if not r.show_beneficiaries %} colspan="3"{% endif %}>{% if r.category %}{{ r.category.name }}{% else %}عام{% endif %}</td>
         {% if r.show_beneficiaries %}
-          <th>عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</th>
+          <th scope="row">عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</th>
           <td>{{ r.beneficiaries_count|default_if_none:"—" }}</td>
         {% endif %}
       </tr>
@@ -477,35 +409,35 @@
 
     {% if r.show_goal %}
       <section class="section print-section">
-        <div class="section-h"><span class="section-index"></span><span>الهدف</span></div>
+        <h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>الهدف</span></h2>
         <div class="section-body">{{ r.goal|default:"—" }}</div>
       </section>
     {% endif %}
 
     {% if r.show_details %}
       <section class="section print-section">
-        <div class="section-h"><span class="section-index"></span><span>تفاصيل التقرير</span></div>
+        <h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>تفاصيل التقرير</span></h2>
         <div class="section-body">{{ r.idea|default:"—" }}</div>
       </section>
     {% endif %}
 
     {% if r.show_implementation %}
       <section class="section print-section">
-        <div class="section-h"><span class="section-index"></span><span>آلية التنفيذ</span></div>
+        <h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>آلية التنفيذ</span></h2>
         <div class="section-body">{{ r.implementation_method|default:"—" }}</div>
       </section>
     {% endif %}
 
     {% if r.show_results %}
       <section class="section print-section">
-        <div class="section-h"><span class="section-index"></span><span>النتائج</span></div>
+        <h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>النتائج</span></h2>
         <div class="section-body">{{ r.results|default:"—" }}</div>
       </section>
     {% endif %}
 
     {% if r.show_recommendations %}
       <section class="section print-section">
-        <div class="section-h"><span class="section-index"></span><span>التوصيات</span></div>
+        <h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>التوصيات</span></h2>
         <div class="section-body">{{ r.recommendations|default:"—" }}</div>
       </section>
     {% endif %}
@@ -522,7 +454,7 @@
     <div class="signature-spacer"></div>
     <section class="approval-block">
       <div class="approval-heading">
-        <strong>الاعتمادات والتوقيعات</strong>
+        <h2>الاعتمادات والتوقيعات</h2>
       </div>
 
     {% comment %}
@@ -537,7 +469,7 @@
         {# مرتبط بقسم → ثلاثة تواقيع #}
         <div class="signatures three-sigs">
           <div class="sig">
-            <h4>{{ executor_label|default:"المنفّذ" }}</h4>
+            <h3>{{ executor_label|default:"المنفّذ" }}</h3>
             <div class="sig-space"></div>
             <div class="sig-line">
               <span class="sig-label">الاسم:</span>
@@ -546,7 +478,7 @@
           </div>
 
           <div class="sig">
-            <h4>{{ SCHOOL_HEAD_OF_DEPARTMENT_LABEL|default:"رئيس القسم" }}</h4>
+            <h3>{{ SCHOOL_HEAD_OF_DEPARTMENT_LABEL|default:"رئيس القسم" }}</h3>
             <div class="sig-space"></div>
             <div class="sig-line">
               <span class="sig-label">الاسم:</span>
@@ -561,7 +493,7 @@
           </div>
 
           <div class="sig">
-            <h4>{{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</h4>
+            <h3>{{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</h3>
             <div class="sig-space"></div>
             <div class="sig-line">
               <span class="sig-label">الاسم:</span>
@@ -573,7 +505,7 @@
         {# غير مرتبط بقسم → توقيعان: المنفّذ + المدير #}
         <div class="signatures two-sigs">
           <div class="sig">
-            <h4>{{ executor_label|default:"المنفّذ" }}</h4>
+            <h3>{{ executor_label|default:"المنفّذ" }}</h3>
             <div class="sig-space"></div>
             <div class="sig-line">
               <span class="sig-label">الاسم:</span>
@@ -582,7 +514,7 @@
           </div>
 
           <div class="sig">
-            <h4>{{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</h4>
+            <h3>{{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</h3>
             <div class="sig-space"></div>
             <div class="sig-line">
               <span class="sig-label">الاسم:</span>
@@ -602,11 +534,11 @@
       {% include "reports/partials/report_evidence_print.html" %}
     {% endif %}
 
-  </div>
+  </main>
 
   {% if show_comments %}
     <section class="section report-comments no-print">
-      <div class="section-h"><span>ملاحظات وتعليقات خاصة</span></div>
+      <h2 class="section-h"><span>ملاحظات وتعليقات خاصة</span></h2>
 
       <div class="xs-report-print-1">
         لا تظهر في الطباعة أو المشاركة.
@@ -631,7 +563,8 @@
                         {% csrf_token %}
                         <input type="hidden" name="action" value="private_comment_update" />
                         <input type="hidden" name="comment_id" value="{{ c.id }}" />
-                        <textarea name="body" rows="3" class="xs-report-print-6">{{ c.body }}</textarea>
+                        <label for="private-comment-{{ c.id }}">تعديل التعليق الخاص</label>
+                        <textarea id="private-comment-{{ c.id }}" name="body" rows="3" class="xs-report-print-6">{{ c.body }}</textarea>
                         <div class="u-mt-2">
                           <button type="submit" class="btn btn-print">حفظ</button>
                         </div>
@@ -660,7 +593,7 @@
         <form method="post" class="u-mt-4">
           {% csrf_token %}
           <input type="hidden" name="action" value="private_comment_create" />
-          <div class="u-fw-900 u-mb-6px">إضافة تعليق خاص {{ SCHOOL_TEACHER_DATIVE_LABEL|default:"للمعلم" }}</div>
+          <label for="{{ comment_form.body.id_for_label }}" class="u-fw-900 u-mb-6px">إضافة تعليق خاص {{ SCHOOL_TEACHER_DATIVE_LABEL|default:"للمعلم" }}</label>
           <div>{{ comment_form.body }}</div>
           {% if comment_form.body.errors %}
             <div class="xs-report-print-8">{{ comment_form.body.errors.0 }}</div>

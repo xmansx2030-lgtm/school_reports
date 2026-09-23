@@ -1482,7 +1482,7 @@
   }
   .manager-jumpbar a:hover { color: var(--mg-green); background: var(--id-accent-wash); transform: translateY(-1px); }
   .manager-jumpbar a.is-current { color: var(--id-accent-ink); background: var(--id-accent); box-shadow: var(--id-e1); }
-  #managerSetup, #managerToday, #managerCoverage, #managerWorkspaces, #managerPerformance, #managerResources { scroll-margin-top: calc(var(--header-bottom, var(--header-h, 72px)) + 80px); }
+  #managerBrief, #managerSetup, #managerToday, #managerCoverage, #managerWorkspaces, #managerPerformance, #managerResources { scroll-margin-top: calc(var(--header-bottom, var(--header-h, 72px)) + 80px); }
 
   .manager-command-grid {
     display: grid;
@@ -1709,6 +1709,7 @@
   }
 </style>
 <link rel="stylesheet" href="{% static 'css/manager-dashboard.css' %}?v=20260919.1">
+<link rel="stylesheet" href="{% static 'css/manager-smart-brief.css' %}?v=20260923.1">
 {% endblock %}
 
 {% block content %}
@@ -1927,11 +1928,14 @@
   {% endif %}
 
   {% if active_school %}
+    {% include "reports/partials/manager_smart_brief.html" %}
+
     <nav class="manager-jumpbar" aria-label="التنقل داخل لوحة المدرسة">
+      <a href="#managerBrief" data-manager-jump="managerBrief" class="is-current" aria-current="location"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> الموجز الذكي</a>
       {% if setup_incomplete %}
-        <a href="#managerSetup" data-manager-jump="managerSetup"{% if manager_onboarding %} class="is-current" aria-current="location"{% endif %}><i class="fa-solid fa-route" aria-hidden="true"></i> إعداد المدرسة</a>
+        <a href="#managerSetup" data-manager-jump="managerSetup"><i class="fa-solid fa-route" aria-hidden="true"></i> إعداد المدرسة</a>
       {% endif %}
-      <a href="#managerToday" data-manager-jump="managerToday"{% if not manager_onboarding %} class="is-current" aria-current="location"{% endif %}><i class="fa-solid fa-bolt" aria-hidden="true"></i> ما يحتاجك الآن</a>
+      <a href="#managerToday" data-manager-jump="managerToday"><i class="fa-solid fa-bolt" aria-hidden="true"></i> ما يحتاجك الآن</a>
       <a href="#managerCoverage" data-manager-jump="managerCoverage"><i class="fa-solid fa-user-check" aria-hidden="true"></i> التغطية</a>
       <a href="#managerWorkspaces" data-manager-jump="managerWorkspaces"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i> مساحات العمل</a>
       <a href="#managerPerformance" data-manager-jump="managerPerformance"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> الأداء</a>
@@ -2541,6 +2545,7 @@
 {% if active_school %}
 {# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqArabic وقت التحليل. #}
 <script src="{% static 'js/arabic-count.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
+<script src="{% static 'js/manager-smart-brief.js' %}?v=20260923.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
 <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
   (function () {
     "use strict";
@@ -2917,6 +2922,9 @@
       renderCharts(nextPayload);
       const generated = nextPayload.generated_at || "الآن";
       if (statusElement) statusElement.textContent = "آخر تحديث: " + generated;
+      window.dispatchEvent(new CustomEvent("tawtheeq:manager-dashboard-updated", {
+        detail: {period: currentPeriod, generatedAt: generated}
+      }));
     }
 
     function markPeriod(period) {
@@ -3005,7 +3013,7 @@
 
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const revealItems = root.querySelectorAll(
-        ".manager-alert-stack, .manager-now, .manager-coverage, .manager-setup, #managerWorkspaces, #managerResources, #managerPerformance"
+        ".manager-alert-stack, .manager-smart-brief, .manager-now, .manager-coverage, .manager-setup, #managerWorkspaces, #managerResources, #managerPerformance"
       );
       revealItems.forEach(function (item) { item.setAttribute("data-manager-reveal", ""); });
 
@@ -3044,7 +3052,7 @@
             else link.removeAttribute("aria-current");
           });
         }, {rootMargin: "-24% 0px -62% 0px", threshold: [0, .1, .35]});
-        ["managerSetup", "managerToday", "managerCoverage", "managerWorkspaces", "managerPerformance", "managerResources"].forEach(function (id) {
+        ["managerBrief", "managerSetup", "managerToday", "managerCoverage", "managerWorkspaces", "managerPerformance", "managerResources"].forEach(function (id) {
           const section = document.getElementById(id);
           if (section) jumpObserver.observe(section);
         });

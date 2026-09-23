@@ -411,6 +411,11 @@ urlpatterns = [
     # البحث الموحّد — نتائجه محدودة بالمدرسة النشطة وصلاحيات صاحب الطلب.
     path("api/search/", views.global_search, name="global_search"),
     path("api/dashboard/school/", views.admin_dashboard_data, name="api_admin_dashboard_data"),
+    path(
+        "api/dashboard/school/manager-brief/",
+        views.manager_smart_brief,
+        name="manager_smart_brief",
+    ),
     path("api/dashboard/platform/", views.platform_admin_dashboard_data, name="api_platform_dashboard_data"),
     path("api/dashboard/platform/search/", views.platform_admin_dashboard_search, name="api_platform_dashboard_search"),
 
@@ -556,6 +561,26 @@ urlpatterns = [
         name="platform_subscription_record_payment",
     ),
     path("platform/subscriptions/<int:pk>/delete/", views.platform_subscription_delete, name="platform_subscription_delete"),
+    path(
+        "platform/conversion/",
+        views.platform_conversion_dashboard,
+        name="platform_conversion_dashboard",
+    ),
+    path(
+        "platform/conversion/schools/<int:pk>/",
+        views.platform_conversion_school,
+        name="platform_conversion_school",
+    ),
+    path(
+        "platform/conversion/schools/<int:pk>/generate/",
+        views.platform_conversion_generate,
+        name="platform_conversion_generate",
+    ),
+    path(
+        "platform/conversion/schools/<int:pk>/outreaches/<int:outreach_pk>/send/",
+        views.platform_conversion_send,
+        name="platform_conversion_send",
+    ),
     path("platform/pricing/", views.platform_pricing_matrix, name="platform_pricing_matrix"),
     path("platform/plans/", views.platform_plans_list, name="platform_plans_list"),
     path("platform/plans/add/", views.platform_plan_form, name="platform_plan_add"),

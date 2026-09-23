@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime, time as dt_time, timedelta
+import json
 
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.functions import TruncWeek
 from django.urls import reverse
+from django_ratelimit.decorators import ratelimit
 
 from core.observability import report_degraded as _degraded
 
@@ -25,6 +27,11 @@ from ..context_processors import nav_context
 from ..cache_utils import get_school_dashboard_payload
 from ..gender_labels import school_gender_labels
 from ..guidance import school_readiness
+from ..manager_brief import (
+    build_manager_brief,
+    generate_manager_brief,
+    manager_brief_ai_enabled,
+)
 from ..audit_export import audit_csv_response
 from ..model_parts.schools import normalize_sa_mobile_identity
 from ..models import Assignment, Meeting, Plan
@@ -1413,8 +1420,7 @@ def school_managers_manage(request: HttpRequest, pk: int) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 def admin_dashboard(request: HttpRequest) -> HttpResponse:
     """لوحة عمل مدير المدرسة."""
-    import json
-    
+
     # إذا لم يكن هناك مدرسة مختارة نوجّه لاختيار مدرسة أولاً
     active_school = _get_active_school(request)
     # السوبر يوزر يمكنه رؤية أي مدرسة، المدير مقيد بمدارسه فقط
@@ -1672,12 +1678,15 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
             signatures_pending=nav_counters.get("NAV_SIGNATURES_PENDING"),
         )
     attention_total = sum(item["count"] for item in focus_items if not item["subset"])
+    manager_brief = build_manager_brief(dashboard_payload)
 
     ctx.update(
         {
             **payload_kpis,
             "focus_items": focus_items,
             "attention_total": attention_total,
+            "manager_brief": manager_brief,
+            "manager_brief_ai_enabled": manager_brief_ai_enabled(),
             "initial_period": selected_period,
             "selected_period_label": dashboard_payload["period_label"],
             "coverage": dashboard_payload["coverage"],
@@ -1761,6 +1770,91 @@ def admin_dashboard_data(request: HttpRequest) -> HttpResponse:
         ),
     )
     return JsonResponse(payload, json_dumps_params={"ensure_ascii": False})
+
+
+@ratelimit(key="user", rate="12/h", method="POST", block=True)
+@require_http_methods(["POST"])
+def manager_smart_brief(request: HttpRequest) -> HttpResponse:
+    """Return a school-scoped executive brief for the selected dashboard period.
+
+    The client supplies only the period selector.  Every metric is reloaded from
+    the same trusted dashboard builder used by the page, so a crafted request
+    cannot add a school, person, metric, action, or URL to the model context.
+    """
+
+    user = request.user
+    if not getattr(user, "is_authenticated", False):
+        return JsonResponse({"detail": "authentication_required"}, status=401)
+    if not (getattr(user, "is_superuser", False) or _is_staff(user)):
+        return JsonResponse({"detail": "forbidden"}, status=403)
+
+    active_school = _get_active_school(request)
+    if School.objects.filter(is_active=True).exists():
+        if active_school is None:
+            return JsonResponse({"detail": "active_school_required"}, status=403)
+        if (not user.is_superuser) and active_school not in _user_manager_schools(user):
+            return JsonResponse({"detail": "forbidden"}, status=403)
+    if active_school is None:
+        return JsonResponse({"detail": "active_school_required"}, status=403)
+
+    if request.content_type != "application/json":
+        return JsonResponse(
+            {"ok": False, "message": "صيغة طلب الموجز غير صحيحة."},
+            status=415,
+            json_dumps_params={"ensure_ascii": False},
+        )
+    if len(request.body) > 2048:
+        return JsonResponse(
+            {"ok": False, "message": "طلب الموجز أكبر من الحد المسموح."},
+            status=413,
+            json_dumps_params={"ensure_ascii": False},
+        )
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        body = None
+    if not isinstance(body, dict):
+        return JsonResponse(
+            {"ok": False, "message": "تعذر قراءة طلب الموجز."},
+            status=400,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    period = _normalize_dashboard_period(body.get("period"))
+    reporttypes_count = 0
+    try:
+        from ..models import ReportType  # type: ignore
+
+        reporttypes_count = ReportType.objects.filter(
+            school=active_school,
+            is_active=True,
+        ).count()
+    except Exception:
+        _degraded(
+            "dashboard.manager_brief.reporttypes_count",
+            school_id=active_school.pk,
+        )
+
+    dashboard_payload = get_school_dashboard_payload(
+        school_id=active_school.pk,
+        period=period,
+        builder=lambda: _build_school_dashboard_payload(
+            active_school,
+            period,
+            reporttypes_count=reporttypes_count,
+        ),
+    )
+    brief = generate_manager_brief(
+        dashboard_payload,
+        school=active_school,
+        teacher=user,
+    )
+    response = JsonResponse(
+        {"ok": True, "brief": brief},
+        json_dumps_params={"ensure_ascii": False},
+    )
+    response["Cache-Control"] = "no-store"
+    return response
 
 @login_required(login_url="reports:login")
 @require_http_methods(["GET"])

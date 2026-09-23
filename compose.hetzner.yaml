@@ -36,6 +36,8 @@ x-app: &app
   depends_on:
     postgres:
       condition: service_healthy
+    pgbouncer:
+      condition: service_healthy
     redis:
       condition: service_healthy
     redis-limits:
@@ -67,25 +69,24 @@ services:
     networks:
       - backend
 
-  # Opt-in connection pooler. Not started by default — bring it up with
-  #     docker compose --profile pgbouncer up -d
-  # then point DATABASE_URL at pgbouncer:6432 instead of postgres:5432.
-  #
-  # Only needed once WEB_CONCURRENCY × MAX_CONCURRENT_REQUESTS approaches
-  # PostgreSQL's max_connections. transaction mode is required: Django issues
-  # SET/RESET per connection, which session mode would pin. Keep CONN_MAX_AGE=0
-  # either way — with a pooler in front, reuse is the pooler's job, not Django's.
+  # Runtime connection pooler. Web/workers use DATABASE_POOL_URL while the
+  # one-shot migration service clears it and keeps the direct DATABASE_URL.
+  # Transaction mode is required: Django issues SET/RESET per connection. Keep
+  # CONN_MAX_AGE=0 — reuse belongs to the pooler, not short-lived ASGI threads.
   pgbouncer:
-    profiles: ["pgbouncer"]
     image: edoburu/pgbouncer:v1.23.1-p2
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    # Contains only the direct DATABASE_URL. The image parses it to build both
+    # the upstream target and SCRAM credentials; POSTGRES_* alone is not read by
+    # this image and previously left the optional profile unable to authenticate.
     env_file:
-      - ${POSTGRES_ENV_FILE:-deploy/hetzner/env.postgres}
+      - ${PGBOUNCER_ENV_FILE:-deploy/hetzner/env.pgbouncer}
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
+      LISTEN_PORT: "6432"
       POOL_MODE: transaction
       MAX_CLIENT_CONN: "${PGBOUNCER_MAX_CLIENT_CONN:-500}"
       DEFAULT_POOL_SIZE: "${PGBOUNCER_DEFAULT_POOL_SIZE:-20}"
@@ -179,6 +180,13 @@ services:
     <<: *app
     restart: "no"
     mem_limit: 2048m
+    # Schema changes use the direct PostgreSQL route. Runtime web/workers use
+    # DATABASE_POOL_URL through PgBouncer; clearing it here keeps migrations
+    # independent of transaction-pooling semantics.
+    environment:
+      DATABASE_POOL_URL: ""
+      RELEASE_SHA: ${RELEASE_SHA:-unknown}
+      RELEASE_IMAGE: ${APP_IMAGE}
     command: >-
       sh -c "python manage.py migrate --noinput &&
       python manage.py collectstatic --noinput"

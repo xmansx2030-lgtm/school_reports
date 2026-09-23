@@ -14,12 +14,14 @@
       <div class="cir-hero__main">
         <div class="cir-hero__eyebrow"><i class="fa-solid fa-building-columns"></i> سجل التعاميم الصادرة</div>
         <h1>{{ n.title|default:"تعميم رسمي" }}</h1>
-        <p>متابعة موحّدة لحالة الاطلاع والتوقيع، مع تقرير رسمي قابل للطباعة والحفظ.</p>
+        <p>{% if n.requires_signature %}متابعة حالات القراءة والإقرار مع كشف قابل للطباعة.{% else %}تعميم للاطلاع فقط؛ تعرض الصفحة حالة القراءة دون مطالبة المستلمين بإقرار.{% endif %}</p>
       </div>
       <div class="cir-hero__actions">
         <a href="{% url 'reports:circulars_sent' %}" class="cir-btn cir-btn--hero"><i class="fa-solid fa-arrow-right"></i> رجوع</a>
-        <a href="{% url 'reports:notification_signatures_csv' n.pk %}" class="cir-btn cir-btn--hero"><i class="fa-solid fa-file-csv"></i> تصدير CSV</a>
-        <a href="{% url 'reports:notification_signatures_print' n.pk %}" target="_blank" rel="noopener" class="cir-btn cir-btn--hero"><i class="fa-solid fa-print"></i> التقرير الرسمي</a>
+        {% if n.requires_signature %}
+          <a href="{% url 'reports:notification_signatures_csv' n.pk %}" class="cir-btn cir-btn--hero"><i class="fa-solid fa-file-csv"></i> تصدير CSV</a>
+          <a href="{% url 'reports:notification_signatures_print' n.pk %}" target="_blank" rel="noopener" class="cir-btn cir-btn--hero"><i class="fa-solid fa-print"></i> التقرير الرسمي</a>
+        {% endif %}
       </div>
     </header>
 
@@ -35,7 +37,7 @@
           <div class="cir-document__reference">
             <div>الرقم: CIR-{{ n.id|stringformat:"05d" }}</div>
             <div>التاريخ: {{ n.created_at|date:"Y/m/d" }}</div>
-            <div>المستلمون: {{ signature_stats.total }}</div>
+            <div>المستلمون: {{ recipients|length }}</div>
           </div>
         </header>
 
@@ -59,6 +61,7 @@
       </article>
 
       <aside class="cir-side" aria-label="متابعة مستلمي التعميم">
+        {% if n.requires_signature %}
         <section class="cir-panel">
           <h2 class="cir-panel__head"><i class="fa-solid fa-chart-line"></i> ملخص التنفيذ</h2>
           <div class="cir-stats">
@@ -73,6 +76,7 @@
             <div class="cir-progress__label"><span>نسبة اكتمال التوقيع</span><strong>{{ signature_stats.signed_percentage|default:0 }}%</strong></div>
           </div>
         </section>
+        {% endif %}
 
         {% if n.attachment %}
         <section class="cir-panel">
@@ -114,22 +118,22 @@
           <h2 class="cir-panel__head"><i class="fa-solid fa-users"></i> سجل المستلمين <span class="cir-status cir-status--signed" id="recipientCount">{{ recipients|length }}</span></h2>
           <div class="cir-search">
             <input class="cir-input" type="search" id="recipientSearch" placeholder="ابحث بالاسم أو الدور…" autocomplete="off">
-            <label class="cir-check xs-circular-detail-3" for="onlyUnsigned">
-              <input type="checkbox" id="onlyUnsigned"> غير الموقّعين فقط
-            </label>
+            {% if n.requires_signature %}<label class="cir-check xs-circular-detail-3" for="onlyUnsigned">
+              <input type="checkbox" id="onlyUnsigned"> غير المقرّين فقط
+            </label>{% endif %}
           </div>
           <div class="cir-table-wrap">
             <table class="cir-table">
-              <thead><tr><th>المستلم</th><th>الاطلاع</th><th>التوقيع</th></tr></thead>
+              <thead><tr><th>المستلم</th><th>حالة القراءة</th>{% if n.requires_signature %}<th>الإقرار</th>{% endif %}</tr></thead>
               <tbody id="recipientRows">
                 {% for recipient in recipients %}
                 <tr data-name="{{ recipient.name|default:'' }}" data-role="{{ recipient.role|default:'' }}" data-signed="{% if recipient.signed %}1{% else %}0{% endif %}">
                   <td><div class="cir-person"><strong>{{ recipient.name }}</strong><span>{{ recipient.role }}</span>{% if recipient.added_later %}<span class="cir-added-later" title="أضيف بواسطة {{ recipient.added_by|default:'إدارة المدرسة' }} في {{ recipient.added_at|date:'Y/m/d — H:i' }}"><i class="fa-solid fa-clock-rotate-left"></i> أضيف لاحقًا</span>{% endif %}</div></td>
-                  <td>{% if recipient.read %}<span class="cir-status cir-status--signed" title="{{ recipient.read_at }}">تم</span>{% else %}<span class="cir-status cir-status--closed">لم يفتح</span>{% endif %}</td>
-                  <td>{% if recipient.signed %}<span class="cir-status cir-status--signed" title="{{ recipient.signed_at }}">موقّع</span>{% else %}<span class="cir-status cir-status--pending">معلّق</span>{% endif %}</td>
+                  <td>{% if recipient.read %}<span class="cir-status cir-status--signed" title="{{ recipient.read_at }}">مقروء</span>{% else %}<span class="cir-status cir-status--closed">غير مقروء</span>{% endif %}</td>
+                  {% if n.requires_signature %}<td>{% if recipient.signed %}<span class="cir-status cir-status--signed" title="{{ recipient.signed_at }}">مكتمل</span>{% elif n.signature_deadline_at and n.signature_deadline_at < now %}<span class="cir-status cir-status--closed">انتهت المهلة</span>{% else %}<span class="cir-status cir-status--pending">معلّق</span>{% endif %}</td>{% endif %}
                 </tr>
                 {% empty %}
-                <tr><td colspan="3" class="xs-circular-detail-4">لا يوجد مستلمون لهذا التعميم.</td></tr>
+                <tr><td colspan="{% if n.requires_signature %}3{% else %}2{% endif %}" class="xs-circular-detail-4">لا يوجد مستلمون لهذا التعميم.</td></tr>
                 {% endfor %}
               </tbody>
             </table>

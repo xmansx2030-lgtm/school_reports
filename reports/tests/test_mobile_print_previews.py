@@ -33,12 +33,15 @@ class MobilePrintPreviewRegressionTests(SimpleTestCase):
 
     def test_report_preview_wraps_toolbar_copy_on_small_screens(self):
         source = self._source("reports/templates/reports/report_print.html")
+        screen_styles = self._source("static/css/report-print.css")
         responsive_styles = self._source(
             "reports/templates/reports/partials/report_print_official_styles.html"
         )
 
-        self.assertIn("white-space: normal;", source)
-        self.assertIn("overflow-wrap: anywhere;", source)
+        self.assertIn("css/report-print.css", source)
+        self.assertIn("white-space: normal;", screen_styles)
+        self.assertIn("overflow-wrap: anywhere;", screen_styles)
+        self.assertIn("@media (max-width: 40rem)", screen_styles)
         self.assertIn("@media screen and (max-width: 820px)", responsive_styles)
         self.assertIn("@media screen and (max-width: 520px)", responsive_styles)
         self.assertIn("@media print", responsive_styles)
@@ -52,7 +55,7 @@ class MobilePrintPreviewRegressionTests(SimpleTestCase):
 
         self.assertRegex(
             template,
-            r'</div>\s*\n\s*{% if show_comments %}\s*\n\s*<section class="section report-comments no-print">',
+            r'</main>\s*\n\s*{% if show_comments %}\s*\n\s*<section class="section report-comments no-print">',
         )
         self.assertIn("display: flex;", screen_styles)
         self.assertIn("flex-direction: column;", screen_styles)

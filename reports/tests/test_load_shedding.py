@@ -15,15 +15,18 @@ from django.test import RequestFactory, SimpleTestCase, TestCase, override_setti
 from django.urls import reverse
 
 from core.middleware import ConcurrencyLimitMiddleware
+from core.logging_filters import SkipExpectedLoadShed
 
 
 class ConcurrencyLimitMiddlewareTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
         ConcurrencyLimitMiddleware._in_flight = 0
+        ConcurrencyLimitMiddleware._last_overload_log_at = 0.0
 
     def tearDown(self):
         ConcurrencyLimitMiddleware._in_flight = 0
+        ConcurrencyLimitMiddleware._last_overload_log_at = 0.0
 
     def _middleware(self, get_response):
         return ConcurrencyLimitMiddleware(get_response)
@@ -56,6 +59,7 @@ class ConcurrencyLimitMiddlewareTests(SimpleTestCase):
         self.assertEqual(shed.status_code, 503)
         self.assertEqual(shed["Retry-After"], "5")
         self.assertEqual(shed["Cache-Control"], "no-store")
+        self.assertTrue(shed.expected_load_shed)
 
     @override_settings(MAX_CONCURRENT_REQUESTS=1)
     def test_json_clients_get_a_json_error(self):
@@ -85,6 +89,38 @@ class ConcurrencyLimitMiddlewareTests(SimpleTestCase):
         self.assertEqual(shed.status_code, 503)
         self.assertEqual(shed["Content-Type"], "application/json")
         self.assertEqual(json.loads(shed.content)["detail"], "server_busy")
+
+    @override_settings(MAX_CONCURRENT_REQUESTS=1, OVERLOAD_LOG_INTERVAL_SECONDS=5)
+    @patch("core.middleware.logger.warning")
+    def test_overload_warning_is_sampled_during_a_spike(self, warning):
+        ConcurrencyLimitMiddleware._in_flight = 1
+        middleware = self._middleware(lambda request: None)
+
+        for _ in range(25):
+            self.assertEqual(middleware(self.factory.get("/dashboard/")).status_code, 503)
+
+        warning.assert_called_once()
+
+    def test_logging_filter_only_suppresses_marked_shed_responses(self):
+        import logging
+
+        from django.http import HttpResponse
+
+        filter_ = SkipExpectedLoadShed()
+        ordinary = logging.LogRecord("django.request", 40, "", 0, "error", (), None)
+        ordinary.response = HttpResponse(status=503)
+        expected = logging.LogRecord("django.request", 40, "", 0, "busy", (), None)
+        expected.response = HttpResponse(status=503)
+        expected.response.expected_load_shed = True
+        expected_request = logging.LogRecord(
+            "django.request", 40, "", 0, "busy", (), None
+        )
+        expected_request.request = self.factory.get("/dashboard/")
+        expected_request.request.expected_load_shed = True
+
+        self.assertTrue(filter_.filter(ordinary))
+        self.assertFalse(filter_.filter(expected))
+        self.assertFalse(filter_.filter(expected_request))
 
     @override_settings(MAX_CONCURRENT_REQUESTS=0)
     def test_zero_disables_shedding(self):
@@ -174,7 +210,19 @@ class InfrastructureCapacityMonitorTests(TestCase):
     def _run(self):
         from reports.tasks import monitor_infrastructure_capacity_task
 
-        return monitor_infrastructure_capacity_task.apply().get()
+        # These tests exercise the session-backlog contract. Host disk/CPU and
+        # external Redis/Celery state belong to the machine running the suite,
+        # so letting them leak in makes the result depend on a developer's free
+        # disk space or whether a local broker happens to be running.
+        with (
+            patch("reports.services_capacity._probe_redis_memory"),
+            patch("reports.services_capacity._probe_cpu_and_memory"),
+            patch("reports.services_capacity._probe_disk"),
+            patch("reports.services_capacity._probe_celery_queues"),
+            patch("reports.services_capacity._probe_http_metrics"),
+            patch("reports.tasks.enqueue_named_task"),
+        ):
+            return monitor_infrastructure_capacity_task.apply().get()
 
     def test_monitor_task_contract_is_stable(self):
         from reports.task_names import MONITOR_INFRASTRUCTURE_CAPACITY_TASK

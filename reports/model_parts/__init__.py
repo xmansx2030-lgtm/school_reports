@@ -18,6 +18,7 @@ from .plans import *
 from .scopes import *
 from .audit import *
 from .ai_usage import *
+from .conversions import *
 from .data_rights import *
 from .api_keys import *
 from .totp import *

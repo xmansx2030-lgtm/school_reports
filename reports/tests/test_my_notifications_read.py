@@ -149,7 +149,8 @@ class MyNotificationsReadBehaviorTests(TestCase):
         response = self.client.get(reverse("reports:home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="homeNotification" role="region"')
+        self.assertContains(response, 'class="twq-section teacher-daily-attention"')
+        self.assertContains(response, 'class="teacher-daily-attention-item"')
         self.assertContains(
             response,
             reverse("reports:my_notification_detail", args=[self.rec.pk]),

@@ -112,6 +112,12 @@ class HijriEchoTests(SimpleTestCase):
                     self.assertIn("js/report-authoring.js", source)
                     self.assertIn('id="reportDayEcho"', source)
                     self.assertIn('id="reportDateHijri"', source)
+                elif template_path.endswith("assignment_create.html"):
+                    self.assertIn("js/assignments.js", source)
+                    self.assertIn('id="assignmentDueHijri"', source)
+                    self.assertIn(
+                        "window.TawtheeqHijri", _source("static/js/assignments.js")
+                    )
                 else:
                     self.assertIn("window.TawtheeqHijri", source)
 
@@ -136,6 +142,13 @@ class HijriEchoTests(SimpleTestCase):
                     self.assertIsNotNone(authoring_tag)
                     self.assertIn("defer", authoring_tag.group(0))
                     self.assertLess(tag.start(), authoring_tag.start())
+                elif template_path.endswith("assignment_create.html"):
+                    assignments_tag = re.search(
+                        r"<script[^>]*js/assignments\.js[^>]*>", source
+                    )
+                    self.assertIsNotNone(assignments_tag)
+                    self.assertIn("defer", assignments_tag.group(0))
+                    self.assertLess(tag.start(), assignments_tag.start())
                 else:
                     # نقيس أول *استدعاء* فعلي، لا أول ذكرٍ للاسم في تعليق.
                     self.assertLess(tag.start(), source.index("window.TawtheeqHijri"))

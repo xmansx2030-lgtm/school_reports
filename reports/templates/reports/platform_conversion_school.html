@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ school.name }} | مساعد التحويل{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/conversion-intelligence.css' %}?v=20260923.4"><script src="{% static 'js/conversion-intelligence.js' %}?v=20260923.1" defer></script>{% endblock %}
+
+{% block content %}
+<div class="twq-page conversion-page conversion-detail">
+  <nav class="conversion-breadcrumb" aria-label="مسار الصفحة"><a href="{% url 'reports:platform_conversion_dashboard' %}">مساعد التحويل</a><i class="fa-solid fa-angle-left" aria-hidden="true"></i><span aria-current="page">{{ school.name }}</span></nav>
+  <header class="twq-page-header conversion-detail-hero">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow">فرصة مدرسة</p>
+      <h1 class="twq-page-header__title">{{ school.name }}</h1>
+      <div class="conversion-hero-meta"><span class="twq-status" data-status="{% if row.segment == 'trial_expired' or row.segment == 'paid_expired' %}warning{% else %}info{% endif %}">{{ row.segment_label }}</span><span>{{ school.get_stage_display }} · {{ school.get_gender_display }}</span>{% if school.city %}<span>{{ school.city }}</span>{% endif %}</div>
+    </div>
+    <aside class="twq-page-header__aside conversion-next-step"><span>الخطوة الأنسب الآن</span><strong>{{ row.priority_label }}</strong><p>{{ row.recommended_action }}</p></aside>
+  </header>
+
+  <section class="conversion-score-grid" aria-label="درجات الفرصة">
+    <article class="twq-card conversion-score-card"><header><div><span>الاستفادة الفعلية</span><strong>{{ row.utilization_score }}<small>/100</small></strong></div><i class="fa-solid fa-chart-line" aria-hidden="true"></i></header><progress max="100" value="{{ row.utilization_score }}">{{ row.utilization_score }}%</progress><p>مقياس ثابت مبني على الإعداد، تنوع الخدمات، الأعمال المكتملة، حداثة النشاط وتبني الفريق.</p></article>
+    <article class="twq-card conversion-score-card"><header><div><span>نية الشراء</span><strong>{{ row.intent_score }}<small>/100</small></strong></div><i class="fa-solid fa-bullseye" aria-hidden="true"></i></header><progress max="100" value="{{ row.intent_score }}">{{ row.intent_score }}%</progress><p>{% if row.intent_factors %}{{ row.intent_factors|join:' · ' }}{% else %}لا توجد إشارة تجارية قوية بعد؛ ركز على التفعيل وتحقيق القيمة أولًا.{% endif %}</p></article>
+    <article class="twq-card conversion-plan-card"><span>الباقة المقترحة مبدئيًا</span>{% if row.recommended_plan %}<strong>{{ row.recommended_plan.name }}</strong><p>{{ row.recommended_plan.price }} ر.س · تستوعب فريق المدرسة الحالي</p>{% else %}<strong>اكتشاف الاحتياج</strong><p>لا توجد باقة مدفوعة نشطة تطابق السعة حاليًا.</p>{% endif %}<small>تقدير أولي يُراجع مع المدرسة قبل أي عرض.</small></article>
+  </section>
+
+  <div class="conversion-detail-grid">
+    <div class="conversion-detail-main">
+      <section class="twq-card conversion-section" aria-labelledby="usageBreakdownTitle">
+        <div class="conversion-section-heading"><div><p>شفافية القرار</p><h2 id="usageBreakdownTitle">كيف حُسبت الاستفادة؟</h2></div><span>المجموع {{ row.utilization_score }}/100</span></div>
+        <div class="conversion-factor-list">
+          {% for factor in row.score_factors %}<div><span>{{ factor.label }}</span><progress max="{{ factor.max }}" value="{{ factor.points }}" aria-label="{{ factor.label }}: {{ factor.points }} من {{ factor.max }}">{{ factor.points }}</progress><strong>{{ factor.points }}/{{ factor.max }}</strong></div>{% endfor %}
+        </div>
+      </section>
+
+      <section class="twq-card conversion-section" aria-labelledby="servicesTitle">
+        <div class="conversion-section-heading"><div><p>ليست تقارير فقط</p><h2 id="servicesTitle">الخدمات التي استخدمتها المدرسة</h2></div><span>{{ row.services_used }} خدمات</span></div>
+        <div class="conversion-services">
+          {% for service in row.services %}<article><i class="fa-solid fa-circle-check" aria-hidden="true"></i><div><strong>{{ service.label }}</strong><small>{{ service.count }} سجلات أو عمليات</small></div></article>{% empty %}<div class="twq-empty"><i class="fa-solid fa-seedling" aria-hidden="true"></i><h3>لم تبدأ الاستفادة بعد</h3><p>اقترح جلسة تفعيل على خدمتين فقط بدل تقديم عرض بيع مباشر.</p></div>{% endfor %}
+        </div>
+      </section>
+
+      <section class="twq-card conversion-section conversion-draft-builder" aria-labelledby="draftBuilderTitle">
+        <div class="conversion-section-heading"><div><p>مرحلة الصياغة</p><h2 id="draftBuilderTitle">جهّز مسودة مخصصة بالذكاء الاصطناعي</h2></div><span class="conversion-safe-badge"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> مؤشرات مجمعة فقط</span></div>
+        <p class="conversion-section-lead">يستخدم اسم المدرسة ومرحلتها وحالة الاشتراك ودرجات الاستخدام والخدمات المستخدمة. لا يرسل محتوى التقارير أو المرفقات أو بيانات الهوية.</p>
+        <form method="post" action="{% url 'reports:platform_conversion_generate' school.pk %}" class="conversion-draft-form">{% csrf_token %}
+          <label><span>{{ draft_form.objective.label }}</span>{{ draft_form.objective }}</label>
+          <label><span>{{ draft_form.tone.label }}</span>{{ draft_form.tone }}</label>
+          <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> إنشاء مسودة جديدة</button>
+        </form>
+      </section>
+
+      {% if outreach %}
+      <section class="twq-card conversion-section conversion-review" id="outreach-review" aria-labelledby="outreachReviewTitle">
+        <div class="conversion-section-heading"><div><p>مراجعة بشرية إلزامية</p><h2 id="outreachReviewTitle">راجع الرسالة واعتمد القنوات</h2></div><span class="twq-status" data-status="{% if outreach.status == 'sent' %}success{% elif outreach.status == 'failed' %}danger{% elif outreach.status == 'partial' %}warning{% else %}draft{% endif %}">{{ outreach.get_status_display }}</span></div>
+        {% if not outreach.ai_generated %}<div class="conversion-alert is-compact" role="status"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>مسودة احتياطية</strong><p>تعذر التوليد الذكي وقت الإنشاء؛ راجع النص بعناية أو أنشئ مسودة جديدة.</p></div></div>{% endif %}
+        <div class="conversion-analysis"><div><span>قراءة الفرصة</span><p>{{ outreach.analysis_summary }}</p></div><div><span>الإجراء المقترح</span><p>{{ outreach.recommended_action }}</p></div></div>
+        <form method="post" action="{% url 'reports:platform_conversion_send' school.pk outreach.pk %}" class="conversion-review-form">{% csrf_token %}
+          <fieldset><legend>البريد الرسمي</legend><label><span>{{ send_form.email_subject.label }}</span>{{ send_form.email_subject }}</label><label><span>{{ send_form.email_body.label }}</span>{{ send_form.email_body }}</label></fieldset>
+          <fieldset><legend>الإشعار داخل توثيق</legend><label><span>{{ send_form.in_app_title.label }}</span>{{ send_form.in_app_title }}</label><label><span>{{ send_form.in_app_body.label }}</span>{{ send_form.in_app_body }}</label></fieldset>
+          <fieldset class="conversion-whatsapp"><legend>مسودة واتساب — نسخ يدوي فقط</legend><label><span>{{ send_form.whatsapp_body.label }}</span>{{ send_form.whatsapp_body }}</label><button class="twq-btn twq-btn--secondary" type="button" data-copy-target="id_whatsapp_body"><i class="fa-regular fa-copy" aria-hidden="true"></i> نسخ النص</button><small>لا يوجد إرسال واتساب تلقائي من الأداة.</small></fieldset>
+          <fieldset class="conversion-channels"><legend>القنوات التي ستُرسل بعد الاعتماد</legend><label>{{ send_form.send_email }} <span>بريد رسمي</span><small>{% if mail_status.enabled %}مفعّل عبر مركز بريد توثيق من <bdi>{{ mail_status.sender_email }}</bdi>{% if mail_status.last_successful_at %} · آخر نجاح {{ mail_status.last_successful_at|date:'Y/m/d H:i' }}{% endif %}{% else %}متوقف من إعدادات بريد المنصة{% endif %}</small></label><label>{{ send_form.send_in_app }} <span>إشعار داخل توثيق</span><small>إلى مدير المدرسة النشط فقط</small></label></fieldset>
+          <div class="conversion-approval"><label>{{ send_form.confirm_reviewed }} <span><strong>راجعت الأرقام والنص وأعتمد الإرسال</strong><small>سيُسجل اسم المعتمد ونتيجة كل قناة. القناة الناجحة لن تتكرر عند إعادة المحاولة.</small></span></label><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> اعتماد وإرسال المحدد</button></div>
+        </form>
+        {% if outreach.failure_reason %}<div class="conversion-alert is-error is-compact" role="alert"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><div><strong>تفاصيل التعذر</strong><p>{{ outreach.failure_reason|linebreaksbr }}</p></div></div>{% endif %}
+      </section>
+      {% endif %}
+
+      {% if history %}<section class="twq-card conversion-section" aria-labelledby="historyTitle"><div class="conversion-section-heading"><div><p>سجل قابل للتدقيق</p><h2 id="historyTitle">المسودات والتواصلات السابقة</h2></div></div><div class="conversion-history">{% for item in history %}<article><span class="twq-status" data-status="{% if item.status == 'sent' %}success{% elif item.status == 'failed' %}danger{% elif item.status == 'partial' %}warning{% else %}draft{% endif %}">{{ item.get_status_display }}</span><div><strong>{{ item.get_objective_display }}</strong><small>{{ item.created_at|date:'Y/m/d H:i' }} · {{ item.created_by.name|default:'النظام' }}</small></div><span>{% if item.ai_generated %}صياغة ذكية{% else %}صياغة احتياطية{% endif %}</span></article>{% endfor %}</div></section>{% endif %}
+    </div>
+
+    <aside class="conversion-detail-aside">
+      <section class="twq-card conversion-section" aria-labelledby="contactsTitle"><div class="conversion-section-heading"><div><p>المستلمون</p><h2 id="contactsTitle">مدير المدرسة</h2></div></div><div class="conversion-contacts">{% for manager in row.managers %}<article><span>{{ manager.name|slice:':1' }}</span><div><strong>{{ manager.name }}</strong><small>{% if manager.email %}{{ manager.email }}{% else %}لا يوجد بريد{% endif %}</small><small dir="ltr">{{ manager.phone }}</small></div></article>{% empty %}<div class="twq-empty"><p>لا يوجد مدير نشط مرتبط بالمدرسة.</p></div>{% endfor %}</div></section>
+      <section class="twq-card conversion-section" aria-labelledby="schoolFactsTitle"><div class="conversion-section-heading"><div><p>لقطة تشغيلية</p><h2 id="schoolFactsTitle">حقائق الفرصة</h2></div></div><dl class="conversion-facts"><div><dt>المنسوبون النشطون</dt><dd>{{ row.active_members }}</dd></div><div><dt>أعمال مكتملة</dt><dd>{{ row.completed_total }}</dd></div><div><dt>آخر نشاط</dt><dd>{% if row.last_activity %}{{ row.last_activity|timesince }} مضت{% else %}لا يوجد{% endif %}</dd></div><div><dt>طلبات دفع معلقة</dt><dd>{{ row.pending_payments }}</dd></div></dl></section>
+      <section class="twq-card conversion-section conversion-guardrails"><h2>ضوابط تحمي الثقة</h2><ul><li><i class="fa-solid fa-check" aria-hidden="true"></i> الذكاء يصوغ ولا يقرر الدرجة.</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> لا خصم أو وعد غير موجود في البيانات.</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> كل إرسال يتطلب اعتمادًا صريحًا.</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> النتيجة تسجل لكل قناة على حدة.</li></ul></section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

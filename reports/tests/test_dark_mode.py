@@ -96,8 +96,17 @@ class DarkModeExperienceTests(TestCase):
         self.assertIn(".theme-toggle--floating", css)
         self.assertIn("@media print", css)
 
+        report_print = self._source("reports/templates/reports/report_print.html")
+        report_css = self._source("static/css/report-print.css")
+        self.assertIn('data-theme-toggle="off"', report_print)
+        self.assertIn("js/theme-manager.js", report_print)
+        self.assertIn("css/tokens.css", report_print)
+        self.assertIn("@media screen", report_css)
+        self.assertIn("var(--twq-bg)", report_css)
+        self.assertIn("@media print", report_print)
+        self.assertIn("body { background: #fff; }", report_print)
+
         for print_template in (
-            "reports/templates/reports/report_print.html",
             "reports/templates/reports/ticket_print.html",
             "reports/templates/reports/notification_signatures_print.html",
         ):

@@ -159,6 +159,8 @@
       <a href="{% url 'reports:platform_email_inbox' %}" data-search-item data-search-title="بريد المنصة الوارد المرسل الرسائل"><i class="fas fa-envelope" aria-hidden="true"></i><span><strong>بريد المنصة</strong><small>{{ platform_email_unread|default:0 }} غير مقروء</small></span></a>
       <a href="{% url 'reports:platform_settings' %}" data-search-item data-search-title="إعدادات المنصة التهيئة"><i class="fas fa-sliders" aria-hidden="true"></i><span><strong>الإعدادات</strong><small>تهيئة المنصة</small></span></a>
       <a href="{% url 'reports:platform_audit_logs' %}" data-search-item data-search-title="سجل العمليات التدقيق"><i class="fas fa-shield-halved" aria-hidden="true"></i><span><strong>سجل العمليات</strong><small>التدقيق الكامل</small></span></a>
+      {# Concurrent Platform Conversion work is preserved in the main tree only and excluded from the isolated pilot checkpoint. #}
+      <a href="{% url 'reports:platform_conversion_dashboard' %}" data-search-item data-search-title="مساعد التحويل الذكي المدارس الاستفادة الاشتراك المدفوع"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><span><strong>مساعد التحويل</strong><small>متابعة فرص التحويل</small></span></a>
     </nav>
   </section>
 </div>

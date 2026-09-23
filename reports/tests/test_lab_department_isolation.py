@@ -273,9 +273,20 @@ class LabDepartmentIsolationTests(TestCase):
         )
         self.assertContains(
             roles_response,
-            ".rol-field[hidden] { display: none !important; }",
+            "css/staff-access.css",
         )
-        self.assertContains(roles_response, "syncAssignLabKind()")
+        self.assertIn(
+            ".rol-field[hidden]",
+            Path(finders.find("css/staff-access.css")).read_text(encoding="utf-8"),
+        )
+        self.assertContains(
+            roles_response,
+            "js/staff-access.js",
+        )
+        self.assertIn(
+            "syncLabKind()",
+            Path(finders.find("js/staff-access.js")).read_text(encoding="utf-8"),
+        )
 
     def test_deputy_lab_review_is_limited_to_the_assigned_department(self):
         scope = StaffScope.objects.create(
