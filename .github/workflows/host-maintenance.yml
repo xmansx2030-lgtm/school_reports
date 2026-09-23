@@ -1,0 +1,305 @@
+name: Hetzner host maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type UPDATE-REBOOT to run production host maintenance
+        required: true
+        type: string
+      mode:
+        description: Run full maintenance or verification/backups only
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - verify
+          - post
+          - proxy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hetzner-host-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    name: Update, clean and reboot host
+    if: inputs.confirmation == 'UPDATE-REBOOT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/id_deploy > ~/.ssh/id_deploy.pub
+          ssh-keygen -lf ~/.ssh/id_deploy.pub | awk '{print $2}' > ~/.ssh/id_deploy.fingerprint
+
+      - name: Pre-maintenance checks and fresh backups
+        if: inputs.mode != 'post' && inputs.mode != 'proxy'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          deploy_fingerprint="$(cat ~/.ssh/id_deploy.fingerprint)"
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_TARGET" \
+            "DEPLOY_FINGERPRINT='$deploy_fingerprint' sudo -n env DEPLOY_FINGERPRINT='$deploy_fingerprint' bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+
+          echo "host=$(hostname) user=${SUDO_USER:-$(whoami)} kernel=$(uname -r)"
+          test "$(docker ps -q | wc -l)" -eq 28
+          test -z "$(docker ps --filter health=unhealthy -q)"
+          systemctl --failed --no-legend --no-pager | tee /tmp/failed-units.before
+          test ! -s /tmp/failed-units.before
+          cd /opt/school_reports
+          docker compose -f compose.hetzner.yaml exec -T worker-media \
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
+            < /dev/null
+
+          for service in \
+            school-reports-postgres-backup.service \
+            school-reports-media-backup.service \
+            school-display-offsite-backup.service \
+            mizaan-beta-offsite-backup.service \
+            tanal-offsite-backup.service
+          do
+            systemctl start "$service"
+            test "$(systemctl show "$service" -p Result --value)" = success
+            test "$(systemctl show "$service" -p ExecMainStatus --value)" = 0
+            echo "backup_ok=$service"
+          done
+
+          # Remove the old temporary root key only when it is not the key used
+          # by this maintenance/deployment connection.
+          auth=/root/.ssh/authorized_keys
+          if test -f "$auth" && grep -q 'codex-mizaan-temporary' "$auth"; then
+            tmp=$(mktemp)
+            keep_tmp=$(mktemp)
+            chmod 600 "$tmp" "$keep_tmp"
+            while IFS= read -r line; do
+              if printf '%s\n' "$line" | grep -q 'codex-mizaan-temporary'; then
+                fingerprint=$(printf '%s\n' "$line" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}')
+                if test "$fingerprint" = "$DEPLOY_FINGERPRINT"; then
+                  printf '%s\n' "$line" >> "$tmp"
+                  printf '%s\n' retained-active-deploy-key >> "$keep_tmp"
+                else
+                  printf '%s\n' removed-obsolete-temporary-key >> "$keep_tmp"
+                fi
+              else
+                printf '%s\n' "$line" >> "$tmp"
+              fi
+            done < "$auth"
+            install -m 600 -o root -g root "$tmp" "$auth"
+            cat "$keep_tmp"
+            rm -f "$tmp" "$keep_tmp"
+          else
+            echo temporary-root-key-not-present
+          fi
+
+          free -h
+          docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
+            | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          REMOTE
+
+      - name: Install updates, prune safe cache, and schedule reboot
+        if: inputs.mode == 'full'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_TARGET" 'sudo -n bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+
+          apt-get update
+          apt-get -y -o Dpkg::Options::=--force-confold upgrade
+
+          # Build cache is disposable. Only old unused images are removed so
+          # the current and recent rollback images remain available.
+          docker builder prune -af
+          docker image prune -af --filter until=168h
+          docker system df
+
+          shutdown -r +1 'Authorized production maintenance'
+          REMOTE
+
+      - name: Wait for reboot and verify all projects
+        if: inputs.mode == 'full'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          sleep 30
+          offline=0
+          for attempt in $(seq 1 20); do
+            if ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+              -o BatchMode=yes -o ConnectTimeout=5 \
+              "$SSH_TARGET" 'true' 2>/dev/null; then
+              sleep 10
+            else
+              offline=1
+              break
+            fi
+          done
+          test "$offline" -eq 1
+
+          online=0
+          for attempt in $(seq 1 40); do
+            if ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+              -o BatchMode=yes -o ConnectTimeout=10 \
+              "$SSH_TARGET" 'true' 2>/dev/null; then
+              online=1
+              break
+            fi
+            sleep 15
+          done
+          test "$online" -eq 1
+
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" 'sudo -n bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          test "$(docker ps -q | wc -l)" -eq 28
+          test -z "$(docker ps --filter health=unhealthy -q)"
+          systemctl --failed --no-legend --no-pager | tee /tmp/failed-units.after
+          test ! -s /tmp/failed-units.after
+          test ! -e /var/run/reboot-required
+          docker compose ls
+          for container in mizaan-beta-web mizaan-beta-scanner mizaan-beta-garage; do
+            docker inspect --format '{{.Name}} exposed={{json .Config.ExposedPorts}} networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}' "$container"
+          done
+          echo mizaan-origin-tls-begin
+          timeout 12 openssl s_client -connect 127.0.0.1:443 -servername mizaanlegal.com -showcerts < /dev/null 2>&1 \
+            | sed -n '1,45p' || true
+          echo mizaan-caddy-log-begin
+          docker logs school-reports-caddy-1 --since 20m 2>&1 \
+            | grep -v '"logger":"http.log.access' \
+            | grep -Ei 'mizaan|certificate|tls|acme|error' | tail -n 120 || true
+          echo mizaan-caddy-config-begin
+          docker exec school-reports-caddy-1 caddy adapt \
+            --config /etc/caddy/Caddyfile --adapter caddyfile --pretty 2>/dev/null \
+            | grep -n -A8 -B4 'mizaanlegal' | head -n 160 || true
+          echo mizaan-certificate-files-begin
+          find /opt/mizaan-v2 /opt/mizaan-beta /opt/mizaan* -maxdepth 5 -type f \
+            \( -iname '*.crt' -o -iname '*.pem' -o -iname '*.key' \) \
+            -printf '%p\n' 2>/dev/null | sort -u || true
+          docker exec school-reports-caddy-1 find /data/caddy/certificates -maxdepth 6 -type f \
+            -printf '%p\n' 2>/dev/null | grep -i mizaan || true
+          docker inspect school-reports-caddy-1 \
+            --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
+          cd /opt/school_reports
+          docker compose -f compose.hetzner.yaml exec -T worker-media \
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
+            < /dev/null
+          free -h
+          swapon --show
+          docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
+            | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          echo host-services-healthy-after-reboot
+          REMOTE
+
+          echo host-maintenance-verified-after-reboot
+
+      - name: Verify current host without reboot
+        if: inputs.mode == 'verify' || inputs.mode == 'post'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" 'sudo -n bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          test "$(docker ps -q | wc -l)" -eq 28
+          test -z "$(docker ps --filter health=unhealthy -q)"
+          systemctl --failed --no-legend --no-pager | tee /tmp/failed-units.verify
+          test ! -s /tmp/failed-units.verify
+          test ! -e /var/run/reboot-required
+          docker compose ls
+          for container in mizaan-beta-web mizaan-beta-scanner mizaan-beta-garage; do
+            docker inspect --format '{{.Name}} exposed={{json .Config.ExposedPorts}} networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}' "$container"
+          done
+          echo mizaan-origin-tls-begin
+          timeout 12 openssl s_client -connect 127.0.0.1:443 -servername mizaanlegal.com -showcerts < /dev/null 2>&1 \
+            | sed -n '1,45p' || true
+          echo mizaan-caddy-log-begin
+          docker logs school-reports-caddy-1 --since 20m 2>&1 \
+            | grep -v '"logger":"http.log.access' \
+            | grep -Ei 'mizaan|certificate|tls|acme|error' | tail -n 120 || true
+          echo mizaan-caddy-config-begin
+          docker exec school-reports-caddy-1 caddy adapt \
+            --config /etc/caddy/Caddyfile --adapter caddyfile --pretty 2>/dev/null \
+            | grep -n -A8 -B4 'mizaanlegal' | head -n 160 || true
+          echo mizaan-certificate-files-begin
+          find /opt/mizaan-v2 /opt/mizaan-beta /opt/mizaan* -maxdepth 5 -type f \
+            \( -iname '*.crt' -o -iname '*.pem' -o -iname '*.key' \) \
+            -printf '%p\n' 2>/dev/null | sort -u || true
+          docker exec school-reports-caddy-1 find /data/caddy/certificates -maxdepth 6 -type f \
+            -printf '%p\n' 2>/dev/null | grep -i mizaan || true
+          docker inspect school-reports-caddy-1 \
+            --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
+          cd /opt/school_reports
+          docker compose -f compose.hetzner.yaml exec -T worker-media \
+            python manage.py shell -c 'from reports.email_branding import email_brand_context; print("worker_logo_url=" + email_brand_context()["logo_url"])' \
+            < /dev/null
+          free -h
+          swapon --show
+          docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
+            | grep -E 'clamav|school-reports|school-display|mizaan|tanal' || true
+          echo host-services-healthy-after-maintenance
+          REMOTE
+
+          echo host-maintenance-verified
+
+      - name: Transactionally reload the shared edge proxy
+        if: inputs.mode == 'proxy'
+        env:
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/school_reports' }}
+        run: |
+          set -euo pipefail
+          candidate="$DEPLOY_PATH/deploy/hetzner/Caddyfile.fragment.candidate"
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+            "cat > '$candidate'" < deploy/hetzner/Caddyfile.fragment
+
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_TARGET" \
+            "set -eu; cd '$DEPLOY_PATH'; \
+             current=deploy/hetzner/Caddyfile.fragment; \
+             backup=deploy/hetzner/Caddyfile.fragment.before-proxy-reload; \
+             docker cp '$candidate' school-reports-caddy-1:/tmp/Caddyfile.candidate; \
+             docker exec school-reports-caddy-1 \
+               caddy validate --config /tmp/Caddyfile.candidate --adapter caddyfile; \
+             cp \"\$current\" \"\$backup\"; \
+             cat '$candidate' > \"\$current\"; \
+             if docker compose -f compose.hetzner.yaml -f compose.caddy.yaml \
+                  up -d --no-deps --force-recreate caddy && \
+                docker exec school-reports-caddy-1 \
+                  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then \
+               rm -f '$candidate' \"\$backup\"; \
+             else \
+               cat \"\$backup\" > \"\$current\"; \
+               docker compose -f compose.hetzner.yaml -f compose.caddy.yaml \
+                 up -d --no-deps --force-recreate caddy; \
+               rm -f '$candidate' \"\$backup\"; \
+               exit 1; \
+             fi"

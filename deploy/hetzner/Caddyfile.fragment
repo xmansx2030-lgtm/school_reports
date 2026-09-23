@@ -60,6 +60,42 @@ tawtheeq-ksa.com {
 	}
 }
 
+# Mizaan shares this host-level edge proxy with Tawtheeq. Keep these routes in
+# the tracked Caddyfile: an application deployment must not erase another
+# project's live virtual hosts when Caddy reloads.
+mizaanlegal.com {
+	import cloudflare_only
+
+	reverse_proxy mizaan-beta-web:3000 {
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+
+	header -Server
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+www.mizaanlegal.com {
+	import cloudflare_only
+	redir https://mizaanlegal.com{uri} permanent
+}
+
+s3.mizaanlegal.com {
+	import cloudflare_only
+	reverse_proxy mizaan-beta-garage:3900
+	header -Server
+}
+
+scanner.mizaanlegal.com {
+	import cloudflare_only
+	reverse_proxy mizaan-beta-scanner:3000
+	header -Server
+}
+
 xmansx.com, www.xmansx.com {
 	import cloudflare_only
 	tls /run/tls/xmansx-origin.crt /run/tls/xmansx-origin.key

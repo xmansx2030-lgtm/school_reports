@@ -32,6 +32,10 @@ x-app: &app
     RELEASE_IMAGE: ${APP_IMAGE}
   volumes:
     - ./deploy/hetzner/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+    # Celery renders branded emails outside the web container. Production's
+    # manifest storage must therefore be visible to every worker after the
+    # migrate service has populated it with collectstatic.
+    - static-data:/app/staticfiles:ro
   logging: *default-logging
   depends_on:
     postgres:
@@ -256,6 +260,7 @@ services:
     cpus: 0.50
     volumes:
       - ${FIREBASE_SERVICE_ACCOUNT_FILE:-./deploy/hetzner/firebase-service-account.json}:/run/secrets/firebase-service-account.json:ro
+      - static-data:/app/staticfiles:ro
     networks:
       - backend
       - edge
