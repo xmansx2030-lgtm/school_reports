@@ -4,449 +4,85 @@
 {% block title %}تكليف جديد | منصة توثيق{% endblock %}
 
 {% block head %}
-{% include "reports/_assignment_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .new-grid { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
-  .new-check { display: flex; gap: .55rem; align-items: flex-start; font-size: .86rem; font-weight: 700; }
-  .new-check input { margin-top: .2rem; }
-
-  /* ── ترقيم الخطوات: النموذج ثلاث خطوات لا حقول متراصّة ───────── */
-  .new-step { display: flex; align-items: center; gap: .5rem; margin: 0 0 .3rem; }
-  .new-step__n {
-    width: 26px; height: 26px; border-radius: 50%; flex: none;
-    display: grid; place-items: center; font-size: .78rem; font-weight: 900;
-    background: var(--asg-green); color: #fff;
-  }
-  [data-theme="dark"] .new-step__n { color: #06251a; }
-  .new-step h2 { margin: 0; font-size: 1rem; font-weight: 900; }
-
-  /* ── الموعد: اختصارات ثم صدى هجري ───────────────────────────── */
-  .new-quick { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .4rem; }
-  .new-quick button {
-    font: inherit; font-size: .72rem; font-weight: 800; cursor: pointer;
-    padding: .22rem .6rem; border-radius: 999px;
-    border: 1px solid var(--asg-line); background: transparent; color: var(--asg-muted);
-  }
-  .new-quick button:hover { color: var(--asg-green); border-color: var(--asg-green); }
-  .new-echo { font-size: .74rem; font-weight: 800; color: var(--asg-green); margin-top: .35rem; min-height: 1.1em; }
-
-  /* ── اختيار المكلَّفين ────────────────────────────────────────── */
-  .pick-tools {
-    display: flex; gap: .6rem; flex-wrap: wrap; align-items: center;
-    padding-bottom: .85rem; margin-bottom: .85rem; border-bottom: 1px dashed var(--asg-line);
-  }
-  .pick-search { position: relative; flex: 1 1 230px; }
-  .pick-search i {
-    position: absolute; inset-inline-start: .7rem; inset-block-start: 50%;
-    transform: translateY(-50%); font-size: .8rem; color: var(--asg-muted); pointer-events: none;
-  }
-  .pick-search input {
-    width: 100%; padding: .5rem .7rem; padding-inline-start: 2rem;
-    border-radius: 10px; border: 1px solid var(--asg-line);
-    background: var(--asg-surface); color: var(--asg-ink);
-    font-family: inherit; font-size: .84rem;
-  }
-  .pick-chips { display: flex; gap: .3rem; flex-wrap: wrap; }
-  .pick-chip {
-    font: inherit; font-size: .74rem; font-weight: 800; cursor: pointer; white-space: nowrap;
-    padding: .3rem .7rem; border-radius: 999px;
-    border: 1px solid var(--asg-line); background: transparent; color: var(--asg-muted);
-  }
-  .pick-chip[aria-pressed="true"] { background: var(--asg-green); border-color: var(--asg-green); color: #fff; }
-  [data-theme="dark"] .pick-chip[aria-pressed="true"] { color: #06251a; }
-  .pick-bulk { display: flex; gap: .3rem; margin-inline-start: auto; }
-
-  .pick-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
-  .pick {
-    position: relative; display: flex; gap: .6rem; align-items: center;
-    padding: .6rem .7rem; border-radius: 12px; cursor: pointer;
-    border: 1px solid var(--asg-line); background: var(--asg-surface);
-    transition: border-color .15s ease, background .15s ease;
-  }
-  .pick:hover { border-color: var(--asg-green); }
-  /* المربّع يبقى في شجرة الوصول ويُقاد بلوحة المفاتيح، ويُخفى بصرياً فقط. */
-  .pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-  /* ‏`:has` للمتصفحات التي تدعمه، و`.is-on` من الجافاسكربت لمن لا يدعمه —
-     فالتحديد لا يجوز أن يكون غير مرئي على متصفح قديم. */
-  .pick.is-on, .pick:has(input:checked) { border-color: var(--asg-green); background: var(--asg-soft); }
-  .pick:has(input:focus-visible) { outline: 2px solid var(--asg-green); outline-offset: 2px; }
-  .pick__avatar {
-    width: 34px; height: 34px; border-radius: 50%; flex: none;
-    display: grid; place-items: center; font-size: .84rem; font-weight: 900;
-    background: var(--asg-soft); color: var(--asg-green); border: 1px solid var(--asg-line);
-  }
-  .pick__body { flex: 1; min-width: 0; }
-  .pick__name { display: block; font-size: .85rem; font-weight: 800; overflow-wrap: anywhere; }
-  .pick__meta { display: block; font-size: .72rem; color: var(--asg-muted); margin-top: .15rem; line-height: 1.6; }
-  .pick__role { font-weight: 900; }
-  .pick__role[data-role="deputy"] { color: var(--asg-violet); }
-  .pick__role[data-role="admin_staff"] { color: var(--asg-gold); }
-  .pick__role[data-role="teacher"] { color: var(--asg-info); }
-  .pick__tick {
-    flex: none; width: 20px; height: 20px; border-radius: 6px;
-    display: grid; place-items: center; font-size: .65rem;
-    border: 1px solid var(--asg-line); color: transparent;
-  }
-  .pick.is-on .pick__tick,
-  .pick:has(input:checked) .pick__tick { background: var(--asg-green); border-color: var(--asg-green); color: #fff; }
-  [data-theme="dark"] .pick.is-on .pick__tick,
-  [data-theme="dark"] .pick:has(input:checked) .pick__tick { color: #06251a; }
-  .pick[hidden] { display: none; }
-
-  .pick-note { font-size: .8rem; color: var(--asg-muted); font-weight: 700; margin: .8rem 0 0; }
-
-  /* ── شريط الإجراء: يبقى ظاهراً مهما طالت القائمة ─────────────── */
-  .new-bar {
-    position: sticky; bottom: 0; z-index: 5;
-    display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
-    margin-top: 1.2rem; padding: .8rem .95rem; border-radius: 14px;
-    border: 1px solid var(--asg-line); background: var(--asg-surface);
-    box-shadow: 0 -8px 24px -20px rgba(16,35,26,.9);
-  }
-  .new-bar__count { font-size: .82rem; font-weight: 800; color: var(--asg-muted); margin-inline-end: auto; }
-  .new-bar__count strong { color: var(--asg-green); font-size: 1rem; }
-  .asg-empty__action { justify-content: center; margin-top: 1rem; }
-  .asg-btn:disabled { opacity: .55; cursor: not-allowed; }
-
-  @media (max-width: 640px) {
-    .pick-bulk { margin-inline-start: 0; }
-    .new-bar__count { flex: 1 1 100%; margin-inline-end: 0; }
-  }
-</style>
+  <link rel="stylesheet" href="{% static 'css/assignments.css' %}?v=20260922.1">
 {% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <a class="asg-hero__eyebrow" href="{% url 'reports:assignment_board' %}">
-      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-      لوحة التكليفات
-    </a>
-    <h1 class="asg-hero__title">تكليف جديد</h1>
-    <p class="asg-hero__meta">حدّد المطلوب والموعد والشواهد اللازمة، ثم اختر المكلَّفين.</p>
+<div class="twq-page assignments-page assignments-create-page" aria-labelledby="assignmentCreateTitle">
+  <header class="twq-page-header assignment-page-header">
+    <div class="twq-page-header__heading">
+      <a class="twq-page-header__eyebrow" href="{% url 'reports:assignment_board' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>العودة إلى التكليفات الصادرة</span></a>
+      <h1 class="twq-page-header__title" id="assignmentCreateTitle">إصدار تكليف جديد</h1>
+      <p class="twq-page-header__lead">اكتب المطلوب والموعد، حدّد شرط الشواهد إن لزم، ثم اختر منسوبي المدرسة الذين سيصلهم التكليف.</p>
+      <dl class="twq-page-header__context" aria-label="سياق إصدار التكليف"><div><dt>المدرسة</dt><dd><bdi>{{ active_school.name }}</bdi></dd></div><div><dt>طريقة الإرسال</dt><dd>فوري بعد الحفظ</dd></div></dl>
+    </div>
+    <aside class="twq-page-header__aside assignment-page-header__aside"><div class="assignment-context-card"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><strong>النطاق يثبته الخادم</strong><span>لا تُقرأ المدرسة أو جهة الإصدار من حقول قابلة للتعديل، ويُرفض أي مستهدف غير صالح.</span></div></aside>
   </header>
 
-  <form method="post" novalidate id="asgForm"
-        data-has-assignees="{% if form.assignee_options %}true{% else %}false{% endif %}">
+  <form method="post" novalidate id="asgForm" class="assignment-create-form" data-assignment-create data-has-assignees="{% if form.assignee_options %}true{% else %}false{% endif %}" data-due-input="{{ form.due_at.id_for_label }}" data-evidence-input="{{ form.requires_evidence.id_for_label }}">
     {% csrf_token %}
 
-    {# ═══ ١ · المطلوب ══════════════════════════════════════ #}
-    <section class="asg-card">
-      <div class="new-step">
-        <span class="new-step__n" aria-hidden="true">١</span>
-        <h2>المطلوب</h2>
-      </div>
-
-      <div class="asg-field">
-        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-        {{ form.title }}
-        {% if form.title.errors %}<ul class="asg-errors">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-      </div>
-
-      <div class="asg-field">
-        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-        {{ form.description }}
-        <div class="asg-field__help">
-          كلّما وضح المطلوب قلّت طلبات التوضيح وأُنجز العمل من أول مرة.
-        </div>
-        {% if form.description.errors %}<ul class="asg-errors">{% for e in form.description.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-      </div>
-
-      <div class="new-grid">
-        <div class="asg-field">
-          <label for="{{ form.department.id_for_label }}">{{ form.department.label }}</label>
-          {{ form.department }}
-          <div class="asg-field__help">{{ form.department.help_text }}</div>
-          {% if form.department.errors %}<ul class="asg-errors">{% for e in form.department.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-        </div>
-
-        <div class="asg-field">
-          <label for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>
-          {{ form.priority }}
-          {% if form.priority.errors %}<ul class="asg-errors">{% for e in form.priority.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-        </div>
-
-        <div class="asg-field">
-          <label for="{{ form.due_at.id_for_label }}">{{ form.due_at.label }}</label>
-          {{ form.due_at }}
-          <div class="new-quick" role="group" aria-label="مواعيد سريعة">
-            <button type="button" data-days="3">بعد ٣ أيام</button>
-            <button type="button" data-days="7">بعد أسبوع</button>
-            <button type="button" data-days="14">بعد أسبوعين</button>
-            <button type="button" data-days="30">بعد شهر</button>
-          </div>
-          <div class="new-echo" id="dueHijri" aria-live="polite"></div>
-          <div class="asg-field__help">{{ form.due_at.help_text }}</div>
-          {% if form.due_at.errors %}<ul class="asg-errors">{% for e in form.due_at.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-        </div>
-      </div>
-    </section>
-
-    {# ═══ ٢ · الشواهد ══════════════════════════════════════ #}
-    <section class="asg-card">
-      <div class="new-step">
-        <span class="new-step__n" aria-hidden="true">٢</span>
-        <h2>الشواهد</h2>
-      </div>
-      <p class="asg-card__hint">
-        عند اشتراط الشواهد لن يستطيع المكلَّف إرسال تنفيذه للمراجعة قبل رفع
-        العدد المطلوب — فالشرط يُنفَّذ ولا يبقى توصية.
-      </p>
-
-      <div class="asg-field">
-        <label class="new-check">
-          {{ form.requires_evidence }}
-          <span>{{ form.requires_evidence.label }}</span>
-        </label>
-      </div>
-
-      <div class="asg-field xs-assignment-create-1" id="evidenceCount">
-        <label for="{{ form.min_evidence_count.id_for_label }}">{{ form.min_evidence_count.label }}</label>
-        {{ form.min_evidence_count }}
-        {% if form.min_evidence_count.errors %}<ul class="asg-errors">{% for e in form.min_evidence_count.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-      </div>
-    </section>
-
-    {# ═══ ٣ · المكلَّفون ════════════════════════════════════ #}
-    <section class="asg-card">
-      <div class="new-step">
-        <span class="new-step__n" aria-hidden="true">٣</span>
-        <h2>المكلَّفون</h2>
-      </div>
-      <p class="asg-card__hint">
-        كلّف من شئت من منسوبي المدرسة — معلماً كان أو وكيلاً أو موظفاً إدارياً؛
-        فالقسم يحدّد من يراجع التنفيذ ولا يحدّ من تُكلّفه. ولكل مكلَّف حالته
-        ونسبته وشواهده على حدة، فتكليفٌ واحد يُنجزه بعضهم ويتأخر بعضهم دون أن
-        تخفي حالةٌ واحدة ذلك.
-      </p>
-
-      {% with options=form.assignee_options %}
-        {% if options %}
-          <div class="pick-tools">
-            <div class="pick-search">
-              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-              <input type="search" id="pickSearch" autocomplete="off"
-                     placeholder="ابحث بالاسم أو القسم…" aria-label="بحث في المكلَّفين">
-            </div>
-
-            <div class="pick-chips" role="group" aria-label="تصفية بالدور">
-              <button type="button" class="pick-chip" data-role="all" aria-pressed="true">
-                الكل ({{ options|length }})
-              </button>
-              {% for group in form.assignee_role_counts %}
-                <button type="button" class="pick-chip" data-role="{{ group.role }}" aria-pressed="false">
-                  {{ group.label }} ({{ group.count }})
-                </button>
-              {% endfor %}
-            </div>
-
-            <div class="pick-bulk">
-              <button type="button" class="asg-btn asg-btn--ghost asg-btn--sm" id="pickAll">تحديد الظاهر</button>
-              <button type="button" class="asg-btn asg-btn--ghost asg-btn--sm" id="pickNone">مسح التحديد</button>
-            </div>
-          </div>
-
-          <div class="pick-grid" id="pickGrid">
-            {% for option in options %}
-              <label class="pick" data-role="{{ option.role }}"
-                     data-search="{{ option.name }} {{ option.role_label }} {{ option.departments|join:' ' }}">
-                <input type="checkbox" name="assignees" value="{{ option.value }}"
-                       id="{{ option.id }}"{% if option.checked %} checked{% endif %}>
-                <span class="pick__avatar" aria-hidden="true">{{ option.initial }}</span>
-                <span class="pick__body">
-                  <span class="pick__name">{{ option.name }}</span>
-                  <span class="pick__meta">
-                    <span class="pick__role" data-role="{{ option.role }}">{{ option.role_label }}</span>
-                    {% if option.departments %} · {{ option.departments|join:" · " }}{% endif %}
-                  </span>
-                </span>
-                <span class="pick__tick" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
-              </label>
-            {% endfor %}
-          </div>
-
-          <p class="pick-note" id="pickEmpty" hidden>لا أحد يطابق بحثك.</p>
-        {% else %}
-          <div class="asg-empty" id="assignmentTeamSetupNotice" role="status">
-            <div class="asg-empty__icon"><i class="fa-solid fa-user-slash" aria-hidden="true"></i></div>
-            <h2>لا يوجد من يمكن تكليفه</h2>
-            <p>
-              التكليف يصل منسوبي المدرسة: المعلمين والوكلاء والموظفين الإداريين.
-              أضف منسوبيك إلى المدرسة أولاً ليظهروا هنا.
-            </p>
-            <a class="asg-btn asg-btn--primary asg-empty__action" id="assignmentTeamSetupLink" href="{% url 'reports:bulk_import_teachers' %}">
-              <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-              إضافة فريق المدرسة الآن
-            </a>
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      {% if form.assignees.errors %}<ul class="asg-errors">{% for e in form.assignees.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-    </section>
-
-    {% if form.non_field_errors %}
-      <ul class="asg-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    {% if form.errors %}
+      <section class="assignment-error-summary" id="assignmentErrorSummary" role="alert" tabindex="-1" aria-labelledby="assignmentErrorTitle">
+        <h2 id="assignmentErrorTitle">تعذّر إصدار التكليف</h2>
+        <p>راجع الحقول التالية ثم أعد الإرسال:</p>
+        <ul>
+          {% if form.title.errors %}<li><a href="#{{ form.title.id_for_label }}">{{ form.title.label }}: {{ form.title.errors.0 }}</a></li>{% endif %}
+          {% if form.description.errors %}<li><a href="#{{ form.description.id_for_label }}">{{ form.description.label }}: {{ form.description.errors.0 }}</a></li>{% endif %}
+          {% if form.department.errors %}<li><a href="#{{ form.department.id_for_label }}">{{ form.department.label }}: {{ form.department.errors.0 }}</a></li>{% endif %}
+          {% if form.priority.errors %}<li><a href="#{{ form.priority.id_for_label }}">{{ form.priority.label }}: {{ form.priority.errors.0 }}</a></li>{% endif %}
+          {% if form.due_at.errors %}<li><a href="#{{ form.due_at.id_for_label }}">{{ form.due_at.label }}: {{ form.due_at.errors.0 }}</a></li>{% endif %}
+          {% if form.requires_evidence.errors %}<li><a href="#{{ form.requires_evidence.id_for_label }}">{{ form.requires_evidence.label }}: {{ form.requires_evidence.errors.0 }}</a></li>{% endif %}
+          {% if form.min_evidence_count.errors %}<li><a href="#{{ form.min_evidence_count.id_for_label }}">{{ form.min_evidence_count.label }}: {{ form.min_evidence_count.errors.0 }}</a></li>{% endif %}
+          {% if form.assignees.errors %}<li><a href="#assignmentTargetSearch">المكلَّفون: {{ form.assignees.errors.0 }}</a></li>{% endif %}
+          {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      </section>
     {% endif %}
 
-    <div class="new-bar">
-      <div class="new-bar__count">
-        <strong id="pickCount">0</strong> مكلَّف مختار
+    <section class="twq-section assignment-form-section" aria-labelledby="assignmentIdentityTitle">
+      <header class="twq-section__header"><div class="assignment-form-section__heading"><span class="assignment-form-section__number" aria-hidden="true">١</span><div><p class="twq-section__kicker">هوية التكليف</p><h2 class="twq-section__title" id="assignmentIdentityTitle">ما المطلوب ومتى؟</h2></div></div><p class="twq-section__description">الوصف الواضح والموعد الواقعي يقللان طلبات التوضيح ويجعلان المتابعة قابلة للقياس.</p></header>
+      <div class="assignment-form-grid">
+        <div class="twq-field assignment-form-grid__full{% if form.title.errors %} twq-field--error{% endif %}"><label class="twq-label" for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}{% if form.title.errors %}<ul class="assignment-field-error" id="{{ form.title.id_for_label }}Errors">{% for error in form.title.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
+        <div class="twq-field assignment-form-grid__full{% if form.description.errors %} twq-field--error{% endif %}"><label class="twq-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>{{ form.description }}<p class="twq-field__help">بيّن النتيجة المتوقعة وما الذي يُعد تنفيذًا مقبولًا.</p>{% if form.description.errors %}<ul class="assignment-field-error">{% for error in form.description.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
+        <div class="twq-field{% if form.department.errors %} twq-field--error{% endif %}"><label class="twq-label" for="{{ form.department.id_for_label }}">{{ form.department.label }}</label>{{ form.department }}<p class="twq-field__help">{{ form.department.help_text }}</p>{% if form.department.errors %}<ul class="assignment-field-error">{% for error in form.department.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
+        <div class="twq-field{% if form.priority.errors %} twq-field--error{% endif %}"><label class="twq-label" for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>{{ form.priority }}{% if form.priority.errors %}<ul class="assignment-field-error">{% for error in form.priority.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
+        <div class="twq-field assignment-form-grid__full{% if form.due_at.errors %} twq-field--error{% endif %}"><label class="twq-label" for="{{ form.due_at.id_for_label }}">{{ form.due_at.label }}</label>{{ form.due_at }}<div class="assignment-due-shortcuts" role="group" aria-label="اختيار موعد سريع"><button type="button" data-assignment-days="3">بعد ٣ أيام</button><button type="button" data-assignment-days="7">بعد أسبوع</button><button type="button" data-assignment-days="14">بعد أسبوعين</button><button type="button" data-assignment-days="30">بعد شهر</button></div><p class="assignment-date-echo" id="assignmentDueHijri" aria-live="polite"></p><p class="twq-field__help">{{ form.due_at.help_text }}</p>{% if form.due_at.errors %}<ul class="assignment-field-error">{% for error in form.due_at.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
       </div>
-      <button type="submit" id="assignmentSubmit" class="asg-btn asg-btn--primary"{% if not form.assignee_options %} disabled aria-disabled="true" aria-describedby="assignmentTeamSetupNotice"{% endif %}>
-        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-        إصدار التكليف
-      </button>
-      <a class="asg-btn asg-btn--ghost" href="{% url 'reports:assignment_board' %}">إلغاء</a>
-    </div>
-  </form>
+    </section>
 
+    <section class="twq-section assignment-form-section" aria-labelledby="assignmentEvidenceTitle">
+      <header class="twq-section__header"><div class="assignment-form-section__heading"><span class="assignment-form-section__number" aria-hidden="true">٢</span><div><p class="twq-section__kicker">معيار التسليم</p><h2 class="twq-section__title" id="assignmentEvidenceTitle">الشواهد المطلوبة</h2></div></div><p class="twq-section__description">عند الاشتراط، لن يتمكن المكلَّف من إرسال التنفيذ للمراجعة قبل استيفاء العدد المحدد.</p></header>
+      <div class="twq-field"><label class="assignment-choice" for="{{ form.requires_evidence.id_for_label }}">{{ form.requires_evidence }}<span><strong>{{ form.requires_evidence.label }}</strong><small class="twq-field__help">استخدمه عندما يحتاج قرار الاعتماد إلى ملف أو صورة أو مستند داعم.</small></span></label></div>
+      <div class="twq-field{% if form.min_evidence_count.errors %} twq-field--error{% endif %}" id="assignmentEvidenceCount"><label class="twq-label" for="{{ form.min_evidence_count.id_for_label }}">{{ form.min_evidence_count.label }}</label>{{ form.min_evidence_count }}{% if form.min_evidence_count.errors %}<ul class="assignment-field-error">{% for error in form.min_evidence_count.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}</div>
+    </section>
+
+    <section class="twq-section assignment-form-section" aria-labelledby="assignmentTargetsTitle">
+      <header class="twq-section__header"><div class="assignment-form-section__heading"><span class="assignment-form-section__number" aria-hidden="true">٣</span><div><p class="twq-section__kicker">جهة التنفيذ</p><h2 class="twq-section__title" id="assignmentTargetsTitle">اختر المكلَّفين</h2></div></div><p class="twq-section__description">يمكن إسناد التكليف إلى منسوبي المدرسة المتاحين. لكل شخص نسبة وشواهد وحالة مراجعة مستقلة.</p></header>
+      {% with options=form.assignee_options %}
+        {% if options %}
+          <div class="assignment-target-toolbar">
+            <div class="twq-field"><label class="twq-label" for="assignmentTargetSearch">البحث في منسوبي المدرسة</label><div class="assignment-target-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input class="twq-control" type="search" id="assignmentTargetSearch" autocomplete="off" placeholder="ابحث بالاسم أو الدور أو القسم…"></div></div>
+            <div class="assignment-target-toolbar__actions"><button type="button" class="twq-btn twq-btn--ghost" id="assignmentSelectVisible">تحديد الظاهر</button><button type="button" class="twq-btn twq-btn--ghost" id="assignmentClearSelection">مسح التحديد</button></div>
+          </div>
+          <div class="assignment-target-filters" role="group" aria-label="تصفية المكلَّفين حسب الدور"><button type="button" class="assignment-target-filter" data-assignment-role="all" aria-pressed="true">الكل ({{ options|length }})</button>{% for group in form.assignee_role_counts %}<button type="button" class="assignment-target-filter" data-assignment-role="{{ group.role }}" aria-pressed="false">{{ group.label }} ({{ group.count }})</button>{% endfor %}</div>
+          <div class="assignment-target-grid" id="assignmentTargetGrid">
+            {% for option in options %}
+              <label class="assignment-target-option" data-assignment-target data-assignment-target-role="{{ option.role }}" data-assignment-target-search="{{ option.name }} {{ option.role_label }} {{ option.departments|join:' ' }}"><input type="checkbox" name="assignees" value="{{ option.value }}" id="{{ option.id }}"{% if option.checked %} checked{% endif %}><span class="assignment-target-option__avatar" aria-hidden="true">{{ option.initial }}</span><span class="assignment-target-option__body"><span class="assignment-target-option__name"><bdi>{{ option.name }}</bdi></span><span class="assignment-target-option__meta">{{ option.role_label }}{% if option.departments %} · <bdi>{{ option.departments|join:" · " }}</bdi>{% endif %}</span></span></label>
+            {% endfor %}
+          </div>
+          <p class="twq-empty twq-empty--local" id="assignmentTargetNoResults" hidden>لا يوجد من يطابق البحث أو الدور المحدد.</p>
+        {% else %}
+          <div class="twq-empty twq-empty--local" id="assignmentTeamSetupNotice" role="status"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-user-slash"></i></span><h3 class="twq-empty__title">لا يوجد من يمكن تكليفه</h3><p class="twq-empty__message">أضف منسوبي المدرسة أولًا ليظهروا هنا كمستهدفين صالحين.</p><a class="twq-btn twq-btn--primary" id="assignmentTeamSetupLink" href="{% url 'reports:bulk_import_teachers' %}"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>إضافة فريق المدرسة الآن</span></a></div>
+        {% endif %}
+      {% endwith %}
+      {% if form.assignees.errors %}<ul class="assignment-field-error">{% for error in form.assignees.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </section>
+
+    <div class="assignment-target-selection" aria-label="إجراءات إصدار التكليف"><p class="assignment-target-selection__count"><strong id="assignmentTargetCount">0</strong> مكلَّف مختار</p><button type="submit" id="assignmentSubmit" class="twq-btn twq-btn--primary"{% if not form.assignee_options %} disabled aria-disabled="true" aria-describedby="assignmentTeamSetupNotice"{% endif %}><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>إصدار التكليف</span></button><a class="twq-btn twq-btn--ghost" href="{% url 'reports:assignment_board' %}">إلغاء</a></div>
+  </form>
 </div>
 
-{# بلا defer: السكربت المضمّن أدناه يستدعي TawtheeqHijri وقت التحليل. #}
 <script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  (function () {
-    var form = document.getElementById('asgForm');
-    if (!form) return;
-
-    // ── الموعد: اختصارات + صدى هجري ──────────────────────────────
-    var due = document.getElementById('{{ form.due_at.id_for_label }}');
-    var echo = document.getElementById('dueHijri');
-    function pad(value) { return String(value).padStart(2, '0'); }
-
-    // التقويم الهجري: التنسيق في js/hijri-date.js — مصدر واحد لكل الشاشات.
-    function paintEcho() {
-      if (!echo || !due) return;
-      echo.textContent = window.TawtheeqHijri
-        ? window.TawtheeqHijri.echo(due.value, 'الموافق ')
-        : '';
-    }
-
-    if (due) {
-      due.addEventListener('change', paintEcho);
-      due.addEventListener('input', paintEcho);
-      paintEcho();
-    }
-
-    Array.prototype.forEach.call(document.querySelectorAll('[data-days]'), function (button) {
-      button.addEventListener('click', function () {
-        if (!due) return;
-        var when = new Date();
-        when.setDate(when.getDate() + parseInt(button.getAttribute('data-days'), 10));
-        due.value = when.getFullYear() + '-' + pad(when.getMonth() + 1) + '-' + pad(when.getDate())
-          + 'T' + pad(when.getHours()) + ':' + pad(when.getMinutes());
-        paintEcho();
-      });
-    });
-
-    // ── الشواهد: عدد الشواهد لا معنى له بلا اشتراطها ─────────────
-    var requires = document.getElementById('{{ form.requires_evidence.id_for_label }}');
-    var countBox = document.getElementById('evidenceCount');
-    function paintEvidence() {
-      if (!requires || !countBox) return;
-      countBox.hidden = !requires.checked;
-    }
-    if (requires) { requires.addEventListener('change', paintEvidence); paintEvidence(); }
-
-    form.addEventListener('submit', function (event) {
-      if (form.getAttribute('data-has-assignees') !== 'false') return;
-      event.preventDefault();
-      var setupLink = document.getElementById('assignmentTeamSetupLink');
-      var setupNotice = document.getElementById('assignmentTeamSetupNotice');
-      var setupTarget = setupLink || setupNotice;
-      if (setupTarget) {
-        setupTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (setupLink) window.setTimeout(function () { setupLink.focus({ preventScroll: true }); }, 220);
-      }
-    });
-
-    // ── اختيار المكلَّفين ──────────────────────────────────────────
-    var grid = document.getElementById('pickGrid');
-    if (!grid) return;
-
-    var picks = Array.prototype.slice.call(grid.querySelectorAll('.pick'));
-    var search = document.getElementById('pickSearch');
-    var chips = Array.prototype.slice.call(document.querySelectorAll('.pick-chip'));
-    var counter = document.getElementById('pickCount');
-    var empty = document.getElementById('pickEmpty');
-    var role = 'all';
-
-    function visible(pick) { return !pick.hidden; }
-
-    function paintCount() {
-      var chosen = 0;
-      picks.forEach(function (pick) {
-        var on = pick.querySelector('input').checked;
-        pick.classList.toggle('is-on', on);
-        if (on) chosen++;
-      });
-      if (counter) counter.textContent = chosen;
-    }
-
-    function paintList() {
-      var term = (search && search.value || '').trim().toLowerCase();
-      var shown = 0;
-      picks.forEach(function (pick) {
-        var matchesRole = role === 'all' || pick.getAttribute('data-role') === role;
-        var matchesTerm = !term ||
-          (pick.getAttribute('data-search') || '').toLowerCase().indexOf(term) !== -1;
-        pick.hidden = !(matchesRole && matchesTerm);
-        if (!pick.hidden) shown++;
-      });
-      if (empty) empty.hidden = shown !== 0;
-    }
-
-    if (search) search.addEventListener('input', paintList);
-
-    chips.forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        role = chip.getAttribute('data-role');
-        chips.forEach(function (other) {
-          other.setAttribute('aria-pressed', other === chip ? 'true' : 'false');
-        });
-        paintList();
-      });
-    });
-
-    // «تحديد الظاهر» لا «تحديد الكل»: زرٌّ يحدّد من لا يراه المستخدم يصدر
-    // تكليفاً إلى من لم يقصده.
-    var all = document.getElementById('pickAll');
-    if (all) {
-      all.addEventListener('click', function () {
-        picks.filter(visible).forEach(function (pick) {
-          pick.querySelector('input').checked = true;
-        });
-        paintCount();
-      });
-    }
-
-    var none = document.getElementById('pickNone');
-    if (none) {
-      none.addEventListener('click', function () {
-        picks.forEach(function (pick) { pick.querySelector('input').checked = false; });
-        paintCount();
-      });
-    }
-
-    grid.addEventListener('change', paintCount);
-    paintCount();
-
-    // التحقق هنا توفيرٌ لرحلة إلى الخادم، والنموذج يرفضه على أي حال.
-    form.addEventListener('submit', function (event) {
-      var chosen = picks.some(function (pick) { return pick.querySelector('input').checked; });
-      if (chosen) return;
-      event.preventDefault();
-      role = 'all';
-      chips.forEach(function (chip) {
-        chip.setAttribute('aria-pressed', chip.getAttribute('data-role') === 'all' ? 'true' : 'false');
-      });
-      if (search) search.value = '';
-      paintList();
-      grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (search) search.focus();
-    });
-  }());
-</script>
+<script src="{% static 'js/assignments.js' %}?v=20260922.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

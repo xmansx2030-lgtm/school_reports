@@ -288,13 +288,31 @@ def assignment_view(request, pk: int):
     assignment = _assignment_for(request, pk, school)
 
     context = _assignment_context(request, assignment, school)
+    can_manage = assignment.issuer_id == request.user.pk or (
+        school is not None and is_school_manager(request.user, active_school=school)
+    )
+    viewer_target = next(
+        (target for target in context["targets"] if target.assignee_id == request.user.pk),
+        None,
+    )
+    if can_manage:
+        active = "assignment_board"
+        return_url = reverse("reports:assignment_board")
+        return_label = "التكليفات الصادرة"
+    elif viewer_target is not None:
+        active = "my_assignments"
+        return_url = reverse("reports:my_assignments")
+        return_label = "تكليفاتي"
+    else:
+        active = "staff_dashboard"
+        return_url = reverse("reports:home")
+        return_label = "الرئيسية"
     context.update(
         {
-            "active": "assignment_board",
-            "can_manage": (
-                assignment.issuer_id == request.user.pk
-                or (school is not None and is_school_manager(request.user, active_school=school))
-            ),
+            "active": active,
+            "can_manage": can_manage,
+            "return_url": return_url,
+            "return_label": return_label,
             "share_url": request.build_absolute_uri(
                 reverse("reports:assignment_view", args=[assignment.pk])
             ),
@@ -391,16 +409,33 @@ def assignment_detail(request, pk: int):
 
     target = _target_for(request, pk, school)
     is_assignee = target.assignee_id == request.user.pk
+    can_open_board = target.assignment.issuer_id == request.user.pk or (
+        school is not None and is_school_manager(request.user, active_school=school)
+    )
+    if is_assignee:
+        active = "my_assignments"
+        return_url = reverse("reports:my_assignments")
+        return_label = "تكليفاتي"
+    elif can_open_board:
+        active = "assignment_board"
+        return_url = reverse("reports:assignment_board")
+        return_label = "التكليفات الصادرة"
+    else:
+        active = "staff_dashboard"
+        return_url = reverse("reports:home")
+        return_label = "الرئيسية"
 
     return render(
         request,
         "reports/assignment_detail.html",
         {
-            "active": "my_assignments" if is_assignee else "assignment_board",
+            "active": active,
             "active_school": school,
             "target": target,
             "assignment": target.assignment,
             "is_assignee": is_assignee,
+            "return_url": return_url,
+            "return_label": return_label,
             "evidence": list(target.evidence.select_related("uploaded_by")),
             "shortfall": target.evidence_shortfall(),
             "actions": available_actions(target, request.user, school=school),
