@@ -2,187 +2,49 @@
 {% load hijri_tags %}
 
 {% block title %}{{ experiment.title|default:"مسودة تجربة" }} | تجارب المختبر{% endblock %}
-
 {% block head %}{% include "reports/_lab_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="lab">
-
-  <header class="lab-hero">
-    <span class="lab-hero__eyebrow">
-      <i class="fa-solid fa-vials" aria-hidden="true"></i>
-      تجربة مختبر
-    </span>
-    <h1>{{ experiment.title|default:"مسودة تجربة بلا عنوان" }}</h1>
-    <p class="lab-hero__lead">
-      {% if experiment.lab_kind %}{{ experiment.get_lab_kind_display }} · {% endif %}
-      <span dir="rtl">{% if experiment.experiment_date %}{{ experiment.experiment_date|hijri }}{% else %}لم يُحدَّد تاريخ التنفيذ{% endif %}</span>
-      {% if experiment.subject %}· {{ experiment.subject }}{% endif %}
-      {% if experiment.class_name %}· {{ experiment.class_name }}{% endif %}
-      {% if experiment.students_count %}· {{ experiment.students_count }} طالباً{% endif %}
-    </p>
-    <div class="lab-hero__actions">
-      <a class="lab-act" href="{% url 'reports:lab_experiments' %}">
-        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-        كل التجارب
-      </a>
-      <a class="lab-act" href="{% url 'reports:lab_experiment_print' experiment.pk %}">
-        <i class="fa-solid fa-print" aria-hidden="true"></i>
-        طباعة
-      </a>
+<div class="twq-page lab-page" aria-labelledby="labExperimentTitle">
+  <header class="twq-page-header lab-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-vials" aria-hidden="true"></i> تجربة مختبر</span>
+      <h1 class="twq-page-header__title" id="labExperimentTitle">{{ experiment.title|default:"مسودة تجربة بلا عنوان" }}</h1>
+      <p class="twq-page-header__lead">{% if experiment.lab_kind %}{{ experiment.get_lab_kind_display }} · {% endif %}{% if experiment.experiment_date %}<bdi>{{ experiment.experiment_date|hijri }}</bdi>{% else %}لم يُحدَّد تاريخ التنفيذ{% endif %}{% if experiment.subject %} · {{ experiment.subject }}{% endif %}{% if experiment.class_name %} · {{ experiment.class_name }}{% endif %}</p>
     </div>
+    <div class="twq-page-header__aside"><div class="lab-page-header__actions"><a class="twq-btn twq-btn--primary" href="{% url 'reports:lab_experiments' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> كل التجارب</a><a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_experiment_print' experiment.pk %}"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة</a></div></div>
   </header>
 
-  {% comment %} ═══ الحالة والإجراءات ════════════════════════════════════
-     الأزرار من ``available_actions`` وحدها — لا زرّ لا تذكره. {% endcomment %}
-  <section class="lab-section">
-    <div class="lab-card">
-      <div class="lab-section__head xs-lab-experiment-detail-1">
-        <h2>
-          <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
-          الحالة: {{ experiment.get_approval_state_display }}
-        </h2>
-        {% if experiment.recorder %}
-          <span class="lab-chip">وثّقها {{ experiment.recorder.name }}</span>
-        {% endif %}
-      </div>
+  <nav class="lab-track-nav" aria-label="مسارات عمليات المختبر"><a href="{% url 'reports:lab_assets' %}"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>الجرد والعهدة</span></a><a href="{% url 'reports:lab_experiments' %}" aria-current="page"><i class="fa-solid fa-vials" aria-hidden="true"></i><span>التجارب والمراجعة</span></a></nav>
 
-      {% if experiment.review_note %}
-        <p class="xs-lab-experiment-detail-2">
-          <b>ملاحظة المراجعة:</b> {{ experiment.review_note }}
-        </p>
-      {% endif %}
+  <section class="twq-section lab-section" aria-labelledby="workflowTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Workflow</span><h2 class="twq-section__title" id="workflowTitle"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> حالة التجربة</h2><p class="twq-section__description">الانتقالات المتاحة صادرة من الخادم بحسب الحالة والدور ونطاق المختبر.</p></div><span class="twq-status lab-status" data-status="{{ experiment.approval_state }}">{{ experiment.get_approval_state_display }}</span></header>
+    {% if experiment.recorder %}<p class="lab-muted">وثّقها: {{ experiment.recorder.name }}</p>{% endif %}
+    {% if experiment.review_note %}<div class="twq-alert twq-alert--warning" role="note"><i class="fa-solid fa-comment-dots" aria-hidden="true"></i><div><strong>ملاحظة المراجعة</strong><p>{{ experiment.review_note }}</p></div></div>{% endif %}
 
-      {% if actions %}
-        <form method="post" action="{% url 'reports:lab_experiment_action' experiment.pk %}" class="lab-form">
-          {% csrf_token %}
-          {% if submission_missing and 'submit' in actions %}
-            <div class="lab-readiness" role="status">
-              <strong><i class="fa-solid fa-list-check" aria-hidden="true"></i> أكمل هذه البيانات قبل الإرسال:</strong>
-              <ul>
-                {% for item in submission_missing %}
-                  <li><a class="lab-link" href="#id_{{ item.field }}">{{ item.label }}</a></li>
-                {% endfor %}
-              </ul>
-            </div>
-          {% endif %}
-          <div class="lab-field">
-            <label for="note">ملاحظة (تُلزم عند الإعادة أو طلب الاستكمال)</label>
-            <input class="form-control" type="text" id="note" name="note" maxlength="500">
-          </div>
-          <div class="u-flex u-wrap u-gap-06">
-            {% for action in actions %}
-              <button type="submit" name="approval_action" value="{{ action }}"
-                      {% if action == 'submit' and submission_missing %}disabled title="أكمل بيانات الإرسال أولاً"{% endif %}
-                      class="lab-btn {% if action == 'return' or action == 'request_info' %}lab-btn--danger{% elif action != 'approve' %}lab-btn--ghost{% endif %}">
-                {% if action == 'submit' %}أرسِل للاعتماد
-                {% elif action == 'withdraw' %}اسحب للتعديل
-                {% elif action == 'start_review' %}ابدأ المراجعة
-                {% elif action == 'request_info' %}اطلب استكمالاً
-                {% elif action == 'return' %}أعِدها بملاحظة
-                {% elif action == 'recommend' %}أوصِ باعتمادها
-                {% elif action == 'approve' %}اعتمِد
-                {% elif action == 'issue' %}أصدِر
-                {% else %}{{ action }}{% endif %}
-              </button>
-            {% endfor %}
-          </div>
-        </form>
-      {% else %}
-        <p class="u-text-lab-muted u-m-0">
-          {% if experiment.is_final %}
-            التجربة معتمدة — والمعتمد نهائي لا يُعدَّل ولا يعود.
-          {% else %}
-            لا إجراء متاحٌ لك على هذه التجربة الآن.
-          {% endif %}
-        </p>
-      {% endif %}
-    </div>
+    {% if actions %}<form method="post" action="{% url 'reports:lab_experiment_action' experiment.pk %}" class="lab-form">{% csrf_token %}
+      {% if submission_missing and 'submit' in actions %}<div class="lab-readiness" role="status"><strong><i class="fa-solid fa-list-check" aria-hidden="true"></i> أكمل هذه البيانات قبل الإرسال:</strong><ul>{% for item in submission_missing %}<li><a href="#id_{{ item.field }}">{{ item.label }}</a></li>{% endfor %}</ul></div>{% endif %}
+      <div class="lab-field"><label class="twq-label" for="note">ملاحظة القرار <span class="lab-muted">(تلزم عند الإعادة أو طلب الاستكمال)</span></label><input class="form-control" type="text" id="note" name="note" maxlength="500"></div>
+      <div class="lab-action-row">{% for action in actions %}<button type="submit" name="approval_action" value="{{ action }}" {% if action == 'submit' and submission_missing %}disabled title="أكمل بيانات الإرسال أولاً"{% endif %} data-confirm="{% if action == 'submit' %}سيتم إرسال التجربة للمراجعة وقفل تعديلها مؤقتًا. هل تريد المتابعة؟{% elif action == 'withdraw' %}سيتم سحب التجربة للتعديل. هل تريد المتابعة؟{% elif action == 'approve' %}سيتم اعتماد التجربة نهائيًا. هل تريد المتابعة؟{% elif action == 'return' %}سيتم إعادة التجربة إلى الموثّق. هل تريد المتابعة؟{% elif action == 'request_info' %}سيتم طلب استكمال التجربة. هل تريد المتابعة؟{% elif action == 'recommend' %}سيتم رفع توصية باعتماد التجربة. هل تريد المتابعة؟{% else %}سيتم تنفيذ الإجراء المحدد. هل تريد المتابعة؟{% endif %}" data-confirm-type="warning" data-confirm-title="{% if action == 'submit' %}تأكيد إرسال التجربة{% elif action == 'approve' %}تأكيد اعتماد التجربة{% elif action == 'return' %}تأكيد إعادة التجربة{% elif action == 'request_info' %}تأكيد طلب الاستكمال{% elif action == 'withdraw' %}تأكيد سحب التجربة{% elif action == 'recommend' %}تأكيد التوصية بالاعتماد{% else %}تأكيد الإجراء{% endif %}" data-confirm-ok="{% if action == 'submit' %}نعم، أرسل{% elif action == 'approve' %}نعم، اعتمد{% elif action == 'return' %}نعم، أعد التجربة{% elif action == 'request_info' %}نعم، اطلب الاستكمال{% elif action == 'withdraw' %}نعم، اسحب للتعديل{% elif action == 'recommend' %}نعم، ارفع التوصية{% else %}نعم، نفّذ{% endif %}" class="twq-btn {% if action == 'approve' or action == 'submit' %}twq-btn--primary{% elif action == 'return' or action == 'request_info' %}twq-btn--danger{% else %}twq-btn--secondary{% endif %}">{% if action == 'submit' %}أرسِل للاعتماد{% elif action == 'withdraw' %}اسحب للتعديل{% elif action == 'start_review' %}ابدأ المراجعة{% elif action == 'request_info' %}اطلب استكمالاً{% elif action == 'return' %}أعِدها بملاحظة{% elif action == 'recommend' %}أوصِ باعتمادها{% elif action == 'approve' %}اعتمِد{% elif action == 'issue' %}أصدِر{% else %}{{ action }}{% endif %}</button>{% endfor %}</div>
+    </form>{% else %}<div class="twq-alert twq-alert--info lab-readonly-note" role="note"><i class="fa-solid fa-lock" aria-hidden="true"></i><div>{% if experiment.is_final %}<strong>التجربة معتمدة ونهائية.</strong> لا تُعدّل ولا تعود إلى حالة سابقة.{% else %}لا إجراء متاح لك على هذه التجربة الآن.{% endif %}</div></div>{% endif %}
   </section>
 
-  {# ═══ التفصيل ══════════════════════════════════════════════ #}
-  <section class="lab-section">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تفصيل التجربة</h2>
-    </div>
-    <div class="lab-card">
-      {% if experiment.requested_by or experiment.objectives or experiment.procedure or experiment.materials_note or experiment.assets.all or experiment.safety_notes or experiment.report %}
-      <dl class="xs-lab-experiment-detail-3">
-        {% if experiment.requested_by %}
-          <div><dt class="xs-lab-experiment-detail-4">طلبها</dt>
-          <dd class="u-my-tight">{{ experiment.requested_by.name }}</dd></div>
-        {% endif %}
-        {% if experiment.objectives %}
-          <div><dt class="xs-lab-experiment-detail-4">الأهداف</dt>
-          <dd class="u-my-tight u-lh-loose">{{ experiment.objectives|linebreaksbr }}</dd></div>
-        {% endif %}
-        {% if experiment.procedure %}
-          <div><dt class="xs-lab-experiment-detail-4">خطوات التنفيذ</dt>
-          <dd class="u-my-tight u-lh-loose">{{ experiment.procedure|linebreaksbr }}</dd></div>
-        {% endif %}
-        {% if experiment.materials_note %}
-          <div><dt class="xs-lab-experiment-detail-4">المواد والأدوات</dt>
-          <dd class="u-my-tight u-lh-loose">{{ experiment.materials_note|linebreaksbr }}</dd></div>
-        {% endif %}
-        {% if experiment.assets.all %}
-          <div><dt class="xs-lab-experiment-detail-4">أصناف العهدة المستخدمة</dt>
-          <dd class="xs-lab-experiment-detail-5">
-            {% for asset in experiment.assets.all %}
-              <a class="lab-chip" href="{% url 'reports:lab_asset_detail' asset.pk %}">{{ asset.name }}</a>
-            {% endfor %}
-          </dd></div>
-        {% endif %}
-        {% if experiment.safety_notes %}
-          <div><dt class="xs-lab-experiment-detail-6">إجراءات السلامة</dt>
-          <dd class="u-my-tight u-lh-loose">{{ experiment.safety_notes|linebreaksbr }}</dd></div>
-        {% endif %}
-        {% if experiment.report %}
-          <div><dt class="xs-lab-experiment-detail-4">التقرير المرتبط</dt>
-          <dd class="u-my-tight">
-            <a class="lab-link" href="{% url 'reports:report_print' experiment.report.pk %}">{{ experiment.report.title }}</a>
-          </dd></div>
-        {% endif %}
-      </dl>
-      {% else %}
-        <div class="lab-empty">
-          <span class="lab-empty__icon"><i class="fa-solid fa-pen" aria-hidden="true"></i></span>
-          <strong>تفاصيل المسودة لم تُكتب بعد.</strong>
-          استخدم قسم التعديل أدناه لإكمال بيانات التجربة.
-        </div>
-      {% endif %}
-    </div>
+  <section class="twq-section lab-section" aria-labelledby="experimentDetailsTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Details</span><h2 class="twq-section__title" id="experimentDetailsTitle"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تفاصيل التجربة</h2></div></header>
+    {% if experiment.requested_by or experiment.objectives or experiment.procedure or experiment.materials_note or experiment.assets.all or experiment.safety_notes or experiment.report %}<dl class="lab-facts">
+      {% if experiment.requested_by %}<div><dt>طلبها</dt><dd>{{ experiment.requested_by.name }}</dd></div>{% endif %}
+      {% if experiment.students_count %}<div><dt>عدد الطلاب</dt><dd><bdi>{{ experiment.students_count }}</bdi></dd></div>{% endif %}
+      {% if experiment.objectives %}<div class="lab-facts__wide"><dt>الأهداف</dt><dd>{{ experiment.objectives|linebreaksbr }}</dd></div>{% endif %}
+      {% if experiment.procedure %}<div class="lab-facts__wide"><dt>خطوات التنفيذ</dt><dd>{{ experiment.procedure|linebreaksbr }}</dd></div>{% endif %}
+      {% if experiment.materials_note %}<div class="lab-facts__wide"><dt>المواد والأدوات</dt><dd>{{ experiment.materials_note|linebreaksbr }}</dd></div>{% endif %}
+      {% if experiment.assets.all %}<div class="lab-facts__wide"><dt>أصناف العهدة المستخدمة</dt><dd><span class="lab-asset-links">{% for asset in experiment.assets.all %}<a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_asset_detail' asset.pk %}">{{ asset.name }}</a>{% endfor %}</span></dd></div>{% endif %}
+      {% if experiment.safety_notes %}<div class="lab-facts__wide"><dt>إجراءات السلامة</dt><dd>{{ experiment.safety_notes|linebreaksbr }}</dd></div>{% endif %}
+      {% if experiment.report %}<div class="lab-facts__wide"><dt>التقرير المرتبط</dt><dd><a href="{% url 'reports:report_print' experiment.report.pk %}">{{ experiment.report.title }}</a></dd></div>{% endif %}
+    </dl>{% else %}<div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-pen"></i></span><h3 class="twq-empty__title">تفاصيل المسودة لم تُكتب بعد</h3><p class="twq-empty__message">استخدم قسم التعديل لإكمال بيانات التجربة.</p></div>{% endif %}
   </section>
 
-  {# ═══ التعديل ══════════════════════════════════════════════ #}
-  {% if editable %}
-    <section class="lab-section">
-      <div class="lab-section__head">
-        <h2><i class="fa-solid fa-pen" aria-hidden="true"></i> تعديل</h2>
-      </div>
-      <div class="lab-card">
-        {% include "reports/_lab_experiment_form.html" with save_label="احفظ التعديل" %}
-      </div>
-    </section>
-  {% endif %}
+  {% if editable %}<section class="twq-section lab-section" aria-labelledby="experimentEditTitle"><header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Edit</span><h2 class="twq-section__title" id="experimentEditTitle"><i class="fa-solid fa-pen" aria-hidden="true"></i> تعديل المسودة</h2><p class="twq-section__description">الحفظ لا يرسل التجربة؛ استخدم إجراء الإرسال بعد اكتمال البيانات.</p></div></header>{% include "reports/_lab_experiment_form.html" with save_label="احفظ التعديل" %}</section>{% endif %}
 
-  {# ═══ تدرّج القرار ═════════════════════════════════════════ #}
-  {% if timeline %}
-    <section class="lab-section">
-      <div class="lab-section__head">
-        <h2><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> تدرّج القرار</h2>
-      </div>
-      <ul class="lab-timeline">
-        {% for step in timeline %}
-          <li>
-            <b>{{ step.get_action_display }}</b>
-            {% if step.actor_display %}— {{ step.actor_display }}{% endif %}
-            {% if step.actor_role %} · {{ step.actor_role }}{% endif %}
-            {% if step.note %}<div class="u-text-lab-muted">{{ step.note }}</div>{% endif %}
-            <time dir="rtl">{{ step.created_at|hijri }} هـ — {{ step.created_at|time:"H:i" }}</time>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
+  {% if timeline %}<section class="twq-section lab-section" aria-labelledby="decisionTimelineTitle"><header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Audit trail</span><h2 class="twq-section__title" id="decisionTimelineTitle"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> تدرّج القرار</h2></div></header><ol class="lab-timeline">{% for step in timeline %}<li><strong>{{ step.get_action_display }}</strong>{% if step.actor_display %} — {{ step.actor_display }}{% endif %}{% if step.actor_role %} · {{ step.actor_role }}{% endif %}{% if step.note %}<div>{{ step.note }}</div>{% endif %}<time><bdi>{{ step.created_at|hijri }} هـ — {{ step.created_at|time:"H:i" }}</bdi></time></li>{% endfor %}</ol></section>{% endif %}
 </div>
 {% endblock %}

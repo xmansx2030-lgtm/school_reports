@@ -127,7 +127,10 @@ def lab_dashboard(request: HttpRequest) -> HttpResponse:
     if redirect_response is not None:
         return redirect_response
 
-    summary = lab_summary(school, user=request.user)
+    outstanding = outstanding_handovers(school, user=request.user)
+    summary = lab_summary(
+        school, user=request.user, outstanding_rows=outstanding
+    )
     attention_assets = list(
         assets_for_school(school, user=request.user).filter(
             condition__in=LabAsset.ATTENTION_CONDITIONS
@@ -149,7 +152,7 @@ def lab_dashboard(request: HttpRequest) -> HttpResponse:
             "summary": summary,
             "attention_assets": attention_assets,
             "recent_experiments": recent_experiments,
-            "outstanding": outstanding_handovers(school, user=request.user)[:8],
+            "outstanding": outstanding[:8],
             "recent_handovers": list(
                 handovers_for_school(school, user=request.user, limit=6)
             ),
@@ -214,7 +217,16 @@ def lab_assets(request: HttpRequest) -> HttpResponse:
         condition = ""
 
     page = Paginator(rows, PAGE_SIZE).get_page(request.GET.get("page") or 1)
-    summary = lab_summary(school, user=request.user)
+    outstanding = outstanding_handovers(school, user=request.user)
+    holders_by_asset: dict[int, list[dict]] = {}
+    for row in outstanding:
+        holders_by_asset.setdefault(row["asset_id"], []).append(row)
+    for asset in page.object_list:
+        asset.current_holders = holders_by_asset.get(asset.pk, [])
+
+    summary = lab_summary(
+        school, user=request.user, outstanding_rows=outstanding
+    )
 
     return render(
         request,
@@ -364,14 +376,17 @@ def lab_assets_print(request: HttpRequest) -> HttpResponse:
     if redirect_response is not None:
         return redirect_response
 
+    outstanding = outstanding_handovers(school, user=request.user)
     return render(
         request,
         "reports/lab_assets_print.html",
         {
             "active_school": school,
             "assets": list(assets_for_school(school, user=request.user)),
-            "outstanding": outstanding_handovers(school, user=request.user),
-            "summary": lab_summary(school, user=request.user),
+            "outstanding": outstanding,
+            "summary": lab_summary(
+                school, user=request.user, outstanding_rows=outstanding
+            ),
             "printed_at": timezone.now(),
         },
     )

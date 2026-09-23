@@ -2,185 +2,69 @@
 {% load hijri_tags %}
 
 {% block title %}{{ asset.name }} | عهدة المختبر{% endblock %}
-
 {% block head %}{% include "reports/_lab_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="lab">
-
-  <header class="lab-hero">
-    <span class="lab-hero__eyebrow">
-      <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-      صنف في العهدة
-    </span>
-    <h1>{{ asset.name }}</h1>
-    <p class="lab-hero__lead">
-      {% if asset.lab_kind %}{{ asset.get_lab_kind_display }} · {% endif %}
-      {{ asset.get_category_display }}
-      {% if asset.code %}· رقم العهدة {{ asset.code }}{% endif %}
-      {% if asset.location %}· {{ asset.location }}{% endif %}
-      {% if not asset.is_active %}· <b>مُخرَج من الجرد</b>{% endif %}
-    </p>
-    <div class="lab-hero__actions">
-      <a class="lab-act" href="{% url 'reports:lab_assets' %}">
-        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-        كل الجرد
-      </a>
+<div class="twq-page lab-page" aria-labelledby="labAssetTitle">
+  <header class="twq-page-header lab-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> صنف في العهدة</span>
+      <h1 class="twq-page-header__title" id="labAssetTitle">{{ asset.name }}</h1>
+      <p class="twq-page-header__lead">{% if asset.lab_kind %}{{ asset.get_lab_kind_display }} · {% endif %}{{ asset.get_category_display }}{% if asset.code %} · رقم العهدة <bdi>{{ asset.code }}</bdi>{% endif %}{% if asset.location %} · {{ asset.location }}{% endif %}</p>
     </div>
+    <div class="twq-page-header__aside"><div class="lab-page-header__actions">
+      <a class="twq-btn twq-btn--primary" href="{% url 'reports:lab_assets' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> كل الجرد</a>
+      <a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_assets_print' %}"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة الكشف</a>
+    </div></div>
   </header>
 
-  <section class="lab-stats" aria-label="حال الصنف">
-    <div class="lab-stat">
-      <span class="lab-stat__l"><i class="fa-solid fa-cubes" aria-hidden="true"></i> الكمية</span>
-      <span class="lab-stat__v">{{ asset.quantity }} {{ asset.unit }}</span>
-    </div>
-    <div class="lab-stat {% if out_quantity %}lab-stat--warn{% endif %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i> خارج المختبر</span>
-      <span class="lab-stat__v">{{ out_quantity }}</span>
-    </div>
-    <div class="lab-stat">
-      <span class="lab-stat__l"><i class="fa-solid fa-check" aria-hidden="true"></i> المتاح</span>
-      <span class="lab-stat__v">{{ available_quantity }}</span>
-    </div>
-    <div class="lab-stat">
-      <span class="lab-stat__l"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> الحالة</span>
-      <span class="lab-stat__v xs-lab-asset-detail-1">{{ asset.get_condition_display }}</span>
-    </div>
-  </section>
+  <nav class="lab-track-nav" aria-label="مسارات عمليات المختبر">
+    <a href="{% url 'reports:lab_assets' %}" aria-current="page"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>الجرد والعهدة</span></a>
+    <a href="{% url 'reports:lab_experiments' %}"><i class="fa-solid fa-vials" aria-hidden="true"></i><span>التجارب والمراجعة</span></a>
+  </nav>
+
+  <dl class="twq-metrics lab-metrics" aria-label="حالة الصنف">
+    <div><dt><i class="fa-solid fa-cubes" aria-hidden="true"></i> إجمالي الكمية</dt><dd><bdi>{{ asset.quantity }} {{ asset.unit }}</bdi></dd></div>
+    <div {% if out_quantity %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i> خارج المختبر</dt><dd><bdi>{{ out_quantity }}</bdi></dd></div>
+    <div><dt><i class="fa-solid fa-check" aria-hidden="true"></i> المتاح</dt><dd><bdi>{{ available_quantity }}</bdi></dd></div>
+    <div {% if not asset.is_active %}data-tone="danger"{% endif %}><dt><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> الحالة</dt><dd><span class="twq-status lab-status" data-status="{% if asset.is_active %}{{ asset.condition }}{% else %}inactive{% endif %}">{% if asset.is_active %}{{ asset.get_condition_display }}{% else %}خارج الجرد{% endif %}</span></dd></div>
+  </dl>
 
   {% if can_record %}
-    {# ═══ الحركة ═══════════════════════════════════════════════ #}
-    <section class="lab-section">
-      <div class="lab-section__head">
-        <h2><i class="fa-solid fa-right-left" aria-hidden="true"></i> تسليم أو إرجاع</h2>
-      </div>
-      <div class="lab-card">
-        <form method="post" action="{% url 'reports:lab_asset_action' asset.pk %}" class="lab-form">
-          {% csrf_token %}
-          <input type="hidden" name="lab_action" value="handover">
-          <div class="lab-grid-2">
-            {% for field in handover_form %}
-              <div class="lab-field">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {{ field.errors }}
-              </div>
-            {% endfor %}
-          </div>
-          <div>
-            <button type="submit" class="lab-btn">
-              <i class="fa-solid fa-check" aria-hidden="true"></i>
-              سجّل الحركة
-            </button>
-          </div>
-        </form>
-      </div>
+    <section class="twq-section lab-section" aria-labelledby="custodyTitle">
+      <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Custody</span><h2 class="twq-section__title" id="custodyTitle"><i class="fa-solid fa-right-left" aria-hidden="true"></i> تسليم أو إرجاع</h2><p class="twq-section__description">سجّل الحركة على هذا الصنف فقط؛ ويظل سجل الحيازة محفوظًا.</p></div></header>
+      <form method="post" action="{% url 'reports:lab_asset_action' asset.pk %}" class="lab-form" data-confirm="سيتم تسجيل حركة عهدة جديدة. هل تريد المتابعة؟" data-confirm-type="warning" data-confirm-title="تأكيد حركة العهدة" data-confirm-ok="نعم، سجّل الحركة">
+        {% csrf_token %}<input type="hidden" name="lab_action" value="handover">
+        <div class="lab-grid-2">{% for field in handover_form %}{% include "reports/_lab_field.html" with field=field %}{% endfor %}</div>
+        <div class="lab-form-actions"><span class="lab-form-actions__hint">تحقق من الاتجاه والشخص والكمية قبل التسجيل.</span><button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-check" aria-hidden="true"></i> سجّل الحركة</button></div>
+      </form>
     </section>
 
-    {# ═══ الحالة والإخراج ══════════════════════════════════════ #}
-    <section class="lab-section">
-      <div class="lab-section__head">
-        <h2><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> الحالة</h2>
-      </div>
-      <div class="lab-card">
-        <form method="post" action="{% url 'reports:lab_asset_action' asset.pk %}" class="lab-grid-2">
-          {% csrf_token %}
-          <input type="hidden" name="lab_action" value="condition">
-          <div class="lab-field">
-            <label for="conditionSelect">الحالة الجديدة</label>
-            <select class="form-control" id="conditionSelect" name="condition">
-              {% for value, label in conditions %}
-                <option value="{{ value }}" {% if asset.condition == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="lab-field u-self-end">
-            <button type="submit" class="lab-btn lab-btn--ghost">حدّث الحالة</button>
-          </div>
-        </form>
-
-        <hr class="xs-lab-asset-detail-2">
-
-        <form method="post" action="{% url 'reports:lab_asset_action' asset.pk %}">
-          {% csrf_token %}
-          {% if asset.is_active %}
-            <input type="hidden" name="lab_action" value="retire">
-            <button type="submit" class="lab-btn lab-btn--danger">
-              <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
-              أخرِجه من الجرد
-            </button>
-            <p class="helptext xs-lab-asset-detail-3">
-              لا يُحذف الصنف: حذفُه يمحو سجلّ حركته، فيسقط أثر من تسلّمه ومتى.
-            </p>
-          {% else %}
-            <input type="hidden" name="lab_action" value="restore">
-            <button type="submit" class="lab-btn lab-btn--ghost">
-              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-              أعِده إلى الجرد
-            </button>
-          {% endif %}
-        </form>
-      </div>
+    <section class="twq-section lab-section" aria-labelledby="conditionTitle">
+      <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Condition</span><h2 class="twq-section__title" id="conditionTitle"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> حالة الصنف</h2><p class="twq-section__description">الحالة تصف سلامة الصنف، أما الإخراج من الجرد فهو إجراء مستقل.</p></div></header>
+      <form method="post" action="{% url 'reports:lab_asset_action' asset.pk %}" class="lab-form-grid">
+        {% csrf_token %}<input type="hidden" name="lab_action" value="condition">
+        <div class="lab-field"><label class="twq-label" for="conditionSelect">الحالة الجديدة</label><select class="form-control" id="conditionSelect" name="condition">{% for value, label in conditions %}<option value="{{ value }}" {% if asset.condition == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="lab-form-actions"><button type="submit" class="twq-btn twq-btn--secondary">تحديث الحالة</button></div>
+      </form>
     </section>
 
-    {# ═══ التعديل ══════════════════════════════════════════════ #}
-    <section class="lab-section">
-      <div class="lab-section__head">
-        <h2><i class="fa-solid fa-pen" aria-hidden="true"></i> بيانات الصنف</h2>
-      </div>
-      <div class="lab-card">
-        {% include "reports/_lab_asset_form.html" with save_label="احفظ التعديل" %}
-      </div>
+    <section class="twq-section lab-section" aria-labelledby="assetEditTitle">
+      <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Identity</span><h2 class="twq-section__title" id="assetEditTitle"><i class="fa-solid fa-pen" aria-hidden="true"></i> بيانات الصنف</h2><p class="twq-section__description">حدّث الهوية والكمية والموقع دون تغيير سجل الحركات.</p></div></header>
+      {% include "reports/_lab_asset_form.html" with save_label="احفظ التعديل" %}
     </section>
   {% else %}
-    <div class="lab-card xs-lab-asset-detail-4">
-      متابعةٌ للاطلاع: التسجيل في العهدة من عمل محضّر المختبر.
-    </div>
+    <div class="twq-alert twq-alert--info lab-readonly-note" role="note"><i class="fa-solid fa-eye" aria-hidden="true"></i><div><strong>وضع الاطلاع فقط.</strong> التسجيل في العهدة من عمل محضّر المختبر أو مدير المدرسة وفق الصلاحية الحالية.</div></div>
   {% endif %}
 
-  {# ═══ سجل الحركة ═══════════════════════════════════════════ #}
-  <section class="lab-section">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> سجل الحركة</h2>
-    </div>
-
-    {% if handovers %}
-      <div class="lab-table-wrap">
-        <table class="lab-table lab-table--cards">
-          <thead>
-            <tr><th>الحركة</th><th>الكمية</th><th>الشخص</th><th>التاريخ</th><th>سجّلها</th><th>ملاحظة</th></tr>
-          </thead>
-          <tbody>
-            {% for handover in handovers %}
-              <tr>
-                <td data-label="الحركة">
-                  <span class="lab-chip {% if handover.direction == 'out' %}lab-chip--warn{% else %}lab-chip--good{% endif %}">
-                    {{ handover.get_direction_display }}
-                  </span>
-                </td>
-                <td data-label="الكمية">{{ handover.quantity }}</td>
-                <td data-label="الشخص">{{ handover.person_name|default:"—" }}</td>
-                <td data-label="التاريخ" dir="rtl">{{ handover.happened_at|hijri }}</td>
-                <td data-label="سجّلها">{% firstof handover.recorded_by.name "—" %}</td>
-                <td data-label="ملاحظة">{{ handover.note|default:"—" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="lab-empty">
-        <strong>لم تُسجَّل حركة على هذا الصنف.</strong>
-        كامل الكمية في المختبر.
-      </div>
-    {% endif %}
+  <section class="twq-section lab-section" aria-labelledby="movementTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">History</span><h2 class="twq-section__title" id="movementTitle"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> سجل الحركة</h2><p class="twq-section__description">آخر خمسين حركة تسليم وإرجاع على هذا الصنف.</p></div></header>
+    {% if handovers %}<div class="twq-table-wrap lab-table-wrap"><table class="twq-table lab-table lab-table--cards"><caption>سجل حركات الصنف</caption><thead><tr><th scope="col">الحركة</th><th scope="col">الكمية</th><th scope="col">الشخص</th><th scope="col">التاريخ</th><th scope="col">سجّلها</th><th scope="col">ملاحظة</th></tr></thead><tbody>{% for handover in handovers %}<tr><td data-label="الحركة"><span class="twq-status lab-status" data-status="{{ handover.direction }}">{{ handover.get_direction_display }}</span></td><td data-label="الكمية"><bdi>{{ handover.quantity }}</bdi></td><td data-label="الشخص">{{ handover.person_name|default:"—" }}</td><td data-label="التاريخ"><bdi>{{ handover.happened_at|hijri }}</bdi></td><td data-label="سجّلها">{% firstof handover.recorded_by.name "—" %}</td><td data-label="ملاحظة">{{ handover.note|default:"—" }}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-right-left"></i></span><h3 class="twq-empty__title">لم تُسجَّل حركة بعد</h3><p class="twq-empty__message">كامل الكمية داخل المختبر.</p></div>{% endif %}
   </section>
 
-  {% if asset.notes %}
-    <section class="lab-section">
-      <div class="lab-section__head"><h2><i class="fa-solid fa-note-sticky" aria-hidden="true"></i> ملاحظات</h2></div>
-      <div class="lab-card">{{ asset.notes|linebreaksbr }}</div>
-    </section>
-  {% endif %}
+  {% if asset.notes %}<section class="twq-section lab-section" aria-labelledby="assetNotesTitle"><header class="twq-section__header lab-section__header"><div class="lab-section__heading"><h2 class="twq-section__title" id="assetNotesTitle"><i class="fa-solid fa-note-sticky" aria-hidden="true"></i> ملاحظات</h2></div></header><div class="lab-panel"><p class="lab-panel__copy">{{ asset.notes|linebreaksbr }}</p></div></section>{% endif %}
+
+  {% if can_record %}<section class="twq-section lab-section" aria-labelledby="inventoryActionTitle"><header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Sensitive action</span><h2 class="twq-section__title" id="inventoryActionTitle">إدارة الظهور في الجرد</h2></div></header><div class="lab-panel {% if asset.is_active %}lab-panel--danger{% endif %}"><div class="lab-sensitive-actions"><p>{% if asset.is_active %}الإخراج لا يحذف الصنف ولا سجل حركته، لكنه يخفيه من الجرد التشغيلي النشط.{% else %}إعادة الصنف تجعله ظاهرًا مجددًا في الجرد التشغيلي.{% endif %}</p><form method="post" action="{% url 'reports:lab_asset_action' asset.pk %}" data-confirm="{% if asset.is_active %}سيخرج الصنف من الجرد مع بقاء سجله. هل تريد المتابعة؟{% else %}سيعود الصنف إلى الجرد النشط. هل تريد المتابعة؟{% endif %}" data-confirm-type="{% if asset.is_active %}danger{% else %}warning{% endif %}" data-confirm-title="{% if asset.is_active %}تأكيد الإخراج من الجرد{% else %}تأكيد الإعادة إلى الجرد{% endif %}" data-confirm-ok="{% if asset.is_active %}نعم، أخرج الصنف{% else %}نعم، أعد الصنف{% endif %}">{% csrf_token %}<input type="hidden" name="lab_action" value="{% if asset.is_active %}retire{% else %}restore{% endif %}"><button type="submit" class="twq-btn {% if asset.is_active %}twq-btn--danger{% else %}twq-btn--secondary{% endif %}"><i class="fa-solid {% if asset.is_active %}fa-box-archive{% else %}fa-rotate-left{% endif %}" aria-hidden="true"></i>{% if asset.is_active %}أخرِجه من الجرد{% else %}أعِده إلى الجرد{% endif %}</button></form></div></div></section>{% endif %}
 </div>
 {% endblock %}

@@ -1,8 +1,11 @@
 <form method="post" class="lab-form" novalidate>
   {% csrf_token %}
   {% if form.errors %}
-    <div class="lab-form-error" role="alert">
-      تعذّر حفظ المسودة. راجع الحقول الموضّحة أدناه.
+    <div class="twq-alert twq-alert--danger lab-error-summary" role="alert" tabindex="-1" data-lab-error-summary>
+      <p><strong>تعذّر حفظ المسودة.</strong> راجع الحقول الموضّحة أدناه.</p>
+      <ul>
+        {% for field in form %}{% if field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}</a></li>{% endif %}{% endfor %}
+      </ul>
       {{ form.non_field_errors }}
     </div>
   {% endif %}
@@ -36,10 +39,10 @@
         {% if has_lab_assets %}
           {% include "reports/_lab_field.html" with field=form.assets %}
         {% else %}
-          <div class="lab-empty u-p-lg">
-            <strong>لا توجد أصناف في العهدة بعد.</strong>
-            أضف الأصناف أولاً لتتمكن من ربطها بالتجربة.
-            <a class="lab-btn lab-btn--ghost" href="{% url 'reports:lab_assets' %}#new-asset">إضافة صنف للعهدة</a>
+          <div class="twq-empty twq-empty--local lab-empty">
+            <h3 class="twq-empty__title">لا توجد أصناف في العهدة بعد.</h3>
+            <p class="twq-empty__message">أضف الأصناف أولاً لتتمكن من ربطها بالتجربة.</p>
+            <a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_assets' %}#new-asset">إضافة صنف للعهدة</a>
           </div>
         {% endif %}
       </div>
@@ -55,7 +58,7 @@
 
   <div class="lab-form-actions">
     <span class="lab-form-actions__hint">لن تصل المسودة إلى المدير حتى تختار «أرسل للاعتماد» من صفحة تفاصيلها.</span>
-    <button type="submit" class="lab-btn">
+    <button type="submit" class="twq-btn twq-btn--primary">
       <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
       {{ save_label|default:"احفظ المسودة" }}
     </button>

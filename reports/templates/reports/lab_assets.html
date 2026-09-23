@@ -1,160 +1,76 @@
 {% extends "base.html" %}
 
-{% block title %}عهدة المختبر | منصة توثيق{% endblock %}
-
+{% block title %}جرد المختبر | منصة توثيق{% endblock %}
 {% block head %}{% include "reports/_lab_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="lab">
-
-  <header class="lab-hero">
-    <span class="lab-hero__eyebrow">
-      <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-      العهدة
-    </span>
-    <h1>جرد مختبر {{ active_school.name }}</h1>
-    <p class="lab-hero__lead">
-      كل صنف بكميته وحالته وموقعه. و«المتاح» محسوبٌ من حركة التسليم لا مُدخَلاً
-      يدوياً — فما في يد معلّمٍ لا يُحسب في المختبر.
-    </p>
-    <div class="lab-hero__actions">
-      {% if can_record %}
-        <a class="lab-act lab-act--solid" href="#new-asset">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          إضافة صنف جديد
-        </a>
-      {% endif %}
-      <a class="lab-act" href="{% url 'reports:lab_dashboard' %}">
-        <i class="fa-solid fa-flask" aria-hidden="true"></i>
-        لوحة المختبر
-      </a>
-      <a class="lab-act" href="{% url 'reports:lab_assets_print' %}">
-        <i class="fa-solid fa-print" aria-hidden="true"></i>
-        طباعة الكشف
-      </a>
+<div class="twq-page lab-page" aria-labelledby="labAssetsTitle">
+  <header class="twq-page-header lab-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> الجرد والعهدة</span>
+      <h1 class="twq-page-header__title" id="labAssetsTitle">جرد مختبر {{ active_school.name }}</h1>
+      <p class="twq-page-header__lead">اعرف حالة كل صنف، المتاح منه، والعهد المفتوحة قبل اتخاذ الإجراء التالي.</p>
     </div>
+    <div class="twq-page-header__aside"><div class="lab-page-header__actions">
+      {% if can_record %}<a class="twq-btn twq-btn--primary" href="#new-asset"><i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة صنف جديد</a>{% endif %}
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_dashboard' %}"><i class="fa-solid fa-flask" aria-hidden="true"></i> لوحة المختبر</a>
+      <a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_assets_print' %}"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة الكشف</a>
+    </div></div>
   </header>
 
-  <section class="lab-stats" aria-label="ملخص الجرد">
-    <div class="lab-stat">
-      <span class="lab-stat__l"><i class="fa-solid fa-list" aria-hidden="true"></i> الأصناف</span>
-      <span class="lab-stat__v">{{ summary.assets_total }}</span>
-    </div>
-    <div class="lab-stat {% if summary.assets_attention %}lab-stat--warn{% endif %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> يحتاج انتباهاً</span>
-      <span class="lab-stat__v">{{ summary.assets_attention }}</span>
-    </div>
-    <div class="lab-stat {% if summary.assets_damaged %}lab-stat--danger{% endif %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-ban" aria-hidden="true"></i> تالف</span>
-      <span class="lab-stat__v">{{ summary.assets_damaged }}</span>
-    </div>
-    <div class="lab-stat {% if summary.outstanding %}lab-stat--warn{% endif %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-right-left" aria-hidden="true"></i> خارج المختبر</span>
-      <span class="lab-stat__v">{{ summary.outstanding }}</span>
-    </div>
-  </section>
+  <nav class="lab-track-nav" aria-label="مسارات عمليات المختبر">
+    <a href="{% url 'reports:lab_assets' %}" aria-current="page"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>الجرد والعهدة</span></a>
+    <a href="{% url 'reports:lab_experiments' %}"><i class="fa-solid fa-vials" aria-hidden="true"></i><span>التجارب والمراجعة</span></a>
+  </nav>
 
-  {# ═══ الإضافة — للمسجّل وحده ════════════════════════════════ #}
+  <dl class="twq-metrics lab-metrics" aria-label="ملخص الجرد">
+    <div><dt><i class="fa-solid fa-list" aria-hidden="true"></i> الأصناف</dt><dd><bdi>{{ summary.assets_total }}</bdi></dd></div>
+    <div {% if summary.assets_attention %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> يحتاج انتباهًا</dt><dd><bdi>{{ summary.assets_attention }}</bdi></dd></div>
+    <div {% if summary.assets_damaged %}data-tone="danger"{% endif %}><dt><i class="fa-solid fa-ban" aria-hidden="true"></i> تالف</dt><dd><bdi>{{ summary.assets_damaged }}</bdi></dd></div>
+    <div {% if summary.outstanding %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-right-left" aria-hidden="true"></i> عهد مفتوحة</dt><dd><bdi>{{ summary.outstanding }}</bdi></dd></div>
+  </dl>
+
   {% if can_record %}
-    <section class="lab-section" id="new-asset">
-      <details class="lab-entry" {% if form.errors or not summary.assets_total %}open{% endif %}>
-        <summary>
-          <span class="lab-entry__title">
-            <span class="lab-entry__icon"><i class="fa-solid fa-plus" aria-hidden="true"></i></span>
-            <span class="lab-entry__copy">
-              <strong>إضافة صنف إلى العهدة</strong>
-              <small>سجّل بياناته الأساسية ومكانه وحالته.</small>
-            </span>
-          </span>
-          <i class="fa-solid fa-chevron-down lab-entry__chevron" aria-hidden="true"></i>
+    <section class="twq-section lab-section lab-section--plain" id="new-asset" aria-labelledby="newAssetTitle">
+      <details class="twq-disclosure lab-disclosure" {% if form.errors or not summary.assets_total %}open{% endif %}>
+        <summary class="twq-disclosure__summary">
+          <span class="lab-disclosure__heading"><span class="lab-disclosure__icon" aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span class="lab-disclosure__copy"><strong id="newAssetTitle">إضافة صنف إلى العهدة</strong><small>سجّل الهوية والكمية والحالة وموقع الحفظ.</small></span></span>
+          <i class="fa-solid fa-chevron-down twq-disclosure__chevron" aria-hidden="true"></i>
         </summary>
-        <div class="lab-entry__body">
-          {% include "reports/_lab_asset_form.html" with save_label="أضِف إلى الجرد" %}
-        </div>
+        <div class="twq-disclosure__body">{% include "reports/_lab_asset_form.html" with save_label="أضِف إلى الجرد" %}</div>
       </details>
     </section>
   {% endif %}
 
-  {# ═══ الكشف ════════════════════════════════════════════════ #}
-  <section class="lab-section">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> البحث في الجرد</h2>
-    </div>
-    <div class="lab-card u-mb-md">
-      <form method="get" class="lab-grid-2">
-        <div class="lab-field">
-          <label for="q">الاسم أو الرقم أو الموقع</label>
-          <input class="form-control" type="search" id="q" name="q" value="{{ q_term }}" placeholder="ميكروسكوب">
-        </div>
-        <div class="lab-field">
-          <label for="category">النوع</label>
-          <select class="form-control" id="category" name="category">
-            <option value="">كل الأنواع</option>
-            {% for value, label in categories %}
-              <option value="{{ value }}" {% if q_category == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="lab-field">
-          <label for="condition">الحالة</label>
-          <select class="form-control" id="condition" name="condition">
-            <option value="">كل الحالات</option>
-            {% for value, label in conditions %}
-              <option value="{{ value }}" {% if q_condition == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="lab-field u-self-end">
-          <button type="submit" class="lab-btn lab-btn--ghost">تصفية</button>
-        </div>
-      </form>
-    </div>
+  <section class="twq-section lab-section" aria-labelledby="inventoryQueueTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Inventory</span><h2 class="twq-section__title" id="inventoryQueueTitle">قائمة تشغيل الجرد</h2><p class="twq-section__description">ابحث بالهوية أو الموقع، ثم افتح الصنف لتسجيل حركة أو تحديث حالته.</p></div></header>
+
+    <form method="get" class="twq-toolbar lab-toolbar" role="search" aria-label="البحث والتصفية في جرد المختبر">
+      <div class="twq-toolbar__search"><label class="twq-label" for="q">الاسم أو الرقم أو الموقع</label><div class="twq-toolbar__control"><i class="fa-solid fa-magnifying-glass twq-toolbar__icon" aria-hidden="true"></i><input class="twq-control" type="search" id="q" name="q" value="{{ q_term }}" placeholder="ميكروسكوب"></div></div>
+      <div class="twq-toolbar__field"><label class="twq-label" for="category">النوع</label><select class="twq-control" id="category" name="category"><option value="">كل الأنواع</option>{% for value, label in categories %}<option value="{{ value }}" {% if q_category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="twq-toolbar__field"><label class="twq-label" for="condition">الحالة</label><select class="twq-control" id="condition" name="condition"><option value="">كل الحالات</option>{% for value, label in conditions %}<option value="{{ value }}" {% if q_condition == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="twq-toolbar__actions"><button type="submit" class="twq-btn twq-btn--primary">تطبيق</button>{% if has_filters %}<a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_assets' %}">إزالة التصفية</a>{% endif %}</div>
+    </form>
+
+    {% if has_filters %}<div class="twq-toolbar__active-filters lab-toolbar__active" aria-label="المرشحات المطبقة"><span class="twq-toolbar__active-label">النطاق الحالي:</span>{% if q_term %}<span class="twq-filter-chip">بحث: <bdi>{{ q_term }}</bdi></span>{% endif %}{% if q_category %}<span class="twq-filter-chip">النوع: {% for value, label in categories %}{% if q_category == value %}{{ label }}{% endif %}{% endfor %}</span>{% endif %}{% if q_condition %}<span class="twq-filter-chip">الحالة: {% for value, label in conditions %}{% if q_condition == value %}{{ label }}{% endif %}{% endfor %}</span>{% endif %}</div>{% endif %}
 
     {% if page_obj.object_list %}
-      <div class="lab-table-wrap">
-        <table class="lab-table lab-table--cards">
-          <thead>
-            <tr>
-              <th>المختبر</th><th>الصنف</th><th>الرقم</th><th>النوع</th>
-              <th>الكمية</th><th>المتاح</th><th>الحالة</th><th>الموقع</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for asset in page_obj.object_list %}
-              <tr>
-                <td data-label="المختبر">{% firstof asset.get_lab_kind_display "غير مصنّف" %}</td>
-                <td data-label="الصنف"><a href="{% url 'reports:lab_asset_detail' asset.pk %}">{{ asset.name }}</a></td>
-                <td data-label="الرقم">{{ asset.code|default:"—" }}</td>
-                <td data-label="النوع">{{ asset.get_category_display }}</td>
-                <td data-label="الكمية">{{ asset.quantity }} {{ asset.unit }}</td>
-                <td data-label="المتاح">{{ asset.available_quantity }}</td>
-                <td data-label="الحالة">
-                  <span class="lab-chip {% if asset.condition == 'good' %}lab-chip--good{% elif asset.condition == 'missing' or asset.condition == 'damaged' %}lab-chip--danger{% else %}lab-chip--warn{% endif %}">
-                    {{ asset.get_condition_display }}
-                  </span>
-                </td>
-                <td data-label="الموقع">{{ asset.location|default:"—" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
+      <div class="twq-table-wrap lab-table-wrap"><table class="twq-table lab-table lab-table--cards"><caption>أصناف جرد المختبر وقراراتها التالية</caption><thead><tr><th scope="col">الصنف</th><th scope="col">المختبر</th><th scope="col">الكمية والمتاح</th><th scope="col">العهدة الحالية</th><th scope="col">الحالة</th><th scope="col">الموقع</th><th scope="col">الإجراء</th></tr></thead><tbody>
+        {% for asset in page_obj.object_list %}
+          <tr>
+            <td data-label="الصنف"><div class="lab-table__identity"><a href="{% url 'reports:lab_asset_detail' asset.pk %}">{{ asset.name }}</a><small>{% if asset.code %}<bdi>{{ asset.code }}</bdi> · {% endif %}{{ asset.get_category_display }}</small></div></td>
+            <td data-label="المختبر">{% firstof asset.get_lab_kind_display "غير مصنّف" %}</td>
+            <td data-label="الكمية والمتاح"><span><bdi>{{ asset.available_quantity }}</bdi> متاح من <bdi>{{ asset.quantity }} {{ asset.unit }}</bdi></span></td>
+            <td data-label="العهدة الحالية">{% if asset.current_holders %}<ul class="lab-holder-list">{% for holder in asset.current_holders %}<li><bdi>{{ holder.person_name }}</bdi><span>× <bdi>{{ holder.quantity }}</bdi></span></li>{% endfor %}</ul>{% else %}<span class="lab-muted">داخل المختبر</span>{% endif %}</td>
+            <td data-label="الحالة"><span class="twq-status lab-status" data-status="{{ asset.condition }}">{{ asset.get_condition_display }}</span></td>
+            <td data-label="الموقع">{{ asset.location|default:"—" }}</td>
+            <td data-label="الإجراء"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_asset_detail' asset.pk %}">{% if asset.current_holders and can_record %}تسجيل إرجاع{% else %}فتح الصنف{% endif %}</a></td>
+          </tr>
+        {% endfor %}
+      </tbody></table></div>
       {% include "reports/_pagination.html" with page_obj=page_obj %}
     {% else %}
-      <div class="lab-empty">
-        {% if has_filters %}
-          <strong>لا نتائج لهذه التصفية.</strong>
-          جرّب مصطلحاً أعمّ أو أزِل المرشّحات.
-        {% else %}
-          <span class="lab-empty__icon"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
-          <strong>الجرد فارغ بعد.</strong>
-          {% if can_record %}
-            ابدأ بإضافة أول صنف، ثم سجّل حركته وحالته من صفحة التفاصيل.
-            <a class="lab-btn lab-btn--ghost" href="#new-asset">إضافة أول صنف</a>
-          {% endif %}
-        {% endif %}
-      </div>
+      <div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid {% if has_filters %}fa-filter-circle-xmark{% else %}fa-box-open{% endif %}"></i></span><h3 class="twq-empty__title">{% if has_filters %}لا نتائج لهذه التصفية{% else %}الجرد فارغ بعد{% endif %}</h3><p class="twq-empty__message">{% if has_filters %}جرّب مصطلحًا أعم أو أزل المرشحات.{% elif can_record %}ابدأ بإضافة أول صنف، ثم سجّل حركته وحالته من صفحة التفاصيل.{% else %}لا توجد أصناف في نطاق المختبر المتاح لك.{% endif %}</p>{% if can_record and not has_filters %}<a class="twq-btn twq-btn--secondary" href="#new-asset">إضافة أول صنف</a>{% endif %}</div>
     {% endif %}
   </section>
 </div>

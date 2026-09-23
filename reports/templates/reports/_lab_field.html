@@ -1,5 +1,5 @@
-<div class="lab-field{% if field.errors %} lab-field--error{% endif %}">
-  <label for="{{ field.id_for_label }}">
+<div class="twq-field lab-field{% if field.errors %} lab-field--error{% endif %}">
+  <label class="twq-label" for="{{ field.id_for_label }}">
     {{ field.label }}
     {% if field.field.required %}
       <span class="lab-required">مطلوب</span>
@@ -8,6 +8,6 @@
     {% endif %}
   </label>
   {{ field }}
-  {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
-  {{ field.errors }}
+  {% if field.help_text %}<span class="helptext" id="{{ field.id_for_label }}-help">{{ field.help_text }}</span>{% endif %}
+  {% if field.errors %}<div id="{{ field.id_for_label }}-errors">{{ field.errors }}</div>{% endif %}
 </div>
