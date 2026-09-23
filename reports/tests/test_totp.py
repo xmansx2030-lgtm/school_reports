@@ -136,7 +136,7 @@ class TotpSecretStorageTests(TestCase):
         self.assertEqual(hash_recovery_code(code), hash_recovery_code("AB12CD34EF56"))
 
 
-@override_settings(ALLOWED_HOSTS=["testserver"])
+@override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
 class TotpLoginGateTests(TestCase):
     def setUp(self):
         plan = SubscriptionPlan.objects.create(
