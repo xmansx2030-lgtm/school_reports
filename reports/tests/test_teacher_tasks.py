@@ -165,7 +165,9 @@ class TeacherOwnScreensTests(TestCase):
         html = response.content.decode("utf-8")
 
         self.assertIn("js/hijri-date.js", html)
-        self.assertIn("TawtheeqHijri", html)
+        self.assertIn("js/report-authoring.js", html)
+        authoring_js = GoldAsInkTests._source("static/js/report-authoring.js")
+        self.assertIn("TawtheeqHijri", authoring_js)
         self.assertNotIn("islamic-umalqura", html)  # لا مُنسّق محلي ثانٍ
 
 
@@ -330,7 +332,7 @@ class TeacherScreenPolishTests(TestCase):
 
     def test_the_open_status_badge_uses_the_ink_gold(self):
         """نغمةُ التنبيه سطحٌ وحدّ؛ وحملُها نصاً بـ‎10.5px‎ يعطي ‎3.16‎."""
-        source = self._source("reports/templates/reports/home.html")
+        source = self._source("static/css/teacher-home.css")
 
         self.assertIn(
             ".th-status.status-open { color: var(--id-gold-ink, var(--th-orange));",
@@ -338,7 +340,8 @@ class TeacherScreenPolishTests(TestCase):
         )
 
     def test_the_section_hint_ink_clears_aa_on_white(self):
-        # ‎#708078‎ على أبيض ‎4.16‎؛ و‎#68766f‎ هو ‎--text-muted‎ ويعطي ‎4.76‎.
-        source = self._source("reports/templates/reports/add_report.html")
-        self.assertIn(".ar-section-option small{font-size:.72rem;color:#68766f", source)
-        self.assertNotIn("color:#708078", source)
+        # النص الثانوي صار يعتمد التوكن الدلالي الذي يتكيّف مع الثيمين.
+        source = self._source("static/css/report-authoring.css")
+        self.assertIn(".report-option-copy small", source)
+        self.assertIn("color: var(--twq-text-muted)", source)
+        self.assertNotRegex(source, r"#[0-9a-fA-F]{3,8}\b")

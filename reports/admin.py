@@ -603,6 +603,16 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ("kind", "requires_signature", "is_important", "created_at")
     list_select_related = ("created_by",)
 
+    def get_readonly_fields(self, request, obj=None):
+        fields = tuple(super().get_readonly_fields(request, obj))
+        if obj and obj.issued_digest:
+            return fields + (
+                "kind", "title", "message", "requires_signature", "signature_ack_text",
+                "signature_deadline_at", "attachment", "school", "created_by", "created_at",
+                "issued_snapshot", "issued_digest",
+            )
+        return fields
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if not request.user.is_superuser:
@@ -618,6 +628,16 @@ class NotificationRecipientAdmin(admin.ModelAdmin):
     list_filter = ("is_read", "created_at")
     search_fields = ("notification__title", "teacher__name")
     list_select_related = ("notification", "teacher")
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = tuple(super().get_readonly_fields(request, obj))
+        if obj and obj.signature_evidence_digest:
+            return fields + (
+                "notification", "teacher", "is_signed", "signed_at",
+                "signed_document_digest", "signed_ack_text", "signature_method",
+                "signature_evidence_digest", "signature_image", "signature_image_sha256",
+            )
+        return fields
 
 
 @admin.register(WebPushSubscription)

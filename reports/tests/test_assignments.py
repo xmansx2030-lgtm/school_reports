@@ -421,9 +421,10 @@ class AssignmentScreenTests(AssignmentBase):
         self.assertContains(response, 'data-has-assignees="false"')
         self.assertContains(response, "إضافة فريق المدرسة الآن")
         self.assertContains(response, f'href="{reverse("reports:bulk_import_teachers")}"')
+        self.assertContains(response, 'id="assignmentSubmit"')
         self.assertContains(
             response,
-            'id="assignmentSubmit" class="asg-btn asg-btn--primary" disabled aria-disabled="true"',
+            'disabled aria-disabled="true" aria-describedby="assignmentTeamSetupNotice"',
         )
 
     def test_issuing_an_assignment_creates_one_target_per_person(self):
@@ -467,6 +468,76 @@ class AssignmentScreenTests(AssignmentBase):
             },
         )
         self.assertFalse(Assignment.objects.filter(title="تكليف بأثر رجعي").exists())
+
+    def test_a_crafted_create_post_cannot_override_school_issuer_or_target_state(self):
+        elsewhere = _school("مدرسة الحقول المصاغة", "asg-crafted")
+        stranger = _user("مستهدف من مدرسة أخرى", "0500030040")
+        SchoolMembership.objects.create(
+            school=elsewhere,
+            teacher=stranger,
+            role_type=SchoolMembership.RoleType.TEACHER,
+        )
+        self._enter(self.manager)
+        due = timezone.localtime() + timedelta(days=3)
+
+        rejected = self.client.post(
+            reverse("reports:assignment_create"),
+            {
+                "title": "مستهدف غير صالح",
+                "priority": Assignment.Priority.NORMAL,
+                "due_at": due.strftime("%Y-%m-%dT%H:%M"),
+                "assignees": [stranger.pk],
+                "school": elsewhere.pk,
+                "issuer": stranger.pk,
+                "approval_state": ApprovalState.APPROVED,
+            },
+        )
+
+        self.assertEqual(rejected.status_code, 200)
+        self.assertFalse(Assignment.objects.filter(title="مستهدف غير صالح").exists())
+
+        accepted = self.client.post(
+            reverse("reports:assignment_create"),
+            {
+                "title": "سياق يثبته الخادم",
+                "priority": Assignment.Priority.NORMAL,
+                "due_at": due.strftime("%Y-%m-%dT%H:%M"),
+                "assignees": [self.staff.pk],
+                "school": elsewhere.pk,
+                "issuer": stranger.pk,
+                "approval_state": ApprovalState.APPROVED,
+            },
+        )
+
+        self.assertEqual(accepted.status_code, 302)
+        assignment = Assignment.objects.get(title="سياق يثبته الخادم")
+        target = assignment.targets.get()
+        self.assertEqual(assignment.school, self.school)
+        self.assertEqual(assignment.issuer, self.manager)
+        self.assertEqual(target.school, self.school)
+        self.assertEqual(target.approval_state, ApprovalState.DRAFT)
+
+    def test_assignment_create_post_requires_csrf(self):
+        csrf_client = self.client_class(enforce_csrf_checks=True)
+        csrf_client.force_login(self.manager)
+        session = csrf_client.session
+        session["active_school_id"] = self.school.pk
+        session.save()
+
+        response = csrf_client.post(
+            reverse("reports:assignment_create"),
+            {
+                "title": "طلب بلا CSRF",
+                "priority": Assignment.Priority.NORMAL,
+                "due_at": (timezone.localtime() + timedelta(days=3)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "assignees": [self.staff.pk],
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Assignment.objects.filter(title="طلب بلا CSRF").exists())
 
     def test_an_assignment_target_of_another_school_reads_as_missing(self):
         elsewhere = _school("مدرسة بعيدة", "asg-far")
@@ -534,6 +605,10 @@ class AssignmentScreenTests(AssignmentBase):
             reverse("reports:assignment_view", args=[target.assignment.pk])
         )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'href="{reverse("reports:my_assignments")}"')
+        self.assertNotContains(
+            response, f'href="{reverse("reports:assignment_board")}"'
+        )
 
     def test_a_stranger_cannot_open_the_assignment_or_print_it(self):
         target = self._target()
@@ -784,3 +859,32 @@ class AssigneeScopeTests(AssignmentBase):
             [department.pk for department in form.fields["department"].queryset],
             [mine.pk],
         )
+
+    def test_a_crafted_department_outside_scope_is_rejected(self):
+        mine = Department.objects.create(
+            school=self.school, name="قسم الوكيل", slug="deputy-scope"
+        )
+        outside = Department.objects.create(
+            school=self.school, name="قسم خارج النطاق", slug="outside-scope"
+        )
+        deputy = self._deputy(departments=[mine])
+        self.client.force_login(deputy)
+        session = self.client.session
+        session["active_school_id"] = self.school.pk
+        session.save()
+
+        response = self.client.post(
+            reverse("reports:assignment_create"),
+            {
+                "title": "قسم مصاغ يدويًا",
+                "department": outside.pk,
+                "priority": Assignment.Priority.NORMAL,
+                "due_at": (timezone.localtime() + timedelta(days=3)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "assignees": [self.staff.pk],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Assignment.objects.filter(title="قسم مصاغ يدويًا").exists())

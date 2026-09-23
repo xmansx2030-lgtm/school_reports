@@ -1,253 +1,52 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}{{ assignment.title }} | التكليفات{% endblock %}
-
-{% block head %}
-{% include "reports/_assignment_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .vw-body { font-size: .9rem; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .vw-meta { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1rem; }
-  .vw-meta__l { font-size: .73rem; color: var(--asg-muted); font-weight: 700; }
-  .vw-meta__v { font-size: .87rem; font-weight: 800; margin-top: .12rem; }
-
-  .vw-table { width: 100%; border-collapse: collapse; font-size: .83rem; }
-  .vw-table th, .vw-table td { padding: .55rem .6rem; text-align: start; border-bottom: 1px solid var(--asg-line); }
-  .vw-table th { font-size: .74rem; font-weight: 900; color: var(--asg-muted); white-space: nowrap; }
-  .vw-table tbody tr:last-child td { border-bottom: 0; }
-  .vw-table__name { font-weight: 800; }
-  .vw-table__name a { color: inherit; text-decoration: none; }
-  .vw-table__name a:hover { text-decoration: underline; }
-  .vw-scroll { overflow-x: auto; }
-
-  .vw-mini { width: 92px; }
-  .vw-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1.1rem; }
-  .vw-share { display: flex; gap: .4rem; align-items: center; margin-top: .8rem; }
-  .vw-share input {
-    flex: 1; min-width: 0; padding: .45rem .6rem; border-radius: 9px; font-size: .78rem;
-    border: 1px solid var(--asg-line); background: var(--asg-soft); color: var(--asg-muted);
-    font-family: inherit; direction: ltr; text-align: left;
-  }
-</style>
-{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/assignments.css' %}?v=20260922.1">{% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <a class="asg-hero__eyebrow" href="{% url 'reports:assignment_board' %}">
-      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-      لوحة التكليفات
-    </a>
-    <h1 class="asg-hero__title">{{ assignment.title }}</h1>
-    <p class="asg-hero__meta">
-      أصدره {{ assignment.issuer_name|default:"—" }}
-      · يستحق {{ assignment.due_at|hijri }} هـ
-      {% if assignment.is_cancelled %} · <strong>ملغى</strong>{% endif %}
-    </p>
-    <div class="vw-actions">
-      <a class="asg-btn asg-btn--primary xs-assignment-view-1"
-         href="{% url 'reports:assignment_print' assignment.pk %}" target="_blank" rel="noopener">
-        <i class="fa-solid fa-print" aria-hidden="true"></i>
-        خطاب التكليف للطباعة
-      </a>
-      <button type="button" class="asg-btn asg-btn--ghost xs-assignment-view-2" id="shareBtn"
-              data-url="{{ share_url }}" data-title="{{ assignment.title }}">
-        <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-        مشاركة
-      </button>
+<div class="twq-page assignments-page assignment-document-page" aria-labelledby="assignmentDocumentTitle">
+  <header class="twq-page-header assignment-page-header">
+    <div class="twq-page-header__heading">
+      <a class="twq-page-header__eyebrow" href="{{ return_url }}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>{{ return_label }}</span></a>
+      <h1 class="twq-page-header__title" id="assignmentDocumentTitle"><bdi>{{ assignment.title }}</bdi></h1>
+      <p class="twq-page-header__lead">تكليف أصدره <bdi>{{ assignment.issuer_name|default:"—" }}</bdi>، ويعرض المطلوب وحالة كل منفذ دون دمج حالاتهم في نتيجة واحدة.</p>
+      <dl class="twq-page-header__context" aria-label="سياق التكليف"><div><dt>موعد التسليم</dt><dd>{{ assignment.due_at|hijri }} هـ · <time dir="ltr" datetime="{{ assignment.due_at|date:'c' }}">{{ assignment.due_at|date:"Y-m-d H:i" }} م</time></dd></div><div><dt>الحالة</dt><dd>{% if assignment.is_cancelled %}<span class="twq-status" data-status="danger">ملغى</span>{% else %}<span class="twq-status" data-status="active">نشط</span>{% endif %}</dd></div></dl>
     </div>
+    <div class="twq-page-header__aside assignment-page-header__aside"><div class="assignment-page-header__actions"><a class="twq-btn twq-btn--primary" href="{% url 'reports:assignment_print' assignment.pk %}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i><span>خطاب التكليف</span></a><button type="button" class="twq-btn twq-btn--secondary" id="assignmentShare" data-url="{{ share_url }}" data-title="{{ assignment.title }}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i><span>مشاركة</span></button></div></div>
   </header>
 
-  <section class="asg-kpis" aria-label="ملخص التنفيذ">
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ totals.total }}</div>
-      <div class="asg-kpi__l">مكلَّف</div>
-    </article>
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ totals.percent }}%</div>
-      <div class="asg-kpi__l">اعتُمد تنفيذهم</div>
-    </article>
-    <article class="asg-kpi" data-tone="warn">
-      <div class="asg-kpi__v">{{ totals.pending }}</div>
-      <div class="asg-kpi__l">بانتظار القرار</div>
-    </article>
-    <article class="asg-kpi" data-tone="danger">
-      <div class="asg-kpi__v">{{ totals.overdue }}</div>
-      <div class="asg-kpi__l">متأخر</div>
-    </article>
-  </section>
+  <dl class="twq-metrics assignment-metrics" aria-label="ملخص التنفيذ"><div><dt>المكلَّفون</dt><dd>{{ totals.total }}</dd></div><div><dt>اعتماد التنفيذ</dt><dd>{{ totals.percent }}%</dd></div><div data-tone="warning"><dt>بانتظار قرار</dt><dd>{{ totals.pending }}</dd></div><div data-tone="danger"><dt>متأخر</dt><dd>{{ totals.overdue }}</dd></div></dl>
 
-  {# ═══ نص التكليف ══════════════════════════════════════════ #}
-  <section class="asg-card">
-    <h2 class="asg-card__title">نصّ التكليف</h2>
+  <div class="assignment-document-grid">
+    <div class="assignment-document-main">
+      <section class="twq-section assignment-section" aria-labelledby="assignmentContentTitle">
+        <header class="twq-section__header"><div><p class="twq-section__kicker">نطاق العمل</p><h2 class="twq-section__title" id="assignmentContentTitle">المطلوب</h2></div></header>
+        <dl class="assignment-meta-grid"><div><dt>الأولوية</dt><dd>{{ assignment.get_priority_display }}</dd></div><div><dt>القسم المعني</dt><dd><bdi>{{ assignment.department.name|default:"غير محدد" }}</bdi></dd></div><div><dt>تاريخ الإصدار</dt><dd>{{ assignment.created_at|hijri }} هـ</dd></div><div><dt>الشواهد</dt><dd>{% if assignment.requires_evidence %}مطلوبة: {{ assignment.min_evidence_count }} على الأقل{% else %}غير مشترطة{% endif %}</dd></div></dl>
+        {% if assignment.description %}<div class="assignment-body">{{ assignment.description }}</div>{% else %}<div class="twq-empty twq-empty--local"><p class="twq-empty__message">لم يُكتب تفصيل إضافي للمطلوب.</p></div>{% endif %}
+        {% if assignment.requires_evidence %}<div class="assignment-callout" data-tone="warning"><strong>شرط التسليم</strong>لا يقبل النظام إرسال التنفيذ للمراجعة قبل رفع {{ assignment.min_evidence_count }} شاهد على الأقل.</div>{% endif %}
+        {% if assignment.is_cancelled %}<div class="assignment-callout" data-tone="danger" role="status"><strong>التكليف ملغى ومحفوظ للسجل</strong>{% if assignment.cancel_reason %}السبب: {{ assignment.cancel_reason }}.{% endif %} لا توجد إجراءات تنفيذ جديدة عليه.</div>{% endif %}
+      </section>
 
-    <div class="vw-meta">
-      <div>
-        <div class="vw-meta__l">موعد التسليم</div>
-        <div class="vw-meta__v">{{ assignment.due_at|hijri }} هـ</div>
-        <div class="vw-meta__l">{{ assignment.due_at|date:"Y-m-d H:i" }} م</div>
-      </div>
-      <div>
-        <div class="vw-meta__l">الأولوية</div>
-        <div class="vw-meta__v">{{ assignment.get_priority_display }}</div>
-      </div>
-      <div>
-        <div class="vw-meta__l">القسم المعني</div>
-        <div class="vw-meta__v">{{ assignment.department.name|default:"—" }}</div>
-      </div>
-      <div>
-        <div class="vw-meta__l">تاريخ الإصدار</div>
-        <div class="vw-meta__v">{{ assignment.created_at|hijri }} هـ</div>
-      </div>
+      <section class="twq-section assignment-section" aria-labelledby="assignmentTargetsTableTitle">
+        <header class="twq-section__header"><div><p class="twq-section__kicker">التنفيذ الفردي</p><h2 class="twq-section__title" id="assignmentTargetsTableTitle">حالة المكلَّفين</h2><p class="twq-section__description">لكل مكلَّف تقدمه وشواهده وقرار اعتماده المستقل.</p></div></header>
+        {% if targets %}
+          <div class="twq-table-wrap assignment-targets-table-wrap" tabindex="0" aria-label="حالة المكلَّفين على التكليف"><table class="twq-table assignment-targets-table"><caption class="sr-only">المكلَّفون ونسب الإنجاز وحالة المراجعة</caption><thead><tr><th scope="col">المكلَّف</th><th scope="col">الحالة</th><th scope="col">الإنجاز</th><th scope="col">الشواهد</th><th scope="col">الإجراء</th></tr></thead><tbody>
+            {% for target in targets %}<tr><td data-label="المكلَّف"><div class="assignment-table-identity"><a href="{% url 'reports:assignment_detail' target.pk %}"><bdi>{{ target.assignee.name }}</bdi></a>{% if target.school %}<span class="assignment-table-meta"><bdi>{{ target.school.name }}</bdi></span>{% endif %}</div></td><td data-label="الحالة"><div class="assignment-row__status"><span class="twq-status" data-status="{{ target.approval_tone }}">{{ target.get_approval_state_display }}</span>{% if target.is_overdue %}<span class="twq-status" data-status="danger">متأخر</span>{% endif %}</div></td><td data-label="الإنجاز"><div class="twq-progress"><div class="twq-progress__label"><span>التقدم</span><strong>{{ target.progress_percent }}%</strong></div><progress class="twq-progress__bar" value="{{ target.progress_percent }}" max="100" aria-label="نسبة إنجاز {{ target.assignee.name }}: {{ target.progress_percent }} بالمئة">{{ target.progress_percent }}%</progress></div></td><td data-label="الشواهد">{{ target.evidence_count }}</td><td data-label="الإجراء"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:assignment_detail' target.pk %}" aria-label="فتح تنفيذ {{ target.assignee.name }}">فتح التنفيذ</a></td></tr>{% endfor %}
+          </tbody></table></div>
+        {% else %}<div class="twq-empty twq-empty--local"><p class="twq-empty__message">لم يُسند هذا التكليف إلى أحد.</p></div>{% endif %}
+      </section>
     </div>
 
-    {% if assignment.description %}
-      <div class="vw-body">{{ assignment.description }}</div>
-    {% else %}
-      <p class="asg-card__hint u-m-0">لم يُكتب تفصيل للمطلوب.</p>
+    {% if can_manage %}
+      <aside class="assignment-workspace__rail" aria-label="إدارة التكليف">
+        <section class="twq-section assignment-section" aria-labelledby="assignmentShareTitle"><header class="twq-section__header"><div><p class="twq-section__kicker">الوصول</p><h2 class="twq-section__title" id="assignmentShareTitle">مشاركة التكليف</h2><p class="twq-section__description">الرابط لا يتجاوز صلاحيات العرض عند الوجهة.</p></div></header><div class="assignment-share-panel"><input type="text" id="assignmentShareUrl" value="{{ share_url }}" readonly aria-label="رابط التكليف"><button type="button" class="twq-btn twq-btn--ghost" id="assignmentCopyLink"><i class="fa-solid fa-copy" aria-hidden="true"></i><span>نسخ</span></button></div></section>
+        {% if not assignment.is_cancelled %}
+          <section class="twq-section assignment-section assignment-sensitive-zone" aria-labelledby="assignmentCancelTitle"><header class="twq-section__header"><div><p class="twq-section__kicker">إجراء حساس</p><h2 class="twq-section__title" id="assignmentCancelTitle">إلغاء التكليف</h2><p class="twq-section__description">الإلغاء يوقف التنفيذ ولا يحذف السجل أو ما تم عليه.</p></div></header><form method="post" action="{% url 'reports:assignment_cancel' assignment.pk %}" class="assignment-action-form">{% csrf_token %}<div class="twq-field"><label class="twq-label" for="assignmentCancelReason">سبب الإلغاء</label><input type="text" id="assignmentCancelReason" name="reason" placeholder="سبب توقف العمل، ويظهر في السجل"></div><button type="submit" class="twq-btn twq-btn--danger"><i class="fa-solid fa-ban" aria-hidden="true"></i><span>إلغاء التكليف</span></button></form></section>
+        {% endif %}
+      </aside>
     {% endif %}
-
-    {% if assignment.requires_evidence %}
-      <p class="asg-card__hint xs-assignment-view-3">
-        <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-        يشترط هذا التكليف {{ assignment.min_evidence_count }} شاهداً على الأقل،
-        ولا يُقبل إرسال التنفيذ للمراجعة قبل استيفائها.
-      </p>
-    {% endif %}
-
-    {% if assignment.is_cancelled %}
-      <p class="asg-card__hint xs-assignment-view-4">
-        أُلغي هذا التكليف{% if assignment.cancel_reason %} — {{ assignment.cancel_reason }}{% endif %}.
-        ويبقى ظاهراً في السجل بسبب إلغائه.
-      </p>
-    {% endif %}
-  </section>
-
-  {# ═══ المكلَّفون ═══════════════════════════════════════════ #}
-  <section class="asg-card">
-    <h2 class="asg-card__title">من صدر إليهم</h2>
-    <p class="asg-card__hint">
-      لكل مكلَّف حالته ونسبته على حدة — فتكليفٌ واحد يُنجزه بعضهم ويتأخر بعضهم
-      دون أن تخفي حالةٌ واحدة ذلك.
-    </p>
-
-    {% if targets %}
-      <div class="vw-scroll">
-        <table class="vw-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>المكلَّف</th>
-              <th>الحالة</th>
-              <th>الإنجاز</th>
-              <th>الشواهد</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for target in targets %}
-              <tr>
-                <td>{{ forloop.counter }}</td>
-                <td class="vw-table__name">
-                  <a href="{% url 'reports:assignment_detail' target.pk %}">{{ target.assignee.name }}</a>
-                  {% if target.is_overdue %}
-                    <span class="asg-tag asg-tag--late xs-assignment-view-5">متأخر</span>
-                  {% endif %}
-                </td>
-                <td>{{ target.get_approval_state_display }}</td>
-                <td>
-                  <div class="asg-bar vw-mini">
-                    <div class="asg-bar__track">
-                      <div class="asg-bar__fill" data-progress="{{ target.progress_percent }}"></div>
-                    </div>
-                    <div class="asg-bar__label">{{ target.progress_percent }}%</div>
-                  </div>
-                </td>
-                <td>{{ target.evidence_count }}</td>
-                <td>
-                  <a class="asg-btn asg-btn--ghost asg-btn--sm"
-                     href="{% url 'reports:assignment_detail' target.pk %}">فتح</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p class="asg-card__hint u-m-0">لم يُسند هذا التكليف إلى أحد.</p>
-    {% endif %}
-  </section>
-
-  {# ═══ الإدارة ══════════════════════════════════════════════ #}
-  {% if can_manage %}
-    <section class="asg-card">
-      <h2 class="asg-card__title">إدارة التكليف</h2>
-
-      <div class="vw-share">
-        <input type="text" id="shareUrl" value="{{ share_url }}" readonly aria-label="رابط التكليف">
-        <button type="button" class="asg-btn asg-btn--ghost asg-btn--sm" id="shareCopy">نسخ الرابط</button>
-      </div>
-
-      {% if not assignment.is_cancelled %}
-        <form method="post" action="{% url 'reports:assignment_cancel' assignment.pk %}" class="u-mt-lg">
-          {% csrf_token %}
-          <div class="asg-field">
-            <label for="cancelReason">سبب الإلغاء</label>
-            <input type="text" id="cancelReason" name="reason" placeholder="يبقى في السجل بياناً لسبب توقّف العمل">
-          </div>
-          <button type="submit" class="asg-btn asg-btn--danger">
-            <i class="fa-solid fa-ban" aria-hidden="true"></i>
-            إلغاء التكليف
-          </button>
-          <div class="asg-field__help">
-            التكليف يُلغى ولا يُحذف — فما وصل المكلَّف صار واقعة، ومحوه يجعل من
-            نُفّذ عليه إجراءٌ بلا سبب ظاهر.
-          </div>
-        </form>
-      {% endif %}
-    </section>
-  {% endif %}
-
+  </div>
 </div>
-
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  (function () {
-    function copy(value, done) {
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(value).then(done, function () {});
-          return;
-        }
-        if (document.execCommand('copy')) done();
-      } catch (error) { /* يبقى الرابط محدَّداً للنسخ اليدوي. */ }
-    }
-
-    var button = document.getElementById('shareCopy');
-    var field = document.getElementById('shareUrl');
-    if (button && field) {
-      button.addEventListener('click', function () {
-        field.select();
-        copy(field.value, function () { button.textContent = 'نُسخ'; });
-      });
-    }
-
-    // مشاركة الجهاز حيث تتوفّر — وهي ما يتوقّعه من يفتح الشاشة على جواله.
-    // ومن لا متصفحه يدعمها ينسخ الرابط، فلا يبقى الزر بلا أثر.
-    var shareButton = document.getElementById('shareBtn');
-    if (shareButton) {
-      shareButton.addEventListener('click', function () {
-        var url = shareButton.getAttribute('data-url');
-        var title = shareButton.getAttribute('data-title');
-        if (navigator.share) {
-          navigator.share({ title: title, text: title, url: url }).catch(function () {});
-          return;
-        }
-        copy(url, function () {
-          shareButton.textContent = 'نُسخ الرابط';
-        });
-      });
-    }
-  }());
-</script>
+<script src="{% static 'js/assignments.js' %}?v=20260922.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

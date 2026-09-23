@@ -3,6 +3,7 @@ from __future__ import annotations
 from .base import *
 from .schools import School, SchoolGroup, Teacher
 from .tickets import Ticket
+from ..circular_evidence import document_snapshot, evidence_digest
 
 
 class GroupNotificationBatch(models.Model):
@@ -101,7 +102,7 @@ class Notification(models.Model):
     requires_signature = models.BooleanField(
         "يتطلب توقيع؟",
         default=False,
-        help_text="عند التفعيل تتطلب الوثيقة إقرارًا وإدخال رقم الجوال لاعتماد التوقيع.",
+        help_text="عند التفعيل تتطلب الوثيقة إقرارًا وتوقيعًا مرسومًا من المستلم.",
     )
     is_broadcast = models.BooleanField(
         "للجميع (بث عام)؟",
@@ -119,6 +120,8 @@ class Notification(models.Model):
         blank=True,
         default="أقرّ بأنني اطلعت على هذا التعميم وفهمت ما ورد فيه وأتعهد بالالتزام به.",
     )
+    issued_snapshot = models.JSONField(null=True, blank=True, editable=False)
+    issued_digest = models.CharField(max_length=64, blank=True, default="", editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     school = models.ForeignKey(
         School,
@@ -186,10 +189,83 @@ class Notification(models.Model):
         # always supplies its explicit kind and is therefore never rewritten.
         if self._state.adding and self.kind == self.Kind.NOTIFICATION and self.requires_signature:
             self.kind = self.Kind.CIRCULAR
-        return super().save(*args, **kwargs)
+        creating = self._state.adding
+        if not creating:
+            locked = (
+                "kind", "title", "message", "requires_signature",
+                "signature_ack_text", "signature_deadline_at", "attachment",
+                "school_id", "created_by_id", "created_at",
+                "issued_snapshot", "issued_digest",
+            )
+            original = type(self).objects.filter(pk=self.pk).values(*locked).first()
+            if original and original["issued_digest"] and any(
+                ((getattr(self, field).name or None) != (original[field] or None))
+                if field == "attachment" else getattr(self, field) != original[field]
+                for field in locked
+            ):
+                raise ValidationError("لا يمكن تعديل محتوى الوثيقة بعد إصدارها؛ أصدر نسخة جديدة.")
+        result = super().save(*args, **kwargs)
+        if creating and (self.kind == self.Kind.CIRCULAR or self.requires_signature):
+            snapshot = document_snapshot(self, basis="at_issue")
+            digest = evidence_digest(snapshot)
+            type(self).objects.filter(pk=self.pk).update(
+                issued_snapshot=snapshot, issued_digest=digest,
+            )
+            self.issued_snapshot = snapshot
+            self.issued_digest = digest
+        return result
 
     def __str__(self):
         return self.title or (self.message[:30] + ("..." if len(self.message) > 30 else ""))
+
+
+class NotificationSendSubmission(models.Model):
+    """Durable idempotency record for one logical notification send.
+
+    The row is reserved in the same transaction that creates the notification
+    and its recipients.  A committed row with ``notification=None`` therefore
+    means the notification was deleted later; it is intentionally retained as
+    a tombstone so an old browser retry cannot recreate the send.
+    """
+
+    submission_key = models.UUIDField("معرّف عملية الإرسال")
+    sender = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name="notification_send_submissions",
+        verbose_name="المرسل",
+    )
+    school = models.ForeignKey(
+        School,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notification_send_submissions",
+        verbose_name="نطاق المدرسة",
+    )
+    payload_fingerprint = models.CharField("بصمة الطلب", max_length=64)
+    notification = models.OneToOneField(
+        Notification,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="send_submission",
+        verbose_name="الإشعار الناتج",
+    )
+    created_at = models.DateTimeField("أُنشئ في", auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "reports_notification_send_submission"
+        ordering = ("-created_at", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("sender", "submission_key"),
+                name="uniq_notif_send_sender_key",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.sender_id}:{self.submission_key}"
 
 
 class NotificationRecipient(models.Model):
@@ -205,6 +281,12 @@ class NotificationRecipient(models.Model):
     # توقيع التعميم (على مستوى المستلم)
     is_signed = models.BooleanField(default=False)
     signed_at = models.DateTimeField(null=True, blank=True)
+    signed_document_digest = models.CharField(max_length=64, blank=True, default="", editable=False)
+    signed_ack_text = models.TextField(blank=True, default="", editable=False)
+    signature_method = models.CharField(max_length=32, blank=True, default="", editable=False)
+    signature_evidence_digest = models.CharField(max_length=64, blank=True, default="", editable=False)
+    signature_image = models.FileField(upload_to="circular_signatures/", blank=True, editable=False)
+    signature_image_sha256 = models.CharField(max_length=64, blank=True, default="", editable=False)
     signature_attempt_count = models.PositiveSmallIntegerField(default=0)
     signature_last_attempt_at = models.DateTimeField(null=True, blank=True)
     delivery_source = models.CharField(
@@ -237,6 +319,22 @@ class NotificationRecipient(models.Model):
 
     def __str__(self):
         return f"{self.teacher} ← {self.notification}"
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            locked = (
+                "notification_id", "teacher_id", "is_signed", "signed_at",
+                "signed_document_digest", "signed_ack_text", "signature_method",
+                "signature_evidence_digest", "signature_image", "signature_image_sha256",
+            )
+            original = type(self).objects.filter(pk=self.pk).values(*locked).first()
+            if original and original["signature_evidence_digest"] and any(
+                (getattr(self, field).name or "") != (original[field] or "")
+                if field == "signature_image" else getattr(self, field) != original[field]
+                for field in locked
+            ):
+                raise ValidationError("لا يمكن تغيير سجل الإقرار بعد اعتماده.")
+        return super().save(*args, **kwargs)
 
 
 class WebPushSubscription(models.Model):

@@ -1,425 +1,169 @@
-{# templates/reports/tickets_inbox.html #}
 {% extends "base.html" %}
+{% load static %}
 {% load hijri_tags %}
 {% block title %}{{ page_title|default:"صندوق الطلبات" }}{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     Tickets Inbox (page-only) — بدون كسر أنماط base/app.css
-     - Scoped داخل .inbox-wrap
-     - دعم data-theme="dark"
-     ========================================================= */
-  .inbox-wrap{max-width:1200px;margin-inline:auto}
-  .inbox-wrap .inbox-card{
-    border-radius: 16px;
-    border: 1px solid var(--line);
-    background: var(--card);
-    box-shadow: 0 18px 50px rgba(2,6,23,.06);
-    padding: 18px;
-  }
-  @media (max-width:520px){
-    .inbox-wrap .inbox-card{padding:14px}
-  }
-
-  .inbox-wrap .title{
-    margin:0 0 12px;
-    font-weight:950;
-    color: var(--ink);
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .inbox-wrap .subtitle{
-    margin: -6px 0 14px;
-    color: var(--muted);
-    font-weight:800;
-    line-height:1.7;
-  }
-
-  /* Filters */
-  .inbox-wrap .inbox-filters{
-    display:grid;
-    gap:10px;
-    margin: 8px 0 14px;
-    padding: 12px;
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    background: linear-gradient(180deg, var(--line-2), var(--card));
-  }
-  .inbox-wrap .inbox-filters .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:10px;
-    align-items:end;
-  }
-  .inbox-wrap .inbox-filters .chk{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-weight:900;
-    color: var(--muted);
-    user-select:none;
-  }
-  .inbox-wrap .inbox-filters .chk input{ transform: translateY(1px); }
-  .inbox-wrap .inbox-filters .actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-  @media (max-width:520px){
-    .inbox-wrap .inbox-filters .actions .btn{flex:1;justify-content:center}
-  }
-
-  /* Badges */
-  .inbox-wrap .status-badge{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    padding: 5px 10px;
-    border-radius: 999px;
-    font-size: .82rem;
-    font-weight: 950;
-    white-space:nowrap;
-    border: 1px solid transparent;
-  }
-  .inbox-wrap .s-open,
-  .inbox-wrap .s-new{
-    background: rgba(16,185,129,.14);
-    color: #065f46;
-    border-color: rgba(16,185,129,.22);
-  }
-  .inbox-wrap .s-in_progress,
-  .inbox-wrap .s-pending{
-    background: rgba(185,151,91,.14);
-    color: #4c1d95;
-    border-color: rgba(185,151,91,.22);
-  }
-  .inbox-wrap .s-done{
-    background: rgba(14,165,233,.14);
-    color: #075985;
-    border-color: rgba(14,165,233,.22);
-  }
-  .inbox-wrap .s-rejected,
-  .inbox-wrap .s-cancelled{
-    background: rgba(239,68,68,.14);
-    color: #991b1b;
-    border-color: rgba(239,68,68,.22);
-  }
-  .inbox-wrap .s-unknown{
-    background: rgba(100,116,139,.14);
-    color: #334155;
-    border-color: rgba(100,116,139,.22);
-  }
-
-  /* Department chip */
-  .inbox-wrap .dept-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    background: rgba(0,108,53,.10);
-    color: #00542a;
-    border: 1px solid rgba(0,108,53,.18);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-weight: 900;
-    font-size: .82rem;
-    white-space:nowrap;
-  }
-
-  /* Attachment thumbnail */
-  .inbox-wrap .att-thumb{
-    width:42px;
-    height:42px;
-    border-radius: 12px;
-    object-fit: cover;
-    border: 1px solid var(--line);
-    box-shadow: 0 10px 22px rgba(2,6,23,.08);
-    background: var(--line-2);
-    display:inline-block;
-  }
-  .inbox-wrap .att-empty{
-    color: var(--muted);
-    font-weight: 900;
-  }
-
-  /* Table */
-  .inbox-wrap .tbl-wrap{
-    overflow:auto;
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    background: var(--card);
-  }
-  .inbox-wrap .tbl{
-    width:100%;
-    border-collapse:collapse;
-    font-size: 14px;
-    min-width: 980px;
-  }
-  .inbox-wrap .tbl th,
-  .inbox-wrap .tbl td{
-    padding: 11px 12px;
-    border-bottom: 1px solid var(--line);
-    text-align:right;
-    vertical-align:middle;
-  }
-  .inbox-wrap .tbl thead th{
-    background: linear-gradient(180deg, var(--line-2), var(--card));
-    color: var(--ink);
-    font-weight: 950;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-  .inbox-wrap .tbl tbody tr:hover{
-    background: rgba(219,234,254,.35);
-  }
-  html[data-theme="dark"] .inbox-wrap .tbl tbody tr:hover{
-    background: rgba(26,48,36,.35);
-  }
-
-  .inbox-wrap .row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .inbox-wrap .btn-open{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding: 8px 10px;
-    border-radius: 12px;
-    background: #16845b;
-    color:#fff;
-    text-decoration:none;
-    font-weight: 950;
-    border: 1px solid rgba(16,185,129,.25);
-    white-space:nowrap;
-  }
-  .inbox-wrap .btn-open:hover{
-    filter: brightness(.98);
-    transform: translateY(-1px);
-  }
-
-  .inbox-wrap .pager {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .55rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--line);
-  }
-
-  .inbox-wrap .pager__status {
-    color: var(--muted);
-    font-size: .82rem;
-    font-weight: 850;
-  }
-
-  /* Mobile: table -> cards */
-  @media(max-width:860px){
-    .inbox-wrap .tbl{min-width: 0}
-    .inbox-wrap .tbl thead{display:none}
-    .inbox-wrap .tbl,
-    .inbox-wrap .tbl tbody,
-    .inbox-wrap .tbl tr,
-    .inbox-wrap .tbl td{
-      display:block;
-      width:100%;
-    }
-    .inbox-wrap .tbl-wrap{
-      border: 0;
-      background: transparent;
-      overflow: visible;
-    }
-    .inbox-wrap .tbl tr{
-      border:1px solid var(--line);
-      border-radius: 14px;
-      margin: 10px 0;
-      background: var(--card);
-      overflow:hidden;
-      box-shadow: 0 10px 26px rgba(2,6,23,.06);
-    }
-    .inbox-wrap .tbl td{
-      border-bottom: 1px dashed var(--line);
-      padding: 10px 12px;
-    }
-    .inbox-wrap .tbl td:last-child{border-bottom:0}
-    .inbox-wrap .tbl td[data-label]::before{
-      content: attr(data-label);
-      font-weight: 950;
-      color: var(--ink);
-      display:inline-block;
-      margin-inline-start: 8px;
-    }
-  }
-
-  /* ============================================================
-     👑 ROYAL LUXURY — طلبات المدرسة (زمرّدي + ذهبي)
-     ============================================================ */
-  .inbox-wrap .inbox-card{
-    position:relative;
-    overflow:hidden;
-    border-color:rgba(185,151,91,.22);
-    box-shadow:0 26px 60px -28px rgba(10,92,51,.45);
-  }
-  .inbox-wrap .inbox-card::before{
-    content:""; position:absolute; inset-inline:0; top:0; height:4px; z-index:3;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .inbox-wrap .title{ color:#0a5c33; padding-top:6px; }
-  .inbox-wrap .inbox-filters{ border-color:rgba(185,151,91,.22); }
-  .inbox-wrap .tbl thead th{ color:#0a5c33; }
-  .inbox-wrap .btn-open{
-    background:linear-gradient(135deg,#0a5c33,#074426);
-    border-color:rgba(185,151,91,.35);
-    box-shadow:0 8px 20px -10px rgba(10,92,51,.6);
-  }
-  .inbox-wrap .dept-chip{
-    background:rgba(10,92,51,.08); color:#0a5c33; border-color:rgba(10,92,51,.2);
-  }
-  /* مواءمة لون حالة "قيد المعالجة" مع الهوية الذهبية بدل البنفسجي */
-  .inbox-wrap .s-in_progress,
-  .inbox-wrap .s-pending{
-    background:rgba(212,177,109,.16);
-    color:#7a5c1e;
-    border-color:rgba(185,151,91,.35);
-  }
-  /* الساعة تحت التاريخ الهجري: تفصيلٌ ثانوي لا ينافس التاريخ نفسه. */
-  .inbox-wrap .tk-time{
-    display:block; margin-top:2px;
-    font-size:.76rem; font-variant-numeric:tabular-nums;
-    color:var(--text-muted,#68766f);
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/requests-inbox.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container inbox-wrap" dir="rtl">
-  <div class="inbox-card">
-    <h1 class="title">{{ page_heading|default:"صندوق الطلبات" }}</h1>
-    <div class="subtitle">{{ page_subtitle|default:"استعرض الطلبات الواردة، فلتر حسب الحالة أو ابحث بالعنوان/التفاصيل." }}</div>
+<div class="twq-page requests-inbox" dir="rtl" aria-labelledby="requestsInboxTitle">
+  <header class="twq-page-header requests-inbox__header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-inbox" aria-hidden="true"></i> مساحة متابعة الطلبات</span>
+      <h1 class="twq-page-header__title" id="requestsInboxTitle">{{ page_heading|default:"صندوق الطلبات" }}</h1>
+      <p class="twq-page-header__lead">{{ page_subtitle|default:"استعرض الطلبات الواردة، وتابع حالتها والمسؤول عنها من مكان واحد." }}</p>
+    </div>
+  </header>
 
-    <form method="get" class="inbox-filters" aria-label="فلترة الطلبات" novalidate>
-      <div class="grid">
-        <input type="text" name="q" value="{{ q }}" class="input" placeholder="بحث في العنوان/التفاصيل">
-        <select name="status" class="select" aria-label="الحالة">
-          <option value="">كل الحالات</option>
-          <option value="attention" {% if status == "attention" %}selected{% endif %}>تحتاج متابعة</option>
-          {% for v,lbl in status_choices %}
+  <section class="twq-section requests-inbox__workspace" aria-labelledby="requestsInboxListTitle">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">قائمة العمل</span>
+        <h2 class="twq-section__title" id="requestsInboxListTitle">الطلبات الواردة</h2>
+        <p class="twq-section__description">افتح الطلب للاطلاع على التفاصيل والردود والإجراءات المتاحة لك.</p>
+      </div>
+      <span class="twq-section__meta">{{ tickets|length }} طلب معروض</span>
+    </div>
+
+    <div class="requests-inbox__filter-panel">
+      <form method="get" class="twq-toolbar requests-inbox__toolbar" role="search" aria-label="البحث والتصفية في الطلبات الواردة">
+        <div class="twq-toolbar__search twq-field">
+          <label class="twq-label" for="inboxSearch"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> البحث</label>
+          <input id="inboxSearch" class="twq-control" type="search" name="q" value="{{ q }}" placeholder="عنوان الطلب أو تفاصيله">
+        </div>
+        <div class="twq-toolbar__field twq-field">
+          <label class="twq-label" for="inboxStatus">الحالة</label>
+          <select id="inboxStatus" name="status" class="twq-control">
+            <option value="">كل الحالات</option>
+            <option value="attention" {% if status == "attention" %}selected{% endif %}>تحتاج متابعة</option>
+            {% for v,lbl in status_choices %}
             <option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ lbl }}</option>
-          {% endfor %}
-        </select>
-
-        <label class="chk">
+            {% endfor %}
+          </select>
+        </div>
+        <label class="twq-choice requests-inbox__mine">
           <input type="checkbox" name="mine" value="1" {% if mine %}checked{% endif %}>
-          المعيّنة لي فقط
+          <span>المعيّنة لي فقط</span>
         </label>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-primary" type="submit">تطبيق</button>
-        {% if q or status or mine %}
-          <a href="{{ request.path }}" class="btn btn-outline">مسح</a>
+        <div class="twq-toolbar__actions">
+          <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-filter" aria-hidden="true"></i> تطبيق</button>
+          {% if q or status or mine %}
+          <a href="{{ request.path }}" class="twq-btn twq-btn--secondary">مسح</a>
+          {% endif %}
+        </div>
+      </form>
+      {% if q or status or mine %}
+      <div class="twq-toolbar__active-filters" aria-label="معايير العرض الحالية">
+        <span class="twq-toolbar__active-label">المحدد حاليًا:</span>
+        {% if q %}<span class="twq-filter-chip">بحث: <bdi>{{ q }}</bdi></span>{% endif %}
+        {% if status %}
+        <span class="twq-filter-chip">الحالة:
+          {% if status == "attention" %}تحتاج متابعة{% else %}{% for v,lbl in status_choices %}{% if status == v %}{{ lbl }}{% endif %}{% endfor %}{% endif %}
+        </span>
         {% endif %}
+        {% if mine %}<span class="twq-filter-chip">المعيّنة لي فقط</span>{% endif %}
       </div>
-    </form>
+      {% endif %}
+    </div>
 
-    <div class="tbl-wrap" aria-label="جدول الطلبات">
-      <table class="tbl">
+    {% if tickets %}
+    <div class="twq-table-wrap requests-inbox__table-wrap">
+      <table class="twq-table requests-inbox__table">
+        <caption class="sr-only">الطلبات الواردة حسب معايير البحث والتصفية الحالية</caption>
         <thead>
           <tr>
-            <th>#</th>
-            <th>التاريخ</th>
-            <th>المرسل</th>
-            <th>القسم</th>
-            <th>المستلمون</th>
-            <th>العنوان</th>
-            <th>المرفق</th>
-            <th>الحالة</th>
-            <th>إجراءات</th>
+            <th scope="col">الطلب</th>
+            <th scope="col">المرسل</th>
+            <th scope="col">القسم والمستلم</th>
+            <th scope="col">التاريخ</th>
+            <th scope="col">الحالة</th>
+            <th scope="col">الإجراء</th>
           </tr>
         </thead>
-
         <tbody>
           {% for t in tickets %}
-            <tr>
-              <td data-label="#"> {{ t.pk }} </td>
-              {# التواريخ تُعرض هجرية في كل المنصة — والميلادي يبقى في السمة للآلة. #}
-              <td data-label="التاريخ">
-                <time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time>
-                <small class="tk-time">{{ t.created_at|time:"H:i" }}</small>
-              </td>
-              <td data-label="المرسل"> {{ t.creator.name|default:"—" }} </td>
-
-              <td data-label="القسم">
-                {% if t.department %}
-                  <span class="dept-chip">{{ t.department.name|default:t.department }}</span>
-                {% else %}
-                  <span class="dept-chip">{{ t.get_department_display|default:"—" }}</span>
-                {% endif %}
-              </td>
-
-              <td data-label="المستلمون">
+          <tr>
+            <td class="requests-inbox__identity">
+              <span class="requests-inbox__reference">طلب #{{ t.pk }}</span>
+              <a class="requests-inbox__title" href="{% url 'reports:ticket_detail' t.pk %}">{{ t.title|default:"طلب بدون عنوان" }}</a>
+              {% if t.attachment %}
+              <a class="requests-inbox__attachment" href="{{ t.attachment.url }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> فتح المرفق</a>
+              {% endif %}
+            </td>
+            <td><span class="requests-inbox__person">{{ t.creator.name|default:"—" }}</span></td>
+            <td>
+              <span class="requests-inbox__department">
+                {% if t.department %}{{ t.department.name|default:t.department }}{% else %}{{ t.get_department_display|default:"—" }}{% endif %}
+              </span>
+              <span class="requests-inbox__subline">المستلم:
                 {% if t.recipients.exists %}
-                  {% for u in t.recipients.all %}
-                    {{ u.name|default:u }}{% if not forloop.last %}، {% endif %}
-                  {% endfor %}
+                  {% for u in t.recipients.all %}{{ u.name|default:u }}{% if not forloop.last %}، {% endif %}{% endfor %}
                 {% else %}
                   {{ t.assignee.name|default:"—" }}
                 {% endif %}
-              </td>
-
-              <td data-label="العنوان"> {{ t.title }} </td>
-
-              <td data-label="المرفق">
-                {% if t.attachment %}
-                  <a href="{{ t.attachment.url }}" target="_blank" rel="noopener" title="فتح المرفق">
-                    <img class="att-thumb" src="{{ t.attachment.url }}" alt="مرفق الطلب" loading="lazy">
-                  </a>
-                {% else %}
-                  <span class="att-empty">—</span>
-                {% endif %}
-              </td>
-
-              <td data-label="الحالة">
-                <span class="status-badge s-{{ t.status|default:'unknown' }}">
-                  {{ t.get_status_display|default:t.status|default:"—" }}
-                </span>
-              </td>
-
-              <td data-label="إجراءات">
-                <div class="row-actions">
-                  <a href="{% url 'reports:ticket_detail' t.pk %}" class="btn-open">
-                    فتح <i class="fa-solid fa-arrow-up-left-from-square u-dim-more"></i>
-                  </a>
-                </div>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="9" class="u-text-center u-p-5 u-text-muted-alt u-fw-900">
-                لا توجد طلبات
-              </td>
-            </tr>
+              </span>
+            </td>
+            <td>
+              {# التواريخ تُعرض هجرية في كل المنصة — والميلادي يبقى في السمة للآلة. #}
+              <time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time>
+              <span class="requests-inbox__subline">{{ t.created_at|time:"H:i" }}</span>
+            </td>
+            <td>{% include "reports/partials/ticket_status.html" with t=t %}</td>
+            <td><a href="{% url 'reports:ticket_detail' t.pk %}" class="twq-btn twq-btn--secondary requests-inbox__open">فتح الطلب</a></td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    {% if tickets.has_other_pages %}
-      <nav class="pager" aria-label="صفحات الطلبات">
-        {% if tickets.has_previous %}
-          <a class="btn btn-outline" href="?page={{ tickets.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if status %}&status={{ status|urlencode }}{% endif %}{% if mine %}&mine=1{% endif %}">
-            السابق
-          </a>
-        {% endif %}
-        <span class="pager__status">صفحة {{ tickets.number }} من {{ tickets.paginator.num_pages }}</span>
-        {% if tickets.has_next %}
-          <a class="btn btn-outline" href="?page={{ tickets.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if status %}&status={{ status|urlencode }}{% endif %}{% if mine %}&mine=1{% endif %}">
-            التالي
-          </a>
-        {% endif %}
-      </nav>
+    <div class="requests-inbox__cards">
+      {% for t in tickets %}
+      <article class="twq-card requests-inbox__card" aria-labelledby="inboxTicketTitle{{ t.pk }}">
+        <div class="requests-inbox__card-head">
+          <span class="requests-inbox__reference">طلب #{{ t.pk }}</span>
+          {% include "reports/partials/ticket_status.html" with t=t %}
+        </div>
+        <h3 id="inboxTicketTitle{{ t.pk }}" class="requests-inbox__card-title"><a href="{% url 'reports:ticket_detail' t.pk %}">{{ t.title|default:"طلب بدون عنوان" }}</a></h3>
+        <dl class="requests-inbox__card-meta">
+          <div><dt>المرسل</dt><dd>{{ t.creator.name|default:"—" }}</dd></div>
+          <div><dt>القسم</dt><dd>{% if t.department %}{{ t.department.name|default:t.department }}{% else %}{{ t.get_department_display|default:"—" }}{% endif %}</dd></div>
+          <div><dt>المستلم</dt><dd>{% if t.recipients.exists %}{% for u in t.recipients.all %}{{ u.name|default:u }}{% if not forloop.last %}، {% endif %}{% endfor %}{% else %}{{ t.assignee.name|default:"—" }}{% endif %}</dd></div>
+          <div><dt>التاريخ</dt><dd><time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time> <span class="requests-inbox__subline">{{ t.created_at|time:"H:i" }}</span></dd></div>
+        </dl>
+        <div class="requests-inbox__card-actions">
+          <a href="{% url 'reports:ticket_detail' t.pk %}" class="twq-btn twq-btn--secondary">فتح الطلب</a>
+          {% if t.attachment %}<a href="{{ t.attachment.url }}" class="twq-btn twq-btn--ghost" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> فتح المرفق</a>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="twq-empty-state requests-inbox__empty">
+      <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+      {% if q or status or mine %}
+      <h3>لا توجد طلبات مطابقة</h3>
+      <p>جرّب تعديل معايير البحث أو عرض جميع الطلبات الواردة في نطاق صلاحياتك.</p>
+      <a href="{{ request.path }}" class="twq-btn twq-btn--secondary">عرض جميع الطلبات</a>
+      {% else %}
+      <h3>لا توجد طلبات واردة</h3>
+      <p>ستظهر هنا الطلبات التي يُسمح لك بمتابعتها عند ورودها.</p>
+      {% endif %}
+    </div>
     {% endif %}
 
-  </div>
+    {% if tickets.has_other_pages %}
+    <nav class="twq-pagination requests-inbox__pagination" aria-label="صفحات الطلبات">
+      {% if tickets.has_previous %}
+      <a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ tickets.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if status %}&status={{ status|urlencode }}{% endif %}{% if mine %}&mine=1{% endif %}">السابق</a>
+      {% endif %}
+      <span class="twq-pagination__meta">صفحة {{ tickets.number }} من {{ tickets.paginator.num_pages }}</span>
+      {% if tickets.has_next %}
+      <a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ tickets.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if status %}&status={{ status|urlencode }}{% endif %}{% if mine %}&mine=1{% endif %}">التالي</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}

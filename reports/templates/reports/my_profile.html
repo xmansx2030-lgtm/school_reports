@@ -1,950 +1,67 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
-{% block title %}حسابي{% endblock %}
+{% block title %}{% if force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* ========== Premium 2026 Design System - My Profile Template ========== */
-  
-  /* رموز هذه الشاشة — مقصورة على حاويتها ومشتقّة من جذر الهوية. كانت معلنة
-     على `:root` عاماً فتسرّبت إلى كل شاشة، ثم تُصحَّح بكتلة ليلية بدرجات
-     رصاصية؛ و`--id-*` وحدها ما يُعاد تعريفه تحت `data-theme="dark"`. */
-  .profile-scope {
-    /* Primary Colors */
-    --prof-primary: var(--id-accent);
-    --prof-primary-dark: var(--id-accent-strong);
-    --prof-primary-light: #0f8f87;
-    --prof-gradient: linear-gradient(135deg, var(--id-hero-via) 0%, var(--id-hero-from) 100%);
-
-    /* Status Colors */
-    --prof-success: var(--id-tone-approved);
-    --prof-success-dark: var(--id-tone-approved);
-    --prof-danger: var(--id-tone-danger);
-    --prof-danger-dark: var(--id-tone-danger);
-    --prof-warning: var(--id-gold);
-    --prof-info: #06b6d4;
-
-    /* Neutral Colors */
-    --prof-text: var(--id-ink);
-    --prof-text-light: var(--id-muted);
-    --prof-border: var(--id-line);
-    --prof-bg: var(--id-surface);
-    --prof-bg-secondary: var(--id-surface-2);
-    --prof-bg-hover: var(--id-line-soft);
-
-    /* Shadow System */
-    --prof-shadow-sm: var(--id-e1);
-    --prof-shadow-md: var(--id-e2);
-    --prof-shadow-lg: var(--id-e3);
-    --prof-shadow-xl: var(--id-e4);
-
-    /* Border Radius */
-    --prof-radius-sm: var(--id-r1);
-    --prof-radius-md: var(--id-r2);
-    --prof-radius-lg: var(--id-r3);
-    --prof-radius-xl: var(--id-r4);
-    --prof-radius-full: var(--id-pill);
-
-    /* Transitions */
-    --prof-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  /* ========== Layout Container ========== */
-  
-  .profile-scope {
-    min-height: 100vh;
-    background: var(--prof-bg-secondary);
-    padding: 2rem;
-  }
-  
-  .profile-container {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-  
-  /* ========== Page Header ========== */
-  
-  .profile-header {
-    background: var(--prof-gradient);
-    border-radius: var(--prof-radius-xl);
-    padding: 2.5rem;
-    margin-bottom: 2rem;
-    box-shadow: var(--prof-shadow-lg);
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .profile-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url('data:image/svg+xml,<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
-    pointer-events: none;
-  }
-  
-  .profile-header-content {
-    position: relative;
-    z-index: 1;
-  }
-  
-  .profile-title {
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: white;
-    margin: 0 0 0.75rem 0;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .profile-title i {
-    font-size: 2rem;
-  }
-  
-  .profile-subtitle {
-    font-size: 1.125rem;
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    line-height: 1.6;
-  }
-
-  .profile-security-alert {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 1.5rem;
-    align-items: center;
-    padding: 1.5rem 1.75rem;
-    margin-bottom: 2rem;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(251, 191, 36, 0.22) 100%);
-    border: 2px solid rgba(245, 158, 11, 0.32);
-    border-radius: var(--prof-radius-lg);
-    box-shadow: var(--prof-shadow-md);
-  }
-
-  .profile-security-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: fit-content;
-    padding: 0.45rem 0.9rem;
-    margin-bottom: 0.9rem;
-    background: rgba(146, 64, 14, 0.12);
-    color: #92400e;
-    border: 1px solid rgba(146, 64, 14, 0.16);
-    border-radius: var(--prof-radius-full);
-    font-size: 0.875rem;
-    font-weight: 800;
-  }
-
-  .profile-security-title {
-    margin: 0 0 0.6rem 0;
-    color: #7c2d12;
-    font-size: 1.35rem;
-    font-weight: 800;
-  }
-
-  .profile-security-text {
-    margin: 0;
-    color: #78350f;
-    line-height: 1.9;
-    font-weight: 600;
-  }
-
-  .profile-security-points {
-    margin: 1rem 0 0 0;
-    padding: 0 1.1rem 0 0;
-    color: #78350f;
-    line-height: 1.9;
-    font-weight: 600;
-  }
-
-  .profile-security-icon {
-    width: 74px;
-    height: 74px;
-    display: grid;
-    place-items: center;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.65);
-    color: #b45309;
-    font-size: 1.75rem;
-    box-shadow: var(--prof-shadow-sm);
-  }
-  
-  /* ========== Grid Layout ========== */
-  
-  .profile-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-bottom: 2rem;
-  }
-  
-  /* ========== Profile Cards ========== */
-  
-  .profile-card {
-    background: var(--prof-bg);
-    border-radius: var(--prof-radius-lg);
-    padding: 2rem;
-    box-shadow: var(--prof-shadow-md);
-    border: 2px solid transparent;
-    transition: var(--prof-transition);
-  }
-  
-  .profile-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--prof-shadow-xl);
-    border-color: var(--prof-primary-light);
-  }
-  
-  .profile-card-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--prof-text);
-    margin: 0 0 1.5rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid var(--prof-border);
-  }
-  
-  .profile-card-title i {
-    font-size: 1.25rem;
-    color: var(--prof-primary);
-  }
-  
-  /* ========== Info Rows ========== */
-  
-  .profile-info-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .profile-info-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background: var(--prof-bg-secondary);
-    border-radius: var(--prof-radius-md);
-    border: 1px solid var(--prof-border);
-    transition: var(--prof-transition);
-  }
-  
-  .profile-info-row:hover {
-    background: var(--prof-bg-hover);
-    border-color: var(--prof-primary-light);
-  }
-  
-  .profile-info-label {
-    font-size: 0.9375rem;
-    color: var(--prof-text-light);
-    font-weight: 500;
-  }
-  
-  .profile-info-value {
-    font-size: 1rem;
-    color: var(--prof-text);
-    font-weight: 600;
-  }
-  
-  /* ========== Schools List ========== */
-  
-  .profile-schools-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .profile-school-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1.25rem;
-    background: var(--prof-bg-secondary);
-    border-radius: var(--prof-radius-md);
-    border: 2px solid var(--prof-border);
-    transition: var(--prof-transition);
-    position: relative;
-  }
-  
-  .profile-school-item::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--prof-primary);
-    flex-shrink: 0;
-  }
-  
-  .profile-school-item:hover {
-    background: var(--prof-bg-hover);
-    border-color: var(--prof-primary-light);
-    transform: translateX(-3px);
-  }
-  
-  .profile-school-name {
-    font-size: 1rem;
-    color: var(--prof-text);
-    font-weight: 600;
-    flex: 1;
-  }
-  
-  .profile-school-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.875rem;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(22, 132, 91, 0.15) 100%);
-    color: var(--prof-success-dark);
-    border-radius: var(--prof-radius-full);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    border: 2px solid rgba(16, 185, 129, 0.3);
-  }
-  
-  .profile-empty-schools {
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--prof-text-light);
-    background: var(--prof-bg-secondary);
-    border-radius: var(--prof-radius-md);
-    border: 2px dashed var(--prof-border);
-  }
-  
-  /* ========== Forms ========== */
-  
-  .profile-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-  
-  .profile-form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .profile-form-label {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--prof-text);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .profile-form-input {
-    width: 100%;
-    padding: 0.875rem 1.125rem;
-    border: 2px solid var(--prof-border);
-    border-radius: var(--prof-radius-md);
-    font-size: 1rem;
-    color: var(--prof-text);
-    background: var(--prof-bg);
-    transition: var(--prof-transition);
-    font-family: inherit;
-  }
-  
-  .profile-form-input:focus {
-    outline: none;
-    border-color: var(--prof-primary);
-    box-shadow: 0 0 0 3px rgba(0, 108, 53, 0.1);
-    transform: translateY(-1px);
-  }
-  
-  .profile-form-input:hover:not(:focus) {
-    border-color: var(--prof-primary-light);
-  }
-
-  .profile-password-input-wrap {
-    position: relative;
-  }
-
-  .profile-password-input-wrap .profile-form-input {
-    padding-inline-start: 3.35rem;
-  }
-
-  .profile-password-toggle {
-    position: absolute;
-    inset-inline-start: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 2.4rem;
-    height: 2.4rem;
-    border: none;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 108, 53, 0.08);
-    color: var(--prof-primary-dark);
-    cursor: pointer;
-    transition: var(--prof-transition);
-  }
-
-  .profile-password-toggle:hover {
-    background: rgba(0, 108, 53, 0.14);
-    transform: translateY(-50%) scale(1.03);
-  }
-
-  .profile-password-toggle:focus-visible {
-    outline: 3px solid rgba(0, 108, 53, 0.2);
-    outline-offset: 2px;
-  }
-
-  .profile-password-simplehint {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0.25rem 0 0.5rem;
-    padding: 12px 14px;
-    border-radius: 14px;
-    background: rgba(10, 92, 51, 0.06);
-    border: 1px solid rgba(185, 151, 91, 0.28);
-    color: #0a5c33;
-    font-weight: 800;
-    font-size: 0.92rem;
-    line-height: 1.7;
-  }
-  .profile-password-simplehint i { color: #b9975b; font-size: 1.1rem; flex: 0 0 auto; }
-  html[data-theme="dark"] .profile-password-simplehint { background: rgba(212,177,109,.08); color: var(--id-gold); }
-
-  .profile-password-panel {
-    padding: 1.1rem 1.1rem 1rem;
-    background:
-      radial-gradient(circle at top right, rgba(0, 108, 53, 0.08), transparent 38%),
-      linear-gradient(135deg, rgba(0, 108, 53, 0.05) 0%, rgba(14, 165, 233, 0.08) 100%);
-    border: 1px solid rgba(0, 108, 53, 0.16);
-    border-radius: var(--prof-radius-lg);
-  }
-
-  .profile-password-panel-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.9rem;
-  }
-
-  .profile-password-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.3rem 0.75rem;
-    margin-bottom: 0.7rem;
-    border-radius: var(--prof-radius-full);
-    background: rgba(0, 108, 53, 0.1);
-    color: var(--prof-primary-dark);
-    font-size: 0.78rem;
-    font-weight: 800;
-  }
-
-  .profile-password-title {
-    margin: 0 0 0.35rem 0;
-    color: var(--prof-text);
-    font-size: 1.05rem;
-    font-weight: 800;
-  }
-
-  .profile-password-text {
-    margin: 0;
-    color: var(--prof-text-light);
-    font-size: 0.92rem;
-    line-height: 1.8;
-    font-weight: 600;
-  }
-
-  .profile-password-strength {
-    min-width: 128px;
-    padding: 0.75rem 0.9rem;
-    background: rgba(255, 255, 255, 0.68);
-    border: 1px solid rgba(0, 108, 53, 0.1);
-    border-radius: var(--prof-radius-md);
-    box-shadow: var(--prof-shadow-sm);
-  }
-
-  .profile-password-strength-label {
-    display: block;
-    color: var(--prof-text-light);
-    font-size: 0.76rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-  }
-
-  .profile-password-strength-value {
-    color: var(--prof-text);
-    font-size: 0.95rem;
-    font-weight: 800;
-  }
-
-  .profile-password-meter {
-    height: 0.55rem;
-    background: rgba(148, 163, 184, 0.22);
-    border-radius: 999px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-
-  .profile-password-meter-bar {
-    display: block;
-    width: 8%;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
-    transition: var(--prof-transition);
-  }
-
-  .profile-password-rules {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 0.7rem;
-  }
-
-  .profile-password-rule {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 0.85rem;
-    align-items: center;
-    padding: 0.85rem 0.95rem;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    border-radius: var(--prof-radius-md);
-    transition: var(--prof-transition);
-  }
-
-  .profile-password-rule.is-live {
-    border-style: solid;
-  }
-
-  .profile-password-rule.is-met {
-    background: rgba(16, 185, 129, 0.09);
-    border-color: rgba(16, 185, 129, 0.34);
-  }
-
-  .profile-password-rule.is-unmet {
-    background: rgba(239, 68, 68, 0.06);
-    border-color: rgba(239, 68, 68, 0.18);
-  }
-
-  .profile-password-rule-icon {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(148, 163, 184, 0.14);
-    color: var(--prof-text-light);
-    flex-shrink: 0;
-  }
-
-  .profile-password-rule.is-met .profile-password-rule-icon {
-    background: rgba(16, 185, 129, 0.14);
-    color: var(--prof-success-dark);
-  }
-
-  .profile-password-rule.is-unmet .profile-password-rule-icon {
-    background: rgba(239, 68, 68, 0.12);
-    color: var(--prof-danger-dark);
-  }
-
-  .profile-password-rule-main strong,
-  .profile-password-rule-main span {
-    display: block;
-    color: var(--prof-text);
-    font-size: 0.92rem;
-    font-weight: 800;
-    line-height: 1.6;
-  }
-
-  .profile-password-rule-main small {
-    display: block;
-    margin-top: 0.18rem;
-    color: var(--prof-text-light);
-    font-size: 0.8rem;
-    line-height: 1.7;
-    font-weight: 600;
-  }
-
-  .profile-password-rule-status {
-    color: var(--prof-text-light);
-    font-size: 0.78rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  .profile-password-rule.is-met .profile-password-rule-status {
-    color: var(--prof-success-dark);
-  }
-
-  .profile-password-rule.is-unmet .profile-password-rule-status {
-    color: var(--prof-danger-dark);
-  }
-
-  .profile-form-error {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--prof-danger);
-    font-size: 0.875rem;
-    padding: 0.625rem 1rem;
-    background: rgba(239, 68, 68, 0.1);
-    border-radius: var(--prof-radius-sm);
-    border-left: 3px solid var(--prof-danger);
-  }
-  
-  .profile-form-error::before {
-    content: '⚠️';
-    font-size: 1rem;
-  }
-
-  .profile-form-hint {
-    color: var(--prof-text-light);
-    font-size: 0.875rem;
-    line-height: 1.8;
-    font-weight: 600;
-  }
-  
-  .profile-form-errors-global {
-    padding: 1rem 1.25rem;
-    background: rgba(239, 68, 68, 0.1);
-    border: 2px solid rgba(239, 68, 68, 0.3);
-    border-radius: var(--prof-radius-md);
-    color: var(--prof-danger-dark);
-    font-weight: 600;
-    margin-bottom: 1rem;
-  }
-  
-  /* ========== Buttons ========== */
-  
-  .profile-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.875rem 2rem;
-    border: none;
-    border-radius: var(--prof-radius-md);
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--prof-transition);
-    box-shadow: var(--prof-shadow-md);
-  }
-  
-  .profile-btn-primary {
-    background: var(--prof-gradient);
-    color: white;
-  }
-  
-  .profile-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--prof-shadow-lg);
-  }
-  
-  .profile-btn-primary:active {
-    transform: translateY(0);
-  }
-  
-  /* ========== Divider ========== */
-  
-  .profile-divider {
-    height: 2rem;
-  }
-
-  .profile-locked-box {
-    padding: 1rem 1.15rem;
-    background: rgba(6, 182, 212, 0.08);
-    border: 1px dashed rgba(6, 182, 212, 0.35);
-    border-radius: var(--prof-radius-md);
-    color: var(--prof-text);
-    line-height: 1.8;
-    font-weight: 600;
-  }
-
-  .profile-passkey-panel {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .profile-passkey-copy {
-    margin: 0;
-    color: var(--prof-text-light);
-    line-height: 1.9;
-    font-weight: 600;
-  }
-
-  .profile-passkey-list {
-    display: grid;
-    gap: .75rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .profile-passkey-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: .9rem 1rem;
-    border: 1px solid var(--prof-border);
-    border-radius: var(--prof-radius-md);
-    background: var(--prof-bg-secondary);
-  }
-
-  .profile-passkey-item strong {
-    display: block;
-    color: var(--prof-text);
-    font-weight: 800;
-  }
-
-  .profile-passkey-item span {
-    display: block;
-    color: var(--prof-text-light);
-    font-size: .84rem;
-    font-weight: 650;
-    margin-top: .2rem;
-  }
-
-  .profile-passkey-item > div:first-child { min-width: 0; }
-
-  .profile-passkey-meta {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    flex: 0 0 auto;
-  }
-
-  .profile-passkey-current {
-    padding: .2rem .5rem;
-    border-radius: 999px;
-    background: rgba(0,108,53,.1);
-    color: var(--prof-primary-dark);
-    font-size: .7rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  /* A lost or replaced phone must be revocable, otherwise enabling a passkey is
-     a one-way door. */
-  .profile-passkey-remove {
-    width: 38px;
-    height: 38px;
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    border: 1px solid var(--prof-border);
-    border-radius: var(--prof-radius-md);
-    color: var(--prof-danger-dark);
-    background: var(--prof-bg);
-    font-size: .9rem;
-    cursor: pointer;
-    transition: background .18s, border-color .18s;
-  }
-
-  .profile-passkey-remove:hover {
-    border-color: var(--prof-danger-dark);
-    background: rgba(239,68,68,.08);
-  }
-
-  .profile-passkey-remove:disabled { opacity: .55; cursor: wait; }
-
-  .profile-passkey-status {
-    display: none;
-    padding: .85rem 1rem;
-    border-radius: var(--prof-radius-md);
-    background: rgba(0,108,53,.08);
-    color: var(--prof-primary-dark);
-    line-height: 1.7;
-    font-weight: 700;
-  }
-
-  .profile-passkey-status.is-error {
-    background: rgba(239,68,68,.10);
-    color: var(--prof-danger-dark);
-  }
-  
-  /* ========== Responsive Design ========== */
-  
-  @media (max-width: 1024px) {
-    .profile-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .profile-scope {
-      padding: 1rem;
-    }
-    
-    .profile-header {
-      padding: 1.75rem;
-      border-radius: var(--prof-radius-lg);
-    }
-    
-    .profile-title {
-      font-size: 1.75rem;
-    }
-    
-    .profile-title i {
-      font-size: 1.5rem;
-    }
-    
-    .profile-subtitle {
-      font-size: 1rem;
-    }
-    
-    .profile-card {
-      padding: 1.5rem;
-    }
-    
-    .profile-card-title {
-      font-size: 1.25rem;
-    }
-
-    .profile-security-alert {
-      grid-template-columns: 1fr;
-    }
-
-    .profile-security-icon {
-      order: -1;
-    }
-
-    .profile-password-panel-head {
-      flex-direction: column;
-    }
-
-    .profile-password-strength {
-      width: 100%;
-      min-width: 0;
-    }
-    
-    .profile-info-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.5rem;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .profile-title {
-      font-size: 1.5rem;
-      gap: 0.75rem;
-    }
-    
-    .profile-title i {
-      font-size: 1.25rem;
-    }
-    
-    .profile-subtitle {
-      font-size: 0.9375rem;
-    }
-    
-    .profile-card-title {
-      font-size: 1.125rem;
-    }
-    
-    .profile-btn {
-      width: 100%;
-    }
-  }
-  
-  /* ========== Animation Support ========== */
-  
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
-
-  .profile-school-copy{ display:flex; flex:1; min-width:0; flex-direction:column; gap:3px; }
-  .profile-school-role{ color:var(--prof-text-light); font-size:.8rem; font-weight:750; }
-
-  .deputy-profile-summary{
-    position:relative; overflow:hidden; margin-bottom:2rem; padding:24px;
-    border:1px solid rgba(185,151,91,.34); border-radius:22px;
-    background:
-      radial-gradient(circle at 4% 0%, rgba(212,177,109,.2), transparent 34%),
-      linear-gradient(135deg, #f7fbf8 0%, #fffdf8 100%);
-    box-shadow:0 22px 48px -36px rgba(5,70,38,.65);
-  }
-  .deputy-profile-summary::before{
-    content:""; position:absolute; inset:0 0 auto; height:4px;
-    background:linear-gradient(90deg,#0b6238,#d4b16d,#0b6238);
-  }
-  .deputy-profile-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:18px; }
-  .deputy-profile-title{ margin:0 0 7px; color:#074426; font-size:1.28rem; font-weight:950; }
-  .deputy-profile-title i{ color:#b38a40; margin-left:7px; }
-  .deputy-profile-text{ margin:0; color:#526159; line-height:1.8; font-weight:650; }
-  .deputy-profile-badges,.deputy-profile-chips{ display:flex; flex-wrap:wrap; gap:8px; }
-  .deputy-profile-badge,.deputy-profile-chip{
-    display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px;
-    border:1px solid rgba(11,98,56,.16); background:#fff; color:#07502d;
-    font-size:.8rem; font-weight:850;
-  }
-  .deputy-profile-body{ display:grid; grid-template-columns:minmax(210px,.75fr) minmax(0,1.25fr); gap:14px; }
-  .deputy-profile-panel{ padding:16px; border:1px solid rgba(11,98,56,.12); border-radius:16px; background:rgba(255,255,255,.72); }
-  .deputy-profile-panel strong{ display:block; color:#074426; margin-bottom:8px; font-weight:900; }
-  .deputy-profile-panel p{ margin:0; color:#59665f; line-height:1.75; }
-  .deputy-profile-warning{ border-color:rgba(180,83,9,.22); background:#fff8e8; }
-  .deputy-profile-warning strong{ color:#92400e; }
-  .deputy-profile-chip{ padding:6px 10px; background:#edf8f1; }
-  [data-theme="dark"] .deputy-profile-summary{ background:linear-gradient(135deg,#10251b,#171d19); }
-  [data-theme="dark"] .deputy-profile-title,[data-theme="dark"] .deputy-profile-panel strong{ color:#e6cf9a; }
-  [data-theme="dark"] .deputy-profile-text,[data-theme="dark"] .deputy-profile-panel p{ color:#c1cbc5; }
-  [data-theme="dark"] .deputy-profile-panel,[data-theme="dark"] .deputy-profile-badge,[data-theme="dark"] .deputy-profile-chip{ background:rgba(0,0,0,.2); color:#e8f4ec; border-color:rgba(230,207,154,.2); }
-  [data-theme="dark"] .deputy-profile-warning{ background:rgba(146,64,14,.2); border-color:rgba(251,191,36,.28); }
-  [data-theme="dark"] .deputy-profile-warning strong{ color:#f8d38a; }
-  .admin-profile-summary::before{ background:linear-gradient(90deg,#245c86,#d4b16d,#245c86); }
-  .admin-profile-summary .deputy-profile-title{ color:#194b70; }
-  .admin-profile-summary .deputy-profile-chip{ color:#194b70; background:#edf6fb; border-color:rgba(36,92,134,.18); }
-  .profile-role-notice{
-    margin-bottom:14px; padding:12px 14px; border-radius:14px;
-    color:#194b70; background:#edf6fb; border:1px solid rgba(36,92,134,.18);
-    line-height:1.75; font-weight:700;
-  }
-  [data-theme="dark"] .profile-role-notice{ color:#cde7f8; background:rgba(36,92,134,.22); border-color:rgba(125,188,230,.25); }
-
-  @media (max-width:768px){
-    .deputy-profile-head{ flex-direction:column; }
-    .deputy-profile-body{ grid-template-columns:1fr; }
-    .deputy-profile-summary{ padding:20px 16px; }
-  }
-
-</style>
+<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260923.1">
+<link rel="stylesheet" href="{% static 'css/auth-password.css' %}?v=20260921.1">
+<link rel="stylesheet" href="{% static 'css/auth-security.css' %}?v=20260921.1">
 {% endblock %}
 
 {% block content %}
-<div class="profile-scope" dir="rtl">
+<div class="profile-scope{% if force_password_change %} profile-scope--forced{% else %} twq-page{% endif %}" dir="rtl" data-password-mode="{% if force_password_change %}first-login{% else %}normal{% endif %}">
   <div class="profile-container">
 
     <!-- Page Header -->
-    <header class="profile-header">
+    <header class="profile-header twq-page-header" aria-labelledby="profilePageTitle">
       <div class="profile-header-content">
-        <h1 class="profile-title">
-          <i class="fa-solid fa-user" aria-hidden="true"></i>
-          <span>حسابي</span>
+        <p class="profile-eyebrow">{% if force_password_change %}خطوة الدخول الأولى{% else %}حساب المستخدم{% endif %}</p>
+        <h1 class="profile-title" id="profilePageTitle">
+          <i class="fa-solid {% if force_password_change %}fa-shield-halved{% else %}fa-user{% endif %}" aria-hidden="true"></i>
+          <span>{% if force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}</span>
         </h1>
-        <p class="profile-subtitle">إدارة بيانات التواصل وكلمة المرور، وعرض المدارس المسندة لك.</p>
+        <p class="profile-subtitle">
+          {% if force_password_change %}
+            أنشئ كلمة مرور خاصة بك وأضف بريد الاستعادة قبل متابعة استخدام المنصة.
+          {% else %}
+            راجع هويتك وبيانات التواصل وسياق المدرسة والدور، ثم انتقل إلى إعدادات الأمان عند الحاجة.
+          {% endif %}
+        </p>
+        {% if not force_password_change %}
+          <dl class="profile-header-context" aria-label="ملخص الحساب الحالي">
+            <div>
+              <dt>الاسم</dt>
+              <dd>{{ request.user.name|default:"-" }}</dd>
+            </div>
+            <div>
+              <dt>المدرسة الحالية</dt>
+              <dd>{{ active_school.name|default:"لم تُحدَّد مدرسة" }}</dd>
+            </div>
+            <div>
+              <dt>الدور الحالي</dt>
+              <dd>
+                {% if current_membership_context %}
+                  {{ current_membership_context.roles|join:"، " }}
+                {% elif request.user.is_superuser %}
+                  مالك النظام
+                {% else %}
+                  لا يوجد دور نشط
+                {% endif %}
+              </dd>
+            </div>
+          </dl>
+        {% endif %}
       </div>
+      {% if not force_password_change %}
+        <div class="profile-header-status" aria-label="حالة الحساب">
+          <span class="twq-status" data-status="{% if request.user.is_active %}approved{% else %}returned{% endif %}">
+            <i class="fa-solid {% if request.user.is_active %}fa-circle-check{% else %}fa-circle-xmark{% endif %}" aria-hidden="true"></i>
+            {% if request.user.is_active %}حساب نشط{% else %}حساب غير نشط{% endif %}
+          </span>
+          <span class="profile-header-status__note">حالة الحساب في المنصة</span>
+        </div>
+      {% endif %}
     </header>
 
     {% if force_password_change %}
@@ -954,16 +71,14 @@
             <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
             <span>مطلوب الآن</span>
           </span>
-          <h2 class="profile-security-title">خطوة سريعة لحماية حسابك</h2>
+          <h2 class="profile-security-title">خطوة أمان إلزامية قبل المتابعة</h2>
           <p class="profile-security-text">
-            كلمة المرور الحالية ما زالت مطابقة لرقم الجوال، وهذا يجعل الوصول إلى الحساب أسهل من اللازم.
-            أضف بريدك الإلكتروني وغيّر كلمة المرور الآن حتى يبقى حسابك أكثر أمانًا وتتمكن من استعادته لاحقًا.
+            حدّث كلمة المرور المؤقتة التي استخدمتها للدخول، وأضف بريدًا يمكنك الوصول إليه عند الحاجة لاستعادة الحساب.
           </p>
           <ul class="profile-security-points">
             <li>أدخل بريدًا إلكترونيًا يمكنك الوصول إليه لاستعادة كلمة المرور لاحقًا.</li>
-            <li>اكتب رقم الجوال الحالي في خانة كلمة المرور القديمة.</li>
-            <li>اختر كلمة مرور جديدة لا يعرفها غيرك.</li>
-            <li>بعد الحفظ سيعود الحساب للعمل بشكل طبيعي.</li>
+            <li>استخدم كلمة المرور المؤقتة الحالية للتحقق من هويتك.</li>
+            <li>بعد الحفظ ستبقى مسجلًا ويمكنك متابعة استخدام المنصة.</li>
           </ul>
         </div>
         <div class="profile-security-icon" aria-hidden="true">
@@ -1058,68 +173,119 @@
     {% endif %}
 
     <!-- Profile Grid -->
-    <div class="profile-grid">
+    <div class="profile-grid{% if force_password_change %} profile-grid--forced{% endif %}">
       
-      <!-- Info Card -->
-      <div class="profile-card">
-        <h2 class="profile-card-title">
-          <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
-          <span>بياناتي</span>
-        </h2>
-        
-        <div class="profile-info-rows">
-          <div class="profile-info-row">
-            <span class="profile-info-label">الاسم</span>
-            <span class="profile-info-value">{{ request.user.name|default:"-" }}</span>
+      <!-- General identity -->
+      <section class="profile-card profile-card--identity twq-section" aria-labelledby="profileIdentityTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">الهوية العامة</p>
+            <h2 class="profile-card-title twq-section__title" id="profileIdentityTitle">
+              <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
+              <span>بيانات الحساب</span>
+            </h2>
+            <p class="twq-section__description">البيانات التعريفية المحفوظة للحساب؛ الحقول المحمية لا تُعدّل من هذه الصفحة.</p>
           </div>
-          <div class="profile-info-row">
-            <span class="profile-info-label">رقم الجوال</span>
-            <span class="profile-info-value">{{ request.user.phone|default:"-" }}</span>
-          </div>
-          <div class="profile-info-row">
-            <span class="profile-info-label">البريد الإلكتروني</span>
-            <span class="profile-info-value" dir="ltr">{{ request.user.email|default:"-" }}</span>
-          </div>
-        </div>
+        </header>
 
-        <div class="profile-divider"></div>
+        <dl class="profile-info-rows">
+          <div class="profile-info-row">
+            <dt class="profile-info-label">الاسم الكامل</dt>
+            <dd class="profile-info-value">{{ request.user.name|default:"-" }}</dd>
+          </div>
+          <div class="profile-info-row">
+            <dt class="profile-info-label">رقم الجوال</dt>
+            <dd class="profile-info-value" dir="ltr"><bdi>{{ request.user.phone|default:"-" }}</bdi></dd>
+          </div>
+          <div class="profile-info-row">
+            <dt class="profile-info-label">البريد الإلكتروني</dt>
+            <dd class="profile-info-value" dir="ltr"><bdi>{{ request.user.email|default:"غير مضاف" }}</bdi></dd>
+          </div>
+          <div class="profile-info-row">
+            <dt class="profile-info-label">حالة الحساب</dt>
+            <dd class="profile-info-value">
+              <span class="twq-status" data-status="{% if request.user.is_active %}approved{% else %}returned{% endif %}">
+                {% if request.user.is_active %}نشط{% else %}غير نشط{% endif %}
+              </span>
+            </dd>
+          </div>
+        </dl>
 
-        <h2 class="profile-card-title">
-          <i class="fa-solid fa-school" aria-hidden="true"></i>
-          <span>المدارس المسندة</span>
-        </h2>
-        
-        {% if memberships %}
+        <p class="profile-protected-note">
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          <span>الهوية الوطنية بيان محمي ولا تُعرض قيمته أو تُعدّل من ملف الخدمة الذاتية.</span>
+        </p>
+      </section>
+
+      <!-- Membership context -->
+      <section class="profile-card profile-card--memberships twq-section" aria-labelledby="profileMembershipsTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">سياق الحساب</p>
+            <h2 class="profile-card-title twq-section__title" id="profileMembershipsTitle">
+              <i class="fa-solid fa-school" aria-hidden="true"></i>
+              <span>المدارس والأدوار</span>
+            </h2>
+            <p class="twq-section__description">عضوياتك النشطة كما هي مسجلة. تبديل المدرسة يتم من شريط المنصة وليس من هذه القائمة.</p>
+          </div>
+        </header>
+
+        {% if membership_contexts %}
           <ul class="profile-schools-list">
-            {% for m in memberships %}
-              <li class="profile-school-item">
-                <span class="profile-school-copy">
-                  <span class="profile-school-name">{{ m.school.name }}</span>
-                  <span class="profile-school-role">{{ m.get_role_type_display }}</span>
-                </span>
-                {% if active_school and m.school_id == active_school.id %}
-                  <span class="profile-school-badge">
-                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                    <span>المدرسة النشطة</span>
+            {% for context in membership_contexts %}
+              <li class="profile-school-item{% if context.is_current %} profile-school-item--current{% endif %}">
+                <div class="profile-school-head">
+                  <span class="profile-school-copy">
+                    <strong class="profile-school-name">{{ context.school.name }}</strong>
+                    <span class="profile-school-status">عضوية نشطة</span>
                   </span>
-                {% endif %}
+                  {% if context.is_current %}
+                    <span class="profile-school-badge">
+                      <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                      <span>المدرسة الحالية</span>
+                    </span>
+                  {% endif %}
+                </div>
+                <dl class="profile-school-facts">
+                  <div>
+                    <dt>الدور الصلاحي</dt>
+                    <dd>{{ context.roles|join:"، " }}</dd>
+                  </div>
+                  <div>
+                    <dt>المسمى الوظيفي</dt>
+                    <dd>{{ context.job_titles|join:"، " }}</dd>
+                  </div>
+                  <div>
+                    <dt>الأقسام</dt>
+                    <dd>{% if context.departments %}{{ context.departments|join:"، " }}{% else %}لا توجد أقسام مسندة{% endif %}</dd>
+                  </div>
+                </dl>
               </li>
             {% endfor %}
           </ul>
         {% else %}
-          <div class="profile-empty-schools">
+          <div class="profile-empty-schools twq-empty twq-empty--local">
             <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
-            <p class="xs-my-profile-1">لا توجد مدارس مسندة لهذا الحساب.</p>
+            <h3 class="twq-empty__title">لا توجد عضويات مدرسية نشطة</h3>
+            <p class="twq-empty__message">سيظهر سياق المدرسة والدور هنا بعد إسناد عضوية نشطة للحساب.</p>
           </div>
         {% endif %}
-      </div>
+      </section>
 
       <!-- Update Forms Card -->
-      <div class="profile-card">
-        <h2 class="profile-card-title">
-          <i class="fa-solid fa-pen" aria-hidden="true"></i>
-          <span>تحديث البيانات</span>
-        </h2>
+      <section class="profile-card profile-card--account twq-section" aria-labelledby="profileAccountTitle">
+        <header class="twq-section__header">
+          <div>
+            <p class="twq-section__kicker">الخدمة الذاتية</p>
+            <h2 class="profile-card-title twq-section__title" id="profileAccountTitle">
+              <i class="fa-solid fa-pen" aria-hidden="true"></i>
+              <span>{% if force_password_change %}إكمال تأمين الحساب{% else %}بيانات التواصل والأمان{% endif %}</span>
+            </h2>
+            {% if not force_password_change %}
+              <p class="twq-section__description">يمكنك تعديل البريد ورقم الجوال فقط. الاسم والدور والمسمى والعضويات حقول إدارية للعرض.</p>
+            {% endif %}
+          </div>
+        </header>
 
         {% if force_password_change %}
           <div class="profile-locked-box">
@@ -1128,8 +294,15 @@
           <div class="profile-divider"></div>
         {% else %}
           <!-- Email Update Form -->
-          <form method="post" class="profile-form" novalidate>
+          <form method="post" class="profile-form" novalidate aria-labelledby="profileEmailFormTitle">
             {% csrf_token %}
+            <h3 class="profile-form-title" id="profileEmailFormTitle">البريد الإلكتروني</h3>
+            {% if email_form.errors %}
+              <div class="profile-form-error-summary twq-alert twq-alert--danger" role="alert" tabindex="-1">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <span>تعذر تحديث البريد. راجع الحقل الموضح ثم أعد المحاولة.</span>
+              </div>
+            {% endif %}
             <div class="profile-form-group">
               <label class="profile-form-label" for="{{ email_form.email.id_for_label }}">
                 <i class="fa-solid fa-envelope" aria-hidden="true"></i>
@@ -1145,10 +318,12 @@
                 inputmode="email"
                 dir="ltr"
                 placeholder="name@example.com"
+                aria-describedby="profileEmailHint{% if email_form.email.errors %} profileEmailError{% endif %}"
+                {% if email_form.email.errors %}aria-invalid="true"{% endif %}
               >
-              <div class="profile-form-hint">يمكنك تركه فارغًا، أو حفظ بريد صالح لاستعادة كلمة المرور لاحقًا.</div>
+              <div class="profile-form-hint" id="profileEmailHint">يمكنك تركه فارغًا، أو حفظ بريد صالح لاستعادة كلمة المرور لاحقًا.</div>
               {% if email_form.email.errors %}
-                <div class="profile-form-error">{{ email_form.email.errors|striptags }}</div>
+                <div class="profile-form-error" id="profileEmailError" role="alert">{{ email_form.email.errors|striptags }}</div>
               {% endif %}
             </div>
             <button type="submit" name="update_email" class="profile-btn profile-btn-primary">
@@ -1160,8 +335,15 @@
           <div class="profile-divider"></div>
 
           <!-- Phone Update Form -->
-          <form method="post" class="profile-form" novalidate>
+          <form method="post" class="profile-form" novalidate aria-labelledby="profilePhoneFormTitle">
             {% csrf_token %}
+            <h3 class="profile-form-title" id="profilePhoneFormTitle">رقم الجوال</h3>
+            {% if phone_form.errors %}
+              <div class="profile-form-error-summary twq-alert twq-alert--danger" role="alert" tabindex="-1">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <span>تعذر تحديث رقم الجوال. راجع الحقل الموضح ثم أعد المحاولة.</span>
+              </div>
+            {% endif %}
             <div class="profile-form-group">
               <label class="profile-form-label" for="{{ phone_form.phone.id_for_label }}">
                 <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
@@ -1173,10 +355,18 @@
                 id="{{ phone_form.phone.id_for_label }}"
                 value="{{ phone_form.phone.value|default:'' }}"
                 class="profile-form-input"
+                autocomplete="tel"
+                inputmode="numeric"
+                pattern="0[0-9]{9}"
+                maxlength="10"
+                dir="ltr"
+                aria-describedby="profilePhoneHint{% if phone_form.phone.errors %} profilePhoneError{% endif %}"
+                {% if phone_form.phone.errors %}aria-invalid="true"{% endif %}
                 {% if phone_form.phone.field.required %}required{% endif %}
               >
+              <div class="profile-form-hint" id="profilePhoneHint">رقم جوال سعودي من 10 أرقام ويبدأ بـ 05.</div>
               {% if phone_form.phone.errors %}
-                <div class="profile-form-error">{{ phone_form.phone.errors|striptags }}</div>
+                <div class="profile-form-error" id="profilePhoneError" role="alert">{{ phone_form.phone.errors|striptags }}</div>
               {% endif %}
             </div>
             <button type="submit" name="update_phone" class="profile-btn profile-btn-primary">
@@ -1189,162 +379,259 @@
         {% endif %}
 
         <!-- Password Update Form -->
-        <form
-          method="post"
-          class="profile-form"
-          novalidate
-          data-password-form
-          data-password-min-length="{{ pwd_form.password_min_length|default:'6' }}"
-        >
-          {% csrf_token %}
-
-          {% if pwd_form.non_field_errors %}
-            <div class="profile-form-errors-global">
-              {{ pwd_form.non_field_errors|striptags }}
+        <section class="twq-password" aria-labelledby="passwordUpdateTitle">
+          <header class="twq-password__header">
+            <div class="twq-password__heading">
+              <span class="twq-password__kicker">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                {% if force_password_change %}خطوة الدخول الأولى{% else %}أمان الحساب{% endif %}
+              </span>
+              <h3 class="twq-password__title" id="passwordUpdateTitle">
+                {% if force_password_change %}أنشئ كلمة مرور خاصة بك{% else %}تغيير كلمة المرور{% endif %}
+              </h3>
+              <p class="twq-password__description">
+                {% if force_password_change %}
+                  أكمل هذه الخطوة مرة واحدة، ثم تابع استخدام المنصة بالحساب نفسه.
+                {% else %}
+                  أدخل كلمة المرور الحالية للتحقق، ثم اختر كلمة جديدة وأكدها.
+                {% endif %}
+              </p>
             </div>
-          {% endif %}
+            <span class="twq-password__context{% if force_password_change %} twq-password__context--required{% endif %}">
+              <i class="fa-solid {% if force_password_change %}fa-circle-exclamation{% else %}fa-lock{% endif %}" aria-hidden="true"></i>
+              {% if force_password_change %}مطلوب قبل المتابعة{% else %}تغيير اختياري{% endif %}
+            </span>
+          </header>
 
-          {% if force_password_change %}
-            <div class="profile-form-group">
-              <label class="profile-form-label" for="{{ pwd_form.email.id_for_label }}">
-                <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-                <span>{{ pwd_form.email.label }}</span>
-              </label>
-              <input
-                type="email"
-                name="{{ pwd_form.email.html_name }}"
-                id="{{ pwd_form.email.id_for_label }}"
-                value="{{ pwd_form.email.value|default:'' }}"
-                class="profile-form-input"
-                autocomplete="email"
-                inputmode="email"
-                dir="ltr"
-                placeholder="name@example.com"
-                autofocus
-                required
-              >
-              <div class="profile-form-hint">سنستخدمه لاحقًا لمساعدتك في استعادة كلمة المرور وتأمين الحساب.</div>
-              {% if pwd_form.email.errors %}
-                <div class="profile-form-error">{{ pwd_form.email.errors|striptags }}</div>
-              {% endif %}
-            </div>
-          {% endif %}
+          <form method="post" class="twq-password__form" novalidate data-password-form>
+            {% csrf_token %}
 
-          <div class="profile-form-group">
-            <label class="profile-form-label" for="{{ pwd_form.old_password.id_for_label }}">
-              <i class="fa-solid fa-lock" aria-hidden="true"></i>
-              <span>{{ pwd_form.old_password.label }}</span>
-            </label>
-            <div class="profile-password-input-wrap">
-              <input
-                type="password"
-                name="{{ pwd_form.old_password.html_name }}"
-                id="{{ pwd_form.old_password.id_for_label }}"
-                class="profile-form-input"
-                autocomplete="current-password"
-                placeholder="أدخل كلمة المرور الحالية"
-                {% if pwd_form.old_password.field.required %}required{% endif %}
-              >
-              <button
-                type="button"
-                class="profile-password-toggle"
-                data-toggle-password
-                data-target="{{ pwd_form.old_password.id_for_label }}"
-                aria-label="إظهار كلمة المرور الحالية"
-                title="إظهار كلمة المرور الحالية"
-              >
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
-              </button>
-            </div>
+            {% if pwd_form.errors %}
+              <div class="twq-password__error-summary" role="alert" tabindex="-1">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <div>
+                  <strong>تعذر حفظ كلمة المرور.</strong>
+                  <span>راجع الحقول الموضحة أدناه ثم أعد المحاولة.</span>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if pwd_form.non_field_errors %}
+              <div class="twq-password__field-error" role="alert">
+                <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                <span>{{ pwd_form.non_field_errors|striptags }}</span>
+              </div>
+            {% endif %}
+
             {% if force_password_change %}
-              <div class="profile-form-hint">كلمة المرور الحالية هي رقم الجوال الحالي المسجّل على الحساب.</div>
+              <div class="twq-password__field">
+                <label class="twq-password__label" for="{{ pwd_form.email.id_for_label }}">
+                  <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                  <span>{{ pwd_form.email.label }}</span>
+                </label>
+                <input
+                  type="email"
+                  name="{{ pwd_form.email.html_name }}"
+                  id="{{ pwd_form.email.id_for_label }}"
+                  value="{{ pwd_form.email.value|default:'' }}"
+                  class="twq-password__input"
+                  autocomplete="email"
+                  inputmode="email"
+                  dir="ltr"
+                  placeholder="name@example.com"
+                  aria-describedby="passwordEmailHint{% if pwd_form.email.errors %} passwordEmailError{% endif %}"
+                  {% if pwd_form.email.errors %}aria-invalid="true"{% endif %}
+                  autofocus
+                  required
+                >
+                <p class="twq-password__help" id="passwordEmailHint">يُحفظ هذا البريد مع الحساب لاستخدامه في الاستعادة لاحقًا.</p>
+                {% if pwd_form.email.errors %}
+                  <p class="twq-password__field-error" id="passwordEmailError" role="alert">
+                    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                    <span>{{ pwd_form.email.errors|striptags }}</span>
+                  </p>
+                {% endif %}
+              </div>
             {% endif %}
-            {% if pwd_form.old_password.errors %}
-              <div class="profile-form-error">{{ pwd_form.old_password.errors|striptags }}</div>
+
+            <div class="twq-password__field">
+              <label class="twq-password__label" for="{{ pwd_form.old_password.id_for_label }}">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <span>{{ pwd_form.old_password.label }}</span>
+              </label>
+              <div class="twq-password__control twq-password__control--toggle">
+                <input
+                  type="password"
+                  name="{{ pwd_form.old_password.html_name }}"
+                  id="{{ pwd_form.old_password.id_for_label }}"
+                  class="twq-password__input"
+                  autocomplete="current-password"
+                  dir="ltr"
+                  spellcheck="false"
+                  placeholder="أدخل كلمة المرور الحالية"
+                  aria-describedby="passwordCurrentHint{% if pwd_form.old_password.errors %} passwordCurrentError{% endif %}"
+                  {% if pwd_form.old_password.errors %}aria-invalid="true"{% endif %}
+                  required
+                >
+                <button
+                  type="button"
+                  class="twq-password__toggle"
+                  data-password-toggle="{{ pwd_form.old_password.id_for_label }}"
+                  aria-label="إظهار كلمة المرور الحالية"
+                  aria-pressed="false"
+                  title="إظهار كلمة المرور الحالية"
+                >
+                  <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                </button>
+              </div>
+              <p class="twq-password__help" id="passwordCurrentHint">
+                {% if force_password_change %}استخدم كلمة المرور المؤقتة التي سجلت الدخول بها.{% else %}مطلوبة للتحقق من أن التغيير يصدر منك.{% endif %}
+              </p>
+              {% if pwd_form.old_password.errors %}
+                <p class="twq-password__field-error" id="passwordCurrentError" role="alert">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span>{{ pwd_form.old_password.errors|striptags }}</span>
+                </p>
               {% endif %}
-          </div>
+            </div>
 
-          <div class="profile-password-simplehint">
-            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            <span>اكتب كلمة مرور جديدة من <b>{{ pwd_form.password_min_length|default:'6' }} أحرف على الأقل</b>، ثم أعد كتابتها للتأكيد.</span>
-          </div>
+            <div class="twq-password__requirements" id="passwordRequirements">
+              <p class="twq-password__requirements-title">متطلبات كلمة المرور الجديدة</p>
+              <ul class="twq-password__requirements-list">
+                {% for requirement in pwd_form.password_requirements %}
+                  <li><i class="fa-solid fa-circle" aria-hidden="true"></i><span>{{ requirement.label }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
 
-          <div class="profile-form-group">
-            <label class="profile-form-label" for="{{ pwd_form.new_password1.id_for_label }}">
-              <i class="fa-solid fa-key" aria-hidden="true"></i>
-              <span>{{ pwd_form.new_password1.label }}</span>
-            </label>
-            <div class="profile-password-input-wrap">
-              <input
-                type="password"
-                name="{{ pwd_form.new_password1.html_name }}"
-                id="{{ pwd_form.new_password1.id_for_label }}"
-                class="profile-form-input"
-                autocomplete="new-password"
-                placeholder="أدخل كلمة مرور جديدة قوية"
-                data-password-primary
-                {% if pwd_form.new_password1.field.required %}required{% endif %}
-              >
-              <button
-                type="button"
-                class="profile-password-toggle"
-                data-toggle-password
-                data-target="{{ pwd_form.new_password1.id_for_label }}"
-                aria-label="إظهار كلمة المرور الجديدة"
-                title="إظهار كلمة المرور الجديدة"
-              >
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+            <div class="twq-password__field">
+              <label class="twq-password__label" for="{{ pwd_form.new_password1.id_for_label }}">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>{{ pwd_form.new_password1.label }}</span>
+              </label>
+              <div class="twq-password__control twq-password__control--toggle">
+                <input
+                  type="password"
+                  name="{{ pwd_form.new_password1.html_name }}"
+                  id="{{ pwd_form.new_password1.id_for_label }}"
+                  class="twq-password__input"
+                  autocomplete="new-password"
+                  dir="ltr"
+                  spellcheck="false"
+                  placeholder="أدخل كلمة المرور الجديدة"
+                  aria-describedby="passwordRequirements{% if pwd_form.new_password1.errors %} passwordNewError{% endif %}"
+                  {% if pwd_form.new_password1.errors %}aria-invalid="true"{% endif %}
+                  required
+                >
+                <button
+                  type="button"
+                  class="twq-password__toggle"
+                  data-password-toggle="{{ pwd_form.new_password1.id_for_label }}"
+                  aria-label="إظهار كلمة المرور الجديدة"
+                  aria-pressed="false"
+                  title="إظهار كلمة المرور الجديدة"
+                >
+                  <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                </button>
+              </div>
+              {% if pwd_form.new_password1.errors %}
+                <p class="twq-password__field-error" id="passwordNewError" role="alert">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span>{{ pwd_form.new_password1.errors|striptags }}</span>
+                </p>
+              {% endif %}
+            </div>
+
+            <div class="twq-password__field">
+              <label class="twq-password__label" for="{{ pwd_form.new_password2.id_for_label }}">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>{{ pwd_form.new_password2.label }}</span>
+              </label>
+              <div class="twq-password__control twq-password__control--toggle">
+                <input
+                  type="password"
+                  name="{{ pwd_form.new_password2.html_name }}"
+                  id="{{ pwd_form.new_password2.id_for_label }}"
+                  class="twq-password__input"
+                  autocomplete="new-password"
+                  dir="ltr"
+                  spellcheck="false"
+                  placeholder="أعد إدخال كلمة المرور الجديدة"
+                  aria-describedby="passwordConfirmHint{% if pwd_form.new_password2.errors %} passwordConfirmError{% endif %}"
+                  {% if pwd_form.new_password2.errors %}aria-invalid="true"{% endif %}
+                  required
+                >
+                <button
+                  type="button"
+                  class="twq-password__toggle"
+                  data-password-toggle="{{ pwd_form.new_password2.id_for_label }}"
+                  aria-label="إظهار تأكيد كلمة المرور"
+                  aria-pressed="false"
+                  title="إظهار تأكيد كلمة المرور"
+                >
+                  <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+                </button>
+              </div>
+              <p class="twq-password__help" id="passwordConfirmHint">أعد كتابة الكلمة نفسها لتجنب خطأ الكتابة.</p>
+              {% if pwd_form.new_password2.errors %}
+                <p class="twq-password__field-error" id="passwordConfirmError" role="alert">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span>{{ pwd_form.new_password2.errors|striptags }}</span>
+                </p>
+              {% endif %}
+            </div>
+
+            <div class="twq-password__actions">
+              <button type="submit" name="update_password" class="profile-btn profile-btn-primary twq-password__submit">
+                <i class="fa-solid fa-lock-open" aria-hidden="true"></i>
+                <span>{% if force_password_change %}حفظ ومتابعة استخدام المنصة{% else %}تحديث كلمة المرور{% endif %}</span>
               </button>
             </div>
-            {% if pwd_form.new_password1.errors %}
-              <div class="profile-form-error">{{ pwd_form.new_password1.errors|striptags }}</div>
-            {% endif %}
-          </div>
 
-          <div class="profile-form-group">
-            <label class="profile-form-label" for="{{ pwd_form.new_password2.id_for_label }}">
-              <i class="fa-solid fa-key" aria-hidden="true"></i>
-              <span>{{ pwd_form.new_password2.label }}</span>
-            </label>
-            <div class="profile-password-input-wrap">
-              <input
-                type="password"
-                name="{{ pwd_form.new_password2.html_name }}"
-                id="{{ pwd_form.new_password2.id_for_label }}"
-                class="profile-form-input"
-                autocomplete="new-password"
-                placeholder="أعد إدخال كلمة المرور الجديدة"
-                data-password-confirm
-                {% if pwd_form.new_password2.field.required %}required{% endif %}
-              >
-              <button
-                type="button"
-                class="profile-password-toggle"
-                data-toggle-password
-                data-target="{{ pwd_form.new_password2.id_for_label }}"
-                aria-label="إظهار تأكيد كلمة المرور"
-                title="إظهار تأكيد كلمة المرور"
-              >
-                <i class="fa-regular fa-eye" aria-hidden="true"></i>
-              </button>
-            </div>
-            {% if pwd_form.new_password2.errors %}
-              <div class="profile-form-error">{{ pwd_form.new_password2.errors|striptags }}</div>
-            {% endif %}
-          </div>
+            <p class="twq-password__session-note">
+              <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+              <span>بعد نجاح التغيير ستبقى مسجلًا في هذه الجلسة، ولن تعمل كلمة المرور السابقة.</span>
+            </p>
+          </form>
+        </section>
+      </section>
 
-          <button type="submit" name="update_password" class="profile-btn profile-btn-primary">
-            <i class="fa-solid fa-lock-open" aria-hidden="true"></i>
-            <span>{% if force_password_change %}تغيير كلمة المرور الآن{% else %}تحديث كلمة المرور{% endif %}</span>
-          </button>
-        </form>
-      </div>
-
-      <div class="profile-card" id="account-security" aria-labelledby="accountSecurityTitle">
+      <div class="profile-card profile-card--passkey" id="account-security" aria-labelledby="accountSecurityTitle">
         <h2 class="profile-card-title" id="accountSecurityTitle">
-          <i class="fa-solid fa-fingerprint" aria-hidden="true"></i>
-          <span>الدخول بالبصمة</span>
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          <span>أمان الحساب</span>
         </h2>
+        <div class="profile-security-methods">
+          <section class="profile-security-method" aria-labelledby="profileTotpTitle">
+            <div class="profile-security-method__head">
+              <div>
+                <h3 id="profileTotpTitle">المصادقة الثنائية</h3>
+                <p class="profile-passkey-copy">رمز متغير من تطبيق المصادقة بعد كلمة المرور.</p>
+              </div>
+              {% if totp_device %}
+                <span class="twq-security-status twq-security-status--enabled"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>مفعّلة</span>
+              {% else %}
+                <span class="twq-security-status twq-security-status--attention"><i class="fa-solid fa-circle-minus" aria-hidden="true"></i>غير مفعّلة</span>
+              {% endif %}
+            </div>
+            <a class="profile-btn profile-btn-secondary" href="{% url 'reports:totp_settings' %}">
+              <i class="fa-solid fa-key" aria-hidden="true"></i>
+              <span>{% if totp_device %}إدارة المصادقة الثنائية{% else %}تفعيل المصادقة الثنائية{% endif %}</span>
+            </a>
+          </section>
+
+          <section class="profile-security-method" aria-labelledby="profilePasskeyTitle">
+            <div class="profile-security-method__head">
+              <div>
+                <h3 id="profilePasskeyTitle">مفاتيح المرور</h3>
+                <p class="profile-passkey-copy">دخول بديل بكلمة مرور الجهاز أو بصمته دون إرسال بياناتك الحيوية إلى المنصة.</p>
+              </div>
+              {% if passkey_credentials %}
+                <span class="twq-security-status twq-security-status--enabled"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>{{ passkey_credentials|length }} مسجل</span>
+              {% else %}
+                <span class="twq-security-status"><i class="fa-solid fa-circle-minus" aria-hidden="true"></i>غير مسجلة</span>
+              {% endif %}
+            </div>
         <div
           class="profile-passkey-panel"
           id="profilePasskeyPanel"
@@ -1417,6 +704,8 @@
             </p>
           {% endif %}
         </div>
+          </section>
+        </div>
       </div>
 
     </div>
@@ -1426,6 +715,7 @@
 
 {% block scripts %}
   {{ block.super }}
+  <script src="{% static 'js/auth-password-toggle.js' %}?v=20260921.1" defer data-cfasync="false"></script>
   <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
     (function () {
       const root = document.getElementById('profilePasskeyPanel');
@@ -1506,163 +796,6 @@
   </script>
   <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
     (function () {
-      const form = document.querySelector('[data-password-form]');
-      if (!form) return;
-
-      // إظهار/إخفاء كلمة المرور — يعمل دائمًا (مستقل عن أي عناصر أخرى)
-      form.querySelectorAll('[data-toggle-password]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          const target = document.getElementById(this.dataset.target || '');
-          if (!target) return;
-          const isHidden = target.type === 'password';
-          target.type = isHidden ? 'text' : 'password';
-          const icon = this.querySelector('i');
-          if (icon) {
-            icon.classList.toggle('fa-eye', !isHidden);
-            icon.classList.toggle('fa-eye-slash', isHidden);
-          }
-          const lbl = isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
-          this.setAttribute('aria-label', lbl);
-          this.setAttribute('title', lbl);
-        });
-      });
-
-      const primaryInput = form.querySelector('[data-password-primary]');
-      const confirmInput = form.querySelector('[data-password-confirm]');
-      const strengthText = form.querySelector('[data-password-strength-text]');
-      const strengthBar = form.querySelector('[data-password-strength-bar]');
-      // الواجهة المبسّطة لا تعرض مقياس القوة/الشروط؛ نكتفي بالأزرار أعلاه.
-      if (!primaryInput || !confirmInput || !strengthText || !strengthBar) return;
-
-      const userPhone = (form.dataset.userPhone || '').trim();
-      const userName = (form.dataset.userName || '').trim().toLowerCase();
-      const minLength = parseInt(form.dataset.passwordMinLength || '8', 10) || 8;
-
-      const ruleNodes = {
-        min_length: form.querySelector('[data-rule-key="min_length"]'),
-        not_numeric: form.querySelector('[data-rule-key="not_numeric"]'),
-        match: form.querySelector('[data-rule-key="match"]'),
-      };
-
-      const normalize = (value) => (value || '').trim();
-
-      const setRuleState = (node, state, text) => {
-        if (!node) return;
-        node.classList.remove('is-met', 'is-unmet');
-        if (state === 'met') node.classList.add('is-met');
-        if (state === 'unmet') node.classList.add('is-unmet');
-        const label = node.querySelector('[data-rule-status]');
-        if (label) label.textContent = text;
-      };
-
-      const updateStrength = (password) => {
-        const value = normalize(password);
-        const hasLetters = /[A-Za-z\u0600-\u06FF]/.test(value);
-        const hasNumbers = /\d/.test(value);
-        const hasSymbols = /[^A-Za-z0-9\u0600-\u06FF]/.test(value);
-
-        let score = 0;
-        if (value.length >= minLength) score += 1;
-        if (hasLetters && hasNumbers) score += 1;
-        if (hasSymbols) score += 1;
-        if (value.length >= 12) score += 1;
-
-        let width = '8%';
-        let label = 'ابدأ بكتابة كلمة المرور';
-        let gradient = 'linear-gradient(90deg, #cbd5e1 0%, #94a3b8 100%)';
-
-        if (value.length) {
-          if (score <= 1) {
-            width = '28%';
-            label = 'ضعيفة';
-            gradient = 'linear-gradient(90deg, #ef4444 0%, #f97316 100%)';
-          } else if (score === 2) {
-            width = '52%';
-            label = 'مقبولة';
-            gradient = 'linear-gradient(90deg, #b9975b 0%, #d4b16d 100%)';
-          } else if (score === 3) {
-            width = '76%';
-            label = 'جيدة';
-            gradient = 'linear-gradient(90deg, #0072bc 0%, #006c35 100%)';
-          } else {
-            width = '100%';
-            label = 'ممتازة';
-            gradient = 'linear-gradient(90deg, #16845b 0%, #16845b 100%)';
-          }
-
-          const lowered = value.toLowerCase();
-          const phoneLooksSimilar = userPhone && lowered.includes(userPhone);
-          const nameLooksSimilar = userName && userName.split(/\s+/).some((part) => part.length >= 3 && lowered.includes(part));
-          if (phoneLooksSimilar || nameLooksSimilar) {
-            label = 'تحتاج تحسينًا';
-          }
-        }
-
-        strengthText.textContent = label;
-        strengthBar.style.width = width;
-        strengthBar.style.background = gradient;
-      };
-
-      const updateRules = () => {
-        const password = normalize(primaryInput.value);
-        const confirm = normalize(confirmInput.value);
-
-        if (ruleNodes.min_length) {
-          if (!password) {
-            setRuleState(ruleNodes.min_length, '', 'بانتظار الإدخال');
-          } else if (password.length >= minLength) {
-            setRuleState(ruleNodes.min_length, 'met', 'متحقق');
-          } else {
-            setRuleState(ruleNodes.min_length, 'unmet', 'قصيرة');
-          }
-        }
-
-        if (ruleNodes.not_numeric) {
-          if (!password) {
-            setRuleState(ruleNodes.not_numeric, '', 'بانتظار الإدخال');
-          } else if (/^\d+$/.test(password)) {
-            setRuleState(ruleNodes.not_numeric, 'unmet', 'أرقام فقط');
-          } else {
-            setRuleState(ruleNodes.not_numeric, 'met', 'متحقق');
-          }
-        }
-
-        if (ruleNodes.match) {
-          if (!password && !confirm) {
-            setRuleState(ruleNodes.match, '', 'بانتظار الإدخال');
-          } else if (confirm && password === confirm) {
-            setRuleState(ruleNodes.match, 'met', 'متطابقة');
-          } else {
-            setRuleState(ruleNodes.match, 'unmet', 'غير متطابقة');
-          }
-        }
-
-        updateStrength(password);
-      };
-
-      form.querySelectorAll('[data-toggle-password]').forEach((button) => {
-        button.addEventListener('click', function () {
-          const target = document.getElementById(this.dataset.target || '');
-          if (!target) return;
-          const isHidden = target.type === 'password';
-          target.type = isHidden ? 'text' : 'password';
-          const icon = this.querySelector('i');
-          if (icon) {
-            icon.classList.toggle('fa-eye', !isHidden);
-            icon.classList.toggle('fa-eye-slash', isHidden);
-          }
-          this.setAttribute('aria-label', isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-          this.setAttribute('title', isHidden ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-        });
-      });
-
-      primaryInput.addEventListener('input', updateRules);
-      confirmInput.addEventListener('input', updateRules);
-      updateRules();
-    })();
-  </script>
-  <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-    (function () {
       const button = document.getElementById('registerPasskeyBtn');
       const statusBox = document.getElementById('profilePasskeyStatus');
       const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
@@ -1699,7 +832,7 @@
         if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
           return 'لم يكتمل التفعيل. تأكد من تفعيل قفل الشاشة أو بصمة الجهاز، ثم أعد المحاولة.';
         }
-        return error && error.message ? error.message : 'تعذر تفعيل الدخول بالبصمة.';
+        return 'تعذر تفعيل مفتاح المرور. أعد المحاولة أو استخدم جهازًا آخر.';
       }
 
       function b64ToBuffer(value) {

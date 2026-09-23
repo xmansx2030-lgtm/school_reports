@@ -153,14 +153,24 @@ class TeacherExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "مساحة عمل المعلم")
-        self.assertContains(response, "متابعة اليوم")
+        self.assertContains(response, "ما يحتاج انتباهك الآن")
+        self.assertContains(response, "إجراءاتك اليومية")
         self.assertContains(response, "أحدث تقاريري")
         self.assertContains(response, "طلباتي المدرسية")
-        self.assertContains(response, "مساحة عملي")
         self.assertContains(response, "إضافة تقرير")
+        self.assertNotContains(response, "متابعة اليوم")
+        self.assertNotContains(response, "مساحة عملي")
         self.assertNotContains(response, "Premium 2026")
         self.assertNotContains(response, "أحدث النشاطات")
         self.assertEqual(len(re.findall(r"<h1\b", html, re.IGNORECASE)), 1)
+        self.assertLess(
+            html.index('id="teacherAttentionTitle"'),
+            html.index('id="teacherActionsTitle"'),
+        )
+        self.assertLess(
+            html.index('id="teacherActionsTitle"'),
+            html.index('id="recentReportsTitle"'),
+        )
         self.assertEqual(
             response.context["active_requests_count"],
             response.context["req_stats"]["open"] + response.context["req_stats"]["in_progress"],
@@ -402,9 +412,17 @@ class TeacherExperienceTests(TestCase):
                 f"{template_name} must bypass Rocket Loader to preserve its CSP nonce",
             )
 
-            add_report_source = (templates_dir / "add_report.html").read_text(encoding="utf-8")
-            self.assertIn('d.addEventListener("input", syncDateFields);', add_report_source)
-            self.assertIn('d.addEventListener("change", syncDateFields);', add_report_source)
+            report_authoring_source = (
+                Path(settings.BASE_DIR) / "static/js/report-authoring.js"
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                'dateInput.addEventListener("input", syncDateFields);',
+                report_authoring_source,
+            )
+            self.assertIn(
+                'dateInput.addEventListener("change", syncDateFields);',
+                report_authoring_source,
+            )
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"])

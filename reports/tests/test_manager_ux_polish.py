@@ -77,6 +77,11 @@ HIJRI_ECHO_TEMPLATES = (
     "reports/templates/reports/assignment_create.html",
 )
 
+EXTERNAL_HIJRI_ECHO_TEMPLATES = (
+    "reports/templates/reports/add_report.html",
+    "reports/templates/reports/edit_report.html",
+)
+
 
 class HijriEchoTests(SimpleTestCase):
     """صدى التاريخ الهجري: مُنسّقٌ واحد، وعلامة حقبةٍ واحدة."""
@@ -101,8 +106,20 @@ class HijriEchoTests(SimpleTestCase):
             with self.subTest(template=template_path):
                 source = _source(template_path)
                 self.assertNotIn("islamic-umalqura", source)
-                self.assertIn("TawtheeqHijri", source)
                 self.assertIn("js/hijri-date.js", source)
+
+                if template_path in EXTERNAL_HIJRI_ECHO_TEMPLATES:
+                    self.assertIn("js/report-authoring.js", source)
+                    self.assertIn('id="reportDayEcho"', source)
+                    self.assertIn('id="reportDateHijri"', source)
+                elif template_path.endswith("assignment_create.html"):
+                    self.assertIn("js/assignments.js", source)
+                    self.assertIn('id="assignmentDueHijri"', source)
+                    self.assertIn(
+                        "window.TawtheeqHijri", _source("static/js/assignments.js")
+                    )
+                else:
+                    self.assertIn("window.TawtheeqHijri", source)
 
     def test_no_template_doubles_the_era_marker(self):
         doubled = re.compile(r"\.format\([^)]*\)\s*\+\s*['\"] هـ")
@@ -110,17 +127,39 @@ class HijriEchoTests(SimpleTestCase):
             with self.subTest(template=template_path):
                 self.assertIsNone(doubled.search(_source(template_path)))
 
-    def test_the_helper_loads_before_the_inline_script_that_calls_it(self):
-        # ‎defer‎ يؤجّل التنفيذ إلى ما بعد تحليل الصفحة، والسكربت المضمّن يعمل
-        # وقت التحليل — فلو أُجّل المساعد لَناداه المضمّن قبل وجوده.
+    def test_the_helper_loads_before_the_script_that_calls_it(self):
         for template_path in HIJRI_ECHO_TEMPLATES:
             with self.subTest(template=template_path):
                 source = _source(template_path)
                 tag = re.search(r"<script[^>]*js/hijri-date\.js[^>]*>", source)
                 self.assertIsNotNone(tag)
                 self.assertNotIn("defer", tag.group(0))
-                # نقيس أول *استدعاء* فعلي، لا أول ذكرٍ للاسم في تعليق.
-                self.assertLess(tag.start(), source.index("window.TawtheeqHijri"))
+
+                if template_path in EXTERNAL_HIJRI_ECHO_TEMPLATES:
+                    authoring_tag = re.search(
+                        r"<script[^>]*js/report-authoring\.js[^>]*>", source
+                    )
+                    self.assertIsNotNone(authoring_tag)
+                    self.assertIn("defer", authoring_tag.group(0))
+                    self.assertLess(tag.start(), authoring_tag.start())
+                elif template_path.endswith("assignment_create.html"):
+                    assignments_tag = re.search(
+                        r"<script[^>]*js/assignments\.js[^>]*>", source
+                    )
+                    self.assertIsNotNone(assignments_tag)
+                    self.assertIn("defer", assignments_tag.group(0))
+                    self.assertLess(tag.start(), assignments_tag.start())
+                else:
+                    # نقيس أول *استدعاء* فعلي، لا أول ذكرٍ للاسم في تعليق.
+                    self.assertLess(tag.start(), source.index("window.TawtheeqHijri"))
+
+    def test_external_authoring_script_keeps_the_hijri_echo_contract(self):
+        source = _source("static/js/report-authoring.js")
+
+        self.assertIn('document.getElementById("id_report_date")', source)
+        self.assertIn('document.getElementById("reportDayEcho")', source)
+        self.assertIn('document.getElementById("reportDateHijri")', source)
+        self.assertIn("window.TawtheeqHijri.echo(value)", source)
 
 
 class HijriDisplayConsistencyTests(SimpleTestCase):
@@ -285,6 +324,147 @@ class LeadershipPortfolioReadabilityTests(SimpleTestCase):
             _source("reports/templates/reports/leadership_portfolio_list.html"),
         )
 
+    def test_list_pilot_keeps_the_post_and_detail_contracts(self):
+        template = _source("reports/templates/reports/leadership_portfolio_list.html")
+
+        self.assertIn('form method="post"', template)
+        self.assertIn("{% csrf_token %}", template)
+        self.assertIn("current_school.current_academic_year", template)
+        self.assertIn("reports:leadership_portfolio_detail", template)
+        self.assertIn("item.completed_count", template)
+        self.assertIn("item.report_evidence_count", template)
+        self.assertIn("item.evidence_count", template)
+        self.assertIn("item.get_status_display", template)
+
+    def test_list_pilot_uses_the_shared_foundation_without_inline_css(self):
+        template = _source("reports/templates/reports/leadership_portfolio_list.html")
+        css = _source("static/css/leadership-portfolio-list.css")
+
+        self.assertIn("css/leadership-portfolio-list.css", template)
+        self.assertNotIn("<style", template)
+        self.assertNotIn("style=", template)
+        for component_class in ("twq-btn", "twq-card", "twq-status", "twq-empty"):
+            with self.subTest(component_class=component_class):
+                self.assertIn(component_class, template)
+        for v1_class in (
+            "twq-page",
+            "twq-page-header",
+            "twq-section__header",
+            "twq-progress__bar",
+            "twq-metrics",
+            "twq-empty--page",
+        ):
+            with self.subTest(v1_class=v1_class):
+                self.assertIn(v1_class, template)
+        self.assertIn("var(--twq-primary)", css)
+        self.assertIn("@media (max-width: 40rem)", css)
+        self.assertIn("prefers-reduced-motion", css)
+        self.assertNotIn("!important", css)
+        self.assertIsNone(
+            re.search(
+                r"(?m)^\s*(?:margin|padding|border)-(?:left|right)\s*:|^\s*(?:left|right)\s*:",
+                css,
+            )
+        )
+
+    def test_list_progress_and_status_have_textual_semantics(self):
+        template = _source("reports/templates/reports/leadership_portfolio_list.html")
+
+        self.assertIn('data-status="{{ item.status }}"', template)
+        self.assertIn('max="8"', template)
+        self.assertIn('aria-label="اكتمل {{ item.completed_count }} من 8 محاور"', template)
+        self.assertIn("{{ item.completed_count }}/8", template)
+
+    def test_detail_pilot_preserves_every_existing_post_contract(self):
+        template = _source("reports/templates/reports/leadership_portfolio_detail.html")
+
+        for action in (
+            "save_overview",
+            "save_section",
+            "upload_evidence",
+            "delete_evidence",
+            "add_report_evidence",
+            "remove_report_evidence",
+            "set_status",
+        ):
+            with self.subTest(action=action):
+                self.assertIn(f'value="{action}"', template)
+
+        for field_name in (
+            "section_id",
+            "evidence_id",
+            "report_id",
+            "images",
+            "caption",
+            "notes",
+            "is_completed",
+            "status",
+        ):
+            with self.subTest(field_name=field_name):
+                self.assertIn(f'name="{field_name}"', template)
+
+        for route_name in (
+            "reports:leadership_portfolio_list",
+            "reports:leadership_portfolio_pdf",
+            "reports:leadership_portfolio_print",
+            "reports:add_report",
+            "reports:report_print",
+        ):
+            with self.subTest(route_name=route_name):
+                self.assertIn(route_name, template)
+
+        self.assertIn("{% csrf_token %}", template)
+        self.assertIn('enctype="multipart/form-data"', template)
+
+    def test_detail_pilot_uses_the_same_foundation_as_the_list(self):
+        template = _source("reports/templates/reports/leadership_portfolio_detail.html")
+        css = _source("static/css/leadership-portfolio-detail.css")
+
+        self.assertIn("css/leadership-portfolio-detail.css", template)
+        self.assertNotIn("<style", template)
+        self.assertNotIn("style=", template)
+        for component_class in ("twq-btn", "twq-field", "twq-control", "twq-status", "twq-empty"):
+            with self.subTest(component_class=component_class):
+                self.assertIn(component_class, template)
+        for v1_class in (
+            "twq-page",
+            "twq-page-header",
+            "twq-section__header",
+            "twq-progress__bar",
+            "twq-metrics",
+            "twq-disclosure",
+            "twq-document-item",
+            "twq-empty--local",
+        ):
+            with self.subTest(v1_class=v1_class):
+                self.assertIn(v1_class, template)
+        self.assertIn("var(--twq-primary)", css)
+        self.assertIn("var(--twq-accent)", css)
+        self.assertIn("@media (max-width: 64rem)", css)
+        self.assertIn("@media (max-width: 48rem)", css)
+        self.assertIn("@media (max-width: 40rem)", css)
+        self.assertIn("prefers-reduced-motion", css)
+        self.assertNotIn("!important", css)
+        self.assertNotRegex(css, r"transition:\s*all")
+        self.assertIsNone(
+            re.search(
+                r"(?m)^\s*(?:margin|padding|border)-(?:left|right)\s*:|^\s*(?:left|right)\s*:",
+                css,
+            )
+        )
+
+    def test_detail_progress_status_and_disclosures_are_accessible(self):
+        template = _source("reports/templates/reports/leadership_portfolio_detail.html")
+
+        self.assertIn('data-status="{{ portfolio.status }}"', template)
+        self.assertIn('value="{{ completion_percent }}" max="100"', template)
+        self.assertIn("اكتمل {{ completion_percent }} بالمئة", template)
+        self.assertIn("<details", template)
+        self.assertIn('<summary class="twq-disclosure__summary">', template)
+        self.assertIn('for="lpSectionNotes{{ section.pk }}"', template)
+        self.assertIn('aria-describedby="axisNotesHelp{{ section.pk }}"', template)
+        self.assertIn('aria-label="حذف الشاهد:', template)
+
 
 class DarkLayerCoverageTests(SimpleTestCase):
     """ما اكتُشف بالقياس على مسارات المدير الاثنين والثلاثين.
@@ -396,15 +576,16 @@ class TableActionNamingTests(SimpleTestCase):
     def test_staff_row_actions_name_the_person(self):
         source = _source("reports/templates/reports/manage_teachers.html")
         self.assertIn('aria-label="تعديل بيانات: {{ t.name|default:t.phone }}"', source)
-        self.assertIn('aria-label="حذف: {{ t.name|default:t.phone }}"', source)
+        self.assertIn('إزالة من المدرسة: {% endif %}{{ t.name|default:t.phone }}', source)
         self.assertNotIn('aria-label="حذف"', source)
 
     def test_delete_is_not_louder_than_the_action_beside_it(self):
         # الحذف نادرٌ لا رجعة فيه، والتعديل شائع. فمربّعٌ أحمر مصمت بجوار
         # التعديل يجعل الأخطر أسهلَ إصابةً بالإبهام.
-        source = _source("reports/templates/reports/manage_teachers.html")
-        self.assertIn(".admin-scope .btn-delete{background:transparent", source)
-        self.assertNotIn(".admin-scope .btn-delete{background:#ef4444", source)
+        source = _source("static/css/users-list.css")
+        self.assertIn(".users-list-delete {", source)
+        self.assertIn("background: transparent;", source)
+        self.assertNotIn("background: #ef4444", source)
 
 
 class SeatPressureTests(SimpleTestCase):

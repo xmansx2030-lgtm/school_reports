@@ -1,308 +1,187 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}نطاق {{ membership.teacher.name }} | منصة توثيق{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  .scp-page {
-    --scp-ink: #10231a; --scp-muted: #607067; --scp-line: #dfe8e2;
-    --scp-soft: #f3f8f5; --scp-surface: #ffffff;
-    --scp-green: #08643b; --scp-gold: #b68a42; --scp-danger: #b42318;
-    max-width: 980px; margin-inline: auto; padding: 1.25rem; color: var(--scp-ink);
-  }
-  [data-theme="dark"] .scp-page {
-    --scp-ink: #eff8f2; --scp-muted: #afc1b5; --scp-line: #2d4637;
-    --scp-soft: #13271c; --scp-surface: #102019;
-    --scp-green: #6ed3a0; --scp-gold: #eabf58; --scp-danger: #ff9d96;
-  }
-
-  .scp-hero {
-    position: relative; overflow: hidden; border-radius: 8px; padding: 1.6rem 1.5rem;
-    background: linear-gradient(135deg, #08643b 0%, #0a7a48 55%, #075334 100%);
-    color: #fff; box-shadow: 0 18px 40px -22px rgba(8,100,59,.75);
-  }
-  .scp-hero__back {
-    display: inline-flex; align-items: center; gap: .4rem;
-    font-size: .78rem; font-weight: 800; text-decoration: none; color: #fff;
-    padding: .3rem .75rem; border-radius: 999px;
-    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.24);
-  }
-  .scp-hero .scp-hero__title {
-    margin: .8rem 0 .25rem; color: #fff; font-size: 1.4rem; font-weight: 900;
-  }
-  .scp-hero .scp-hero__meta { margin: 0; color: #fff; font-size: .88rem; opacity: .92; }
-
-  .scp-card {
-    background: var(--scp-surface); border: 1px solid var(--scp-line);
-    border-radius: 8px; padding: 1.15rem 1.2rem; margin-top: 1.2rem;
-    box-shadow: 0 10px 26px -24px rgba(16,35,26,.75);
-  }
-  .scp-card__title { font-size: 1rem; font-weight: 900; margin: 0 0 .3rem; }
-  .scp-card__hint { font-size: .83rem; color: var(--scp-muted); line-height: 1.8; margin: 0 0 1rem; }
-
-  .scp-summary { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
-  .scp-summary__group { border: 1px solid var(--scp-line); border-radius: 8px; padding: .85rem; }
-  .scp-summary__group h3 { margin: 0 0 .65rem; font-size: .88rem; letter-spacing: 0; }
-  .scp-summary__group ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .45rem; }
-  .scp-summary__group li { display: flex; gap: .45rem; align-items: flex-start; font-size: .79rem; line-height: 1.65; }
-  .scp-summary__group li[hidden] { display: none; }
-  .scp-summary__group--yes h3, .scp-summary__group--yes i { color: var(--scp-green); }
-  .scp-summary__group--no h3, .scp-summary__group--no i { color: var(--scp-danger); }
-  .scp-summary__empty { color: var(--scp-muted); }
-
-  /* ── القوالب ──────────────────────────────────────────────── */
-  .scp-templates { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-  .scp-template {
-    border: 1px solid var(--scp-line); border-radius: 8px; padding: .85rem .9rem;
-    background: var(--scp-surface); display: flex; flex-direction: column; gap: .45rem;
-  }
-  .scp-template.is-current { border-color: var(--scp-green); background: var(--scp-soft); }
-  .scp-template__name { font-size: .9rem; font-weight: 800; }
-  .scp-template__desc { font-size: .78rem; color: var(--scp-muted); line-height: 1.75; flex: 1; }
-
-  /* ── الحقول ───────────────────────────────────────────────── */
-  .scp-field { margin-top: 1rem; }
-  .scp-field > label { display: block; font-size: .8rem; font-weight: 800; color: var(--scp-muted); margin-bottom: .4rem; }
-  .scp-field select {
-    width: 100%; max-width: 340px; padding: .55rem .7rem; border-radius: 8px;
-    border: 1px solid var(--scp-line); background: var(--scp-surface);
-    color: var(--scp-ink); font-family: inherit; font-size: .88rem;
-  }
-  .scp-field select:focus { outline: 2px solid var(--scp-green); outline-offset: 1px; }
-
-  .scp-checks { display: grid; gap: .45rem; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-  .scp-checks label { display: flex; gap: .5rem; align-items: flex-start; font-size: .85rem; font-weight: 700; }
-  .scp-checks input { margin-top: .2rem; }
-
-  /* ── الصلاحيات ────────────────────────────────────────────── */
-  .scp-group { margin-top: 1.1rem; }
-  .scp-group__name {
-    font-size: .8rem; font-weight: 900; color: var(--scp-green);
-    padding-bottom: .35rem; border-bottom: 1px solid var(--scp-line); margin-bottom: .6rem;
-  }
-  .scp-cap {
-    display: flex; gap: .6rem; align-items: flex-start;
-    padding: .6rem .7rem; border-radius: 8px; border: 1px solid transparent;
-  }
-  .scp-cap:hover { background: var(--scp-soft); }
-  .scp-cap.is-pending { opacity: .72; }
-  .scp-cap input { margin-top: .25rem; flex: none; }
-  .scp-cap__body { flex: 1; }
-  .scp-cap__label { font-size: .87rem; font-weight: 800; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-  .scp-cap__desc { font-size: .77rem; color: var(--scp-muted); line-height: 1.75; margin-top: .2rem; }
-  .scp-soon {
-    font-size: .68rem; font-weight: 800; padding: .1rem .5rem; border-radius: 999px;
-    color: var(--scp-gold); border: 1px solid currentColor;
-  }
-
-  .scp-btn {
-    display: inline-flex; align-items: center; gap: .4rem;
-    padding: .55rem 1.1rem; border-radius: 8px;
-    font-size: .85rem; font-weight: 800; font-family: inherit;
-    text-decoration: none; cursor: pointer; border: 1px solid transparent;
-  }
-  .scp-btn--primary { background: var(--scp-green); color: #fff; }
-  [data-theme="dark"] .scp-btn--primary { color: #06251a; }
-  .scp-btn--ghost { background: transparent; color: var(--scp-muted); border-color: var(--scp-line); }
-  .scp-btn--sm { padding: .38rem .8rem; font-size: .78rem; }
-
-  .scp-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.4rem; }
-  .scp-errors { list-style: none; margin: .4rem 0 0; padding: 0; }
-  .scp-errors li { font-size: .78rem; color: var(--scp-danger); font-weight: 700; }
-
-  @media (max-width: 640px) {
-    .scp-page { padding: .85rem; }
-    .scp-hero { padding: 1.3rem 1.1rem; border-radius: 8px; }
-    .scp-hero__title { font-size: 1.2rem; }
-    .scp-summary { grid-template-columns: 1fr; }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/staff-access.css' %}?v=20260923.1">
 {% endblock %}
 
 {% block content %}
-<div class="scp-page">
-
-  <header class="scp-hero">
-    <a class="scp-hero__back" href="{% url 'reports:staff_roles' %}">
-      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-      الأدوار والصلاحيات
-    </a>
-    <h1 class="scp-hero__title">نطاق {{ membership.teacher.name }}</h1>
-    <p class="scp-hero__meta">{{ membership.get_role_type_display }} — {{ active_school.name }}</p>
+<div class="twq-page staff-access-page staff-scope-page" dir="rtl" data-staff-scope>
+  <header class="twq-page-header staff-scope-header">
+    <div class="twq-page-header__heading">
+      <a class="staff-access-back" href="{% url 'reports:staff_roles' %}">
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        إدارة الوصول والتفويضات
+      </a>
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> نطاق دائم</span>
+      <h1 class="twq-page-header__title">نطاق {{ membership.teacher.name }}</h1>
+      <p class="twq-page-header__lead">حدّد ما يستطيع هذا المنسوب فعله، ثم اربط الصلاحيات بالأقسام التي يشرف عليها فعليًا.</p>
+      <dl class="twq-page-header__context staff-access-context" aria-label="هوية المنسوب وسياق الصلاحية">
+        <div><dt>المدرسة النشطة</dt><dd>{{ active_school.name }}</dd></div>
+        <div><dt>الدور الصلاحي</dt><dd>{{ membership.get_role_type_display }}</dd></div>
+        <div><dt>المسمى الوظيفي</dt><dd>{{ membership.get_job_title_display }}</dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside">
+      {% if scope.pk %}
+        <span class="twq-status" data-status="active"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> نطاق محفوظ</span>
+      {% else %}
+        <span class="twq-status" data-status="warning"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> يحتاج إعدادًا</span>
+      {% endif %}
+    </div>
   </header>
 
-  <section class="scp-card" aria-labelledby="scopeSummaryTitle">
-    <h2 class="scp-card__title" id="scopeSummaryTitle">ملخص واضح للصلاحيات</h2>
-    <p class="scp-card__hint">يتحدث الملخص مباشرة عند اختيار الصلاحيات، ويعرض الحدود الثابتة لهذا الدور.</p>
-    <div class="scp-summary">
-      <div class="scp-summary__group scp-summary__group--yes">
-        <h3>يستطيع</h3>
+  <section class="twq-section staff-access-boundary" aria-labelledby="scopeBoundaryTitle">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">قرار أمني قبل الحفظ</span>
+        <h2 class="twq-section__title" id="scopeBoundaryTitle">الصلاحية وحدها لا تعني نطاقًا مدرسيًا كاملاً</h2>
+        <p class="twq-section__description">القسم يحدد أين تُمارس الصلاحية. ترك الأقسام فارغة يعني عدم وجود أقسام مسندة، وليس الإشراف على المدرسة كلها.</p>
+      </div>
+    </div>
+    <div class="staff-access-summary" aria-live="polite">
+      <div class="staff-access-summary__group" data-tone="allowed">
+        <h3><i class="fa-solid fa-check" aria-hidden="true"></i> يستطيع</h3>
         <ul id="scopeAllowedList">
           {% for item in capability_summary %}
-            <li data-capability="{{ item.code }}" {% if not item.allowed %}hidden{% endif %}>
-              <i class="fa-solid fa-check" aria-hidden="true"></i><span>{{ item.label }}</span>
-            </li>
+            <li data-capability="{{ item.code }}" {% if not item.allowed %}hidden{% endif %}>{{ item.label }}</li>
           {% endfor %}
-          <li class="scp-summary__empty" id="scopeAllowedEmpty" {% if capability_summary|length and scope.capabilities %}hidden{% endif %}>لا توجد صلاحيات إضافية محددة.</li>
+          <li class="staff-access-summary__empty" id="scopeAllowedEmpty" {% if capability_summary|length and scope.capabilities %}hidden{% endif %}>لا توجد صلاحيات إضافية محددة.</li>
         </ul>
       </div>
-      <div class="scp-summary__group scp-summary__group--no">
-        <h3>لا يستطيع</h3>
+      <div class="staff-access-summary__group" data-tone="denied">
+        <h3><i class="fa-solid fa-lock" aria-hidden="true"></i> لا يستطيع</h3>
         <ul id="scopeDeniedList">
           {% for item in capability_summary %}
-            <li data-capability="{{ item.code }}" {% if item.allowed %}hidden{% endif %}>
-              <i class="fa-solid fa-xmark" aria-hidden="true"></i><span>{{ item.label }}</span>
-            </li>
+            <li data-capability="{{ item.code }}" {% if item.allowed %}hidden{% endif %}>لا يملك: {{ item.label }}</li>
           {% endfor %}
-          {% for boundary in fixed_boundaries %}
-            <li><i class="fa-solid fa-lock" aria-hidden="true"></i><span>{{ boundary }}</span></li>
-          {% endfor %}
+          {% for boundary in fixed_boundaries %}<li>{{ boundary }}</li>{% endfor %}
         </ul>
       </div>
     </div>
   </section>
 
-  {# ═══ القوالب المعتمدة ════════════════════════════════════ #}
-  <section class="scp-card">
-    <h2 class="scp-card__title">القوالب المعتمدة</h2>
-    <p class="scp-card__hint">
-      يملأ القالب الصلاحيات دفعةً واحدة ثم يتركها لمراجعتك — لا يُحفظ شيء حتى
-      تضغط «حفظ النطاق». والقوالب تختصر توليفات لا تُحصى إلى حالات مفهومة
-      وقابلة للشرح.
-    </p>
-
-    <div class="scp-templates">
+  <section class="twq-section staff-access-templates" aria-labelledby="scopeTemplatesTitle">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">بداية موصى بها</span>
+        <h2 class="twq-section__title" id="scopeTemplatesTitle">القوالب المعتمدة</h2>
+        <p class="twq-section__description">القالب يملأ الاختيارات للمراجعة فقط؛ لا يُحفظ شيء قبل ضغط «حفظ النطاق».</p>
+      </div>
+    </div>
+    <div class="staff-access-template-grid">
       {% for tpl in templates %}
-        <form method="post" class="scp-template {% if scope.template_code == tpl.code %}is-current{% endif %}">
+        <form method="post" class="staff-access-template{% if scope.template_code == tpl.code %} is-current{% endif %}">
           {% csrf_token %}
           <input type="hidden" name="action" value="apply_template">
           <input type="hidden" name="template_code" value="{{ tpl.code }}">
-          <div class="scp-template__name">{{ tpl.label }}</div>
-          <div class="scp-template__desc">{{ tpl.description }}</div>
-          <button type="submit" class="scp-btn scp-btn--ghost scp-btn--sm">
-            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
-            تطبيق القالب
+          <strong>{{ tpl.label }}</strong>
+          <p>{{ tpl.description }}</p>
+          <button type="submit" class="twq-btn twq-btn--secondary">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> تطبيق للمراجعة
           </button>
         </form>
       {% endfor %}
     </div>
   </section>
 
-  {# ═══ النطاق ══════════════════════════════════════════════ #}
-  <form method="post" novalidate>
+  <form method="post" novalidate class="staff-access-scope-form" data-access-form="scope">
     {% csrf_token %}
     <input type="hidden" name="action" value="save_scope">
     {{ form.template_code.as_hidden }}
 
+    {% if form.errors %}
+      <div class="twq-alert twq-alert--danger staff-access-error-summary" role="alert" tabindex="-1" data-error-summary>
+        <strong>تعذّر حفظ النطاق.</strong>
+        <span>راجع الحقول الموضحة أدناه؛ لم تتغير صلاحيات {{ membership.teacher.name }}.</span>
+      </div>
+    {% endif %}
+
     {% if form.domain %}
-      <section class="scp-card">
-        <h2 class="scp-card__title">مجال الوكالة</h2>
-        <p class="scp-card__hint">
-          وصف تنظيمي يوضّح مجال إشراف الوكيل — لا يمنح صلاحية بذاته، فالصلاحيات
-          تُحدَّد أدناه صراحةً.
-        </p>
-        <div class="scp-field">
-          <label for="{{ form.domain.id_for_label }}">{{ form.domain.label }}</label>
+      <section class="twq-section" aria-labelledby="scopeDomainTitle">
+        <div class="twq-section__header">
+          <div>
+            <span class="twq-section__kicker">وصف تنظيمي</span>
+            <h2 class="twq-section__title" id="scopeDomainTitle">مجال الوكالة</h2>
+            <p class="twq-section__description">المجال يصف مسؤولية الوكيل ولا يمنح أي صلاحية بذاته.</p>
+          </div>
+        </div>
+        <div class="staff-access-field">
+          <label class="twq-label" for="{{ form.domain.id_for_label }}">{{ form.domain.label }}</label>
           {{ form.domain }}
-          {% if form.domain.errors %}
-            <ul class="scp-errors">{% for e in form.domain.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-          {% endif %}
+          {% if form.domain.errors %}<ul class="staff-access-errors" id="{{ form.domain.id_for_label }}-errors">{% for e in form.domain.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
         </div>
       </section>
     {% endif %}
 
-    <section class="scp-card">
-      <h2 class="scp-card__title">الأقسام المشمولة</h2>
-      <p class="scp-card__hint">
-        من يقعون تحت إشرافه. <strong>تركها فارغة يعني نطاقاً بلا أقسام</strong> —
-        لا إشرافاً على المدرسة كلها.
-      </p>
-      <div class="scp-checks">
-        {% for choice in form.departments %}
-          <label>{{ choice.tag }} <span>{{ choice.choice_label }}</span></label>
-        {% empty %}
-          <p class="scp-card__hint u-m-0">
-            لا توجد أقسام في هذه المدرسة بعد.
-            <a href="{% url 'reports:departments_list' %}">أنشئ قسماً أولاً</a>.
-          </p>
-        {% endfor %}
+    <section class="twq-section" aria-labelledby="scopeDepartmentsTitle">
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">نطاق البيانات</span>
+          <h2 class="twq-section__title" id="scopeDepartmentsTitle">الأقسام المشمولة</h2>
+          <p class="twq-section__description">الخيارات من المدرسة النشطة فقط. تركها فارغة يعني نطاقًا بلا أقسام مسندة.</p>
+        </div>
       </div>
-      {% if form.departments.errors %}
-        <ul class="scp-errors">{% for e in form.departments.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-      {% endif %}
-    </section>
-
-    <section class="scp-card">
-      <h2 class="scp-card__title">الصلاحيات</h2>
-      <p class="scp-card__hint">
-        ما يستطيع فعله ضمن نطاقه. الصلاحيات الموسومة «قريباً» تعتمد على ميزات
-        قيد البناء — يمكنك اختيارها الآن وسيسري مفعولها فور توفّرها، ولن تفعل
-        شيئاً قبل ذلك.
-      </p>
-
-      {% for group_name, group_caps in capability_groups %}
-        <div class="scp-group">
-          <div class="scp-group__name">{{ group_name }}</div>
-          {% for cap in group_caps %}
-            <label class="scp-cap {% if not cap.available %}is-pending{% endif %}">
-              <input type="checkbox" name="capabilities" value="{{ cap.code }}"
-                     {% if cap.code in form.initial.capabilities %}checked{% endif %}>
-              <span class="scp-cap__body">
-                <span class="scp-cap__label">
-                  {{ cap.label }}
-                  {% if not cap.available %}<span class="scp-soon">قريباً</span>{% endif %}
-                </span>
-                <span class="scp-cap__desc">{{ cap.description }}</span>
-              </span>
-            </label>
+      <fieldset class="staff-access-fieldset" {% if form.departments.errors %}aria-invalid="true" aria-describedby="{{ form.departments.id_for_label }}-errors"{% endif %}>
+        <legend class="staff-access-sr-only">اختر الأقسام المشمولة</legend>
+        <div class="staff-access-check-grid">
+          {% for choice in form.departments %}
+            <label class="staff-access-check">{{ choice.tag }} <span>{{ choice.choice_label }}</span></label>
+          {% empty %}
+            <div class="twq-empty-state staff-access-empty-inline">
+              <p>لا توجد أقسام نشطة في هذه المدرسة.</p>
+              <a class="twq-btn twq-btn--secondary" href="{% url 'reports:departments_list' %}">إدارة الأقسام</a>
+            </div>
           {% endfor %}
         </div>
-      {% endfor %}
-
-      {% if form.capabilities.errors %}
-        <ul class="scp-errors">{% for e in form.capabilities.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-      {% endif %}
+      </fieldset>
+      {% if form.departments.errors %}<ul class="staff-access-errors" id="{{ form.departments.id_for_label }}-errors">{% for e in form.departments.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
     </section>
 
-    {% if form.non_field_errors %}
-      <ul class="scp-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
-    {% endif %}
+    <section class="twq-section" aria-labelledby="scopeCapabilitiesTitle" {% if form.capabilities.errors %}aria-invalid="true" aria-describedby="{{ form.capabilities.id_for_label }}-errors"{% endif %}>
+      <div class="twq-section__header">
+        <div>
+          <span class="twq-section__kicker">ما يمكن تنفيذه</span>
+          <h2 class="twq-section__title" id="scopeCapabilitiesTitle">الصلاحيات التشغيلية</h2>
+          <p class="twq-section__description">الدور الصلاحي يحدد ما يجوز عرضه، وهذه الاختيارات تحدد ما يُمنح فعليًا ضمن الأقسام المحددة.</p>
+        </div>
+      </div>
+      {% for group_name, group_caps in capability_groups %}
+        <fieldset class="staff-access-capability-group">
+          <legend>{{ group_name }}</legend>
+          <div class="staff-access-capability-grid">
+            {% for cap in group_caps %}
+              <label class="staff-access-capability{% if not cap.available %} is-pending{% endif %}">
+                <input type="checkbox" name="capabilities" value="{{ cap.code }}" {% if cap.code in form.capabilities.value %}checked{% endif %}>
+                <span>
+                  <strong>{{ cap.label }}{% if not cap.available %} <small>قريبًا</small>{% endif %}</strong>
+                  <span>{{ cap.description }}</span>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+      {% endfor %}
+      {% if form.capabilities.errors %}<ul class="staff-access-errors" id="{{ form.capabilities.id_for_label }}-errors">{% for e in form.capabilities.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      {% if form.non_field_errors %}<ul class="staff-access-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    </section>
 
-    <div class="scp-actions">
-      <button type="submit" class="scp-btn scp-btn--primary">
-        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-        حفظ النطاق
-      </button>
-      <a class="scp-btn scp-btn--ghost" href="{% url 'reports:staff_roles' %}">إلغاء</a>
+    <div class="staff-access-sensitive-actions" aria-label="إجراءات حفظ النطاق">
+      <div>
+        <strong>مراجعة قبل الحفظ</strong>
+        <p>الحفظ يغيّر الوصول فورًا، لكنه لا يغير الدور أو المسمى الوظيفي أو عضوية الأقسام.</p>
+      </div>
+      <div>
+        <button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ النطاق</button>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:staff_roles' %}">إلغاء</a>
+      </div>
     </div>
   </form>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  (function () {
-    var checks = Array.prototype.slice.call(document.querySelectorAll('input[name="capabilities"]'));
-    var allowed = document.getElementById('scopeAllowedList');
-    var denied = document.getElementById('scopeDeniedList');
-    var empty = document.getElementById('scopeAllowedEmpty');
-    if (!checks.length || !allowed || !denied) return;
-
-    function refreshSummary() {
-      var selected = 0;
-      checks.forEach(function (check) {
-        var yes = allowed.querySelector('[data-capability="' + check.value + '"]');
-        var no = denied.querySelector('[data-capability="' + check.value + '"]');
-        if (yes) yes.hidden = !check.checked;
-        if (no) no.hidden = check.checked;
-        if (check.checked) selected += 1;
-      });
-      if (empty) empty.hidden = selected > 0;
-    }
-
-    checks.forEach(function (check) { check.addEventListener('change', refreshSummary); });
-    refreshSummary();
-  }());
-</script>
+<script src="{% static 'js/staff-access.js' %}?v=20260923.1" defer></script>
 {% endblock %}

@@ -57,6 +57,7 @@ POSTGRES_DB=school_reports
 POSTGRES_USER=school_reports
 POSTGRES_PASSWORD={postgres_password}
 DATABASE_URL=postgresql://school_reports:{postgres_password}@postgres:5432/school_reports
+DATABASE_POOL_URL=postgresql://school_reports:{postgres_password}@pgbouncer:6432/school_reports
 DB_SSL=False
 
 REDIS_PASSWORD={redis_password}
@@ -71,7 +72,7 @@ AWS_S3_REGION_NAME=nbg1
 MEDIA_PUBLIC_ACCESS_ENABLED=False
 AWS_QUERYSTRING_AUTH=True
 
-WEB_CONCURRENCY=3
+WEB_CONCURRENCY=4
 GUNICORN_TIMEOUT=120
 GUNICORN_KEEPALIVE=5
 GUNICORN_MAX_REQUESTS=800

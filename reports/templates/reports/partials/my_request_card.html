@@ -1,0 +1,43 @@
+{% load hijri_tags %}
+<article class="requests-card">
+  <div class="requests-card__head">
+    <div class="requests-card__identity">
+      <span class="requests-id">طلب #{{ t.pk }}</span>
+      <h3 class="requests-card__title">
+        <a href="{% url 'reports:ticket_detail' t.pk %}">{{ t.title|default:"طلب بدون عنوان" }}</a>
+      </h3>
+    </div>
+    {% include "reports/partials/ticket_status.html" with t=t %}
+  </div>
+
+  <dl class="requests-card__meta">
+    <div>
+      <dt>القسم</dt>
+      <dd>{{ t.get_department_display|default:t.department|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt>المستلم</dt>
+      <dd>{% firstof t.assignee.name t.assignee "غير مسند" %}</dd>
+    </div>
+    <div>
+      <dt>تاريخ الطلب</dt>
+      <dd><time datetime="{{ t.created_at|date:'c' }}">{{ t.created_at|hijri }} هـ</time> <span class="requests-card__gregorian">· {{ t.created_at|date:"Y-m-d" }} م</span></dd>
+    </div>
+  </dl>
+
+  {% if t.pub_notes %}
+  <div class="requests-card__reply">
+    <span class="requests-card__reply-label"><i class="fa-solid fa-reply" aria-hidden="true"></i> آخر رد</span>
+    {% for n in t.pub_notes|slice:":1" %}
+      <p><strong>{{ n.author.name }}:</strong> {{ n.body|default:"—"|truncatechars:100 }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="requests-card__foot">
+    <span class="requests-card__foot-note">التفاصيل والردود في صفحة الطلب</span>
+    <a href="{% url 'reports:ticket_detail' t.pk %}" class="twq-btn twq-btn--secondary requests-card__action">
+      عرض الطلب <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+    </a>
+  </div>
+</article>

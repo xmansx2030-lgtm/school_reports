@@ -40,7 +40,7 @@ from ..middleware import (
     is_force_password_change_required,
 )
 from ..marketing_attribution import capture_marketing_attribution
-from ..models import WebAuthnCredential
+from ..models import DepartmentMembership, SchoolMembership, TeacherTotpDevice, WebAuthnCredential
 from ..forms import AccountPasswordResetForm, AccountSetPasswordForm
 from ..email_identity import format_system_from_email
 from ..staff_workspace import build_staff_workspaces
@@ -1357,6 +1357,56 @@ def logout_view(request: HttpRequest) -> HttpResponse:
     return redirect("reports:login")
 
 
+def _profile_membership_contexts(
+    user,
+    memberships: list[SchoolMembership],
+    *,
+    active_school,
+) -> list[dict[str, Any]]:
+    """Build read-only school context without per-membership department queries."""
+
+    grouped: dict[int, dict[str, Any]] = {}
+    for membership in memberships:
+        school_id = int(membership.school_id)
+        context = grouped.setdefault(
+            school_id,
+            {
+                "school": membership.school,
+                "is_current": bool(active_school and active_school.pk == school_id),
+                "roles": [],
+                "job_titles": [],
+                "departments": [],
+            },
+        )
+        role_label = membership.get_role_type_display()
+        if role_label not in context["roles"]:
+            context["roles"].append(role_label)
+        job_title = membership.get_job_title_display()
+        if job_title not in context["job_titles"]:
+            context["job_titles"].append(job_title)
+
+    if grouped:
+        department_names: dict[int, list[str]] = {school_id: [] for school_id in grouped}
+        department_memberships = (
+            DepartmentMembership.objects.filter(
+                teacher=user,
+                department__school_id__in=grouped,
+                department__is_active=True,
+            )
+            .select_related("department")
+            .order_by("department__school__name", "department__name", "id")
+        )
+        for department_membership in department_memberships:
+            school_id = int(department_membership.department.school_id)
+            name = department_membership.department.name
+            if name not in department_names[school_id]:
+                department_names[school_id].append(name)
+        for school_id, names in department_names.items():
+            grouped[school_id]["departments"] = names
+
+    return list(grouped.values())
+
+
 @login_required(login_url="reports:login")
 @require_http_methods(["GET", "POST"])
 def my_profile(request: HttpRequest) -> HttpResponse:
@@ -1370,10 +1420,19 @@ def my_profile(request: HttpRequest) -> HttpResponse:
     active_school = _get_active_school(request)
     force_password_change = is_force_password_change_required(request)
 
-    memberships = (
+    memberships = list(
         SchoolMembership.objects.filter(teacher=request.user, is_active=True)
         .select_related("school")
         .order_by("school__name", "id")
+    )
+    membership_contexts = _profile_membership_contexts(
+        request.user,
+        memberships,
+        active_school=active_school,
+    )
+    current_membership_context = next(
+        (context for context in membership_contexts if context["is_current"]),
+        None,
     )
 
     phone_form = MyProfilePhoneForm(instance=request.user, prefix="phone")
@@ -1437,10 +1496,16 @@ def my_profile(request: HttpRequest) -> HttpResponse:
     ctx = {
         "active_school": active_school,
         "memberships": memberships,
+        "membership_contexts": membership_contexts,
+        "current_membership_context": current_membership_context,
         "phone_form": phone_form,
         "email_form": email_form,
         "pwd_form": pwd_form,
         "force_password_change": force_password_change,
+        "totp_device": TeacherTotpDevice.objects.filter(
+            teacher=request.user,
+            confirmed_at__isnull=False,
+        ).first(),
         "passkey_credentials": WebAuthnCredential.objects.filter(teacher=request.user, is_active=True).order_by("-created_at"),
         **build_staff_workspaces(request.user, active_school),
     }

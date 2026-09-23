@@ -520,3 +520,19 @@ html[data-theme="dark"] .cir-empty__icon { background: #332a18; color: #efd396; 
   .cir-report-table tr { break-inside: avoid; page-break-inside: avoid; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+.cir-receipt__digest {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-align: left;
+}
+
+.cir-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.cir-filters .cir-btn[aria-current="page"] {
+  border-color: currentColor;
+  font-weight: 700;
+}

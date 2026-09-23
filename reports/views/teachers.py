@@ -162,6 +162,7 @@ def manage_teachers(request: HttpRequest) -> HttpResponse:
         request,
         "reports/manage_teachers.html",
         {
+            "active_school": active_school,
             "teachers_page": page,
             "term": term,
             "status_filter": status_filter,
@@ -822,11 +823,25 @@ def edit_teacher(request: HttpRequest, pk: int) -> HttpResponse:
                 logger.exception("edit_teacher failed")
                 messages.error(request, "حدث خطأ غير متوقع أثناء التحديث.")
         else:
+            for field_name in form.errors:
+                if field_name in form.fields:
+                    form.fields[field_name].widget.attrs["aria-invalid"] = "true"
             messages.error(request, "الرجاء تصحيح الأخطاء الظاهرة.")
     else:
         form = TeacherEditForm(instance=teacher, active_school=active_school)
 
-    return render(request, "reports/edit_teacher.html", {"form": form, "teacher": teacher, "title": "تعديل مستخدم"})
+    return render(
+        request,
+        "reports/edit_teacher.html",
+        {
+            "form": form,
+            "teacher": teacher,
+            "title": "تعديل مستخدم",
+            "active_school": active_school,
+            "school_role_label": effective_user_role_label(teacher, active_school=active_school),
+            "next_url_value": _safe_next_url(request.POST.get("next") or request.GET.get("next")),
+        },
+    )
 
 @login_required(login_url="reports:login")
 @role_required({"manager"})

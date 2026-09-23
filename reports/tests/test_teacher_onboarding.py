@@ -5,12 +5,14 @@ from unittest.mock import patch
 import openpyxl
 from django.contrib import messages
 from django.contrib.messages import get_messages
+from django.core.cache import caches
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from reports import teacher_onboarding
 from reports.forms import TeacherCreateForm
+from reports.staff_assignments import STAFF_ASSIGNMENTS
 from reports.models import (
     Department,
     DepartmentMembership,
@@ -33,6 +35,8 @@ class TeacherOnboardingTests(TestCase):
     # side effect the test happened to assert. Expiry gets its own test below;
     # here it is held far enough away to stop timing from deciding the result.
     def setUp(self):
+        # POST requests are rate-limited per user; test IDs repeat across cases.
+        caches["default"].clear()
         ttl_patch = patch.object(teacher_onboarding, "PREVIEW_MAX_AGE_SECONDS", 24 * 60 * 60)
         ttl_patch.start()
         self.addCleanup(ttl_patch.stop)
@@ -451,6 +455,138 @@ class TeacherOnboardingTests(TestCase):
             preview["rows"][0]["job_title"],
             SchoolMembership.RoleType.DEPUTY,
         )
+
+    def test_preview_accepts_every_canonical_assignment_and_existing_aliases(self):
+        for assignment in STAFF_ASSIGNMENTS:
+            with self.subTest(assignment=assignment.code):
+                preview = teacher_onboarding.build_preview(
+                    [{
+                        "name": "منسوب تجريبي",
+                        "phone": "0551234567",
+                        "job_title": assignment.code,
+                        "lab_kind": "science" if assignment.code == "lab_tech" else "",
+                    }],
+                    self.school,
+                )
+                self.assertTrue(preview["can_confirm"], preview["rows"][0]["errors"])
+                self.assertEqual(preview["rows"][0]["job_title"], assignment.code)
+
+        for alias, expected in (
+            ("معلم", "teacher"),
+            ("Teacher", "teacher"),
+            ("وكيل مدرسة", "deputy"),
+            ("Deputy", "deputy"),
+            ("موظف إداري", "admin_staff"),
+            ("Admin", "admin_staff"),
+            ("محضر مختبر", "lab_tech"),
+            ("Lab", "lab_tech"),
+        ):
+            with self.subTest(alias=alias):
+                preview = teacher_onboarding.build_preview(
+                    [{
+                        "name": "منسوب تجريبي",
+                        "phone": "0551234567",
+                        "job_title": alias,
+                        "lab_kind": "science" if expected == "lab_tech" else "",
+                    }],
+                    self.school,
+                )
+                self.assertTrue(preview["can_confirm"], preview["rows"][0]["errors"])
+                self.assertEqual(preview["rows"][0]["job_title"], expected)
+
+    def _assert_unsupported_assignment_preview(self, response, phone):
+        self.assertRedirects(
+            response,
+            f"{reverse('reports:bulk_import_teachers')}?step=preview",
+            fetch_redirect_response=False,
+        )
+        preview = self.client.session[PREVIEW_SESSION_KEY]
+        self.assertEqual(preview["summary"]["invalid"], 1)
+        self.assertFalse(preview["can_confirm"])
+        self.assertEqual(preview["rows"][0]["job_title"], "manager")
+        self.assertIn("التكليف غير مدعوم في الاستيراد الجماعي.", preview["rows"][0]["errors"])
+        page = self.client.get(f"{reverse('reports:bulk_import_teachers')}?step=preview")
+        self.assertContains(page, "التكليف غير مدعوم في الاستيراد الجماعي.")
+        self.assertContains(page, "تكليف غير مدعوم")
+        self.assertFalse(Teacher.objects.filter(phone=phone).exists())
+        return preview
+
+    def test_quick_preview_rejects_manager_and_token_cannot_confirm_it(self):
+        preview_response = self._quick_preview(phone="0551234511", job_title="manager")
+        preview = self._assert_unsupported_assignment_preview(preview_response, "0551234511")
+
+        # Even a direct POST with the issued token must revalidate without writes.
+        confirm_response = self._confirm_current_preview(expect_success=False)
+        self.assertRedirects(
+            confirm_response,
+            f"{reverse('reports:bulk_import_teachers')}?step=preview",
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(Teacher.objects.filter(phone="0551234511").exists())
+        self.assertFalse(
+            SchoolMembership.objects.filter(
+                school=self.school, teacher__phone="0551234511"
+            ).exists()
+        )
+        self.assertFalse(self.client.session[PREVIEW_SESSION_KEY]["can_confirm"])
+        self.assertEqual(preview["rows"][0]["job_title"], "manager")
+
+    def test_xlsx_preview_rejects_manager_before_confirmation(self):
+        book = openpyxl.Workbook()
+        sheet = book.active
+        sheet.append(["الاسم الكامل", "رقم الجوال", "المسمى الوظيفي"])
+        sheet.append(["منسوب غير مدعوم", "0551234512", "manager"])
+        payload = BytesIO()
+        book.save(payload)
+        response = self.client.post(
+            reverse("reports:bulk_import_teachers"),
+            {"action": "file_preview", "excel_file": SimpleUploadedFile(
+                "unsupported.xlsx", payload.getvalue(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )},
+        )
+        self._assert_unsupported_assignment_preview(response, "0551234512")
+
+    def test_csv_preview_rejects_manager_before_confirmation(self):
+        response = self.client.post(
+            reverse("reports:bulk_import_teachers"),
+            {"action": "file_preview", "excel_file": SimpleUploadedFile(
+                "unsupported.csv",
+                "name,phone,role\nUnsupported Staff,0551234513,manager\n".encode("utf-8"),
+                content_type="text/csv",
+            )},
+        )
+        self._assert_unsupported_assignment_preview(response, "0551234513")
+
+    def test_unsupported_assignment_does_not_change_existing_account_or_membership(self):
+        existing = Teacher.objects.create_user(
+            phone="0551234514", name="منسوب موجود", password="existing-safe-password"
+        )
+        membership = SchoolMembership.objects.create(
+            school=self.school,
+            teacher=existing,
+            role_type=SchoolMembership.RoleType.TEACHER,
+            job_title=SchoolMembership.JobTitle.TEACHER,
+        )
+        self._quick_preview(phone=existing.phone, name=existing.name, job_title="manager")
+        self.assertFalse(self.client.session[PREVIEW_SESSION_KEY]["can_confirm"])
+        self._confirm_current_preview(expect_success=False)
+
+        existing.refresh_from_db()
+        membership.refresh_from_db()
+        self.assertTrue(existing.check_password("existing-safe-password"))
+        self.assertEqual(membership.role_type, SchoolMembership.RoleType.TEACHER)
+        self.assertEqual(membership.job_title, SchoolMembership.JobTitle.TEACHER)
+        self.assertEqual(SchoolMembership.objects.filter(school=self.school, teacher=existing).count(), 1)
+
+    def test_unknown_assignment_stays_invalid_during_confirmation_revalidation(self):
+        self._quick_preview(phone="0551234515", job_title="unsupported-role")
+        preview = self.client.session[PREVIEW_SESSION_KEY]
+        self.assertFalse(preview["can_confirm"])
+        self.assertEqual(preview["rows"][0]["job_title"], "unsupported-role")
+        self._confirm_current_preview(expect_success=False)
+        self.assertFalse(self.client.session[PREVIEW_SESSION_KEY]["can_confirm"])
+        self.assertFalse(Teacher.objects.filter(phone="0551234515").exists())
 
     def test_quick_preview_writes_nothing_then_confirmation_creates_everything(self):
         response = self._quick_preview()

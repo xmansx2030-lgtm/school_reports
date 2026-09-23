@@ -1,0 +1,20 @@
+.hs-field { margin: 1.1rem 0; padding: 1rem; border: 1px solid #d9e3db; border-radius: 16px; background: linear-gradient(145deg, #f8fbf8, #eff5ef); box-shadow: 0 10px 28px rgba(13, 55, 35, .07); }
+.hs-field__header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: .7rem; }
+.hs-field__header strong, .hs-field__header span { display: block; }
+.hs-field__header strong { color: #103d29; font-size: .98rem; }
+.hs-field__header span { margin-top: .15rem; color: #596f60; font-size: .78rem; }
+.hs-field__clear { flex: 0 0 auto; padding: .4rem .7rem; color: #315b43; background: #fff; border: 1px solid #c9dbce; border-radius: 9px; font: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
+.hs-field__clear:hover, .hs-field__clear:focus-visible { background: #e5f1e8; outline-color: #166b41; }
+.hs-field__frame { position: relative; overflow: hidden; border: 1px solid #bbd1c1; border-radius: 12px; background: #fff; box-shadow: inset 0 2px 12px rgba(21, 67, 42, .04); }
+.hs-field__frame canvas { position: relative; z-index: 2; display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; touch-action: none; cursor: crosshair; }
+.hs-field__hint { position: absolute; top: 40%; right: 0; left: 0; color: #c5d5c9; font-size: 1.35rem; font-weight: 700; text-align: center; pointer-events: none; }
+.hs-field__baseline { position: absolute; right: 7%; bottom: 20%; left: 7%; border-bottom: 1px dashed #d4e1d7; pointer-events: none; }
+.hs-field--signed .hs-field__hint, .hs-field--drawing .hs-field__hint { display: none; }
+.hs-field--signed .hs-field__frame { border-color: #428a61; }
+.hs-field__message { margin: .55rem 0 0; color: #647b69; font-size: .74rem; }
+.hs-field--signed .hs-field__message { color: #1a7045; }
+.cir-receipt-signature { display: grid; place-items: center; width: min(100%, 340px); min-height: 110px; margin: 1rem 0; padding: .5rem; border: 1px solid #d3dfd5; border-radius: 10px; background: #fff; }
+.cir-receipt-signature img { display: block; width: 100%; max-height: 125px; object-fit: contain; }
+.cir-report-signature { display: block; width: 95px; max-height: 46px; object-fit: contain; margin: auto; }
+@media (max-width: 560px) { .hs-field { padding: .7rem; } .hs-field__header { flex-wrap: wrap; } .hs-field__frame canvas { min-height: 135px; } }
+@media print { .hs-field { display: none; } .cir-receipt-signature, .cir-report-signature { break-inside: avoid; } }

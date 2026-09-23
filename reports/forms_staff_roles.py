@@ -28,10 +28,25 @@ from .staff_assignments import (
 __all__ = ["StaffRoleAssignForm", "StaffScopeForm", "DelegationForm", "ASSIGNMENTS"]
 
 
+class StaffMemberChoiceField(forms.ModelChoiceField):
+    """اسم واضح للخيار دون استدعاء ``Teacher.__str__`` المكلف.
+
+    تمثيل المستخدم العام يشتق دوره من المدرسة النشطة، وهو مناسب للعناوين
+    العامة لا لقائمة فيها عشرات المنسوبين: استدعاؤه لكل خيار كان يعيد استعلام
+    العضويات عدة مرات لكل صف. المدرسة هنا محكومة أصلاً بالـ queryset، لذلك
+    يكفي الاسم والجوال للتعرّف على الشخص دون أي استعلام إضافي.
+    """
+
+    def label_from_instance(self, obj):
+        name = (getattr(obj, "name", "") or "").strip()
+        phone = (getattr(obj, "phone", "") or "").strip()
+        return f"{name} — {phone}" if name and phone else name or phone or "مستخدم"
+
+
 class StaffRoleAssignForm(forms.Form):
     """إسناد دور لمنسوب داخل المدرسة النشطة."""
 
-    member = forms.ModelChoiceField(
+    member = StaffMemberChoiceField(
         queryset=Teacher.objects.none(),
         label="المنسوب",
         error_messages={"invalid_choice": "هذا المستخدم ليس من منسوبي مدرستك."},
@@ -209,6 +224,12 @@ class DelegationForm(forms.ModelForm):
         required=True,
         widget=forms.CheckboxSelectMultiple,
         error_messages={"required": "اختر صلاحية واحدة على الأقل — التفويض الفارغ لا معنى له."},
+    )
+
+    delegate = StaffMemberChoiceField(
+        queryset=Teacher.objects.none(),
+        label="المفوَّض إليه",
+        error_messages={"invalid_choice": "هذا المستخدم ليس من منسوبي مدرستك."},
     )
 
     def __init__(self, *args, school=None, delegator=None, **kwargs):

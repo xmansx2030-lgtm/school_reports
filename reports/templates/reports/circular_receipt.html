@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}إيصال إقرار {{ communication_label }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{% static 'css/circulars-official.css' %}">
+  <link rel="stylesheet" href="{% static 'css/handwritten-signature.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cir-shell" dir="rtl">
+  <div class="cir-container">
+    <header class="cir-hero cir-no-print">
+      <div class="cir-hero__main">
+        <div class="cir-hero__eyebrow">سجل الإقرار الإلكتروني</div>
+        <h1>إيصال إقرار {{ communication_label }}</h1>
+        <p>يعرض ما سجله النظام عن إقرارك على هذه الوثيقة.</p>
+      </div>
+      <div class="cir-hero__actions">
+        <a class="cir-btn cir-btn--hero" href="{% if n.is_newsletter %}{% url 'reports:my_notification_detail' r.pk %}{% else %}{% url 'reports:my_circular_detail' r.pk %}{% endif %}">العودة للوثيقة</a>
+        <button type="button" class="cir-btn cir-btn--hero" id="printReceipt">طباعة الإيصال</button>
+      </div>
+    </header>
+
+    <article class="cir-panel cir-receipt" aria-labelledby="receiptTitle">
+      <h2 class="cir-panel__head" id="receiptTitle">إيصال {% if n.is_newsletter %}NWS{% else %}CIR{% endif %}-{{ n.pk|stringformat:"05d" }}-{{ r.pk|stringformat:"05d" }}</h2>
+      <div class="cir-panel__body">
+        <dl class="cir-info-list">
+          <div class="cir-info-row"><dt>الوثيقة</dt><dd>{{ snapshot.title|default:n.title|default:communication_label }}</dd></div>
+          <div class="cir-info-row"><dt>المستلم</dt><dd>{{ r.teacher.name|default:r.teacher }}</dd></div>
+          <div class="cir-info-row"><dt>تاريخ الإصدار</dt><dd>{{ n.created_at|date:"Y/m/d — H:i" }}</dd></div>
+          <div class="cir-info-row"><dt>وقت الإقرار</dt><dd>{{ r.signed_at|date:"Y/m/d — H:i:s" }}</dd></div>
+          <div class="cir-info-row"><dt>طريقة الاعتماد</dt><dd>{% if r.signature_method == 'drawn_ack' %}توقيع مرسوم من حساب المستلم وإقرار صريح{% elif r.signature_method == 'account_phone_ack' %}جلسة الحساب، مطابقة رقم الجوال المسجل، وإقرار صريح{% else %}سجل سابق{% endif %}</dd></div>
+          <div class="cir-info-row"><dt>حالة السجل</dt><dd>{% if evidence_valid %}تطابق بيانات الإقرار والوثيقة المحفوظة{% elif evidence_available %}تعذر التحقق من تطابق البيانات؛ يرجى مراجعة الإدارة{% else %}إقرار سابق دون دليل نسخة محفوظة{% endif %}</dd></div>
+          {% if snapshot.attachment_name %}<div class="cir-info-row"><dt>المرفق وقت الحفظ</dt><dd>{{ snapshot.attachment_name }}</dd></div>{% endif %}
+        </dl>
+        {% if snapshot.message %}
+          <section aria-labelledby="receiptDocumentText">
+            <h3 id="receiptDocumentText">نص الوثيقة المحفوظ</h3>
+            <div>{{ snapshot.message|linebreaksbr }}</div>
+          </section>
+        {% endif %}
+        {% if r.signed_ack_text %}
+          <div class="cir-signature__declaration"><strong>نص الإقرار المعتمد:</strong><br>{{ r.signed_ack_text|linebreaksbr }}</div>
+        {% endif %}
+        {% if r.signature_image_sha256 %}
+          <div><strong>التوقيع المرسوم المحفوظ:</strong></div>
+          {% if evidence_valid %}<div class="cir-receipt-signature"><img src="{% url 'reports:circular_signature_image' r.pk %}" alt="التوقيع المرسوم للمستلم" loading="eager"></div>
+          {% else %}<p>تعذّر التحقق من سجل التوقيع. يرجى مراجعة الإدارة.</p>{% endif %}
+          <p>الرسم محفوظ مع الإقرار؛ شكل الخط وحده لا يثبت هوية من استخدم الحساب.</p>
+        {% endif %}
+        {% if snapshot.basis == 'at_first_sign' %}
+          <p>هذه وثيقة سابقة على حفظ نسخ الإصدار؛ حُفظت نسختها عند أول إقرار، ولا يثبت هذا السجل محتواها وقت الإرسال.</p>
+        {% endif %}
+        {% if evidence_available %}
+          <dl class="cir-info-list">
+            <div class="cir-info-row"><dt>بصمة الوثيقة SHA-256</dt><dd class="cir-receipt__digest" dir="ltr">{{ r.signed_document_digest }}</dd></div>
+            <div class="cir-info-row"><dt>بصمة سجل الإقرار SHA-256</dt><dd class="cir-receipt__digest" dir="ltr">{{ r.signature_evidence_digest }}</dd></div>
+            {% if r.signature_image_sha256 %}<div class="cir-info-row"><dt>بصمة صورة التوقيع SHA-256</dt><dd class="cir-receipt__digest" dir="ltr">{{ r.signature_image_sha256 }}</dd></div>{% endif %}
+          </dl>
+        {% endif %}
+        <p>حالة «مقروء» تعني فتح الصفحة أو تحديدها كمقروءة، ولا تثبت قراءة كل كلمة أو فتح المرفق. هذا الإيصال خاص بالمستلم ويتطلب الدخول إلى حسابه.</p>
+      </div>
+    </article>
+  </div>
+</div>
+<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
+  document.getElementById('printReceipt').addEventListener('click', function () { window.print(); });
+</script>
+{% endblock %}

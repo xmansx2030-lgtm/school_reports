@@ -1,0 +1,140 @@
+/* Screen-only companion to the self-contained official document stylesheet.
+   The document CSS remains embedded for PDF rendering without a static server. */
+@media screen {
+  body {
+    background: var(--twq-bg);
+  }
+
+  .twq-print-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--twq-space-2);
+    padding: var(--twq-space-3) var(--twq-space-4);
+    background: var(--twq-surface);
+    color: var(--twq-text);
+    border-block-end: 1px solid var(--twq-border);
+    box-shadow: var(--twq-shadow-xs);
+  }
+
+  .twq-print-actions .tb-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--twq-space-2);
+    margin-inline-end: auto;
+    font-size: var(--twq-font-size-sm);
+    font-weight: var(--twq-font-weight-semibold);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .twq-print-actions .tb-title i { color: var(--twq-accent); }
+
+  .twq-print-actions .btn,
+  .report-comments .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--twq-space-2);
+    min-block-size: var(--twq-tap-target, 44px);
+    padding: var(--twq-space-2) var(--twq-space-4);
+    border: 1px solid var(--twq-border-strong);
+    border-radius: var(--twq-radius-sm);
+    background: var(--twq-surface);
+    color: var(--twq-text);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--twq-font-size-sm);
+    font-weight: var(--twq-font-weight-semibold);
+    line-height: var(--twq-line-height-tight);
+    text-decoration: none;
+    transition: background-color var(--twq-duration-fast) var(--twq-ease-standard),
+                border-color var(--twq-duration-fast) var(--twq-ease-standard);
+  }
+
+  .twq-print-actions .btn:hover,
+  .report-comments .btn:hover { background: var(--twq-surface-secondary); }
+
+  .twq-print-actions .btn:focus-visible,
+  .report-comments .btn:focus-visible,
+  .report-comments :is(summary, textarea):focus-visible {
+    outline: 2px solid var(--twq-focus);
+    outline-offset: 2px;
+  }
+
+  .twq-print-actions .btn-print,
+  .twq-print-actions .btn-send,
+  .report-comments .btn-print {
+    border-color: var(--twq-primary);
+    background: var(--twq-primary);
+    color: var(--twq-primary-foreground);
+  }
+
+  .twq-print-actions .btn-print:hover,
+  .twq-print-actions .btn-send:hover,
+  .report-comments .btn-print:hover {
+    border-color: var(--twq-primary-hover);
+    background: var(--twq-primary-hover);
+  }
+
+  .twq-print-actions .btn-print--secondary,
+  .twq-print-actions .btn-print--secondary:hover {
+    border-color: var(--twq-border-strong);
+    background: var(--twq-surface-secondary);
+    color: var(--twq-text);
+  }
+
+  .twq-print-actions .btn-state {
+    border-color: var(--twq-border);
+    background: var(--twq-surface-secondary);
+    color: var(--twq-text-secondary);
+  }
+
+  .report-comments {
+    color: var(--twq-text);
+    background: var(--twq-surface);
+    border-color: var(--twq-border);
+  }
+
+  .report-comments .xs-report-print-2 {
+    background: var(--twq-surface-secondary);
+    border-color: var(--twq-border);
+  }
+
+  .report-comments label {
+    display: block;
+    margin-block-end: var(--twq-space-2);
+  }
+
+  .report-comments .xs-report-print-6 {
+    background: var(--twq-surface);
+    color: var(--twq-text);
+    border-color: var(--twq-border-strong);
+  }
+
+  .report-comments .btn.xs-report-print-7 {
+    border-color: var(--twq-danger);
+    color: var(--twq-danger);
+    background: var(--twq-danger-soft);
+  }
+
+  .page { overflow-wrap: anywhere; }
+
+  @media (max-width: 40rem) {
+    .twq-print-actions { padding: var(--twq-space-3); }
+    .twq-print-actions .tb-title {
+      flex-basis: 100%;
+      justify-content: center;
+      margin-inline-end: 0;
+      text-align: center;
+    }
+    .twq-print-actions .btn { flex: 1 1 auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .twq-print-actions .btn,
+    .report-comments .btn { transition-duration: 0ms; }
+  }
+}

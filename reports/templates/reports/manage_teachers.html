@@ -1,594 +1,229 @@
-{# templates/reports/manage_teachers.html #}
 {% extends "base.html" %}
+{% load static %}
+
 {% block title %}إدارة منسوبي المدرسة{% endblock %}
 
-{% block content %}
-<div class="admin-scope" dir="rtl">
-  <div class="admin-container">
-    <div class="admin-header">
-      <div class="header-content">
-        <div class="admin-kicker"><i class="fas fa-users-gear" aria-hidden="true"></i> إدارة فريق المدرسة</div>
-        <h1 class="admin-title">
-          <i class="fas fa-chalkboard-teacher"></i>
-          إدارة منسوبي المدرسة
-        </h1>
-        <p class="admin-subtitle">راجع الحسابات والأدوار والأقسام، ثم عدّل بيانات أي مستخدم أو أضف فريقاً جديداً.</p>
-      </div>
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/users-list.css' %}?v=20260920.1">
+{% endblock %}
 
-      <div class="header-actions">
-        <a class="btn btn-primary btn-add" href="{% url 'reports:bulk_import_teachers' %}">
-          <i class="fas fa-users-plus"></i>
-          إضافة منسوبي المدرسة
-        </a>
-        <a class="btn btn-outline-primary btn-add" href="{% url 'reports:add_teacher' %}">
-          <i class="fas fa-plus-circle"></i>
-          إضافة فردية
-        </a>
+{% block content %}
+<div class="twq-page users-list-page" dir="rtl">
+  <header class="twq-page-header users-list-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-users-gear" aria-hidden="true"></i> الأشخاص والصلاحيات</span>
+      <h1 class="twq-page-header__title">إدارة منسوبي المدرسة</h1>
+      <p class="twq-page-header__lead">اعثر على المنسوب، راجع دوره وقسمه وحالة حسابه، ثم انتقل إلى الإجراء المسموح.</p>
+      {% if active_school %}
+        <dl class="twq-page-header__context"><div><dt>المدرسة الحالية</dt><dd>{{ active_school.name }}</dd></div></dl>
+      {% endif %}
+    </div>
+    <div class="twq-page-header__aside">
+      <a class="twq-btn twq-btn--primary" href="{% url 'reports:bulk_import_teachers' %}">
+        <i class="fa-solid fa-users-plus" aria-hidden="true"></i> إضافة منسوبي المدرسة
+      </a>
+    </div>
+  </header>
+
+  <section class="twq-section users-list-section" aria-labelledby="usersListTitle">
+    <div class="twq-section__header users-list-section__header">
+      <div>
+        <span class="twq-section__kicker">دليل المدرسة</span>
+        <h2 class="twq-section__title" id="usersListTitle">المنسوبون والحسابات</h2>
+        <p class="twq-section__description">يمكن الإضافة فرديًا أو إدخال عدة منسوبين مع المعاينة قبل الحفظ؛ كلمة مرور مؤقتة هي رقم الجوال.</p>
       </div>
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:add_teacher' %}">
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i> إضافة فردية
+      </a>
     </div>
 
-    <section class="onboarding-callout" aria-label="طريقة إضافة المستخدمين">
-      <div>
-        <strong>أضف عدة مستخدمين في دقائق</strong>
-        <span>إدخال سريع أو رفع Excel، مع معاينة كاملة قبل الحفظ وكلمة مرور مؤقتة هي رقم الجوال.</span>
-      </div>
-      <div class="capacity-chip">
-        {% if capacity.maximum %}
-          <b>{{ capacity.current }} / {{ capacity.maximum }}</b>
-          <span>متبقٍ {{ capacity.remaining }}</span>
-        {% else %}
-          <b>{{ capacity.current }}</b>
-          <span>مستخدمًا — غير محدود</span>
-        {% endif %}
-      </div>
-    </section>
+    <div class="users-list-capacity" aria-label="مقاعد منسوبي المدرسة">
+      <span>المقاعد المستخدمة</span>
+      <strong>{{ capacity.current }}{% if capacity.maximum %} من {{ capacity.maximum }}{% endif %}</strong>
+      {% if capacity.maximum %}
+        <span>المتبقي {{ capacity.remaining }}</span>
+      {% else %}
+        <span>بلا حد محدد</span>
+      {% endif %}
+    </div>
 
-    <form method="get" action="" class="filters-panel" role="search">
-      <div class="filter-field filter-field--search">
-        <label for="q">بحث بالاسم أو الجوال أو الهوية</label>
-        <input
-          id="q"
-          type="search"
-          name="q"
-          value="{{ term }}"
-          placeholder="مثال: محمد أو 05..."
-          autocomplete="off"
-          spellcheck="false"
-        >
+    <form method="get" action="{% url 'reports:manage_teachers' %}" class="twq-toolbar users-list-toolbar" role="search" aria-label="البحث والتصفية في منسوبي المدرسة">
+      <div class="twq-toolbar__search">
+        <label class="twq-label" for="q">الاسم أو رقم الجوال أو الهوية</label>
+        <div class="twq-toolbar__control">
+          <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input class="twq-control" id="q" type="search" name="q" value="{{ term }}" placeholder="ابحث عن منسوب…" autocomplete="off" spellcheck="false">
+        </div>
       </div>
-      <div class="filter-field">
-        <label for="statusFilter">حالة الحساب</label>
-        <select id="statusFilter" name="status">
-          <option value="">الكل</option>
+      <div class="twq-toolbar__field">
+        <label class="twq-label" for="statusFilter">حالة الحساب</label>
+        <select class="twq-control" id="statusFilter" name="status">
+          <option value="">جميع الحالات</option>
           <option value="active" {% if status_filter == "active" %}selected{% endif %}>نشط</option>
           <option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>معطل</option>
         </select>
       </div>
-      <div class="filter-field">
-        <label for="jobTitleFilter">المسمى الوظيفي</label>
-        <select id="jobTitleFilter" name="job_title">
-          <option value="">الكل</option>
+      <div class="twq-toolbar__field">
+        <label class="twq-label" for="jobTitleFilter">المسمى الوظيفي</label>
+        <select class="twq-control" id="jobTitleFilter" name="job_title">
+          <option value="">جميع المسميات</option>
           {% for value, label in job_title_choices %}
             <option value="{{ value }}" {% if job_title_filter == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="filter-field">
-        <label for="departmentFilter">القسم</label>
-        <select id="departmentFilter" name="department">
-          <option value="">كل الأقسام</option>
+      <div class="twq-toolbar__field">
+        <label class="twq-label" for="departmentFilter">القسم</label>
+        <select class="twq-control" id="departmentFilter" name="department">
+          <option value="">جميع الأقسام</option>
           {% for department in departments %}
             <option value="{{ department.id }}" {% if department_filter == department.id|stringformat:"s" %}selected{% endif %}>{{ department.name }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="filter-actions">
-        <button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> تطبيق</button>
+      <div class="twq-toolbar__actions">
+        <button class="twq-btn twq-btn--primary" type="submit">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> بحث
+        </button>
         {% if term or status_filter or job_title_filter or department_filter %}
-          <a class="btn btn-outline" href="{% url 'reports:manage_teachers' %}">مسح</a>
+          <a class="twq-btn twq-btn--ghost" href="{% url 'reports:manage_teachers' %}">مسح الفلاتر</a>
         {% endif %}
       </div>
     </form>
 
-    <div class="admin-card">
-      {% if teachers_page and teachers_page.object_list %}
-        <div class="meta-bar" aria-label="إحصاءات الجدول">
-          <div class="muted">
-            <i class="fas fa-list" aria-hidden="true"></i> في هذه الصفحة: <b id="rowsCount">{{ teachers_page.object_list|length }}</b>
-          </div>
-          <div class="muted">
-            الإجمالي: <b>{{ teachers_page.paginator.count }}</b> منسوبي مدرسة
-          </div>
-        </div>
+    {% if term or status_filter or job_title_filter or department_filter %}
+      <div class="twq-toolbar__active-filters" aria-label="الفلاتر النشطة">
+        <span class="twq-toolbar__active-label">الفلاتر النشطة</span>
+        {% if term %}
+          <a class="twq-filter-chip" href="?{% if status_filter %}status={{ status_filter|urlencode }}&{% endif %}{% if job_title_filter %}job_title={{ job_title_filter|urlencode }}&{% endif %}{% if department_filter %}department={{ department_filter|urlencode }}{% endif %}" aria-label="إزالة البحث عن {{ term }}">
+            <span>بحث: «{{ term }}»</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+        {% if status_filter %}
+          <a class="twq-filter-chip" href="?{% if term %}q={{ term|urlencode }}&{% endif %}{% if job_title_filter %}job_title={{ job_title_filter|urlencode }}&{% endif %}{% if department_filter %}department={{ department_filter|urlencode }}{% endif %}" aria-label="إزالة فلتر حالة الحساب">
+            <span>الحالة: {% if status_filter == "active" %}نشط{% elif status_filter == "inactive" %}معطل{% else %}{{ status_filter }}{% endif %}</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+        {% if job_title_filter %}
+          <a class="twq-filter-chip" href="?{% if term %}q={{ term|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter|urlencode }}&{% endif %}{% if department_filter %}department={{ department_filter|urlencode }}{% endif %}" aria-label="إزالة فلتر المسمى الوظيفي">
+            <span>المسمى: {% for value, label in job_title_choices %}{% if job_title_filter == value %}{{ label }}{% endif %}{% endfor %}</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+        {% if department_filter %}
+          <a class="twq-filter-chip" href="?{% if term %}q={{ term|urlencode }}&{% endif %}{% if status_filter %}status={{ status_filter|urlencode }}&{% endif %}{% if job_title_filter %}job_title={{ job_title_filter|urlencode }}{% endif %}" aria-label="إزالة فلتر القسم">
+            <span>القسم: {% for department in departments %}{% if department_filter == department.id|stringformat:"s" %}{{ department.name }}{% endif %}{% endfor %}</span><i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </a>
+        {% endif %}
+      </div>
+    {% endif %}
 
-        <div class="table-responsive" role="region" aria-label="جدول منسوبي المدرسة">
-          <table class="teachers-table">
-            <thead>
+    <div class="users-list-results" aria-live="polite">
+      <span>{{ teachers_page.paginator.count }} {% if term or status_filter or job_title_filter or department_filter %}نتيجة مطابقة{% else %}منسوبًا في الدليل{% endif %}</span>
+      {% if teachers_page.paginator.num_pages > 1 %}<span>صفحة {{ teachers_page.number }} من {{ teachers_page.paginator.num_pages }}</span>{% endif %}
+      <span class="users-list-results__page-count">في هذه الصفحة: <b id="rowsCount">{{ teachers_page.object_list|length }}</b></span>
+    </div>
+
+    {% if teachers_page.object_list %}
+      <div class="twq-table-wrap users-list-table-wrap">
+        <table class="twq-table users-list-table">
+          <caption class="users-list-sr-only">منسوبو المدرسة وأدوارهم وأقسامهم وحالة حساباتهم والإجراءات المتاحة</caption>
+          <thead>
+            <tr>
+              <th scope="col">{{ SCHOOL_TEACHER_LABEL|default:"المستخدم" }}</th>
+              <th scope="col">الدور والقسم</th>
+              <th scope="col">رقم الهوية</th>
+              <th scope="col">الحالة</th>
+              <th scope="col">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in teachers_page.object_list %}
               <tr>
-                <th class="text-right">{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}</th>
-                <th class="text-right">رقم الهوية</th>
-                <th class="text-right">رقم الجوال</th>
-                <th class="text-center">القسم / الدور</th>
-                <th class="text-center">الحالة</th>
-                <th class="text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for t in teachers_page.object_list %}
-              <tr>
-                <td data-label="{{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}">
-                  <div class="teacher-info">
-                    <div class="teacher-avatar" aria-hidden="true"><i class="fas fa-user"></i></div>
-                    <div class="teacher-details">
-                      <div class="teacher-name">{{ t.name }}</div>
-                      <div class="teacher-sub muted">
-                        {% if t.phone %}{{ t.phone }}{% endif %}
-                      </div>
-                    </div>
-                  </div>
+                <td class="users-list-table__identity" data-label="المستخدم">
+                  <strong class="users-list-name">{{ t.name|default:t.phone }}</strong>
+                  <span class="users-list-phone"><span class="users-list-sr-only">رقم الجوال: </span><bdi>{{ t.phone }}</bdi></span>
+                  {% if t.email %}<span class="users-list-email"><span class="users-list-sr-only">البريد الإلكتروني: </span><bdi>{{ t.email }}</bdi></span>{% endif %}
                 </td>
-
-                <td data-label="رقم الهوية">{{ t.national_id|default:"-" }}</td>
-                <td data-label="رقم الجوال">{{ t.phone }}</td>
-
-                {# ===== عمود القسم/الدور (بدون استدعاء role.slug داخل القالب) ===== #}
-                <td data-label="القسم / الدور" class="text-center">
+                <td class="users-list-table__responsibility" data-label="الدور والقسم">
+                  {% if t.manage_role_label %}<span class="users-list-role">{{ t.manage_role_label }}</span>{% else %}<span class="users-list-muted">—</span>{% endif %}
                   {% with memberships=t.dept_memberships.all %}
                     {% if memberships %}
-                      <div class="chips">
+                      <div class="users-list-departments">
                         {% for m in memberships %}
                           {% with dep=m.department rt=m.role_type|stringformat:"s"|lower %}
-                            <span class="chip chip-dept" data-slug="{{ dep.slug|default_if_none:''|lower }}">
-                              <i class="fas fa-building"></i>
+                            <span class="users-list-department" data-slug="{{ dep.slug|default_if_none:''|lower }}">
                               {{ dep.name|default:dep.slug }}
-                              <span class="chip-role {% if rt == 'officer' or rt == '1' %}role-officer{% else %}role-employee{% endif %}">
-                                {% if rt == 'officer' or rt == '1' %}
-                                  <i class="fas fa-user-shield"></i> مسؤول
-                                {% else %}
-                                  <i class="fas fa-id-badge"></i> موظف
-                                {% endif %}
-                              </span>
+                              <small>{% if rt == 'officer' or rt == '1' %}مسؤول{% else %}موظف{% endif %}</small>
                             </span>
                           {% endwith %}
                         {% endfor %}
                       </div>
                     {% else %}
-                      {% with kind=t.manage_role_kind|default:'' label=t.manage_role_label|default:'' %}
-                        {% if kind == 'admin_staff' %}
-                          <span class="chip chip-role role-employee"><i class="fas fa-id-badge"></i> {{ label|default:SCHOOL_ADMIN_STAFF_LABEL|default:"موظف إداري" }}</span>
-                        {% elif kind == 'lab_tech' %}
-                          <span class="chip chip-role role-employee"><i class="fas fa-flask"></i> {{ label|default:SCHOOL_LAB_TECH_LABEL|default:"محضر مختبر" }}</span>
-                        {% elif kind == 'manager' %}
-                          <span class="chip chip-role role-manager"><i class="fas fa-crown"></i> {{ label|default:SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}</span>
-                        {% elif kind == 'teacher' %}
-                          <span class="chip chip-role role-teacher"><i class="fas fa-user-graduate"></i> {{ label|default:SCHOOL_TEACHER_LABEL|default:"معلم" }}</span>
-                        {% elif label %}
-                          <span class="chip chip-role role-employee"><i class="fas fa-id-badge"></i> {{ label }}</span>
-                        {% else %}
-                          <span class="badge-muted">—</span>
-                        {% endif %}
-                      {% endwith %}
+                      <span class="users-list-muted">دون قسم</span>
                     {% endif %}
                   {% endwith %}
                 </td>
-                {# ===================================== #}
-
-                <td data-label="الحالة" class="text-center">
+                <td class="users-list-table__national-id" data-label="رقم الهوية"><bdi>{{ t.national_id|default:"—" }}</bdi></td>
+                <td class="users-list-table__status" data-label="الحالة">
                   {% if t.is_active %}
-                    <span class="status-badge status-active"><i class="fas fa-check-circle"></i> نشط</span>
+                    <span class="twq-status" data-status="active"><i class="fa-solid fa-circle" aria-hidden="true"></i> نشط</span>
                   {% else %}
-                    <span class="status-badge status-inactive"><i class="fas fa-times-circle"></i> معطل</span>
+                    <span class="twq-status" data-status="danger"><i class="fa-solid fa-circle" aria-hidden="true"></i> معطل</span>
                   {% endif %}
                 </td>
-
-                <td data-label="الإجراءات" class="text-center">
+                <td class="users-list-table__actions" data-label="الإجراءات">
+                  {% if request.user.is_superuser or t.has_teacher_membership %}
                   {% with nxt=request.get_full_path %}
-                    <div class="action-buttons">
-                      <a
-                        href="{% url 'reports:edit_teacher' pk=t.id %}?next={{ nxt|urlencode }}"
-                        class="btn btn-icon btn-edit"
-                        title="تعديل"
-                        aria-label="تعديل بيانات: {{ t.name|default:t.phone }}"
-                      >
-                        <i class="fas fa-edit"></i>
+                    <div class="users-list-actions">
+                      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:edit_teacher' pk=t.id %}?next={{ nxt|urlencode }}" aria-label="تعديل بيانات: {{ t.name|default:t.phone }}">
+                        <i class="fa-solid fa-pen" aria-hidden="true"></i> تعديل
                       </a>
-
-                      <form
-                        method="post"
-                        action="{% url 'reports:delete_teacher' pk=t.id %}?next={{ nxt|urlencode }}"
-                        class="teacher-delete-form u-inline"
-                        data-confirm="هل تريد حذف هذا {{ SCHOOL_TEACHER_LABEL|default:'المعلم' }}؟"
-                        data-confirm-type="danger">
+                      <form method="post" action="{% url 'reports:delete_teacher' pk=t.id %}?next={{ nxt|urlencode }}" class="teacher-delete-form users-list-delete-form" data-confirm="{% if request.user.is_superuser %}هل تريد حذف حساب {{ t.name|default:t.phone }}؟{% else %}هل تريد إزالة {{ t.name|default:t.phone }} من المدرسة الحالية؟{% endif %}" data-confirm-type="danger">
                         {% csrf_token %}
-                        <button
-                          type="submit"
-                          class="btn btn-icon btn-delete"
-                          title="حذف"
-                          aria-label="حذف: {{ t.name|default:t.phone }}"
-                        >
-                          <i class="fas fa-trash-alt"></i>
+                        <button type="submit" class="twq-btn twq-btn--ghost users-list-delete" aria-label="{% if request.user.is_superuser %}حذف حساب: {% else %}إزالة من المدرسة: {% endif %}{{ t.name|default:t.phone }}">
+                          <i class="fa-solid fa-trash" aria-hidden="true"></i> {% if request.user.is_superuser %}حذف الحساب{% else %}إزالة{% endif %}
                         </button>
                       </form>
                     </div>
                   {% endwith %}
+                  {% else %}
+                    <span class="users-list-muted">لا إجراء متاح</span>
+                  {% endif %}
                 </td>
               </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="pager" aria-label="التنقل بين الصفحات">
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if teachers_page.paginator.num_pages > 1 %}
+        <nav class="twq-pagination" aria-label="صفحات منسوبي المدرسة">
           {% if teachers_page.has_previous %}
-            <a class="btn btn-outline" href="?page={{ teachers_page.previous_page_number }}{% if filters_query %}&{{ filters_query }}{% endif %}">السابق</a>
+            <a class="twq-btn twq-btn--ghost twq-pagination__link" href="?page={{ teachers_page.previous_page_number }}{% if filters_query %}&{{ filters_query }}{% endif %}">
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i> السابق
+            </a>
           {% endif %}
-          <span class="btn btn-outline">صفحة {{ teachers_page.number }} / {{ teachers_page.paginator.num_pages }}</span>
+          <span class="twq-pagination__meta">صفحة {{ teachers_page.number }} من {{ teachers_page.paginator.num_pages }}</span>
           {% if teachers_page.has_next %}
-            <a class="btn btn-outline" href="?page={{ teachers_page.next_page_number }}{% if filters_query %}&{{ filters_query }}{% endif %}">التالي</a>
+            <a class="twq-btn twq-btn--ghost twq-pagination__link" href="?page={{ teachers_page.next_page_number }}{% if filters_query %}&{{ filters_query }}{% endif %}">
+              التالي <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </a>
           {% endif %}
-        </div>
-
-      {% else %}
-        <div class="empty-state">
-          <div class="empty-icon"><i class="fas fa-users-slash"></i></div>
-          <h3>لا توجد حسابات للكادر التعليمي</h3>
-          <p>لم يتم العثور على نتائج{% if term %} لبحثك عن "<strong>{{ term }}</strong>"{% endif %}</p>
-          <a href="{% url 'reports:bulk_import_teachers' %}" class="btn btn-primary">
-            <i class="fas fa-users-plus"></i> إضافة منسوبي المدرسة
-          </a>
-        </div>
+        </nav>
       {% endif %}
-    </div>
-  </div>
+    {% else %}
+      <div class="twq-empty twq-empty--local users-list-empty">
+        <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-users"></i></span>
+        {% if term or status_filter or job_title_filter or department_filter %}
+          <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
+          <p class="twq-empty__message">جرّب تغيير البحث أو الفلاتر للوصول إلى المنسوب المطلوب.</p>
+          <a class="twq-btn twq-btn--secondary" href="{% url 'reports:manage_teachers' %}">مسح الفلاتر</a>
+        {% else %}
+          <h3 class="twq-empty__title">لا يوجد منسوبون في الدليل بعد</h3>
+          <p class="twq-empty__message">أضف منسوبي المدرسة لتظهر حساباتهم وأدوارهم هنا.</p>
+          <a class="twq-btn twq-btn--primary" href="{% url 'reports:bulk_import_teachers' %}">إضافة منسوبي المدرسة</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
 </div>
-
-<style nonce="{{ CSP_NONCE }}">
-  .admin-scope .admin-kicker{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;color:#0a5c33;font-size:.8rem;font-weight:950}
-  .admin-scope .admin-kicker i{color:#b9975b}
-  .admin-scope .admin-title{font-size:clamp(1.45rem,2.5vw,2rem)}
-  .admin-scope .admin-card{border-radius:18px;box-shadow:0 14px 34px rgba(15,23,42,.06)}
-  .admin-scope .meta-bar{justify-content:space-between;padding:0 2px 3px}
-  .admin-scope .filters-panel{box-shadow:0 10px 28px rgba(15,23,42,.04)}
-  .admin-scope .teachers-table tbody tr{transition:background .18s ease,box-shadow .18s ease}
-  .admin-scope .teachers-table tbody tr:hover{box-shadow:inset 3px 0 0 rgba(185,151,91,.45)}
-  .admin-scope .teacher-actions-cell{min-width:116px}
-  html[data-theme="dark"] .admin-scope .admin-kicker{color:#9ee6b8}
-
-  /* =========================================================
-     Manage Teachers (scoped) — بدون كسر app.css
-     - دعم data-theme للوضع الداكن/الفاتح
-     - تقليل التعارض بتغليف كل شيء داخل .admin-scope
-     ========================================================= */
-
-  /* A11y */
-  .admin-scope .sr-only{
-    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0
-  }
-
-  /* Tokens (محلية) */
-  .admin-scope{
-    --ink: var(--ink, #0f172a);
-    --muted: var(--muted, #64748b);
-    --line: var(--line, #e2e8f0);
-    --line-2: var(--line-2, #f1f5f9);
-    --card: var(--card, #ffffff);
-    --bg: var(--bg, #f8fafc);
-    --t: var(--t-fast, 180ms ease);
-  }
-
-  /* Container */
-  .admin-scope .admin-container{padding:20px;max-width:1400px;margin:0 auto}
-  .admin-scope .admin-header{
-    display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:14px
-  }
-  .admin-scope .header-content{flex:1;min-width:260px}
-  .admin-scope .admin-title{
-    font-size:22px;font-weight:950;color:var(--ink);margin:0 0 6px;display:flex;align-items:center;gap:10px
-  }
-  .admin-scope .admin-subtitle{color:var(--muted);font-size:14px;margin:0;font-weight:800}
-
-  /* Actions */
-  .admin-scope .header-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .admin-scope .search-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .admin-scope .search-form input[type="search"]{
-    padding:10px 14px;border:1px solid var(--line);border-radius:12px;min-width:260px;outline:none;
-    background: var(--card);
-    color: var(--ink);
-    transition: var(--t);
-  }
-  .admin-scope .search-form input[type="search"]::placeholder{color: rgba(100,116,139,.85)}
-  .admin-scope .search-form input[type="search"]:focus{
-    border-color:#006c35;
-    box-shadow:0 0 0 3px rgba(0,108,53,.12)
-  }
-
-  .admin-scope .btn-add{padding:12px 18px;font-weight:900}
-
-  .admin-scope .onboarding-callout{
-    display:flex;align-items:center;justify-content:space-between;gap:18px;
-    margin-bottom:14px;padding:17px 20px;border:1px solid rgba(0,108,53,.2);
-    border-radius:16px;background:linear-gradient(135deg,rgba(0,108,53,.08),rgba(185,151,91,.08));
-  }
-  .admin-scope .onboarding-callout > div:first-child{display:flex;flex-direction:column;gap:4px}
-  .admin-scope .onboarding-callout strong{color:#075e34;font-size:15px;font-weight:950}
-  .admin-scope .onboarding-callout span{color:var(--muted);font-size:13px;font-weight:750}
-  .admin-scope .capacity-chip{
-    min-width:115px;padding:9px 13px;border:1px solid rgba(0,108,53,.16);
-    border-radius:12px;background:var(--card);text-align:center
-  }
-  .admin-scope .capacity-chip b{display:block;color:#006c35;font-size:16px}
-  .admin-scope .capacity-chip span{font-size:11px}
-
-  .admin-scope .filters-panel{
-    display:grid;grid-template-columns:minmax(260px,1.7fr) repeat(3,minmax(145px,1fr)) auto;
-    align-items:end;gap:10px;margin-bottom:14px;padding:14px;border:1px solid var(--line);
-    border-radius:16px;background:var(--card)
-  }
-  .admin-scope .filter-field{display:flex;flex-direction:column;gap:6px}
-  .admin-scope .filter-field label{font-size:12px;font-weight:900;color:var(--muted)}
-  .admin-scope .filter-field input,
-  .admin-scope .filter-field select{
-    width:100%;min-height:43px;padding:9px 11px;border:1px solid var(--line);
-    border-radius:11px;background:var(--card);color:var(--ink);outline:none
-  }
-  .admin-scope .filter-field input:focus,
-  .admin-scope .filter-field select:focus{
-    border-color:#006c35;box-shadow:0 0 0 3px rgba(0,108,53,.1)
-  }
-  .admin-scope .filter-actions{display:flex;gap:7px}
-
-  /* Card */
-  .admin-scope .admin-card{
-    background:var(--card);
-    border-radius:16px;
-    border: 1px solid var(--line);
-    box-shadow:0 10px 28px rgba(15,23,42,.06);
-    padding:18px;
-    overflow:hidden
-  }
-
-  .admin-scope .meta-bar{
-    display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-bottom:12px
-  }
-  .admin-scope .muted{color:var(--muted);font-weight:900}
-
-  /* Table */
-  .admin-scope .table-responsive{
-    overflow-x:auto;
-    border-radius:14px;
-    border:1px solid var(--line)
-  }
-  .admin-scope .teachers-table{
-    width:100%;
-    border-collapse:separate;
-    border-spacing:0;
-    min-width:920px;
-    background: var(--card);
-  }
-  .admin-scope .teachers-table th{
-    background: linear-gradient(180deg, var(--line-2), var(--card));
-    padding:16px;
-    font-weight:950;
-    color:#475569;
-    text-align:right;
-    border-bottom:1px solid var(--line);
-    white-space:nowrap;
-  }
-  .admin-scope .teachers-table td{
-    padding:16px;
-    border-bottom:1px solid var(--line);
-    color:#334155;
-    vertical-align:middle;
-  }
-  .admin-scope .teachers-table tr:last-child td{border-bottom:none}
-  .admin-scope .teachers-table tbody tr{
-    transition: var(--t);
-  }
-  .admin-scope .teachers-table tbody tr:hover{
-    background: rgba(241,245,249,.75);
-  }
-
-  .admin-scope .text-right{text-align:right}
-  .admin-scope .text-center{text-align:center}
-
-  /* Teacher info */
-  .admin-scope .teacher-info{display:flex;align-items:center;gap:12px}
-  .admin-scope .teacher-avatar{
-    width:42px;height:42px;border-radius:50%;
-    background: rgba(0,108,53,.10);
-    color: rgba(0,108,53,.95);
-    display:flex;align-items:center;justify-content:center;font-size:18px;
-    border: 1px solid rgba(0,108,53,.15);
-  }
-  .admin-scope .teacher-details{display:flex;flex-direction:column}
-  .admin-scope .teacher-name{font-weight:950;color:var(--ink)}
-  .admin-scope .teacher-sub{font-size:.88rem}
-
-  /* Chips */
-  .admin-scope .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-  .admin-scope .chip{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:7px 10px;border-radius:9999px;
-    font-size:12px;font-weight:950;line-height:1;
-    border:1px solid rgba(0,0,0,.06);
-    white-space:nowrap;
-  }
-  .admin-scope .chip-dept{background:#f1f5f9;color:#334155}
-
-  /* Dept colors */
-  .admin-scope .chip-dept[data-slug="activity"]  {background:#dbeafe;color:#00542a}
-  .admin-scope .chip-dept[data-slug="volunteer"] {background:#dcfce7;color:#166534}
-  .admin-scope .chip-dept[data-slug="school"]    {background:#fef3c7;color:#92400e}
-  .admin-scope .chip-dept[data-slug="admin"]     {background:#fee2e2;color:#b91c1c}
-  .admin-scope .chip-dept[data-slug="teachers"]  {background:#ede9fe;color:#6d28d9}
-  .admin-scope .chip-dept[data-slug="affairs"]   {background:#e0e7ff;color:#3730a3}
-
-  /* Role inside dept */
-  .admin-scope .chip-role{
-    display:inline-flex;align-items:center;gap:4px;
-    padding:5px 8px;border-radius:9999px;
-    font-weight:950;margin-right:6px;
-    border:1px dashed rgba(0,0,0,.10)
-  }
-  .admin-scope .role-officer{background:#eef2ff;color:#3730a3}
-  .admin-scope .role-employee{background:#ecfeff;color:#155e75}
-
-  /* Global roles */
-  .admin-scope .chip-role.role-manager{background:#ffe4e6;color:#be123c}
-  .admin-scope .chip-role.role-teacher{background:#e9d5ff;color:#6d28d9}
-
-  /* Status */
-  .admin-scope .status-badge{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:7px 12px;border-radius:999px;
-    font-size:13px;font-weight:950;
-    border: 1px solid rgba(0,0,0,.05);
-  }
-  .admin-scope .status-active{background:#f0fdf4;color:#166534}
-  .admin-scope .status-inactive{background:#fef2f2;color:#dc2626}
-
-  /* Action buttons */
-  .admin-scope .action-buttons{display:flex;gap:8px;justify-content:center}
-
-  /* Icons buttons (avoid overriding app.css too much) */
-  .admin-scope .btn-icon{padding:9px 12px;border-radius:10px}
-  .admin-scope .btn-edit{background:#b9975b;color:#fff}
-  .admin-scope .btn-edit:hover{background:#d97706}
-  /* الحذف إجراءٌ نادرٌ لا رجعة فيه، والتعديل هو الشائع. فلمّا كان الحذف
-     مربّعاً أحمرَ مصمتاً بجوار التعديل، صار أعلى الاثنين صوتاً وأقربهما
-     إلى نقرةٍ بالخطأ. فيبقى أحمرَ الدلالة، ويُخفَض إلى إطارٍ حتى يُقصد. */
-  .admin-scope .btn-delete{background:transparent;color:#b3261e;border:1px solid rgba(179,38,30,.34)}
-  .admin-scope .btn-delete:hover,
-  .admin-scope .btn-delete:focus-visible{background:#b3261e;color:#fff;border-color:#b3261e}
-  .admin-scope .btn-outline{background:#fff;border:1px solid var(--line);color:#1e293b}
-  .admin-scope .btn-outline:hover{background: var(--line-2)}
-
-  /* Pager */
-  .admin-scope .pager{
-    display:flex;gap:8px;justify-content:center;align-items:center;margin-top:16px;flex-wrap:wrap
-  }
-
-  /* Empty */
-  .admin-scope .empty-state{padding:60px 20px;text-align:center;color:#94a3b8}
-  .admin-scope .empty-icon{font-size:64px;margin-bottom:16px;opacity:.5}
-  .admin-scope .empty-state h3{margin:0 0 8px 0;color:#64748b;font-weight:950;font-size:20px}
-  .admin-scope .empty-state p{margin:0 0 24px 0;font-size:15px}
-
-  /* Dark mode via data-theme */
-  html[data-theme="dark"] .admin-scope{
-    --line: var(--id-line);
-    --line-2: rgba(20,37,28,.45);
-  }
-  html[data-theme="dark"] .admin-scope .admin-card{
-    box-shadow:0 18px 45px rgba(2,6,23,.35);
-  }
-  html[data-theme="dark"] .admin-scope .onboarding-callout strong{color:#7ee2a5}
-  html[data-theme="dark"] .admin-scope .filter-field input,
-  html[data-theme="dark"] .admin-scope .filter-field select{background:rgba(15,30,23,.55)}
-  html[data-theme="dark"] .admin-scope .teachers-table th{
-    color: rgba(226,232,240,.92);
-  }
-  html[data-theme="dark"] .admin-scope .teachers-table td{
-    color: rgba(226,232,240,.92);
-  }
-  html[data-theme="dark"] .admin-scope .teachers-table tbody tr:hover{
-    background: rgba(26,48,36,.55);
-  }
-  html[data-theme="dark"] .admin-scope .btn-outline{
-    background: rgba(15,30,23,.6);
-    border-color: var(--id-line);
-    color: rgba(226,232,240,.92);
-  }
-  html[data-theme="dark"] .admin-scope .btn-outline:hover{
-    background: rgba(26,48,36,.65);
-  }
-  html[data-theme="dark"] .admin-scope .search-form input[type="search"]{
-    background: rgba(15,30,23,.55);
-    border-color: var(--id-line);
-    color: rgba(226,232,240,.95);
-  }
-  html[data-theme="dark"] .admin-scope .search-form input[type="search"]::placeholder{
-    color: rgba(148,163,184,.85);
-  }
-
-  /* Responsive cards (mobile) */
-  @media (max-width: 992px){
-    .admin-scope .admin-container{padding:16px}
-    .admin-scope .admin-header{flex-direction:column;align-items:flex-start}
-    .admin-scope .teachers-table{min-width:100%}
-    .admin-scope .teachers-table thead{display:none}
-    .admin-scope .teachers-table tbody{
-      display:grid;
-      gap:12px;
-      padding:12px;
-      background:var(--line-2);
-    }
-    .admin-scope .teachers-table tr{
-      display:grid;
-      margin:0;
-      border:1px solid rgba(185,151,91,.28);
-      border-radius:16px;
-      overflow:hidden;
-      background:var(--card);
-      box-shadow:0 10px 24px -18px rgba(10,92,51,.6);
-    }
-    .admin-scope .teachers-table td{
-      display:grid;
-      grid-template-columns:110px minmax(0,1fr);
-      align-items:start;
-      padding:12px 14px;
-      border-bottom:1px solid var(--line);
-      text-align:start;
-      gap: 10px;
-    }
-    .admin-scope .teachers-table td:last-child{border-bottom:none}
-    .admin-scope .teachers-table td::before{
-      content:attr(data-label);
-      font-weight:950;
-      color:#475569;
-      margin-left:12px;
-      flex: 0 0 auto;
-    }
-    html[data-theme="dark"] .admin-scope .teachers-table td::before{
-      color: rgba(226,232,240,.80);
-    }
-    .admin-scope .teacher-info{align-items:center;gap:10px}
-    .admin-scope .teacher-role-cell .chips{justify-content:flex-start}
-    .admin-scope .teacher-actions-cell .action-buttons{justify-content:flex-start}
-    .admin-scope .teacher-actions-cell .btn-icon{min-width:44px}
-    .admin-scope .filters-panel{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .admin-scope .filter-field--search{grid-column:1/-1}
-  }
-
-  @media (max-width: 520px){
-    .admin-scope .search-form input[type="search"]{min-width:220px;width:100%}
-    .admin-scope .onboarding-callout{align-items:stretch;flex-direction:column}
-    .admin-scope .filters-panel{grid-template-columns:1fr}
-    .admin-scope .filter-field--search{grid-column:auto}
-    .admin-scope .filter-actions .btn{flex:1}
-    .admin-scope .admin-container{padding:12px}
-    .admin-scope .admin-card{padding:10px}
-    .admin-scope .teachers-table tbody{padding:8px}
-    .admin-scope .teachers-table td{grid-template-columns:92px minmax(0,1fr);padding:11px 10px}
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    .admin-scope .teachers-table tbody tr{transition:none}
-  }
-
-  /* Final page layer: keep the directory readable on tablet and mobile. */
-  @media (max-width: 992px){
-    .admin-scope .teachers-table tbody{display:grid;gap:12px;padding:12px;background:var(--line-2)}
-    .admin-scope .teachers-table tbody tr{display:grid;margin:0;border:1px solid rgba(185,151,91,.28);border-radius:16px;overflow:hidden;background:var(--card);box-shadow:0 10px 24px -18px rgba(10,92,51,.6)}
-    .admin-scope .teachers-table tbody td{display:grid;grid-template-columns:110px minmax(0,1fr);align-items:start;text-align:start;gap:10px}
-    .admin-scope .teacher-info{flex-direction:row;align-items:center;gap:10px}
-    .admin-scope .teacher-role-cell .chips,.admin-scope .teacher-actions-cell .action-buttons{justify-content:flex-start}
-  }
-  @media (max-width:520px){
-    .admin-scope .admin-container{padding:12px}
-    .admin-scope .admin-card{padding:10px}
-    .admin-scope .teachers-table tbody{padding:8px}
-    .admin-scope .teachers-table tbody td{grid-template-columns:92px minmax(0,1fr);padding:11px 10px}
-  }
-</style>
 {% endblock %}

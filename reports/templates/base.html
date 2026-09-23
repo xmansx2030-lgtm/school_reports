@@ -23,6 +23,15 @@
   <!-- Theme: apply BEFORE CSS to avoid flash -->
   {% include "reports/partials/theme_bootstrap.html" %}
 
+  {% comment %}
+    Transitional CSS cascade (see docs/DESIGN_SYSTEM_FOUNDATION.md):
+    1) legacy base and shell; 2) legacy theme/page CSS; 3) utilities/extracted;
+    4) legacy dark-mode compatibility; 5) canonical tokens and aliases;
+    6) shared design-system foundation.
+
+    Canonical tokens intentionally load after legacy declarations during the
+    migration. New CSS uses --twq-* directly; old pages resolve through aliases.
+  {% endcomment %}
   <!-- Performance -->
   <link rel="preload" href="{% static 'css/app.css' %}?v=20260912.1" as="style">
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260912.1" />
@@ -61,10 +70,10 @@
   {% endcomment %}
   <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1" />
   <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1" />
-  <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260903.10" />
-  {% comment %}رموز الهوية تأتي بعد كل الأوراق القديمة كي تبقى هي المصدر الحاكم للقيم الدلالية.{% endcomment %}
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260911.3" />
-  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260912.7" />
+  <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1" />
+  {% comment %}رموز --twq-* الحاكمة ثم طبقة المكوّنات المشتركة؛ الترتيب مقصود للتوافق التدريجي.{% endcomment %}
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1" />
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260919.2" />
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/progress-bars.js' %}?v=20260812.1" defer></script>
   {% if request.user.is_authenticated %}<script src="{% static 'js/global-search.js' %}?v=20260812.1" defer></script>{% endif %}
@@ -723,6 +732,10 @@
           <a class="{% if active == 'platform_subscriptions_list' or active == 'platform_subscription_detail' or active == 'platform_subscription_add' %}is-active{% endif %}" href="{% url 'reports:platform_subscriptions_list' %}">
             <span>الاشتراكات</span>
             <i class="fa-solid fa-file-invoice-dollar"></i>
+          </a>
+          <a class="{% if active == 'platform_conversion_dashboard' or active == 'platform_conversion_school' or active == 'platform_conversion_generate' or active == 'platform_conversion_send' %}is-active{% endif %}" href="{% url 'reports:platform_conversion_dashboard' %}">
+            <span>التحويل الذكي</span>
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
           </a>
           <a class="{% if active == 'platform_payments_list' or active == 'platform_payment_detail' %}is-active{% endif %}" href="{% url 'reports:platform_payments_list' %}">
             <span>المالية</span>

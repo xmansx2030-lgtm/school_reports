@@ -1,180 +1,151 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}{{ document.title }} | أرشيف الوثائق{% endblock %}
 
 {% block head %}
-{% include "reports/_assignment_theme.html" %}
-{% include "reports/_document_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .dc-grid { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); align-items: start; }
-  @media (max-width: 980px) { .dc-grid { grid-template-columns: 1fr; } }
-  .dc-side { position: sticky; top: 1rem; }
-  @media (max-width: 980px) { .dc-side { position: static; } }
-
-  /* ── معاينة الملف ─────────────────────────────────────────── */
-  .dc-preview {
-    border: 1px solid var(--asg-line); border-radius: 16px; overflow: hidden;
-    background: var(--asg-soft); box-shadow: var(--doc-shadow);
-  }
-  .dc-preview__img { display: block; width: 100%; max-height: 420px; object-fit: contain; background: var(--asg-soft); }
-  .dc-file {
-    display: flex; align-items: center; gap: .85rem; padding: 1.1rem;
-    background: var(--asg-surface);
-  }
-  .dc-file__name { flex: 1; min-width: 120px; font-size: .89rem; font-weight: 800; overflow-wrap: anywhere; }
-  .dc-file__sub { font-size: .75rem; color: var(--asg-muted); margin-top: .18rem; font-weight: 700; }
-  .dc-file__acts { display: flex; gap: .4rem; flex-wrap: wrap; }
-
-  /* ── شبكة البيانات ────────────────────────────────────────── */
-  .dc-meta { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(136px, 1fr)); margin-top: 1.1rem; }
-  .dc-meta__c { padding: .7rem .8rem; border-radius: 12px; background: var(--asg-soft); border: 1px solid var(--asg-line); }
-  .dc-meta__l { font-size: .72rem; color: var(--asg-muted); font-weight: 800; }
-  .dc-meta__v { font-size: .86rem; font-weight: 800; margin-top: .2rem; overflow-wrap: anywhere; }
-
-  .dc-body { font-size: .87rem; line-height: 1.95; white-space: pre-wrap; margin-top: 1.1rem; }
-  .dc-note {
-    margin-top: 1.1rem; padding: .8rem .95rem; border-radius: 13px;
-    font-size: .84rem; line-height: 1.85; background: var(--asg-soft);
-    border-inline-start: 3px solid var(--asg-gold); white-space: pre-wrap;
-  }
-
-  /* ── الخط الزمني ──────────────────────────────────────────── */
-  .dc-tl { list-style: none; margin: .25rem 0 0; padding: 0; position: relative; }
-  .dc-tl::before {
-    content: ""; position: absolute; inset-inline-start: 7px; inset-block: .5rem;
-    width: 2px; background: var(--asg-line);
-  }
-  .dc-tl__i { position: relative; padding-inline-start: 1.6rem; padding-block: .55rem; }
-  .dc-tl__i::before {
-    content: ""; position: absolute; inset-inline-start: 2px; inset-block-start: .82rem;
-    width: 12px; height: 12px; border-radius: 50%;
-    background: var(--asg-surface); border: 2px solid var(--asg-line);
-  }
-  .dc-tl__i[data-last="1"]::before { border-color: var(--asg-green); background: var(--asg-green); }
-  .dc-tl__t { font-size: .83rem; font-weight: 800; }
-  .dc-tl__m { font-size: .74rem; color: var(--asg-muted); margin-top: .15rem; line-height: 1.7; }
-  .dc-tl__n { font-size: .79rem; margin-top: .3rem; line-height: 1.8; padding: .4rem .6rem; border-radius: 9px; background: var(--asg-soft); }
-
-  .dc-actions { display: grid; gap: .45rem; margin-top: .2rem; }
-  .dc-actions .asg-btn { width: 100%; justify-content: center; }
-  .dc-locked {
-    display: flex; gap: .6rem; align-items: flex-start; padding: .8rem .9rem;
-    border-radius: 13px; background: var(--asg-soft); border: 1px solid var(--asg-line);
-    font-size: .82rem; line-height: 1.8; color: var(--asg-muted);
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/document-detail.css' %}?v=20260920.1">
 {% endblock %}
 
 {% block content %}
-<div class="asg-page doc-kind" data-kind="{{ document.kind }}">
+<div class="twq-page document-detail-page" data-kind="{{ document.kind }}">
 
-  <header class="asg-hero">
-    <a class="asg-hero__eyebrow" href="{% url 'reports:document_archive' %}">
+  <header class="twq-page-header document-detail-header">
+    <div class="twq-page-header__heading">
+    <a class="twq-page-header__eyebrow document-detail-back" href="{% url 'reports:document_archive' %}">
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
       أرشيف الوثائق
     </a>
-    <h1 class="asg-hero__title">{{ document.title }}</h1>
-    <p class="asg-hero__meta">
-      {{ document.owner_name|default:"—" }}
-      · رُفعت {{ document.created_at|hijri }} هـ
-      · {{ document.get_kind_display }}
-    </p>
+    <h1 class="twq-page-header__title">{{ document.title }}</h1>
+    <p class="twq-page-header__lead">{{ document.get_kind_display }} · {{ document.owner_name|default:"—" }}</p>
+    </div>
+    <div class="twq-page-header__aside document-detail-header__aside">
+      {% if document.is_archived %}
+        <span class="twq-status" data-status="approved">مؤرشفة معتمدة</span>
+      {% elif document.approval_state == 'draft' %}
+        <span class="twq-status" data-status="draft">مسودة</span>
+      {% elif document.approval_state == 'returned' or document.approval_state == 'needs_info' %}
+        <span class="twq-status" data-status="danger">{{ document.get_approval_state_display }}</span>
+      {% else %}
+        <span class="twq-status" data-status="pending">{{ document.get_approval_state_display }}</span>
+      {% endif %}
+    </div>
   </header>
 
-  <div class="dc-grid">
+  <div class="dc-grid document-detail-layout">
     <div>
-      <section class="asg-card">
-        <div class="u-flex u-items-center u-gap-sm u-wrap u-mb-09">
-          <h2 class="asg-card__title u-m-0">الملف والبيانات</h2>
-          {% if document.is_archived %}
-            <span class="doc-state" data-s="approved">
-              <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
-              مؤرشَفة معتمَدة
-            </span>
-          {% elif document.approval_state == 'draft' %}
-            <span class="doc-state" data-s="draft">مسودة</span>
-          {% elif document.approval_state == 'returned' or document.approval_state == 'needs_info' %}
-            <span class="doc-state" data-s="returned">{{ document.get_approval_state_display }}</span>
-          {% else %}
-            <span class="doc-state" data-s="pending">{{ document.get_approval_state_display }}</span>
-          {% endif %}
+      <section class="twq-section document-detail-section" aria-labelledby="documentFileTitle">
+        <div class="twq-section__header">
+          <div>
+            <span class="twq-section__kicker">الوثيقة</span>
+            <h2 class="twq-section__title" id="documentFileTitle">الملف المرفق</h2>
+            <p class="twq-section__description">افتح الملف للاطلاع عليه أو نزّله للاحتفاظ بنسخة.</p>
+          </div>
         </div>
 
         {% comment %}
         الصور تُعرض، والمستندات تُفتح. معاينةُ صورةٍ داخل الصفحة توفّر على
         المراجع فتحَ تبويب لكل وثيقة يعتمدها — وهو عملُه المتكرر.
         {% endcomment %}
-        <div class="dc-preview">
+        {% if document.file %}
+        <div class="dc-preview document-detail-preview">
           {% if '.png' in document.file.name|lower or '.jpg' in document.file.name|lower or '.jpeg' in document.file.name|lower %}
             <img class="dc-preview__img" src="{{ document.file.url }}" alt="معاينة {{ document.title }}" loading="lazy">
           {% endif %}
-          <div class="dc-file">
-            <span class="doc-ico doc-ico--lg" aria-hidden="true">
+          <div class="dc-file twq-document-item document-detail-file">
+            <span class="twq-document-item__icon document-detail-file__icon" aria-hidden="true">
               {% if '.pdf' in document.file.name|lower %}<i class="fa-solid fa-file-pdf"></i>
               {% elif '.doc' in document.file.name|lower %}<i class="fa-solid fa-file-word"></i>
               {% elif '.xls' in document.file.name|lower %}<i class="fa-solid fa-file-excel"></i>
               {% elif '.png' in document.file.name|lower or '.jpg' in document.file.name|lower or '.jpeg' in document.file.name|lower %}<i class="fa-solid fa-file-image"></i>
               {% else %}<i class="fa-solid fa-file-lines"></i>{% endif %}
             </span>
-            <div class="dc-file__name">
-              {{ document.title }}
-              <div class="dc-file__sub">
+            <div class="dc-file__name twq-document-item__content">
+              <h3><bdi>{{ document.file.name }}</bdi></h3>
+              <p class="dc-file__sub">
                 {% if document.storage_bytes %}{{ document.storage_bytes|filesizeformat }}{% else %}الملف المرفق{% endif %}
-              </div>
+              </p>
             </div>
-            <div class="dc-file__acts">
-              <a class="asg-btn asg-btn--primary asg-btn--sm" href="{{ document.file.url }}" target="_blank" rel="noopener">
+            <div class="dc-file__acts twq-document-item__actions">
+              <a class="twq-btn twq-btn--primary" href="{{ document.file.url }}" target="_blank" rel="noopener" aria-label="فتح ملف الوثيقة: {{ document.title }}">
                 <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i>
-                فتح
+                فتح الملف
               </a>
-              <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{{ document.file.url }}" download>
+              <a class="twq-btn twq-btn--secondary" href="{{ document.file.url }}" download aria-label="تنزيل ملف الوثيقة: {{ document.title }}">
                 <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
                 تنزيل
               </a>
             </div>
           </div>
         </div>
+        {% else %}
+          <div class="twq-empty twq-empty--local">
+            <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-file-circle-xmark"></i></span>
+            <h3 class="twq-empty__title">لا يوجد ملف مرفق</h3>
+            <p class="twq-empty__message">بيانات الوثيقة متاحة، لكن لا يوجد ملف يمكن فتحه أو تنزيله.</p>
+          </div>
+        {% endif %}
 
-        <div class="dc-meta">
+      </section>
+
+      <section class="twq-section document-detail-section" aria-labelledby="documentInfoTitle">
+        <div class="twq-section__header"><div>
+          <span class="twq-section__kicker">التصنيف والسياق</span>
+          <h2 class="twq-section__title" id="documentInfoTitle">بيانات الوثيقة</h2>
+        </div></div>
+        <dl class="dc-meta document-detail-metadata">
           <div class="dc-meta__c">
-            <div class="dc-meta__l">النوع</div>
-            <div class="dc-meta__v xs-document-detail-1">{{ document.get_kind_display }}</div>
+            <dt class="dc-meta__l">النوع</dt>
+            <dd class="dc-meta__v">{{ document.get_kind_display }}</dd>
           </div>
           <div class="dc-meta__c">
-            <div class="dc-meta__l">السنة الدراسية</div>
-            <div class="dc-meta__v">{% if document.academic_year %}{{ document.academic_year }} هـ{% else %}—{% endif %}</div>
+            <dt class="dc-meta__l">صاحب الوثيقة</dt>
+            <dd class="dc-meta__v">{{ document.owner_name|default:"—" }}</dd>
           </div>
           <div class="dc-meta__c">
-            <div class="dc-meta__l">القسم</div>
-            <div class="dc-meta__v">{{ document.department.name|default:"—" }}</div>
+            <dt class="dc-meta__l">السنة الدراسية</dt>
+            <dd class="dc-meta__v">{% if document.academic_year %}<bdi>{{ document.academic_year }} هـ</bdi>{% else %}—{% endif %}</dd>
           </div>
           <div class="dc-meta__c">
-            <div class="dc-meta__l">اعتمد الأرشفة</div>
-            <div class="dc-meta__v">
-              {% if document.decided_by %}{{ document.decided_by.name }}{% else %}—{% endif %}
-            </div>
+            <dt class="dc-meta__l">القسم</dt>
+            <dd class="dc-meta__v">{{ document.department.name|default:"—" }}</dd>
           </div>
-        </div>
+          <div class="dc-meta__c">
+            <dt class="dc-meta__l">تاريخ الإضافة</dt>
+            <dd class="dc-meta__v"><time datetime="{{ document.created_at|date:'c' }}">{{ document.created_at|hijri }} هـ</time></dd>
+          </div>
+          <div class="dc-meta__c">
+            <dt class="dc-meta__l">آخر تحديث</dt>
+            <dd class="dc-meta__v"><time datetime="{{ document.updated_at|date:'c' }}">{{ document.updated_at|hijri }} هـ</time></dd>
+          </div>
+          {% if document.decided_by %}<div class="dc-meta__c"><dt class="dc-meta__l">صاحب القرار</dt><dd class="dc-meta__v">{{ document.decided_by.name }}</dd></div>{% endif %}
+        </dl>
+      </section>
 
         {% if document.description %}
-          <div class="dc-body">{{ document.description }}</div>
+          <section class="twq-section document-detail-section" aria-labelledby="documentDescriptionTitle">
+            <div class="twq-section__header"><div><h2 class="twq-section__title" id="documentDescriptionTitle">وصف الوثيقة</h2></div></div>
+            <div class="dc-body">{{ document.description }}</div>
+          </section>
         {% endif %}
 
         {% if document.review_note %}
-          <div class="dc-note">
-            <strong>آخر ملاحظة:</strong> {{ document.review_note }}
-          </div>
+          <section class="dc-note document-detail-review-note" aria-labelledby="documentNoteTitle">
+            <h2 id="documentNoteTitle">آخر ملاحظة مراجعة</h2>
+            <p>{{ document.review_note }}</p>
+          </section>
         {% endif %}
-      </section>
     </div>
 
     <div>
-      <section class="asg-card dc-side">
-        <h2 class="asg-card__title">
+      <section class="twq-section dc-side document-detail-workflow" aria-labelledby="documentWorkflowTitle">
+        <div class="twq-section__header"><div>
+        <span class="twq-section__kicker">دورة الأرشفة</span>
+        <h2 class="twq-section__title" id="documentWorkflowTitle">
           {% if is_owner %}إجراءاتك{% else %}اعتماد الأرشفة{% endif %}
         </h2>
-        <p class="asg-card__hint">
+        </div></div>
+        <p class="document-detail-workflow__help">
           {% if is_owner %}
             {% if 'issue' in actions %}
               وثيقتك بصفتك مدير المدرسة — إصدارها ينقلها إلى الأرشيف ويُسجَّل كإصدار، لا كاعتماد لعملك.
@@ -191,50 +162,50 @@
             {% csrf_token %}
             <input type="hidden" name="approval_action" id="docAction" value="">
             {% if not is_owner %}
-              <div class="asg-field">
-                <label for="docNote">ملاحظتك</label>
-                <textarea name="note" id="docNote" rows="3" placeholder="تُرفَق بالقرار وتظهر في السجل…"></textarea>
+              <div class="twq-field document-detail-note-field">
+                <label class="twq-label" for="docNote">ملاحظتك</label>
+                <textarea class="twq-control" name="note" id="docNote" rows="3" placeholder="تُرفَق بالقرار وتظهر في السجل…"></textarea>
               </div>
             {% endif %}
-            <div class="dc-actions">
+            <div class="dc-actions document-detail-actions">
               {% if 'issue' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-dc="issue">
+                <button type="submit" class="twq-btn twq-btn--primary" data-dc="issue">
                   <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
                   إصدار وأرشفة
                 </button>
               {% endif %}
               {% if 'submit' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-dc="submit">
+                <button type="submit" class="twq-btn twq-btn--primary" data-dc="submit">
                   <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
                   إرسال للأرشفة
                 </button>
               {% endif %}
               {% if 'approve' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-dc="approve">
+                <button type="submit" class="twq-btn twq-btn--primary" data-dc="approve">
                   <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                   اعتماد النقل للأرشيف
                 </button>
               {% endif %}
               {% if 'start_review' in actions %}
-                <button type="submit" class="asg-btn asg-btn--ghost" data-dc="start_review">
+                <button type="submit" class="twq-btn twq-btn--secondary" data-dc="start_review">
                   <i class="fa-solid fa-eye" aria-hidden="true"></i>
                   بدء المراجعة
                 </button>
               {% endif %}
               {% if 'request_info' in actions %}
-                <button type="submit" class="asg-btn asg-btn--warn" data-dc="request_info">
+                <button type="submit" class="twq-btn twq-btn--secondary document-detail-action--attention" data-dc="request_info">
                   <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                   طلب استكمال
                 </button>
               {% endif %}
               {% if 'return' in actions %}
-                <button type="submit" class="asg-btn asg-btn--warn" data-dc="return">
+                <button type="submit" class="twq-btn twq-btn--secondary document-detail-action--attention" data-dc="return">
                   <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
                   إعادة بملاحظة
                 </button>
               {% endif %}
               {% if 'withdraw' in actions %}
-                <button type="submit" class="asg-btn asg-btn--ghost" data-dc="withdraw">سحب للتعديل</button>
+                <button type="submit" class="twq-btn twq-btn--ghost" data-dc="withdraw">سحب للتعديل</button>
               {% endif %}
             </div>
           </form>
@@ -250,8 +221,8 @@
             })();
           </script>
         {% else %}
-          <div class="dc-locked">
-            <i class="fa-solid {% if document.is_archived %}fa-lock{% else %}fa-hourglass-half{% endif %} xs-document-detail-2" aria-hidden="true"></i>
+          <div class="dc-locked document-detail-locked">
+            <i class="fa-solid {% if document.is_archived %}fa-lock{% else %}fa-hourglass-half{% endif %}" aria-hidden="true"></i>
             <span>
               {% if document.is_archived %}
                 هذه الوثيقة في الأرشيف المعتمَد. لا تُعدَّل ولا تُحذف.
@@ -264,16 +235,19 @@
       </section>
 
       {% if timeline %}
-        <section class="asg-card">
-          <h2 class="asg-card__title">سجل الأرشفة</h2>
-          <p class="asg-card__hint">كل خطوة ومَن اتّخذها ومتى — لا تُعدَّل ولا تُحذف.</p>
-          <ol class="dc-tl">
+        <section class="twq-section document-detail-history" aria-labelledby="documentHistoryTitle">
+          <div class="twq-section__header"><div>
+            <span class="twq-section__kicker">السجل</span>
+            <h2 class="twq-section__title" id="documentHistoryTitle">سجل الأرشفة</h2>
+            <p class="twq-section__description">كل خطوة ومَن اتّخذها ومتى — لا تُعدَّل ولا تُحذف.</p>
+          </div></div>
+          <ol class="dc-tl document-detail-timeline">
             {% for step in timeline %}
               <li class="dc-tl__i" {% if forloop.last %}data-last="1"{% endif %}>
                 <div class="dc-tl__t">{{ step.get_action_display }}</div>
                 <div class="dc-tl__m">
                   {{ step.actor_display }}{% if step.actor_role %} · {{ step.actor_role }}{% endif %}
-                  <br>{{ step.created_at|hijri }} هـ — {{ step.created_at|time:"H:i" }}
+                  <br><time datetime="{{ step.created_at|date:'c' }}">{{ step.created_at|hijri }} هـ — {{ step.created_at|time:"H:i" }}</time>
                 </div>
                 {% if step.note %}<div class="dc-tl__n">{{ step.note }}</div>{% endif %}
               </li>

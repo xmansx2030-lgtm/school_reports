@@ -1,256 +1,112 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}صندوق المراجعة والاعتماد | منصة توثيق{% endblock %}
 
 {% block head %}
-{% include "reports/_approval_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .inb-kpis { display: grid; gap: .8rem; margin-top: 1.15rem; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); }
-  .inb-kpi {
-    background: var(--apr-surface); border: 1px solid var(--apr-line);
-    border-radius: 15px; padding: .85rem 1rem;
-  }
-  .inb-kpi__v { font-size: 1.55rem; font-weight: 900; line-height: 1.1; }
-  .inb-kpi__l { font-size: .77rem; font-weight: 700; color: var(--apr-muted); margin-top: .18rem; }
-  .inb-kpi[data-tone="mine"] .inb-kpi__v { color: var(--apr-green); }
-  .inb-kpi[data-tone="old"] .inb-kpi__v { color: var(--apr-gold); }
-
-  .inb-filters { display: flex; gap: .45rem; flex-wrap: wrap; margin-top: 1.15rem; }
-  .inb-chip {
-    display: inline-flex; align-items: center; gap: .4rem;
-    font-size: .8rem; font-weight: 800; text-decoration: none;
-    padding: .42rem .9rem; border-radius: 999px;
-    border: 1px solid var(--apr-line); color: var(--apr-muted);
-    background: var(--apr-surface);
-  }
-  .inb-chip:hover { border-color: var(--apr-green); color: var(--apr-green); }
-  .inb-chip.is-active { background: var(--apr-green); color: #fff; border-color: transparent; }
-  [data-theme="dark"] .inb-chip.is-active { color: #06251a; }
-  .inb-chip__n {
-    font-size: .72rem; font-weight: 900;
-    padding: .05rem .4rem; border-radius: 999px;
-    background: var(--apr-soft); color: var(--apr-green);
-  }
-  .inb-chip.is-active .inb-chip__n { background: rgba(255,255,255,.24); color: inherit; }
-  .inb-chip:focus-visible,.inb-item a:focus-visible,.inb-item button:focus-visible { outline: 2px solid var(--apr-gold); outline-offset: 2px; }
-
-  .inb-head { display: flex; align-items: center; gap: .55rem; margin: 1.3rem 0 .1rem; }
-  .inb-head__t { font-size: .84rem; font-weight: 900; }
-  .inb-head__n { font-size: .73rem; font-weight: 800; color: var(--apr-muted); }
-  .inb-head__line { flex: 1; height: 1px; background: var(--apr-line); }
-
-  .inb-list { display: grid; gap: .6rem; margin-top: .75rem; }
-  .inb-item {
-    position: relative; display: flex; gap: .85rem; align-items: center; flex-wrap: wrap;
-    padding: .9rem 1rem; border-radius: 15px;
-    border: 1px solid var(--apr-line); background: var(--apr-surface);
-    box-shadow: 0 8px 22px -22px rgba(16,35,26,.7);
-  }
-  .inb-item:hover { border-color: var(--apr-green); box-shadow: 0 16px 32px -24px rgba(8,100,59,.5); transform: translateY(-1px); }
-  .inb-item[data-tone="recommended"] { border-inline-start: 3px solid var(--apr-violet); }
-  .inb-item[data-tone="pending"] { border-inline-start: 3px solid var(--apr-info); }
-  .inb-item[data-mine="1"] { background: linear-gradient(180deg, color-mix(in srgb, var(--apr-green) 5%, transparent), transparent 60%); }
-  @media (prefers-reduced-motion: no-preference) {
-    .inb-item, .inb-chip { transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-  }
-
-  .inb-item__ico {
-    width: 38px; height: 38px; flex: none; border-radius: 12px;
-    display: grid; place-items: center; font-size: .92rem;
-    background: var(--apr-soft); color: var(--apr-info);
-  }
-  .inb-item[data-tone="recommended"] .inb-item__ico { color: var(--apr-violet); }
-  .inb-item__main { flex: 1; min-width: 200px; }
-  .inb-item__title { font-size: .94rem; font-weight: 800; overflow-wrap: anywhere; }
-  .inb-item__title a { color: inherit; text-decoration: none; }
-  .inb-item__title a::after { content: ""; position: absolute; inset: 0; }
-  .inb-item:hover .inb-item__title a { color: var(--apr-green); }
-  .inb-item__sub { font-size: .78rem; color: var(--apr-muted); margin-top: .24rem; line-height: 1.7; }
-  .inb-item__side { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; position: relative; z-index: 1; }
-  .inb-kind { display: inline-flex; align-items: center; gap: .3rem; margin-inline-end: .35rem; padding: .16rem .5rem; border-radius: 999px; background: var(--apr-soft); color: var(--apr-muted); font-size: .68rem; font-weight: 900; }
-  .inb-primary-form { margin: 0; }
-
-  /* عمر الانتظار: ما ينتظر أسبوعين يجب أن يُرى قبل أن يُقرأ. */
-  .inb-age {
-    display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap;
-    font-size: .72rem; font-weight: 800; padding: .2rem .55rem; border-radius: 999px;
-    color: var(--apr-muted); border: 1px solid currentColor;
-  }
-  .inb-age[data-w="warn"] { color: var(--apr-gold); }
-  .inb-age[data-w="late"] { color: var(--apr-danger); }
-  .inb-mine {
-    font-size: .68rem; font-weight: 900; padding: .12rem .5rem; border-radius: 999px;
-    background: var(--apr-green); color: #fff; white-space: nowrap;
-  }
-  [data-theme="dark"] .inb-mine { color: #06251a; }
-
-  @media (max-width: 640px) {
-    .apr-page { padding: .85rem; }
-    .apr-hero { padding: 1.35rem 1.15rem; border-radius: 16px; }
-    .apr-hero__title { font-size: 1.26rem; }
-    .inb-item__side { width: 100%; }
-    .inb-item__side .apr-btn,.inb-primary-form { flex: 1; }
-    .inb-item__side .apr-btn { justify-content: center; }
-  }
-</style>
+  <link rel="stylesheet" href="{% static 'css/report-approval.css' %}?v=20260921.1">
 {% endblock %}
 
 {% block content %}
-<div class="apr-page">
-
-  <header class="apr-hero">
-    <span class="apr-hero__eyebrow">
-      <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
-      {% if is_manager %}اعتماد{% else %}مراجعة{% endif %}
-    </span>
-    <h1 class="apr-hero__title">صندوق المراجعة والاعتماد</h1>
-    <p class="apr-hero__meta">
-      {% if is_manager %}
-        كل ما ينتظر قرارك في {{ active_school.name }} — والاعتماد النهائي بيدك وحدك.
-      {% else %}
-        ما ينتظر مراجعتك ضمن نطاق إشرافك. توصيتك ترفع العمل للمدير ولا تعتمده.
-      {% endif %}
-    </p>
-    <p class="apr-hero__note">
-      لا يعتمد أحد عمله بنفسه — ولو كان مدير المدرسة. وما اعتُمد لا يُعدَّل ولا
-      يُحذف، فالاعتماد الذي يمكن محوه ليس اعتماداً.
-    </p>
+<div class="twq-page report-approval-page approval-inbox-page">
+  <header class="twq-page-header approval-page-header" aria-labelledby="approvalInboxTitle">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>{% if is_manager %}قرارات المدرسة{% else %}مراجعات نطاقك{% endif %}</p>
+      <h1 class="twq-page-header__title" id="approvalInboxTitle">صندوق المراجعة والاعتماد</h1>
+      <p class="twq-page-header__lead">{% if is_manager %}راجع الأعمال التي تنتظر قرارك في المدرسة، وافتح كل سجل لفهم محتواه ومساره قبل اتخاذ الإجراء.{% else %}راجع الأعمال الواقعة ضمن نطاق إشرافك. التوصية ترفع العمل للمدير، ولا تعني الاعتماد النهائي.{% endif %}</p>
+      <dl class="twq-page-header__context approval-page-context" aria-label="سياق صندوق الاعتماد">
+        <div><dt>المدرسة</dt><dd><bdi>{{ active_school.name }}</bdi></dd></div>
+        <div><dt>الدور في هذه الشاشة</dt><dd>{% if is_manager %}اعتماد نهائي{% else %}مراجعة ضمن النطاق{% endif %}</dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside approval-header-state" aria-label="قاعدة الاعتماد">
+      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+      <p>لا يعتمد المستخدم عمله بنفسه، وكل قرار نهائي يبقى محفوظًا في سجل الاعتماد.</p>
+    </div>
   </header>
 
-  {% if rows %}
-    <section class="inb-kpis" aria-label="ملخص الصندوق">
-      <article class="inb-kpi">
-        <div class="inb-kpi__v">{{ total }}</div>
-        <div class="inb-kpi__l">في صندوقك</div>
-      </article>
-      <article class="inb-kpi" data-tone="mine">
-        <div class="inb-kpi__v">{{ mine_count }}</div>
-        <div class="inb-kpi__l">يتطلب إجراءً منك</div>
-      </article>
-      {% if oldest_days %}
-        <article class="inb-kpi" data-tone="old">
-          <div class="inb-kpi__v">{{ oldest_days }}</div>
-          <div class="inb-kpi__l">يوماً — أقدم انتظار</div>
-        </article>
-      {% endif %}
-    </section>
+  {% if total %}
+    <dl class="twq-metrics approval-queue-metrics" aria-label="ملخص قائمة الاعتماد">
+      <div><dt>إجمالي الأعمال</dt><dd>{{ total }}</dd></div>
+      <div><dt>يتطلب إجراءً منك</dt><dd>{{ mine_count }}</dd></div>
+      <div><dt>أقدم انتظار</dt><dd>{% if oldest_days %}{{ oldest_days }} يومًا{% else %}اليوم{% endif %}</dd></div>
+    </dl>
   {% endif %}
 
-  <div class="inb-filters">
-    <a class="inb-chip {% if not state_filter %}is-active{% endif %}"
-       href="{% url 'reports:approval_inbox' %}">
-      الكل
-      <span class="inb-chip__n">{{ total }}</span>
+  <nav class="approval-state-filter" aria-label="تصفية صندوق الاعتماد حسب الحالة">
+    <a class="approval-filter-chip{% if not state_filter %} is-active{% endif %}" href="{% url 'reports:approval_inbox' %}" {% if not state_filter %}aria-current="page"{% endif %}>
+      <span>الكل</span><span class="approval-filter-chip__count">{{ total }}</span>
     </a>
     {% for state, count in counts.items %}
       {% if count %}
-        <a class="inb-chip {% if state_filter == state %}is-active{% endif %}"
-           href="?state={{ state }}">
-          {% if state == 'submitted' %}مُرسل للمراجعة
-          {% elif state == 'under_review' %}قيد المراجعة
-          {% elif state == 'recommended' %}موصى باعتماده
-          {% elif state == 'needs_info' %}بانتظار الاستكمال
-          {% elif state == 'returned' %}مُعاد للملاحظة
-          {% else %}{{ state }}{% endif %}
-          <span class="inb-chip__n">{{ count }}</span>
+        <a class="approval-filter-chip{% if state_filter == state %} is-active{% endif %}" href="?state={{ state }}" {% if state_filter == state %}aria-current="page"{% endif %}>
+          <span>{% if state == 'submitted' %}مُرسل للمراجعة{% elif state == 'under_review' %}قيد المراجعة{% elif state == 'recommended' %}موصى باعتماده{% elif state == 'needs_info' %}بانتظار الاستكمال{% elif state == 'returned' %}مُعاد للملاحظة{% else %}{{ state }}{% endif %}</span>
+          <span class="approval-filter-chip__count">{{ count }}</span>
         </a>
       {% endif %}
     {% endfor %}
-  </div>
+  </nav>
 
   {% if rows %}
-    {% comment %}
-    الصندوق مقسوم قسمين: ما يتطلب إجراء المستخدم الآن، وما يراه للمتابعة فقط.
-    خلطُهما يجعل المدير يقلّب عشرين سطراً ليجد الثلاثة التي تخصّه.
-    {% endcomment %}
     {% regroup rows by is_mine as groups %}
     {% for group in groups %}
-      <div class="inb-head">
-        <span class="inb-head__t">
-          {% if group.grouper %}
-            <i class="fa-solid fa-gavel xs-approval-inbox-1" aria-hidden="true"></i>
-            دورك الآن
-          {% else %}
-            <i class="fa-solid fa-eye" aria-hidden="true"></i>
-            للمتابعة فقط
-          {% endif %}
-        </span>
-        <span class="inb-head__n">{{ group.list|length }}</span>
-        <span class="inb-head__line"></span>
-      </div>
+      <section class="twq-section approval-queue-section" aria-labelledby="approvalGroup{{ forloop.counter }}">
+        <header class="twq-section__header approval-queue-section__header">
+          <div>
+            <p class="twq-section__kicker">قائمة قرار تشغيلية</p>
+            <h2 class="twq-section__title" id="approvalGroup{{ forloop.counter }}">{% if group.grouper %}دورك الآن{% else %}للمتابعة فقط{% endif %}</h2>
+            <p class="twq-section__description">{% if group.grouper %}افتح العمل لمراجعة المحتوى والشواهد والسجل قبل القرار.{% else %}أعمال مرئية لك ولا يتوفر عليها إجراء في حالتها الحالية.{% endif %}</p>
+          </div>
+          <span class="twq-status" data-status="{% if group.grouper %}pending{% else %}draft{% endif %}">{{ group.list|length }} عمل</span>
+        </header>
 
-      <div class="inb-list">
-        {% for row in group.list %}
-          <article class="inb-item" data-tone="{{ row.tone }}"
-                   {% if row.is_mine %}data-mine="1"{% endif %}>
-            <span class="inb-item__ico" aria-hidden="true">
-              <i class="fa-solid {{ row.kind_icon }}"></i>
-            </span>
-
-            <div class="inb-item__main">
-              <div class="inb-item__title">
-                <span class="inb-kind"><i class="fa-solid {{ row.kind_icon }}" aria-hidden="true"></i>{{ row.kind_label }}</span>
-                <a href="{{ row.detail_url }}">{{ row.title }}</a>
-              </div>
-              <div class="inb-item__sub">
-                {{ row.subtitle }}
-                {% if row.submitted_at %} · أُرسل {{ row.submitted_at|hijri }} هـ{% endif %}
-                {% if row.item.reviewed_by %} · راجعه {{ row.item.reviewed_by.name }}{% endif %}
-              </div>
-            </div>
-
-            <div class="inb-item__side">
-              {# الحارس على ``submitted_at`` لا على ``waiting_days``: صفرُ أيام #}
-              {# قيمةٌ صحيحة تعني «اليوم»، وفحصُ العدد وحده يُخفيها. #}
-              {% if row.submitted_at %}
-                <span class="inb-age"
-                      data-w="{% if row.waiting_days >= 7 %}late{% elif row.waiting_days >= 3 %}warn{% endif %}"
-                      title="مضى على إرساله {{ row.waiting_days }} يوماً">
-                  <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                  {% if row.waiting_days == 0 %}اليوم{% else %}{{ row.waiting_days }} يوماً{% endif %}
-                </span>
-              {% endif %}
-
-              <span class="apr-state" data-tone="{{ row.tone }}">
-                {{ row.state_label }}
-              </span>
-
-              {% if row.inline_action and row.action_url and 'approve' in row.actions or row.inline_action and row.action_url and 'issue' in row.actions or row.inline_action and row.action_url and 'recommend' in row.actions or row.inline_action and row.action_url and 'start_review' in row.actions %}
-                <form method="post" action="{{ row.action_url }}" class="inb-primary-form">
-                  {% csrf_token %}
-                  <input type="hidden" name="approval_action" value="{% if 'issue' in row.actions %}issue{% elif 'approve' in row.actions %}approve{% elif 'recommend' in row.actions %}recommend{% else %}start_review{% endif %}">
-                  <input type="hidden" name="next" value="inbox">
-                  <button type="submit" class="apr-btn apr-btn--primary apr-btn--sm">
-                    <i class="fa-solid {% if 'issue' in row.actions %}fa-file-circle-check{% elif 'approve' in row.actions %}fa-circle-check{% elif 'recommend' in row.actions %}fa-thumbs-up{% else %}fa-eye{% endif %}" aria-hidden="true"></i>
-                    {% if 'issue' in row.actions %}إصدار وأرشفة{% elif 'approve' in row.actions %}اعتماد{% elif 'recommend' in row.actions %}توصية{% else %}بدء المراجعة{% endif %}
-                  </button>
-                </form>
-              {% endif %}
-
-              <a class="apr-btn apr-btn--ghost apr-btn--sm"
-                 href="{{ row.detail_url }}">
-                {% if row.inline_action %}فتح{% else %}فتح ومراجعة{% endif %}
-              </a>
-            </div>
-          </article>
-        {% endfor %}
-      </div>
+        <div class="twq-table-wrap approval-queue-table-wrap" tabindex="0" aria-label="{% if group.grouper %}الأعمال التي تتطلب إجراءك{% else %}أعمال المتابعة{% endif %}">
+          <table class="twq-table approval-queue-table">
+            <caption class="sr-only">{% if group.grouper %}الأعمال التي تتطلب إجراءك الآن{% else %}أعمال متاحة للمتابعة فقط{% endif %}</caption>
+            <thead><tr><th scope="col">العمل</th><th scope="col">السياق</th><th scope="col">وصل للمراجعة</th><th scope="col">الحالة</th><th scope="col">الإجراء</th></tr></thead>
+            <tbody>
+              {% for row in group.list %}
+                <tr data-tone="{{ row.tone }}"{% if row.is_mine %} data-mine="1"{% endif %}>
+                  <td data-label="العمل">
+                    <div class="approval-work-identity">
+                      <span class="approval-work-icon" aria-hidden="true"><i class="fa-solid {{ row.kind_icon }}"></i></span>
+                      <div><span class="approval-work-kind">{{ row.kind_label }}</span><a class="approval-work-title" href="{{ row.detail_url }}"><bdi>{{ row.title }}</bdi></a></div>
+                    </div>
+                  </td>
+                  <td data-label="السياق"><p class="approval-work-context">{{ row.subtitle }}</p>{% if row.item.reviewed_by %}<p class="approval-work-context">راجعه <bdi>{{ row.item.reviewed_by.name }}</bdi></p>{% endif %}</td>
+                  <td data-label="وصل للمراجعة">
+                    {% if row.submitted_at %}<time datetime="{{ row.submitted_at|date:'c' }}">{{ row.submitted_at|hijri }} هـ</time><span class="approval-waiting-age">{% if row.waiting_days == 0 %}وصل اليوم{% else %}منذ {{ row.waiting_days }} يومًا{% endif %}</span>{% else %}<span class="approval-work-context">غير محدد</span>{% endif %}
+                  </td>
+                  <td data-label="الحالة"><span class="twq-status" data-status="{{ row.tone }}">{{ row.state_label }}</span></td>
+                  <td data-label="الإجراء">
+                    <div class="twq-table__actions approval-queue-actions">
+                      {% if row.inline_action and row.action_url %}
+                        {% if 'issue' in row.actions or 'approve' in row.actions or 'recommend' in row.actions or 'start_review' in row.actions %}
+                          <form method="post" action="{{ row.action_url }}" class="approval-inline-action">
+                            {% csrf_token %}
+                            <input type="hidden" name="approval_action" value="{% if 'issue' in row.actions %}issue{% elif 'approve' in row.actions %}approve{% elif 'recommend' in row.actions %}recommend{% else %}start_review{% endif %}">
+                            <input type="hidden" name="next" value="inbox">
+                            <button type="submit" class="twq-btn twq-btn--primary approval-queue-primary"><i class="fa-solid {% if 'issue' in row.actions %}fa-file-circle-check{% elif 'approve' in row.actions %}fa-circle-check{% elif 'recommend' in row.actions %}fa-thumbs-up{% else %}fa-eye{% endif %}" aria-hidden="true"></i>{% if 'issue' in row.actions %}إصدار وأرشفة{% elif 'approve' in row.actions %}اعتماد{% elif 'recommend' in row.actions %}توصية{% else %}بدء المراجعة{% endif %}</button>
+                          </form>
+                        {% endif %}
+                      {% endif %}
+                      <a class="twq-btn twq-btn--secondary" href="{{ row.detail_url }}">{% if row.inline_action %}فتح التفاصيل{% else %}فتح ومراجعة{% endif %}</a>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
     {% endfor %}
   {% else %}
-    <div class="apr-empty u-mt-2xl">
-      <div class="apr-empty__icon"><i class="fa-solid fa-mug-hot" aria-hidden="true"></i></div>
-      <h2>لا شيء ينتظرك</h2>
-      <p>
-        {% if state_filter %}
-          لا توجد أعمال في هذه الحالة الآن.
-          <a href="{% url 'reports:approval_inbox' %}">اعرض الكل</a>.
-        {% else %}
-          صندوقك فارغ — كل ما أُرسل إليك حُسم. ستظهر هنا الأعمال فور إرسالها للمراجعة.
-        {% endif %}
-      </p>
-    </div>
+    <section class="twq-empty twq-empty--page approval-empty" aria-labelledby="approvalEmptyTitle">
+      <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+      <h2 class="twq-empty__title" id="approvalEmptyTitle">{% if state_filter %}لا توجد نتائج بهذه الحالة{% else %}لا توجد أعمال تنتظر قرارك{% endif %}</h2>
+      <p class="twq-empty__message">{% if state_filter %}غيّر فلتر الحالة أو اعرض جميع الأعمال في الصندوق.{% else %}ستظهر هنا الأعمال فور وصولها إلى دورك في مسار المراجعة.{% endif %}</p>
+      {% if state_filter %}<a class="twq-btn twq-btn--secondary" href="{% url 'reports:approval_inbox' %}">عرض جميع الحالات</a>{% endif %}
+    </section>
   {% endif %}
-
 </div>
 {% endblock %}

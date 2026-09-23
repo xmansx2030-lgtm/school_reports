@@ -39,6 +39,16 @@ class FocusVisibilityTests(SimpleTestCase):
     def _css(self, name: str) -> str:
         return (self.root / "static" / "css" / name).read_text(encoding="utf-8")
 
+    def _theme_token(self, css: str, selector: str, token: str) -> str:
+        block = re.search(rf"{re.escape(selector)}\s*\{{(?P<body>.*?)\n\}}", css, re.DOTALL)
+        self.assertIsNotNone(block, f"تعذر العثور على كتلة الثيم: {selector}")
+        value = re.search(
+            rf"{re.escape(token)}:\s*(#[0-9a-fA-F]{{6}})",
+            block.group("body"),
+        )
+        self.assertIsNotNone(value, f"{token} يجب أن يملك قيمة لون مركزية في {selector}")
+        return value.group(1)
+
     def test_a_global_focus_ring_covers_every_interactive_element(self):
         css = self._css("utilities.css")
 
@@ -70,16 +80,17 @@ class FocusVisibilityTests(SimpleTestCase):
 
     def test_the_ring_colour_is_a_token_in_both_themes(self):
         """لونٌ ثابت في الوضعين يعني حلقةً تختفي في أحدهما."""
-        self.assertIn("--focus-ring", self._css("tokens.css"))
-        self.assertIn("--focus-ring", self._css("dark-mode.css"))
+        alias = "--focus-ring: var(--twq-focus)"
+        self.assertIn(alias, self._css("tokens.css"))
+        self.assertIn(alias, self._css("dark-mode.css"))
 
     def test_the_ring_is_visible_against_both_backgrounds(self):
         """3:1 هو حدّ WCAG لمكوّنات الواجهة غير النصّية."""
-        light = re.search(r"--focus-ring:\s*(#[0-9a-fA-F]{6})", self._css("tokens.css"))
-        dark = re.search(r"--focus-ring:\s*(#[0-9a-fA-F]{6})", self._css("dark-mode.css"))
-        self.assertIsNotNone(light)
-        self.assertIsNotNone(dark)
+        tokens = self._css("tokens.css")
+        light_focus = self._theme_token(tokens, ":root", "--twq-focus")
+        light_background = self._theme_token(tokens, ":root", "--twq-bg")
+        dark_focus = self._theme_token(tokens, 'html[data-theme="dark"]', "--twq-focus")
+        dark_background = self._theme_token(tokens, 'html[data-theme="dark"]', "--twq-bg")
 
-        # خلفية الصفحة في كل وضع.
-        self.assertGreaterEqual(contrast_ratio(light.group(1), "#f4f7f3"), 3.0)
-        self.assertGreaterEqual(contrast_ratio(dark.group(1), "#061512"), 3.0)
+        self.assertGreaterEqual(contrast_ratio(light_focus, light_background), 3.0)
+        self.assertGreaterEqual(contrast_ratio(dark_focus, dark_background), 3.0)

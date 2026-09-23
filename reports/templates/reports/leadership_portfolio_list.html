@@ -2,44 +2,129 @@
 {% load static %}
 {% block title %}ملف الأداء القيادي{% endblock %}
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  .lp-shell{--lp-green:#075b36;--lp-deep:#043d25;--lp-gold:#b58a46;--lp-ink:#17211c;--lp-muted:#647269;max-width:1180px;margin:0 auto;padding:28px 18px 64px;color:var(--lp-ink)}
-  .lp-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;gap:32px;align-items:end;min-height:280px;padding:42px;border-radius:8px;background:#073f29;color:#fff}
-  .lp-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(125deg,rgba(255,255,255,.04),transparent 55%),repeating-linear-gradient(90deg,transparent 0 54px,rgba(255,255,255,.025) 55px 56px)}
-  .lp-hero>*{position:relative}.lp-eyebrow{display:inline-flex;align-items:center;gap:8px;color:#e5cc91;font-weight:900;font-size:.82rem}.lp-hero h1{margin:14px 0 8px;color:#fff;font-size:clamp(2rem,5vw,3.7rem);line-height:1.25;letter-spacing:0}.lp-school{color:#fff;font-size:1.2rem;font-weight:900}.lp-hero p{max-width:650px;margin:12px 0 0;color:#d7e5dd;line-height:1.9}.lp-mark{width:128px;height:128px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08)}.lp-mark img{width:92px;height:92px;object-fit:contain}
-  .lp-create{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:28px 0;padding:20px 0;border-bottom:1px solid #d9e3dd}.lp-create h2{margin:0 0 4px;font-size:1.2rem}.lp-create p{margin:0;color:var(--lp-muted)}
-  .lp-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:0 18px;border:1px solid #cdd9d2;border-radius:6px;background:#fff;color:var(--lp-deep);font:inherit;font-weight:900;text-decoration:none;cursor:pointer}.lp-btn--primary{border-color:var(--lp-green);background:var(--lp-green);color:#fff}.lp-btn:hover{transform:translateY(-1px)}
-  .lp-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.lp-item{padding:24px;border:1px solid #d7e1db;border-top:4px solid var(--lp-gold);border-radius:6px;background:#fff}.lp-item__top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.lp-year{font-size:1.5rem;font-weight:1000;color:var(--lp-deep)}.lp-status{padding:5px 9px;background:#eef6f1;color:var(--lp-green);font-size:.75rem;font-weight:900}.lp-stats{display:flex;gap:22px;margin:24px 0;color:var(--lp-muted)}.lp-stats strong{display:block;color:var(--lp-ink);font-size:1.2rem}.lp-empty{padding:52px 24px;text-align:center;border:1px dashed #b9c9bf;color:var(--lp-muted)}
-  @media(max-width:760px){.lp-hero{grid-template-columns:1fr;padding:28px 22px}.lp-mark{display:none}.lp-create{align-items:stretch;flex-direction:column}.lp-list{grid-template-columns:1fr}.lp-btn{width:100%}}
-</style>
+<link rel="stylesheet" href="{% static 'css/leadership-portfolio-list.css' %}?v=20260919.1">
 {% endblock %}
 {% block content %}
-<div class="lp-shell">
-  <section class="lp-hero">
-    <div>
-      <span class="lp-eyebrow"><i class="fa-solid fa-compass" aria-hidden="true"></i> منصة توثيق · القيادة المدرسية</span>
-      <h1>ملف الأداء القيادي</h1>
-      <div class="lp-school">{{ current_school.name }}</div>
-      <p>مساحة سنوية توثق أثر القيادة المدرسية بالنتائج والشواهد، وتحول العمل الإداري اليومي إلى سجل مهني منظم وجاهز للعرض.</p>
+<div class="lp-shell lp-pilot twq-page">
+  <header class="lp-pilot__header twq-page-header" aria-labelledby="leadershipPortfolioTitle">
+    <div class="lp-pilot__heading twq-page-header__heading">
+      <div class="lp-pilot__eyebrow twq-page-header__eyebrow">
+        <i class="fa-solid fa-compass" aria-hidden="true"></i>
+        <span>منصة توثيق · القيادة المدرسية</span>
+      </div>
+      <h1 class="twq-page-header__title" id="leadershipPortfolioTitle">ملف الأداء القيادي</h1>
+      <p class="lp-pilot__lead twq-page-header__lead">متابعة وتوثيق مؤشرات الأداء القيادي والإنجازات والشواهد في سجل سنوي منظم وجاهز للمراجعة.</p>
+
+      <dl class="lp-pilot__context twq-page-header__context" aria-label="سياق ملف الأداء القيادي">
+        <div>
+          <dt>المدرسة</dt>
+          <dd><bdi>{{ current_school.name }}</bdi></dd>
+        </div>
+        <div>
+          <dt>السنة الدراسية الحالية</dt>
+          <dd id="lpAcademicYearStatus">
+            {% if current_school.current_academic_year %}
+              <bdi>{{ current_school.current_academic_year }}</bdi> هـ
+            {% else %}
+              لم تُحدد من إعدادات المدرسة
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
     </div>
-    <div class="lp-mark"><img src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق"></div>
-  </section>
 
-  <section class="lp-create" aria-labelledby="lpCreateTitle">
-    <div><h2 id="lpCreateTitle">السنة الدراسية الحالية</h2><p>{% if current_school.current_academic_year %}{{ current_school.current_academic_year }} هـ{% else %}لم تُحدد من إعدادات المدرسة{% endif %}</p></div>
-    <form method="post">{% csrf_token %}<button class="lp-btn lp-btn--primary" type="submit" {% if not current_school.current_academic_year %}disabled{% endif %}><i class="fa-solid fa-plus"></i> إنشاء أو فتح ملف السنة</button></form>
-  </section>
+    <div class="lp-pilot__primary-action twq-page-header__aside">
+      <div class="lp-pilot__mark twq-page-header__mark" aria-hidden="true">
+        <img src="{% static 'img/brand-mark.svg' %}" alt="">
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <button
+          class="twq-btn twq-btn--primary lp-pilot__create-button"
+          type="submit"
+          aria-describedby="lpAcademicYearStatus"
+          {% if not current_school.current_academic_year %}disabled{% endif %}
+        >
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <span>إنشاء أو فتح ملف السنة</span>
+        </button>
+      </form>
+    </div>
+  </header>
 
-  <section class="lp-list" aria-label="ملفات الأداء القيادي">
-    {% for item in portfolios %}
-      <article class="lp-item">
-        <div class="lp-item__top"><div><div class="lp-year">{{ item.academic_year }} هـ</div><div><bdi>{{ item.manager_name }}</bdi></div></div><span class="lp-status">{{ item.get_status_display }}</span></div>
-        <div class="lp-stats"><div><strong>{{ item.completed_count }}/8</strong>محاور مكتملة</div><div><strong>{{ item.report_evidence_count }}</strong>تقارير موثقة</div><div><strong>{{ item.evidence_count }}</strong>صور شواهد</div></div>
-        <a class="lp-btn" href="{% url 'reports:leadership_portfolio_detail' item.pk %}"><i class="fa-solid fa-arrow-left"></i> فتح مساحة العمل</a>
-      </article>
-    {% empty %}
-      <div class="lp-empty"><i class="fa-regular fa-folder-open fa-2x" aria-hidden="true"></i><h2>ابدأ أول ملف قيادي</h2><p>سيُنشأ الملف بمحاوره الثمانية للعام الدراسي الحالي.</p></div>
-    {% endfor %}
+  <section class="lp-pilot__workspace twq-section" aria-labelledby="leadershipPortfolioArchiveTitle">
+    <div class="lp-pilot__section-heading twq-section__header">
+      <div>
+        <span class="lp-pilot__section-kicker twq-section__kicker">السجل السنوي</span>
+        <h2 class="twq-section__title" id="leadershipPortfolioArchiveTitle">ملفات الأداء القيادي</h2>
+        <p class="twq-section__description">راجع مستوى الإنجاز والشواهد لكل سنة، ثم انتقل إلى مساحة العمل لاستكمال الملف.</p>
+      </div>
+      <div class="lp-pilot__legend twq-section__meta" aria-label="دليل حالة الإنجاز">
+        <span><i class="fa-solid fa-circle" aria-hidden="true"></i> التقدم من 8 محاور</span>
+      </div>
+    </div>
+
+    {% if portfolios %}
+      <ul class="lp-pilot__list" aria-label="ملفات الأداء القيادي">
+        {% for item in portfolios %}
+          <li>
+            <article class="twq-card twq-card--status lp-portfolio-card" aria-labelledby="lpPortfolioYear{{ item.pk }}">
+              <div class="lp-portfolio-card__top">
+                <div>
+                  <span class="lp-portfolio-card__label">العام الدراسي</span>
+                  <h3 id="lpPortfolioYear{{ item.pk }}"><bdi>{{ item.academic_year }}</bdi> هـ</h3>
+                  <p class="lp-portfolio-card__manager">
+                    <i class="fa-regular fa-user" aria-hidden="true"></i>
+                    <span>قائد الملف:</span>
+                    <bdi>{{ item.manager_name }}</bdi>
+                  </p>
+                </div>
+                <span class="twq-status lp-portfolio-card__status" data-status="{{ item.status }}">
+                  <i class="fa-solid fa-circle" aria-hidden="true"></i>
+                  <span>{{ item.get_status_display }}</span>
+                </span>
+              </div>
+
+              <div class="lp-portfolio-card__progress twq-progress">
+                <div class="lp-portfolio-card__progress-label twq-progress__label">
+                  <span>اكتمال المحاور</span>
+                  <strong><bdi>{{ item.completed_count }}/8</bdi></strong>
+                </div>
+                <progress class="twq-progress__bar" value="{{ item.completed_count }}" max="8" aria-label="اكتمل {{ item.completed_count }} من 8 محاور">{{ item.completed_count }} من 8</progress>
+              </div>
+
+              <dl class="lp-portfolio-card__metrics twq-metrics">
+                <div>
+                  <dt><i class="fa-regular fa-file-lines" aria-hidden="true"></i> تقارير موثقة</dt>
+                  <dd><bdi>{{ item.report_evidence_count }}</bdi></dd>
+                </div>
+                <div>
+                  <dt><i class="fa-regular fa-images" aria-hidden="true"></i> صور شواهد</dt>
+                  <dd><bdi>{{ item.evidence_count }}</bdi></dd>
+                </div>
+              </dl>
+
+              <footer class="lp-portfolio-card__footer">
+                <a class="twq-btn twq-btn--secondary lp-portfolio-card__action" href="{% url 'reports:leadership_portfolio_detail' item.pk %}">
+                  <span>فتح مساحة العمل</span>
+                  <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </a>
+              </footer>
+            </article>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="twq-empty twq-empty--page lp-pilot__empty">
+        <div class="twq-empty__icon lp-pilot__empty-icon" aria-hidden="true"><i class="fa-regular fa-folder-open"></i></div>
+        <h2 class="twq-empty__title">ابدأ أول ملف قيادي</h2>
+        {% if current_school.current_academic_year %}
+          <p class="twq-empty__message">استخدم الإجراء الرئيسي أعلاه لإنشاء ملف السنة الحالية بمحاوره الثمانية.</p>
+        {% else %}
+          <p class="twq-empty__message">حدد السنة الدراسية الحالية من إعدادات المدرسة أولًا، ثم عُد لإنشاء الملف.</p>
+        {% endif %}
+      </div>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

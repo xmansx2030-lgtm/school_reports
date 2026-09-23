@@ -1,19 +1,26 @@
 import hashlib
 import json
+from pathlib import Path
+from unittest import mock
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from reports.models import Teacher, WebAuthnCredential
+from reports.models import Teacher, TeacherTotpDevice, WebAuthnCredential
+from reports.totp import encrypt_secret, generate_secret
 from reports.views.auth import (
     PASSKEY_ENROLL_PROMPT_SESSION_KEY,
     PASSKEY_PROMPT_SNOOZE_COOKIE,
     PASSKEY_PROMPT_SNOOZE_MAX_AGE,
     PASSKEY_UNSUPPORTED_DEVICE_COOKIE,
     PASSKEY_UNSUPPORTED_DEVICE_MAX_AGE,
+    WEBAUTHN_AUTH_CHALLENGE_SESSION_KEY,
+    WEBAUTHN_AUTH_DISCOVERABLE_SESSION_KEY,
     _passkey_device_label,
 )
 from reports.webauthn import (
+    AuthenticatorData,
     b64url_encode,
     credential_hash,
     parse_authenticator_data,
@@ -23,6 +30,7 @@ from reports.webauthn import (
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class PasskeyEndpointTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = Teacher.objects.create_user(
             phone="555000111",
             name="Passkey User",
@@ -262,10 +270,14 @@ class PasskeyEndpointTests(TestCase):
         self.assertEqual(payload["publicKey"]["allowCredentials"][0]["id"], b64url_encode(self.credential_id))
 
         login_response = self.client.get(reverse("reports:login"))
-        self.assertContains(login_response, "isConditionalMediationAvailable")
+        self.assertContains(login_response, "js/auth-login.js")
         self.assertContains(login_response, "username webauthn")
-        self.assertContains(login_response, "NotSupportedError")
-        self.assertContains(login_response, "NotAllowedError")
+        login_javascript = (
+            Path(__file__).resolve().parents[2] / "static" / "js" / "auth-login.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("isConditionalMediationAvailable", login_javascript)
+        self.assertIn("NotSupportedError", login_javascript)
+        self.assertIn("NotAllowedError", login_javascript)
 
     def test_login_options_without_identifier_start_discoverable_ceremony(self):
         """No identifier means one-tap sign-in, not an error.
@@ -341,6 +353,50 @@ class PasskeyEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "challenge_missing")
+
+    def test_successful_passkey_is_an_alternative_to_password_and_totp(self):
+        """A verified passkey is the primary ceremony, not password factor one."""
+        TeacherTotpDevice.objects.create(
+            teacher=self.user,
+            secret_encrypted=encrypt_secret(generate_secret()),
+            confirmed_at="2026-09-21T12:00:00+00:00",
+        )
+        session = self.client.session
+        session[WEBAUTHN_AUTH_CHALLENGE_SESSION_KEY] = "passkey-challenge"
+        session[WEBAUTHN_AUTH_DISCOVERABLE_SESSION_KEY] = True
+        session.save()
+
+        with (
+            mock.patch(
+                "reports.views.auth.parse_client_data",
+                return_value=b"client-data-hash",
+            ),
+            mock.patch(
+                "reports.views.auth.parse_authenticator_data",
+                return_value=AuthenticatorData(flags=0x05, sign_count=1),
+            ),
+            mock.patch("reports.views.auth.verify_signature", return_value=None),
+        ):
+            response = self.client.post(
+                reverse("reports:passkey_login_verify"),
+                data=json.dumps(
+                    {
+                        "rawId": b64url_encode(self.credential_id),
+                        "response": {
+                            "clientDataJSON": "stub",
+                            "authenticatorData": "stub",
+                            "signature": "stub",
+                            "userHandle": b64url_encode(str(self.user.pk).encode("utf-8")),
+                        },
+                    }
+                ),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertIn("_auth_user_id", self.client.session)
+        self.assertNotEqual(response.json()["redirect"], reverse("reports:totp_challenge"))
 
     def test_discoverable_login_rejects_user_handle_of_another_account(self):
         """The handle the authenticator returns must name the credential's owner."""

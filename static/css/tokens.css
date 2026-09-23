@@ -1,206 +1,443 @@
-/* static/css/tokens.css
+/* Tawtheeq canonical design tokens
    ─────────────────────────────────────────────────────────────────────────
-   رموز التصميم: المصدر الوحيد للّون والمسافة والظل والحركة.
+   Source of truth for new UI: only the --twq-* names below are canonical.
 
-   **لماذا ملفٌ مستقل.** كانت هذه الرموز مكتوبةً داخل ``<style>`` في
-   ``base.html`` — أي داخل قالبٍ من ثلاثة آلاف سطر، لا يُفتح إلا لتعديل ترويسة،
-   ولا يعرف أحد أن فيه تعريف الهوية البصرية كلها. ومن احتاج لوناً كتبه بيده،
-   فتكاثرت النسخ حتى صار في المنصة 519 ``!important`` و784 سمة ``style=``.
+   The unprefixed and --id-* names at the end of each theme are compatibility
+   aliases. They intentionally remain while existing templates migrate. Do not
+   add a new legacy alias without an existing consumer and a removal plan.
 
-   ومكانُ الرموز هنا يجعل الإجابة على «ما لونُ العلامة؟» ملفاً واحداً لا بحثاً.
-
-   **قاعدة الاستعمال:** لا لون مكتوب بالسداسي في أي ملف آخر. إن احتجت لوناً
-   ليس هنا، فأضفه هنا باسمٍ يقول دوره (``--danger`` لا ``--red``) ثم استعمله.
+   This file is loaded after legacy theme files during the migration so their
+   older :root declarations cannot override the canonical semantic contract.
+   New shared CSS must consume --twq-* directly.
    ───────────────────────────────────────────────────────────────────────── */
 
-/* TAWTHEEQ DESIGN SYSTEM 2026
-   الأسماء الدلالية الجديدة هي المصدر الأساسي. الأسماء القديمة في قسم
-   compatibility aliases تبقى حتى تنتقل القوالب تدريجياً بلا كسر. */
 :root {
   color-scheme: light;
 
+  /* Brand */
+  --twq-primary: #006c35;
+  --twq-primary-hover: #00572b;
+  --twq-primary-active: #004723;
+  --twq-primary-soft: #e8f4ed;
+  --twq-primary-foreground: #ffffff;
+  --twq-secondary: #26483b;
+  --twq-secondary-hover: #19372c;
+  --twq-secondary-foreground: #ffffff;
+  --twq-accent: #9a6f2e;
+  --twq-accent-hover: #7b5722;
+  --twq-accent-soft: #f7f0e4;
+
+  /* Stable brand scales retained for the existing identity layer. */
+  --twq-green-950: #032014;
+  --twq-green-900: #05331f;
+  --twq-green-800: #064a2b;
+  --twq-green-700: #006c35;
+  --twq-green-600: #0a8046;
+  --twq-green-500: #16955a;
+  --twq-green-300: #7fd0a8;
+  --twq-green-100: #d7f0e2;
+  --twq-green-050: #eef8f2;
+  --twq-gold-700: #8a6a2f;
+  --twq-gold-600: #a8843f;
+  --twq-gold-500: #b9975b;
+  --twq-gold-400: #d4b16d;
+  --twq-gold-300: #e6cf9a;
+  --twq-gold-100: #f6ecd6;
+
+  /* Semantic colors */
+  --twq-success: #137a50;
+  --twq-success-soft: #e8f5ef;
+  --twq-warning: #946200;
+  --twq-warning-soft: #fff5d9;
+  --twq-danger: #b42318;
+  --twq-danger-hover: #941b12;
+  --twq-danger-soft: #fff0ee;
+  --twq-info: #126a8a;
+  --twq-info-soft: #eaf5f9;
+  --twq-neutral: #62736b;
+  --twq-neutral-soft: #eef1ef;
+  --twq-draft: #62736b;
+  --twq-draft-soft: #eef1ef;
+
+  /* Surfaces */
+  --twq-bg: #f5f7f6;
+  --twq-surface: #ffffff;
+  --twq-surface-secondary: #f0f4f2;
+  --twq-surface-muted: #e8efeb;
+  --twq-surface-elevated: #ffffff;
+  --twq-scrim: rgba(7, 29, 21, .58);
+
+  /* Text */
+  --twq-text: #14251f;
+  --twq-text-secondary: #44584f;
+  --twq-text-muted: #62736b;
+  --twq-text-disabled: #84928c;
+  --twq-text-inverse: #ffffff;
+
+  /* Borders and focus */
+  --twq-border: #d7e0db;
+  --twq-border-strong: #b9c7c0;
+  --twq-divider: #e3eae6;
+  --twq-focus: #9a6f2e;
+  --twq-focus-shadow: 0 0 0 3px rgba(154, 111, 46, .24);
+
   /* Typography */
-  --font-base: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --text-xs: .75rem;
-  --text-sm: .875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: clamp(1.5rem, 2.4vw, 1.875rem);
-  --text-3xl: clamp(1.75rem, 3.2vw, 2.25rem);
-  --leading-tight: 1.35;
-  --leading-normal: 1.7;
-  --leading-relaxed: 1.9;
-  --weight-regular: 500;
-  --weight-medium: 650;
-  --weight-semibold: 750;
-  --weight-bold: 850;
+  --twq-font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --twq-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --twq-font-size-xs: .75rem;
+  --twq-font-size-sm: .875rem;
+  --twq-font-size-md: 1rem;
+  --twq-font-size-lg: 1.125rem;
+  --twq-font-size-xl: 1.25rem;
+  --twq-font-size-2xl: clamp(1.5rem, 2.4vw, 1.875rem);
+  --twq-font-size-3xl: clamp(1.75rem, 3.2vw, 2.25rem);
+  --twq-line-height-tight: 1.35;
+  --twq-line-height-normal: 1.7;
+  --twq-line-height-relaxed: 1.9;
+  --twq-font-weight-regular: 500;
+  --twq-font-weight-medium: 650;
+  --twq-font-weight-semibold: 750;
+  --twq-font-weight-bold: 850;
 
-  /* Brand and semantic palette */
-  --primary: #006c35;
-  --primary-hover: #00572b;
-  --primary-active: #004723;
-  --primary-foreground: #ffffff;
-  --primary-soft: #e8f4ed;
-  --secondary: #26483b;
-  --secondary-hover: #19372c;
-  --secondary-foreground: #ffffff;
-  --accent: #9a6f2e;
-  --accent-hover: #7b5722;
-  --accent-soft: #f7f0e4;
-  --success: #137a50;
-  --success-soft: #e8f5ef;
-  --warning: #946200;
-  --warning-soft: #fff5d9;
-  --danger: #b42318;
-  --danger-hover: #941b12;
-  --danger-soft: #fff0ee;
-  --info: #126a8a;
-  --info-soft: #eaf5f9;
+  /* Spacing: 4px rhythm */
+  --twq-space-0: 0;
+  --twq-space-1: .25rem;
+  --twq-space-2: .5rem;
+  --twq-space-3: .75rem;
+  --twq-space-4: 1rem;
+  --twq-space-5: 1.25rem;
+  --twq-space-6: 1.5rem;
+  --twq-space-8: 2rem;
+  --twq-space-10: 2.5rem;
+  --twq-space-12: 3rem;
+  --twq-space-16: 4rem;
 
-  /* Surfaces and text */
-  --canvas: #f5f7f6;
-  --surface: #ffffff;
-  --surface-subtle: #f0f4f2;
-  --surface-muted: #e8efeb;
-  --surface-elevated: #ffffff;
-  --text-primary: #14251f;
-  --text-secondary: #44584f;
-  --text-muted: #62736b;
-  --text-disabled: #84928c;
-  --border: #d7e0db;
-  --border-strong: #b9c7c0;
-  --focus-ring: #9a6f2e;
-  --focus-shadow: 0 0 0 3px rgba(154, 111, 46, .24);
-  --scrim: rgba(7, 29, 21, .58);
+  /* Shape, elevation, and controls */
+  --twq-radius-sm: .5rem;
+  --twq-radius-md: .75rem;
+  --twq-radius-lg: 1rem;
+  --twq-radius-xl: 1.25rem;
+  --twq-radius-pill: 999px;
+  --twq-shadow-xs: 0 1px 2px rgba(15, 35, 27, .04);
+  --twq-shadow-sm: 0 4px 14px rgba(15, 35, 27, .06);
+  --twq-shadow-md: 0 12px 28px rgba(15, 35, 27, .08);
+  --twq-shadow-lg: 0 20px 48px rgba(15, 35, 27, .11);
+  --twq-control-sm: 2.75rem;
+  --twq-control-md: 3rem;
+  --twq-control-lg: 3.25rem;
+  --twq-tap-target: 2.75rem;
 
-  /* Spacing: 4px base rhythm */
-  --space-1: .25rem;
-  --space-2: .5rem;
-  --space-3: .75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
-
-  /* Shape, elevation, controls */
-  --radius-sm: .5rem;
-  --radius-md: .75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
-  --radius-pill: 999px;
-  --shadow-xs: 0 1px 2px rgba(15, 35, 27, .04);
-  --shadow-sm: 0 4px 14px rgba(15, 35, 27, .06);
-  --shadow-md: 0 12px 28px rgba(15, 35, 27, .08);
-  --shadow-lg: 0 20px 48px rgba(15, 35, 27, .11);
-  --control-sm: 2.75rem;
-  --control-md: 3rem;
-  --control-lg: 3.25rem;
-  --tap-target: 2.75rem;
-  --content-max: 90rem;
-  --content-narrow: 52rem;
-  --content-padding: clamp(1rem, 2.5vw, 2rem);
+  /* Layout and responsive governance.
+     Native media queries cannot consume custom properties; the values document
+     the official literals used by shared components: 40rem, 64rem, 80rem. */
+  --twq-content-max: 90rem;
+  --twq-content-narrow: 52rem;
+  --twq-content-padding: clamp(1rem, 2.5vw, 2rem);
+  --twq-breakpoint-mobile: 40rem;
+  --twq-breakpoint-desktop: 64rem;
+  --twq-breakpoint-wide: 80rem;
 
   /* Motion */
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-slow: 250ms;
-  --ease-standard: cubic-bezier(.2, .8, .2, 1);
-  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --twq-duration-fast: 150ms;
+  --twq-duration-normal: 200ms;
+  --twq-duration-slow: 300ms;
+  --twq-ease-standard: cubic-bezier(.2, .8, .2, 1);
+  --twq-ease-out: cubic-bezier(.16, 1, .3, 1);
 
-  /* Compatibility aliases used by existing templates */
-  --brand: var(--primary);
-  --brand-700: var(--primary-hover);
+  /* Layering */
+  --twq-z-content: 1;
+  --twq-z-header: 100;
+  --twq-z-popover: 300;
+  --twq-z-drawer: 500;
+  --twq-z-modal: 700;
+  --twq-z-toast: 900;
+  --twq-z-skip-link: 1000;
+
+  /* Workflow tones used by the current approval/status layer. */
+  --twq-status-draft: #61756a;
+  --twq-status-draft-soft: #eef1ef;
+  --twq-status-pending: #1f6feb;
+  --twq-status-pending-soft: #e6effd;
+  --twq-status-attention: #a8843f;
+  --twq-status-attention-soft: #fbf1dd;
+  --twq-status-recommended: #6d4aff;
+  --twq-status-recommended-soft: #eeeaff;
+  --twq-status-approved: #076c3c;
+  --twq-status-approved-soft: #dff2e7;
+  --twq-status-danger: #b42318;
+  --twq-status-danger-soft: #fdeceb;
+
+  /* Identity hero values retained exactly during migration. */
+  --twq-hero-from: #064a2b;
+  --twq-hero-via: #006c35;
+  --twq-hero-to: #05331f;
+  --twq-hero-text: #ffffff;
+  --twq-hero-text-muted: rgba(255, 255, 255, .82);
+
+  /* Compatibility aliases: remove only after usage reaches zero. */
+  --font-base: var(--twq-font-family);
+  --font-mono: var(--twq-font-mono);
+  --text-xs: var(--twq-font-size-xs);
+  --text-sm: var(--twq-font-size-sm);
+  --text-md: var(--twq-font-size-md);
+  --text-lg: var(--twq-font-size-lg);
+  --text-xl: var(--twq-font-size-xl);
+  --text-2xl: var(--twq-font-size-2xl);
+  --text-3xl: var(--twq-font-size-3xl);
+  --leading-tight: var(--twq-line-height-tight);
+  --leading-normal: var(--twq-line-height-normal);
+  --leading-relaxed: var(--twq-line-height-relaxed);
+  --weight-regular: var(--twq-font-weight-regular);
+  --weight-medium: var(--twq-font-weight-medium);
+  --weight-semibold: var(--twq-font-weight-semibold);
+  --weight-bold: var(--twq-font-weight-bold);
+
+  --primary: var(--twq-primary);
+  --primary-hover: var(--twq-primary-hover);
+  --primary-active: var(--twq-primary-active);
+  --primary-foreground: var(--twq-primary-foreground);
+  --primary-soft: var(--twq-primary-soft);
+  --secondary: var(--twq-secondary);
+  --secondary-hover: var(--twq-secondary-hover);
+  --secondary-foreground: var(--twq-secondary-foreground);
+  --accent: var(--twq-accent);
+  --accent-hover: var(--twq-accent-hover);
+  --accent-soft: var(--twq-accent-soft);
+  --success: var(--twq-success);
+  --success-soft: var(--twq-success-soft);
+  --warning: var(--twq-warning);
+  --warning-soft: var(--twq-warning-soft);
+  --danger: var(--twq-danger);
+  --danger-hover: var(--twq-danger-hover);
+  --danger-soft: var(--twq-danger-soft);
+  --info: var(--twq-info);
+  --info-soft: var(--twq-info-soft);
+
+  --canvas: var(--twq-bg);
+  --surface: var(--twq-surface);
+  --surface-subtle: var(--twq-surface-secondary);
+  --surface-muted: var(--twq-surface-muted);
+  --surface-elevated: var(--twq-surface-elevated);
+  --text-primary: var(--twq-text);
+  --text-secondary: var(--twq-text-secondary);
+  --text-muted: var(--twq-text-muted);
+  --text-disabled: var(--twq-text-disabled);
+  --border: var(--twq-border);
+  --border-strong: var(--twq-border-strong);
+  --focus-ring: var(--twq-focus);
+  --focus-shadow: var(--twq-focus-shadow);
+  --scrim: var(--twq-scrim);
+
+  --space-1: var(--twq-space-1);
+  --space-2: var(--twq-space-2);
+  --space-3: var(--twq-space-3);
+  --space-4: var(--twq-space-4);
+  --space-5: var(--twq-space-5);
+  --space-6: var(--twq-space-6);
+  --space-8: var(--twq-space-8);
+  --space-10: var(--twq-space-10);
+  --space-12: var(--twq-space-12);
+  --space-16: var(--twq-space-16);
+  --radius-sm: var(--twq-radius-sm);
+  --radius-md: var(--twq-radius-md);
+  --radius-lg: var(--twq-radius-lg);
+  --radius-xl: var(--twq-radius-xl);
+  --radius-pill: var(--twq-radius-pill);
+  --shadow-xs: var(--twq-shadow-xs);
+  --shadow-sm: var(--twq-shadow-sm);
+  --shadow-md: var(--twq-shadow-md);
+  --shadow-lg: var(--twq-shadow-lg);
+  --control-sm: var(--twq-control-sm);
+  --control-md: var(--twq-control-md);
+  --control-lg: var(--twq-control-lg);
+  --tap-target: var(--twq-tap-target);
+  --content-max: var(--twq-content-max);
+  --content-narrow: var(--twq-content-narrow);
+  --content-padding: var(--twq-content-padding);
+  --duration-fast: var(--twq-duration-fast);
+  --duration-normal: var(--twq-duration-normal);
+  --duration-slow: var(--twq-duration-slow);
+  --ease-standard: var(--twq-ease-standard);
+  --ease-out: var(--twq-ease-out);
+
+  --brand: var(--twq-primary);
+  --brand-700: var(--twq-primary-hover);
   --brand-alpha: rgba(0, 108, 53, .95);
-  --brand-soft: var(--primary-soft);
-  --brand-light: var(--primary-soft);
-  --brand-ghost: var(--primary-soft);
-  --bg-body: var(--canvas);
-  --bg-page: var(--canvas);
-  --bg-main: var(--canvas);
-  --bg-sub: var(--surface-subtle);
-  --bg-subtle: var(--surface-subtle);
-  --bg-card: var(--surface);
-  --card: var(--surface);
-  --paper: var(--surface);
-  --ink: var(--text-primary);
-  --ink-soft: var(--text-secondary);
-  --muted: var(--text-muted);
-  --text-main: var(--text-primary);
-  --text-light: var(--text-muted);
-  --line: var(--border);
-  --line-2: var(--border);
-  --border-light: var(--border);
-  --border-focus: var(--border-strong);
-  --r-sm: var(--radius-sm);
-  --r-md: var(--radius-md);
-  --r-lg: var(--radius-lg);
-  --r-full: var(--radius-pill);
-  --radius: var(--radius-md);
-  --shadow-xl: var(--shadow-lg);
-  --shadow-glass: var(--shadow-md);
-  --tap: var(--tap-target);
-  --t-fast: var(--duration-fast);
-  --t: var(--duration-normal);
-  --ease: var(--ease-standard);
-  --ease-feedback: var(--ease-out);
+  --brand-soft: var(--twq-primary-soft);
+  --brand-light: var(--twq-primary-soft);
+  --brand-ghost: var(--twq-primary-soft);
+  --bg-body: var(--twq-bg);
+  --bg-page: var(--twq-bg);
+  --bg-main: var(--twq-bg);
+  --bg-sub: var(--twq-surface-secondary);
+  --bg-subtle: var(--twq-surface-secondary);
+  --bg-card: var(--twq-surface);
+  --card: var(--twq-surface);
+  --paper: var(--twq-surface);
+  --ink: var(--twq-text);
+  --ink-soft: var(--twq-text-secondary);
+  --muted: var(--twq-text-muted);
+  --text-main: var(--twq-text);
+  --text-light: var(--twq-text-muted);
+  --line: var(--twq-border);
+  --line-2: var(--twq-divider);
+  --border-light: var(--twq-border);
+  --border-focus: var(--twq-border-strong);
+  --r-sm: var(--twq-radius-sm);
+  --r-md: var(--twq-radius-md);
+  --r-lg: var(--twq-radius-lg);
+  --r-full: var(--twq-radius-pill);
+  --radius: var(--twq-radius-md);
+  --shadow-xl: var(--twq-shadow-lg);
+  --shadow-glass: var(--twq-shadow-md);
+  --tap: var(--twq-tap-target);
+  --t-fast: var(--twq-duration-fast);
+  --t: var(--twq-duration-normal);
+  --ease: var(--twq-ease-standard);
+  --ease-feedback: var(--twq-ease-out);
   --badge-count-bg: #c62828;
   --badge-count-ink: #ffffff;
+
+  /* Existing identity names now resolve through the canonical contract. */
+  --id-green-950: var(--twq-green-950);
+  --id-green-900: var(--twq-green-900);
+  --id-green-800: var(--twq-green-800);
+  --id-green-700: var(--twq-green-700);
+  --id-green-600: var(--twq-green-600);
+  --id-green-500: var(--twq-green-500);
+  --id-green-300: var(--twq-green-300);
+  --id-green-100: var(--twq-green-100);
+  --id-green-050: var(--twq-green-050);
+  --id-gold-700: var(--twq-gold-700);
+  --id-gold-600: var(--twq-gold-600);
+  --id-gold-500: var(--twq-gold-500);
+  --id-gold-400: var(--twq-gold-400);
+  --id-gold-300: var(--twq-gold-300);
+  --id-gold-100: var(--twq-gold-100);
+  --id-ink: var(--twq-text);
+  --id-ink-soft: var(--twq-text-secondary);
+  --id-muted: var(--twq-text-muted);
+  --id-line: var(--twq-border);
+  --id-line-soft: var(--twq-divider);
+  --id-surface: var(--twq-surface);
+  --id-surface-2: var(--twq-surface-secondary);
+  --id-canvas: var(--twq-bg);
+  --id-accent: var(--twq-primary);
+  --id-accent-strong: var(--twq-primary-hover);
+  --id-accent-ink: var(--twq-primary-foreground);
+  --id-accent-wash: var(--twq-primary-soft);
+  --id-gold: var(--twq-gold-500);
+  --id-gold-ink: var(--twq-gold-700);
+  --id-gold-line: rgba(185, 151, 91, .42);
+  --id-hero-from: var(--twq-hero-from);
+  --id-hero-via: var(--twq-hero-via);
+  --id-hero-to: var(--twq-hero-to);
+  --id-hero-ink: var(--twq-hero-text);
+  --id-hero-ink-soft: var(--twq-hero-text-muted);
+  --id-e1: var(--twq-shadow-xs);
+  --id-e2: var(--twq-shadow-sm);
+  --id-e3: var(--twq-shadow-md);
+  --id-e4: var(--twq-shadow-lg);
+  --id-r1: .625rem;
+  --id-r2: .875rem;
+  --id-r3: 1.125rem;
+  --id-r4: 1.5rem;
+  --id-r5: 1.875rem;
+  --id-pill: var(--twq-radius-pill);
+  --id-ease: var(--twq-ease-standard);
+  --id-fast: 160ms;
+  --id-slow: 340ms;
+  --id-tone-draft: var(--twq-status-draft);
+  --id-tone-draft-wash: var(--twq-status-draft-soft);
+  --id-tone-pending: var(--twq-status-pending);
+  --id-tone-pending-wash: var(--twq-status-pending-soft);
+  --id-tone-attention: var(--twq-status-attention);
+  --id-tone-attention-wash: var(--twq-status-attention-soft);
+  --id-tone-recommended: var(--twq-status-recommended);
+  --id-tone-recommended-wash: var(--twq-status-recommended-soft);
+  --id-tone-approved: var(--twq-status-approved);
+  --id-tone-approved-wash: var(--twq-status-approved-soft);
+  --id-tone-danger: var(--twq-status-danger);
+  --id-tone-danger-wash: var(--twq-status-danger-soft);
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --primary: #42ca88;
-  --primary-hover: #5bd598;
-  --primary-active: #31b978;
-  --primary-foreground: #062319;
-  --primary-soft: #113529;
-  --secondary: #c6d8cf;
-  --secondary-hover: #e1ece6;
-  --secondary-foreground: #0a1d16;
-  --accent: #e2c27f;
-  --accent-hover: #efd79f;
-  --accent-soft: #302a1d;
-  --success: #8de0b4;
-  --success-soft: #123329;
-  --warning: #f0cf86;
-  --warning-soft: #362c16;
-  --danger: #ff9698;
-  --danger-hover: #ffb3b4;
-  --danger-soft: #3a1c1d;
-  --info: #8bd4ee;
-  --info-soft: #132f39;
-  --canvas: #071510;
-  --surface: #0d211a;
-  --surface-subtle: #112a21;
-  --surface-muted: #173329;
-  --surface-elevated: #142c23;
-  --text-primary: #edf6f1;
-  --text-secondary: #c8d8d0;
-  --text-muted: #a7bbb1;
-  --text-disabled: #71877c;
-  --border: rgba(205, 225, 216, .18);
-  --border-strong: rgba(205, 225, 216, .32);
-  --focus-ring: #e2c27f;
-  --focus-shadow: 0 0 0 3px rgba(226, 194, 127, .28);
-  --scrim: rgba(0, 0, 0, .72);
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, .22);
-  --shadow-sm: 0 6px 18px rgba(0, 0, 0, .24);
-  --shadow-md: 0 14px 32px rgba(0, 0, 0, .28);
-  --shadow-lg: 0 24px 52px rgba(0, 0, 0, .34);
+  --twq-primary: #42ca88;
+  --twq-primary-hover: #5bd598;
+  --twq-primary-active: #31b978;
+  --twq-primary-soft: #113529;
+  --twq-primary-foreground: #062319;
+  --twq-secondary: #c6d8cf;
+  --twq-secondary-hover: #e1ece6;
+  --twq-secondary-foreground: #0a1d16;
+  --twq-accent: #e2c27f;
+  --twq-accent-hover: #efd79f;
+  --twq-accent-soft: #302a1d;
+  --twq-success: #8de0b4;
+  --twq-success-soft: #123329;
+  --twq-warning: #f0cf86;
+  --twq-warning-soft: #362c16;
+  --twq-danger: #ff9698;
+  --twq-danger-hover: #ffb3b4;
+  --twq-danger-soft: #3a1c1d;
+  --twq-info: #8bd4ee;
+  --twq-info-soft: #132f39;
+  --twq-neutral: #a7bbb1;
+  --twq-neutral-soft: #1b3027;
+  --twq-draft: #a7bbb1;
+  --twq-draft-soft: #1b3027;
+  --twq-bg: #071510;
+  --twq-surface: #0d211a;
+  --twq-surface-secondary: #112a21;
+  --twq-surface-muted: #173329;
+  --twq-surface-elevated: #142c23;
+  --twq-scrim: rgba(0, 0, 0, .72);
+  --twq-text: #edf6f1;
+  --twq-text-secondary: #c8d8d0;
+  --twq-text-muted: #a7bbb1;
+  --twq-text-disabled: #71877c;
+  --twq-text-inverse: #062319;
+  --twq-border: rgba(205, 225, 216, .18);
+  --twq-border-strong: rgba(205, 225, 216, .32);
+  --twq-divider: rgba(205, 225, 216, .12);
+  --twq-focus: #e2c27f;
+  --twq-focus-shadow: 0 0 0 3px rgba(226, 194, 127, .28);
+  --twq-shadow-xs: 0 1px 2px rgba(0, 0, 0, .22);
+  --twq-shadow-sm: 0 6px 18px rgba(0, 0, 0, .24);
+  --twq-shadow-md: 0 14px 32px rgba(0, 0, 0, .28);
+  --twq-shadow-lg: 0 24px 52px rgba(0, 0, 0, .34);
+  --twq-status-draft: #a2b5a9;
+  --twq-status-draft-soft: rgba(162, 181, 169, .16);
+  --twq-status-pending: #7cb2ff;
+  --twq-status-pending-soft: rgba(124, 178, 255, .16);
+  --twq-status-attention: #eabf58;
+  --twq-status-attention-soft: rgba(234, 191, 88, .16);
+  --twq-status-recommended: #b5a0ff;
+  --twq-status-recommended-soft: rgba(181, 160, 255, .16);
+  --twq-status-approved: #6ed3a0;
+  --twq-status-approved-soft: rgba(110, 211, 160, .16);
+  --twq-status-danger: #ff9d96;
+  --twq-status-danger-soft: rgba(255, 157, 150, .16);
+  --twq-hero-from: #05331f;
+  --twq-hero-via: #074a2b;
+  --twq-hero-to: #032014;
+  --twq-hero-text: #f3fbf6;
+  --twq-hero-text-muted: rgba(243, 251, 246, .78);
   --brand-alpha: rgba(66, 202, 136, .94);
   --badge-count-bg: #ff8c91;
   --badge-count-ink: #3d0a0c;
+  --id-gold: var(--twq-gold-300);
+  --id-gold-ink: var(--twq-gold-300);
+  --id-gold-line: rgba(230, 207, 154, .30);
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --duration-fast: 1ms;
-    --duration-normal: 1ms;
-    --duration-slow: 1ms;
+    --twq-duration-fast: 1ms;
+    --twq-duration-normal: 1ms;
+    --twq-duration-slow: 1ms;
+    --id-fast: 1ms;
+    --id-slow: 1ms;
   }
 }

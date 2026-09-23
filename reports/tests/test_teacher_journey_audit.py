@@ -368,7 +368,8 @@ class TeacherJourneyAuditTests(TestCase):
         for path in glob.glob("reports/templates/reports/*.html"):
             text = open(path, encoding="utf-8").read()
             for line_no, line in enumerate(text.splitlines(), start=1):
-                if re.search(r"report_date\s*\|\s*date:", line):
+                visible_markup = re.sub(r'\sdatetime="[^"]*"', "", line)
+                if re.search(r"report_date\s*\|\s*date:", visible_markup):
                     offenders.append(f"{path.rsplit('/', 1)[-1]}:{line_no}")
         self.assertEqual(
             offenders,

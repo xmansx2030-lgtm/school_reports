@@ -72,6 +72,7 @@ class ManagerFirstRunExperienceTests(TestCase):
         self.assertContains(response, "ابدأ بـ بيانات المدرسة والسنة الحالية")
         self.assertContains(response, "إعداد المدرسة خطوة بخطوة")
         self.assertLess(html.index('id="managerSetup"'), html.index('id="managerToday"'))
+        self.assertEqual(html.count('role="progressbar"'), 2)
         self.assertContains(response, "لا توجد مهام تشغيلية معلّقة بعد")
         self.assertNotContains(response, "لا شيء ينتظرك الآن")
         self.assertContains(response, "لا توجد بيانات أداء بعد — وهذا طبيعي")
@@ -203,14 +204,22 @@ class ManagerFirstRunExperienceTests(TestCase):
             / "reports"
             / "admin_dashboard.html"
         ).read_text(encoding="utf-8")
+        setup_partial = (
+            project_root
+            / "reports"
+            / "templates"
+            / "reports"
+            / "partials"
+            / "manager_dashboard_setup.html"
+        ).read_text(encoding="utf-8")
 
         hero_rule = css.split("body.page .manager-hero h1", 1)[1].split("}", 1)[0]
         self.assertIn("-webkit-text-fill-color: currentColor", hero_rule)
         self.assertIn('labelledBar.setAttribute("aria-label"', template)
         self.assertIn('link.setAttribute("aria-current", "location")', template)
         self.assertIn("var(--header-bottom, var(--header-h, 72px))", template)
-        self.assertEqual(template.count('role="progressbar"'), 2)
-        self.assertEqual(template.count('aria-valuenow="{{ setup_percent }}"'), 2)
+        self.assertEqual((template + setup_partial).count('role="progressbar"'), 2)
+        self.assertEqual((template + setup_partial).count('aria-valuenow="{{ setup_percent }}"'), 2)
         for period_label_id in (
             "managerPrintPeriodLabel",
             "managerHeroPeriodLabel",
@@ -258,15 +267,23 @@ class ManagerFirstRunExperienceTests(TestCase):
             / "reports"
             / "school_settings.html"
         ).read_text(encoding="utf-8")
-        self.assertIn(":focus-visible", settings_template)
-        focus_rule = settings_template.split(":focus-visible", 1)[1].split("}", 1)[0]
+        settings_css = (project_root / "static" / "css" / "school-settings.css").read_text(
+            encoding="utf-8"
+        )
+        settings_script = (project_root / "static" / "js" / "school-settings.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("css/school-settings.css", settings_template)
+        self.assertIn("js/school-settings.js", settings_template)
+        self.assertIn(":focus-visible", settings_css)
+        focus_rule = settings_css.split(":focus-visible", 1)[1].split("}", 1)[0]
         self.assertIn("outline: 3px solid", focus_rule)
-        self.assertIn('window.addEventListener("pageshow"', settings_template)
-        self.assertIn("if(event.persisted) restoreSubmitButton();", settings_template)
-        self.assertIn('#id_email,\n  #id_current_academic_year {', settings_template)
-        self.assertIn("direction: ltr;", settings_template)
+        self.assertIn('window.addEventListener("pageshow"', settings_script)
+        self.assertIn("if (event.persisted) restoreSubmitButton();", settings_script)
+        self.assertIn('input[name="phone"]', settings_css)
+        self.assertIn("direction: ltr;", settings_css)
         self.assertIn('aria-busy="false" aria-describedby="saveStatus"', settings_template)
         self.assertIn('id="saveStatus" role="status" aria-live="polite"', settings_template)
-        self.assertIn('form.setAttribute("aria-busy", "true")', settings_template)
-        self.assertIn('form.setAttribute("aria-busy", "false")', settings_template)
-        self.assertIn('if(saveStatus) saveStatus.textContent = "";', settings_template)
+        self.assertIn('form.setAttribute("aria-busy", "true")', settings_script)
+        self.assertIn('form.setAttribute("aria-busy", "false")', settings_script)
+        self.assertIn('if (saveStatus) saveStatus.textContent = "";', settings_script)

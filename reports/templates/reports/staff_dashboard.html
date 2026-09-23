@@ -1,306 +1,214 @@
 {% extends "base.html" %}
-{% load arabic_tags %}
+{% load static arabic_tags %}
 
-{% block title %}مؤشرات نطاقي | منصة توثيق{% endblock %}
+{% block title %}مركز عمليات نطاقي | منصة توثيق{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  /* رموز مُنطَقة على ‎.scp‎ وحدها: أي رمز عام هنا يسرّب لون هذه الشاشة إلى
-     شاشات أخرى تشترك معها في القالب الأساس. */
-  .scp {
-    --scp-ink: #10231a;
-    --scp-muted: #607067;
-    --scp-line: #dfe8e2;
-    --scp-soft: #f3f8f5;
-    --scp-card: #ffffff;
-    --scp-green: #08643b;
-    --scp-warn: #9a6700;
-    --scp-warn-soft: #fdf6e3;
-    color: var(--scp-ink);
-  }
-  [data-theme="dark"] .scp {
-    --scp-ink: #eff8f2;
-    --scp-muted: #afc1b5;
-    --scp-line: #2d4637;
-    --scp-soft: #13271c;
-    --scp-card: #0d241d;
-    --scp-green: #6ed3a0;
-    --scp-warn: #eabf58;
-    --scp-warn-soft: #241f10;
-  }
-
-  .scp-hero {
-    border: 1px solid var(--scp-line);
-    border-radius: 18px;
-    background: var(--scp-soft);
-    padding: 22px;
-    margin-bottom: 18px;
-  }
-  .scp-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 900;
-    font-size: 13px;
-    color: var(--scp-green);
-    margin-bottom: 8px;
-  }
-  .scp-hero h1 {
-    margin: 0 0 8px;
-    font-size: clamp(20px, 3vw, 26px);
-    font-weight: 950;
-    color: var(--scp-ink);
-  }
-  .scp-lead {
-    margin: 0;
-    color: var(--scp-muted);
-    line-height: 1.9;
-    max-width: 70ch;
-  }
-  .scp-depts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 14px;
-  }
-  .scp-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid var(--scp-line);
-    border-radius: 999px;
-    background: var(--scp-card);
-    padding: 5px 12px;
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--scp-ink);
-  }
-
-  .scp-empty {
-    border: 1px dashed var(--scp-line);
-    border-radius: 16px;
-    background: var(--scp-warn-soft);
-    padding: 20px;
-    color: var(--scp-ink);
-    line-height: 1.9;
-  }
-  .scp-empty strong { color: var(--scp-warn); }
-
-  .scp-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 14px;
-  }
-  .scp-card {
-    display: block;
-    border: 1px solid var(--scp-line);
-    border-radius: 16px;
-    background: var(--scp-card);
-    padding: 18px;
-    text-decoration: none;
-    color: var(--scp-ink);
-  }
-  .scp-card:hover { border-color: var(--scp-green); }
-  .scp-card__head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--scp-muted);
-    font-size: 13px;
-    font-weight: 800;
-    margin-bottom: 10px;
-  }
-  .scp-card__value {
-    font-size: 30px;
-    font-weight: 950;
-    line-height: 1;
-    color: var(--scp-ink);
-  }
-  .scp-card--warn .scp-card__value { color: var(--scp-warn); }
-  .scp-card__extra {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--scp-muted);
-  }
-  .scp-note {
-    margin-top: 18px;
-    font-size: 13px;
-    color: var(--scp-muted);
-    line-height: 1.9;
-  }
-
-  /* تغطية النطاق — بالرموز ذاتها التي تحمل بقية الشاشة، فتتقلّب معها
-     في الوضعين بلا سطرٍ داكن إضافي. */
-  .scp-coverage {
-    margin-top: 20px;
-    padding: 18px 20px;
-    border: 1px solid var(--scp-line);
-    border-radius: 14px;
-    background: var(--scp-card);
-  }
-  .scp-coverage__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .scp-coverage__head h2 { margin: 0; font-size: 16px; font-weight: 900; color: var(--scp-ink); }
-  .scp-coverage__ratio { color: var(--scp-muted); font-size: 13px; font-weight: 700; }
-  .scp-coverage__ratio strong {
-    margin-inline-end: 8px;
-    color: var(--scp-green);
-    font-size: 24px;
-    font-weight: 950;
-    font-variant-numeric: tabular-nums;
-  }
-  .scp-coverage__bar {
-    height: 8px;
-    margin: 12px 0 14px;
-    border-radius: 999px;
-    background: var(--scp-soft);
-    overflow: hidden;
-  }
-  .scp-coverage__bar > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--scp-green);
-  }
-  .scp-coverage__label { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: var(--scp-ink); }
-  .scp-coverage__names {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .scp-coverage__names li {
-    padding: 5px 11px;
-    border: 1px solid var(--scp-line);
-    border-radius: 999px;
-    background: var(--scp-soft);
-    color: var(--scp-ink);
-    font-size: 12.5px;
-    font-weight: 700;
-  }
-  .scp-coverage__done {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
-    color: var(--scp-green);
-    font-size: 13.5px;
-    font-weight: 800;
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/staff-dashboard.css' %}?v=20260922.1">
 {% endblock %}
 
 {% block content %}
-<div class="scp">
-
-  <header class="scp-hero">
-    <span class="scp-eyebrow">
-      <i class="fa-solid fa-gauge" aria-hidden="true"></i>
-      الإشراف
-    </span>
-    <h1>مؤشرات نطاقي في {{ active_school.name }}</h1>
-    <p class="scp-lead">
-      ما يقع تحت إشرافك وحده — لا مدرستك كلها. والأرقام هنا للاطلاع والمتابعة،
-      والإجراء يُمارَس من شاشته: المراجعة من صندوق الاعتماد، والتكليف من لوحته.
-    </p>
-
-    {% if departments %}
-      <div class="scp-depts">
-        {% for dept in departments %}
-          <span class="scp-chip">
-            <i class="fa-solid fa-sitemap" aria-hidden="true"></i>
-            {{ dept.name }}
-          </span>
-        {% endfor %}
-        <span class="scp-chip">
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-          {{ scoped_people }} منسوباً
-        </span>
+<div class="twq-page staff-dashboard" dir="rtl" data-access-source="{{ dashboard_access_source }}">
+  <header class="twq-page-header staff-dashboard__header" aria-labelledby="staffDashboardTitle">
+    <div class="twq-page-header__heading">
+      <div class="twq-page-header__eyebrow">
+        <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+        مؤشرات نطاقي
       </div>
-    {% endif %}
+      <h1 class="twq-page-header__title" id="staffDashboardTitle">مركز عمليات النطاق</h1>
+      <p class="twq-page-header__lead">
+        ابدأ بما يحتاج قرارًا أو متابعة، ثم انتقل إلى مساحة العمل الأصلية لإكمال الإجراء.
+        لا تعرض هذه الصفحة إلا العمل المرتبط بمدرستك ونطاقك الحالي.
+      </p>
+      <dl class="twq-page-header__context staff-dashboard__facts" aria-label="سياق العمل الحالي">
+        <div class="staff-dashboard__fact">
+          <dt>المدرسة</dt>
+          <dd>{{ active_school.name }}</dd>
+        </div>
+        <div class="staff-dashboard__fact">
+          <dt>الدور الحالي</dt>
+          <dd>{{ USER_ROLE_LABEL|default:"منسوب مدرسة" }}</dd>
+        </div>
+        <div class="staff-dashboard__fact">
+          <dt>نطاق الأقسام</dt>
+          <dd>{{ supervised_count|arabic_count:"قسم,قسمان,أقسام,قسمًا" }}</dd>
+        </div>
+        <div class="staff-dashboard__fact">
+          <dt>مصدر الوصول</dt>
+          <dd>{% if dashboard_access_source == "delegation" %}تفويض مؤقت فعّال{% else %}صلاحية ضمن النطاق{% endif %}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <aside class="twq-page-header__aside staff-dashboard__scope-summary" aria-label="ملخص النطاق">
+      <span class="staff-dashboard__scope-icon" aria-hidden="true"><i class="fa-solid fa-sitemap"></i></span>
+      <span class="staff-dashboard__scope-label">مسؤوليتك الحالية</span>
+      <strong>{{ scoped_people|arabic_count:"منسوب,منسوبان,منسوبين,منسوبًا" }}</strong>
+      <span>ضمن {{ supervised_count|arabic_count:"قسم,قسمان,أقسام,قسمًا" }}</span>
+    </aside>
   </header>
 
   {% if not supervised_count %}
-    {% comment %} صفرُ أقسام يُقال صريحاً: كشفٌ فارغ بلا تفسير يُقرأ «مدرستي فارغة» لا
-       «نطاقي لم يُضبط بعد»، فيبحث صاحبه عن عطلٍ لا وجود له. {% endcomment %}
-    <div class="scp-empty">
-      <strong>لم تُسنَد إليك أقسام بعد.</strong>
-      صلاحياتك مُنحت، لكن نطاقها فارغ — ولذلك لا أرقام تُعرض هنا. راجع مدير
-      المدرسة ليحدّد الأقسام التي تشرف عليها من شاشة «الأدوار والصلاحيات».
-    </div>
-  {% elif not cards %}
-    <div class="scp-empty">
-      <strong>لا مؤشرات لعرضها.</strong>
-      نطاقك مضبوط، لكن لم تُمنح بعد صلاحيةً تُنتج رقماً على هذه الشاشة.
-    </div>
+    <section class="twq-empty twq-empty--page staff-dashboard__setup" aria-labelledby="staffScopeEmptyTitle">
+      <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-sitemap"></i></span>
+      <h2 class="twq-empty__title" id="staffScopeEmptyTitle">لم تُسنَد إليك أقسام بعد</h2>
+      <p class="twq-empty__message">
+        صلاحية فتح اللوحة موجودة، لكن نطاقها بلا أقسام. لذلك لا تُعرض بيانات المدرسة كلها
+        بديلًا عن النطاق. راجع مدير المدرسة لضبط الأقسام من شاشة الأدوار والصلاحيات.
+      </p>
+    </section>
   {% else %}
-    <section class="scp-grid" aria-label="مؤشرات النطاق">
-      {% for card in cards %}
-        <a class="scp-card {% if card.tone == 'warn' %}scp-card--warn{% endif %}" href="{{ card.url }}">
-          <span class="scp-card__head">
-            <i class="fa-solid {{ card.icon }}" aria-hidden="true"></i>
-            {{ card.label }}
-          </span>
-          <span class="scp-card__value">{{ card.value }}</span>
-          {% if card.extra_label %}
-            <span class="scp-card__extra">{{ card.extra }} {{ card.extra_label }}</span>
+    <div class="staff-dashboard__workspace">
+      <div class="staff-dashboard__main">
+        <section class="twq-section staff-dashboard__section" aria-labelledby="staffAttentionTitle">
+          <div class="twq-section__header">
+            <div>
+              <div class="twq-section__kicker">الأولوية التشغيلية</div>
+              <h2 class="twq-section__title" id="staffAttentionTitle">ما يحتاج متابعتك الآن</h2>
+              <p class="twq-section__description">
+                قرارات المراجعة والعمل المتأخر والمعلّق تظهر أولًا، دون إنشاء مسار معالجة داخل اللوحة.
+              </p>
+            </div>
+          </div>
+
+          {% if attention_cards %}
+            <ul class="staff-queue" aria-label="الأعمال التي تحتاج متابعة">
+              {% for card in attention_cards %}
+                <li class="staff-queue__entry">
+                  <a class="staff-queue__item staff-queue__item--attention" href="{{ card.url }}">
+                    <span class="staff-queue__icon" aria-hidden="true"><i class="fa-solid {{ card.icon }}"></i></span>
+                    <span class="staff-queue__content">
+                      <strong>{{ card.label }}</strong>
+                      <span>
+                        {% if card.key == "reports" %}افتح صندوق الاعتماد واتخذ الإجراء المسموح.
+                        {% elif card.key == "assignments" %}راجع التنفيذ والمواعيد من لوحة التكليفات.
+                        {% elif card.key == "minutes" %}أكمل المحضر من مساحة الاجتماعات.
+                        {% elif card.key == "requests" %}تابع الطلبات المحالة إلى أقسام نطاقك.
+                        {% elif card.key == "documents" %}راجع الوثائق من مساحة الأرشيف.
+                        {% else %}افتح مساحة العمل المرتبطة لإكمال المتابعة.{% endif %}
+                      </span>
+                    </span>
+                    <span class="staff-queue__metric">
+                      <strong>{{ card.value }}</strong>
+                      {% if card.extra_label %}<small>{{ card.extra }} {{ card.extra_label }}</small>{% endif %}
+                    </span>
+                    <span class="twq-status" data-status="attention">تحتاج متابعة</span>
+                    <i class="fa-solid fa-arrow-left staff-queue__arrow" aria-hidden="true"></i>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="twq-empty twq-empty--local staff-dashboard__all-clear">
+              <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+              <h3 class="twq-empty__title">لا توجد أعمال عاجلة ضمن المؤشرات الحالية</h3>
+              <p class="twq-empty__message">يمكنك الانتقال إلى مساحات العمل المتاحة للمتابعة الدورية.</p>
+            </div>
           {% endif %}
-        </a>
-      {% endfor %}
-    </section>
+        </section>
+
+        {% if operational_cards %}
+          <section class="twq-section staff-dashboard__section" aria-labelledby="staffOperationsTitle">
+            <div class="twq-section__header">
+              <div>
+                <div class="twq-section__kicker">المتابعة الدورية</div>
+                <h2 class="twq-section__title" id="staffOperationsTitle">أعمال ضمن مسؤوليتك</h2>
+                <p class="twq-section__description">ملخصات هادئة تساعدك على الانتقال إلى العمل دون تضخيم الأرقام الصفرية.</p>
+              </div>
+            </div>
+
+            <ul class="staff-queue staff-queue--calm" aria-label="الأعمال التشغيلية ضمن النطاق">
+              {% for card in operational_cards %}
+                <li class="staff-queue__entry">
+                  <a class="staff-queue__item" href="{{ card.url }}">
+                    <span class="staff-queue__icon" aria-hidden="true"><i class="fa-solid {{ card.icon }}"></i></span>
+                    <span class="staff-queue__content"><strong>{{ card.label }}</strong></span>
+                    <span class="staff-queue__metric">
+                      <strong>{{ card.value }}</strong>
+                      {% if card.extra_label %}<small>{{ card.extra }} {{ card.extra_label }}</small>{% endif %}
+                    </span>
+                    <span class="twq-status" data-status="info">متابعة دورية</span>
+                    <i class="fa-solid fa-arrow-left staff-queue__arrow" aria-hidden="true"></i>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% elif not cards %}
+          <section class="twq-empty twq-empty--local staff-dashboard__no-capability" aria-labelledby="staffNoCapabilityTitle">
+            <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
+            <h2 class="twq-empty__title" id="staffNoCapabilityTitle">لا توجد مؤشرات تشغيلية مفعّلة</h2>
+            <p class="twq-empty__message">
+              نطاق الأقسام مضبوط، لكن الصلاحية الحالية تتيح قراءة اللوحة فقط ولا تضيف أعمالًا تشغيلية أخرى.
+            </p>
+          </section>
+        {% endif %}
+      </div>
+
+      <aside class="staff-dashboard__rail" aria-label="سياق النطاق ومساحات العمل">
+        <section class="staff-scope-card" aria-labelledby="staffScopeTitle">
+          <div class="staff-scope-card__header">
+            <div><span>النطاق الفعّال</span><h2 id="staffScopeTitle">الأقسام المشمولة</h2></div>
+            <span class="twq-status" data-status="active">فعّال</span>
+          </div>
+          <ul class="staff-scope-card__departments">
+            {% for dept in departments %}
+              <li><i class="fa-solid fa-sitemap" aria-hidden="true"></i><span>{{ dept.name }}</span></li>
+            {% endfor %}
+          </ul>
+          <p>أي قسم غير ظاهر هنا لا يدخل في نطاق بياناتك أو إجراءاتك على هذه اللوحة.</p>
+        </section>
+
+        <nav class="staff-actions" aria-labelledby="staffActionsTitle">
+          <div class="staff-actions__header"><span>الانتقال للعمل</span><h2 id="staffActionsTitle">مساحاتك المتاحة</h2></div>
+          <div class="staff-actions__list">
+            {% if CAN_REVIEW_APPROVALS %}<a href="{% url 'reports:approval_inbox' %}"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i><span>صندوق الاعتماد</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_ASSIGN_TASKS %}<a href="{% url 'reports:assignment_board' %}"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i><span>إدارة التكليفات</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_HANDLE_REQUESTS %}<a href="{% url 'reports:manager_school_tickets' %}"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>طلبات نطاقي</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_MANAGE_MEETINGS %}<a href="{% url 'reports:meeting_list' %}"><i class="fa-solid fa-users-rectangle" aria-hidden="true"></i><span>الاجتماعات والمحاضر</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_TRACK_PLANS %}<a href="{% url 'reports:plan_list' %}"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i><span>الخطط والمهام</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_VIEW_ACHIEVEMENTS %}<a href="{% url 'reports:achievement_school_files' %}"><i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>ملفات الإنجاز</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_ARCHIVE_DOCUMENTS %}<a href="{% url 'reports:document_archive' %}"><i class="fa-solid fa-folder-tree" aria-hidden="true"></i><span>أرشيف الوثائق</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_DRAFT_CIRCULARS %}<a href="{% url 'reports:circular_draft_list' %}"><i class="fa-solid fa-file-pen" aria-hidden="true"></i><span>مسودات التعاميم</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if SHOW_LAB_NAV %}<a href="{% url 'reports:lab_dashboard' %}"><i class="fa-solid fa-flask" aria-hidden="true"></i><span>لوحة المختبر</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+            {% if CAN_VIEW_SCHOOL_AUDIT %}<a href="{% url 'reports:school_audit_logs' %}"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span>سجل الإجراءات</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>{% endif %}
+          </div>
+        </nav>
+      </aside>
+    </div>
+
+    {% if coverage %}
+      <section class="twq-section staff-coverage" aria-labelledby="scopeCoverageTitle">
+        <div class="twq-section__header staff-coverage__header">
+          <div>
+            <div class="twq-section__kicker">مؤشر ثانوي</div>
+            <h2 class="twq-section__title" id="scopeCoverageTitle">توثيق نطاقك هذا الشهر</h2>
+            <p class="twq-section__description">يعرض من وثّق داخل الأقسام المشمولة فقط؛ ولا يرسل تذكيرًا أو يغيّر أي سجل.</p>
+          </div>
+          <div class="staff-coverage__ratio" aria-label="نسبة التوثيق {{ coverage.percent }} بالمئة">
+            <strong>{{ coverage.percent }}%</strong><span>{{ coverage.covered }} من {{ coverage.total }} وثّقوا</span>
+          </div>
+        </div>
+        <div class="twq-progress staff-coverage__progress">
+          <div class="twq-progress__label"><span>التغطية الحالية</span><span>{{ coverage.percent }}%</span></div>
+          <progress class="twq-progress__bar" max="100" value="{{ coverage.percent }}" aria-label="تغطية التوثيق هذا الشهر"></progress>
+        </div>
+
+        {% if coverage.pending %}
+          <div class="staff-coverage__pending">
+            <h3>لم يوثّق بعد: {{ coverage.pending|arabic_count:"منسوب,منسوبان,منسوبين,منسوبًا" }}</h3>
+            <ul>{% for person in coverage.pending_preview %}<li><bdi>{{ person.name|default:person.phone }}</bdi></li>{% endfor %}</ul>
+          </div>
+        {% else %}
+          <p class="staff-coverage__complete"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>وثّق جميع من في نطاقك هذا الشهر.</p>
+        {% endif %}
+      </section>
+    {% endif %}
   {% endif %}
 
-  {% if coverage %}
-    {% comment %}
-      تغطية التوثيق داخل النطاق.
-
-      البطاقات أعلاه تقول «كم»، وهذه تقول «مَن» — وهي ما يعمل عليه الوكيل
-      فعلاً: قسمان تحت إشرافه، ومعرفةُ الصامت فيهما عملُه اليومي.
-
-      ولا زرّ هنا: هذه الشاشة تقول «أين تقف الأمور» ولا تحرّكها. والتذكير
-      يُرسله المدير من لوحته — فمن لا يملك الإرسال لا يُعرض له زرُّه.
-    {% endcomment %}
-    <section class="scp-coverage" aria-labelledby="scopeCoverageTitle">
-      <div class="scp-coverage__head">
-        <h2 id="scopeCoverageTitle">توثيق نطاقك هذا الشهر</h2>
-        <span class="scp-coverage__ratio">
-          <strong>{{ coverage.percent }}%</strong>
-          {{ coverage.covered }} من {{ coverage.total }} وثّقوا
-        </span>
-      </div>
-      <div class="scp-coverage__bar" role="img"
-           aria-label="تغطية التوثيق {{ coverage.percent }} بالمئة">
-        <span data-progress="{{ coverage.percent }}"></span>
-      </div>
-
-      {% if coverage.pending %}
-        <p class="scp-coverage__label">
-          لم يوثّق بعد:
-          {{ coverage.pending|arabic_count:"منسوب,منسوبان,منسوبين,منسوباً" }}
-        </p>
-        <ul class="scp-coverage__names">
-          {% for person in coverage.pending_preview %}
-            <li><bdi>{{ person.name|default:person.phone }}</bdi></li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="scp-coverage__done">
-          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-          وثّق جميع من في نطاقك هذا الشهر.
-        </p>
-      {% endif %}
-    </section>
-  {% endif %}
-
-  <p class="scp-note">
-    الاعتماد النهائي يبقى لمدير المدرسة في كل ما تعرضه هذه الشاشة.
-  </p>
+  <div class="twq-alert staff-dashboard__manager-note" role="note">
+    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+    <span>الاعتماد النهائي يبقى لمدير المدرسة وفق مسار كل وحدة وصلاحياتها.</span>
+  </div>
 </div>
 {% endblock %}

@@ -294,6 +294,53 @@ class DocumentScreenTests(DocumentBase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "محضر لجنة السلامة")
 
+    def test_archive_list_uses_shared_search_and_document_patterns(self):
+        document = self._document()
+        self._enter(self.staff)
+
+        response = self.client.get(reverse("reports:document_archive"))
+
+        self.assertContains(response, 'class="twq-toolbar archive-list-toolbar"')
+        self.assertContains(response, 'name="q"')
+        self.assertContains(response, 'name="year"')
+        self.assertContains(response, 'name="department"')
+        self.assertContains(response, 'name="kind"')
+        self.assertContains(response, 'class="twq-document-item archive-list-item"')
+        self.assertContains(response, reverse("reports:document_detail", args=[document.pk]))
+        self.assertContains(response, 'data-status="draft"')
+        self.assertContains(response, 'id="docUploadForm"')
+
+    def test_archive_filters_keep_search_and_show_active_context(self):
+        self._document(title="محضر الجودة")
+        self._document(title="مستند مالي", kind=Document.Kind.FINANCIAL)
+        self._enter(self.staff)
+
+        response = self.client.get(
+            reverse("reports:document_archive"),
+            {"q": "الجودة", "year": "1447-1448", "kind": Document.Kind.MINUTES},
+        )
+
+        self.assertEqual(response.context["page_obj"].paginator.count, 1)
+        self.assertContains(response, "محضر الجودة")
+        self.assertEqual(
+            [item.title for item in response.context["page_obj"]],
+            ["محضر الجودة"],
+        )
+        self.assertContains(response, "الفلاتر النشطة")
+        self.assertContains(response, "مسح الفلاتر")
+
+    def test_manager_review_queue_remains_visible_before_results(self):
+        document = self._document()
+        submit(document, self.staff, school=self.school)
+        self._enter(self.manager)
+
+        response = self.client.get(reverse("reports:document_archive"))
+        html = response.content.decode()
+
+        self.assertContains(response, "تنتظر اعتماد الأرشفة")
+        self.assertContains(response, "مراجعة")
+        self.assertLess(html.index("archive-list-review"), html.index("archive-list-results__summary"))
+
     def test_uploading_a_document_from_the_screen(self):
         self._enter(self.staff)
         response = self.client.post(
@@ -458,6 +505,9 @@ class DocumentScreenTests(DocumentBase):
             file=_pdf("far.pdf"),
         )
         self._enter(self.manager)
+
+        archive_page = self.client.get(reverse("reports:document_archive"))
+        self.assertNotIn(far, archive_page.context["page_obj"].object_list)
 
         response = self.client.get(reverse("reports:document_detail", args=[far.pk]))
         self.assertEqual(response.status_code, 404)

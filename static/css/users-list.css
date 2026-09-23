@@ -1,0 +1,318 @@
+/* School people directory: page-owned presentation over Tawtheeq V1 primitives. */
+.users-list-page {
+  min-inline-size: 0;
+}
+
+.users-list-page .twq-page-header__context {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.users-list-page .twq-page-header__aside {
+  align-self: start;
+}
+
+.users-list-section {
+  min-inline-size: 0;
+  margin-block-start: var(--twq-space-6);
+  padding: var(--twq-space-6);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+  box-shadow: var(--twq-shadow-xs);
+}
+
+.users-list-section__header > * {
+  min-inline-size: 0;
+}
+
+.users-list-section__header .twq-btn {
+  flex: 0 0 auto;
+}
+
+.users-list-capacity {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+  margin-block-end: var(--twq-space-5);
+  padding-block: var(--twq-space-3);
+  padding-inline: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text-secondary);
+  background: var(--twq-surface-secondary);
+  font-size: var(--twq-font-size-sm);
+}
+
+.users-list-capacity strong {
+  color: var(--twq-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.users-list-toolbar {
+  grid-template-columns: minmax(13rem, 2fr) repeat(3, minmax(8rem, 1fr)) auto;
+}
+
+.users-list-toolbar .twq-toolbar__actions {
+  flex-wrap: wrap;
+}
+
+.users-list-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+  margin-block: var(--twq-space-5) var(--twq-space-3);
+  color: var(--twq-text-secondary);
+  font-size: var(--twq-font-size-sm);
+}
+
+.users-list-results__page-count {
+  color: var(--twq-text-muted);
+}
+
+.users-list-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.users-list-table {
+  table-layout: fixed;
+}
+
+.users-list-table th:first-child { inline-size: 22%; }
+.users-list-table th:nth-child(2) { inline-size: 30%; }
+.users-list-table th:nth-child(3) { inline-size: 15%; }
+.users-list-table th:nth-child(4) { inline-size: 13%; }
+.users-list-table th:last-child { inline-size: 20%; }
+
+.users-list-table td,
+.users-list-table th {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.users-list-table tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.users-list-table tbody tr:hover {
+  background: var(--twq-surface-secondary);
+}
+
+.users-list-table__identity,
+.users-list-table__responsibility {
+  color: var(--twq-text);
+}
+
+.users-list-name,
+.users-list-phone,
+.users-list-email,
+.users-list-role {
+  display: block;
+}
+
+.users-list-name {
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.users-list-phone,
+.users-list-email,
+.users-list-muted {
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-xs);
+}
+
+.users-list-phone,
+.users-list-email {
+  margin-block-start: var(--twq-space-1);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.users-list-role {
+  font-weight: var(--twq-font-weight-medium);
+}
+
+.users-list-departments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twq-space-1);
+  margin-block-start: var(--twq-space-2);
+}
+
+.users-list-department {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--twq-space-1);
+  max-inline-size: 100%;
+  padding-block: var(--twq-space-1);
+  padding-inline: var(--twq-space-2);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-sm);
+  background: var(--twq-surface-secondary);
+  font-size: var(--twq-font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.users-list-department small {
+  color: var(--twq-text-muted);
+  font-size: inherit;
+}
+
+.users-list-table__national-id bdi {
+  font-variant-numeric: tabular-nums;
+}
+
+.users-list-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--twq-space-1);
+}
+
+.users-list-delete-form {
+  margin: 0;
+}
+
+.users-list-delete {
+  color: var(--twq-danger);
+  background: transparent;
+}
+
+.users-list-delete:hover {
+  color: var(--twq-danger);
+  background: var(--twq-danger-soft);
+}
+
+@media (max-width: 78rem) {
+  .users-list-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .users-list-toolbar .twq-toolbar__search,
+  .users-list-toolbar .twq-toolbar__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 63.99rem) {
+  body.not-home .users-list-page .users-list-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .users-list-page .users-list-table-wrap .users-list-table {
+    min-inline-size: 0;
+    inline-size: 100%;
+  }
+
+  .users-list-table,
+  .users-list-table tbody,
+  .users-list-table tr,
+  .users-list-table td {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .users-list-table {
+    border-collapse: separate;
+  }
+
+  .users-list-table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .users-list-table tbody {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--twq-space-3);
+  }
+
+  .users-list-table tbody tr {
+    min-inline-size: 0;
+    padding: var(--twq-space-4);
+    border: 1px solid var(--twq-border);
+    border-radius: var(--twq-radius-lg);
+    background: var(--twq-surface);
+    box-shadow: var(--twq-shadow-xs);
+  }
+
+  .users-list-table tbody td {
+    padding-block: var(--twq-space-2);
+    padding-inline: 0;
+    border-block-end: 1px solid var(--twq-divider);
+  }
+
+  .users-list-table tbody td:last-child {
+    border-block-end: 0;
+  }
+
+  .users-list-table tbody td:not(.users-list-table__identity)::before {
+    display: block;
+    margin-block-end: var(--twq-space-1);
+    color: var(--twq-text-muted);
+    font-size: var(--twq-font-size-xs);
+    font-weight: var(--twq-font-weight-medium);
+    content: attr(data-label);
+  }
+
+  .users-list-table__identity .users-list-name {
+    font-size: var(--twq-font-size-md);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .users-list-section {
+    padding: var(--twq-space-4);
+  }
+
+  .users-list-section__header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .users-list-toolbar,
+  .users-list-table tbody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .users-list-toolbar .twq-toolbar__search,
+  .users-list-toolbar .twq-toolbar__actions {
+    grid-column: auto;
+  }
+
+  .users-list-toolbar .twq-toolbar__actions > * {
+    flex: 1 1 auto;
+  }
+
+  .users-list-results__page-count {
+    inline-size: 100%;
+  }
+
+  .users-list-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .users-list-actions > * {
+    inline-size: 100%;
+  }
+
+  .users-list-delete-form .twq-btn {
+    inline-size: 100%;
+  }
+}

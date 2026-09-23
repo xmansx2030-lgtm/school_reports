@@ -1,34 +1,34 @@
-{% extends 'reports/password_reset_base.html' %}
-
-{% comment %}
-  شاشة العامل الثاني تمتدّ من قالب الاستعادة لا من ``base.html``: صاحبها لم
-  تُنشأ له جلسة مصادَق عليها بعد، فترويسةُ التطبيق وقوائمُها لا معنى لها هنا
-  — وعرضُها يوحي بدخولٍ لم يتم.
-{% endcomment %}
+{% extends 'reports/auth_security_base.html' %}
 
 {% block title %}التحقق بخطوتين{% endblock %}
+{% block heading %}أكمل التحقق بخطوتين{% endblock %}
+{% block lead %}أدخل الرمز الحالي من تطبيق المصادقة لإكمال تسجيل الدخول إلى حسابك.{% endblock %}
 
 {% block content %}
-  <h1>التحقق بخطوتين</h1>
-  <p class="recovery-copy">
-    أدخل الرمز المعروض في تطبيق المصادقة على هاتفك. وإن فقدت الهاتف، أدخل أحد
-    رموز الاسترجاع التي حفظتها عند التفعيل.
-  </p>
-
-  <form method="post" class="recovery-form" action="{% url 'reports:totp_challenge' %}">
+  <form method="post" class="twq-auth__form" action="{% url 'reports:totp_challenge' %}">
     {% csrf_token %}
-    <div class="recovery-field">
-      <label class="recovery-label" for="challengeCode">الرمز</label>
-      <div class="recovery-inputwrap">
-        <input id="challengeCode" name="code" type="text" inputmode="numeric"
-               maxlength="32" required autocomplete="one-time-code" autofocus
-               class="recovery-input" placeholder="٦ أرقام أو رمز استرجاع">
+    <div class="twq-auth__field">
+      <label class="twq-auth__label" for="challengeCode">رمز التحقق أو رمز الاسترجاع</label>
+      <div class="twq-auth__control-wrap">
+        <input id="challengeCode" name="code" type="text" inputmode="text"
+               maxlength="32" required autocomplete="one-time-code" autocapitalize="off"
+               spellcheck="false" autofocus dir="ltr"
+               class="twq-auth__control" placeholder="000000"
+               aria-describedby="challengeCodeHelp">
+        <i class="fa-solid fa-shield-halved twq-auth__field-icon" aria-hidden="true"></i>
       </div>
+      <p class="twq-auth__help" id="challengeCodeHelp">يمكنك أيضًا إدخال أحد رموز الاسترجاع المحفوظة إذا لم يتوفر هاتفك.</p>
     </div>
-    <button type="submit" class="recovery-button">تحقّق</button>
+    <button type="submit" class="twq-auth__submit">
+      <span>تحقق وأكمل الدخول</span>
+      <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+    </button>
+    <p class="twq-auth__alternative-note">
+      لا تشارك رمز المصادقة أو رمز الاسترجاع مع أي شخص. لن تطلبه منك إدارة المنصة خارج شاشة الدخول.
+    </p>
   </form>
-
-  <p class="recovery-help">
-    <a href="{% url 'reports:login' %}">العودة إلى تسجيل الدخول</a>
-  </p>
+  <a class="twq-auth__link" href="{% url 'reports:login' %}">
+    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    العودة إلى تسجيل الدخول
+  </a>
 {% endblock %}

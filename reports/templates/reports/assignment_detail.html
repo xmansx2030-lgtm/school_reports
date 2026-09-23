@@ -1,416 +1,61 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
+{% load static hijri_tags %}
 
 {% block title %}{{ assignment.title }} | التكليفات{% endblock %}
-
-{% block head %}
-{% include "reports/_assignment_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .dtl-grid { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; }
-  @media (max-width: 900px) { .dtl-grid { grid-template-columns: 1fr; } }
-
-  .dtl-meta { display: grid; gap: .55rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-  .dtl-meta__l { font-size: .73rem; color: var(--asg-muted); font-weight: 700; }
-  .dtl-meta__v { font-size: .86rem; font-weight: 800; margin-top: .12rem; }
-
-  .dtl-body { font-size: .88rem; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 1rem; }
-
-  .dtl-alert {
-    margin-top: 1rem; padding: .75rem .9rem; border-radius: 12px;
-    font-size: .84rem; line-height: 1.85; background: var(--asg-soft);
-    border-inline-start: 3px solid var(--asg-gold); white-space: pre-wrap;
-  }
-  .dtl-alert--late { border-inline-start-color: var(--asg-danger); }
-  .dtl-alert__l { font-size: .73rem; font-weight: 900; display: block; margin-bottom: .2rem; color: var(--asg-gold); }
-  .dtl-alert--late .dtl-alert__l { color: var(--asg-danger); }
-
-  .dtl-ev { display: grid; gap: .45rem; margin-top: .8rem; }
-  .dtl-ev__row {
-    display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
-    padding: .55rem .75rem; border-radius: 11px;
-    border: 1px solid var(--asg-line); background: var(--asg-surface);
-  }
-  .dtl-ev__name { flex: 1; min-width: 140px; font-size: .84rem; font-weight: 700; }
-  .dtl-ev__name a { color: inherit; }
-  .dtl-ev__sub { font-size: .74rem; color: var(--asg-muted); }
-
-  .dtl-timeline { list-style: none; margin: .6rem 0 0; padding: 0; padding-inline-start: 1.85rem; position: relative; }
-  .dtl-timeline::before {
-    content: ""; position: absolute; inset-block: .7rem; inset-inline-start: .8rem;
-    width: 2px; background: var(--asg-line); border-radius: 2px;
-  }
-  .dtl-step { position: relative; padding-bottom: .9rem; }
-  .dtl-step__dot {
-    position: absolute; inset-inline-start: -1.85rem; inset-block-start: .1rem;
-    width: 24px; height: 24px; border-radius: 50%;
-    display: grid; place-items: center; font-size: .65rem;
-    background: var(--asg-soft); color: var(--asg-green);
-    border: 2px solid var(--asg-surface); box-shadow: 0 0 0 1px var(--asg-line);
-  }
-  .dtl-step[data-action="return"] .dtl-step__dot,
-  .dtl-step[data-action="request_info"] .dtl-step__dot { color: var(--asg-gold); }
-  .dtl-step__head { font-size: .84rem; font-weight: 800; }
-  .dtl-step__who { font-size: .75rem; color: var(--asg-muted); margin-top: .12rem; }
-  .dtl-step__note { font-size: .81rem; line-height: 1.8; margin-top: .3rem; white-space: pre-wrap; }
-  .dtl-proxy {
-    font-size: .67rem; font-weight: 800; padding: .06rem .42rem; border-radius: 999px;
-    color: var(--asg-violet); border: 1px solid currentColor; margin-inline-start: .35rem;
-  }
-
-  .dtl-actions { display: flex; gap: .45rem; flex-wrap: wrap; margin-top: .8rem; }
-  .dtl-note { width: 100%; min-height: 84px; }
-</style>
-{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/assignments.css' %}?v=20260922.1">{% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <a class="asg-hero__eyebrow"
-       href="{% if is_assignee %}{% url 'reports:my_assignments' %}{% else %}{% url 'reports:assignment_board' %}{% endif %}">
-      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-      {% if is_assignee %}تكليفاتي{% else %}لوحة التكليفات{% endif %}
-    </a>
-    <h1 class="asg-hero__title">{{ assignment.title }}</h1>
-    <p class="asg-hero__meta">
-      المكلَّف: {{ target.assignee.name }} · من {{ assignment.issuer_name|default:"—" }}
-    </p>
-    <div class="xs-assignment-detail-1">
-      <a class="asg-hero__eyebrow" href="{% url 'reports:assignment_view' assignment.pk %}">
-        <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
-        التكليف كاملاً
-      </a>
-      <a class="asg-hero__eyebrow" href="{% url 'reports:assignment_print' assignment.pk %}"
-         target="_blank" rel="noopener">
-        <i class="fa-solid fa-print" aria-hidden="true"></i>
-        طباعة
-      </a>
+<div class="twq-page assignments-page assignment-detail-page" aria-labelledby="assignmentDetailTitle">
+  <header class="twq-page-header assignment-page-header">
+    <div class="twq-page-header__heading">
+      <a class="twq-page-header__eyebrow" href="{{ return_url }}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>{{ return_label }}</span></a>
+      <h1 class="twq-page-header__title" id="assignmentDetailTitle"><bdi>{{ assignment.title }}</bdi></h1>
+      <p class="twq-page-header__lead">مساحة تنفيذ ومراجعة حصة <bdi>{{ target.assignee.name }}</bdi> من التكليف الصادر بواسطة <bdi>{{ assignment.issuer_name|default:"—" }}</bdi>.</p>
+      <dl class="twq-page-header__context" aria-label="سياق التنفيذ"><div><dt>الحالة</dt><dd><span class="twq-status" data-status="{{ target.approval_tone }}">{{ target.get_approval_state_display }}</span></dd></div><div><dt>الموعد</dt><dd>{{ assignment.due_at|hijri }} هـ · <time dir="ltr" datetime="{{ assignment.due_at|date:'c' }}">{{ assignment.due_at|date:"Y-m-d H:i" }} م</time></dd></div></dl>
     </div>
+    <div class="twq-page-header__aside assignment-page-header__aside"><div class="assignment-page-header__actions"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:assignment_view' assignment.pk %}"><i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>التكليف كاملًا</span></a><a class="twq-btn twq-btn--ghost" href="{% url 'reports:assignment_print' assignment.pk %}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i><span>طباعة</span></a></div></div>
   </header>
 
-  <div class="dtl-grid">
-
-    {# ═══ العمود الأول ═══════════════════════════════════ #}
-    <div>
-      <section class="asg-card u-mt-2xl">
-        <div class="u-flex u-items-center u-gap-sm u-wrap u-mb-09">
-          <h2 class="asg-card__title u-m-0">تفاصيل التكليف</h2>
-          <span class="asg-tag">{{ target.get_approval_state_display }}</span>
-          {% if target.is_overdue %}
-            <span class="asg-tag asg-tag--late">متأخر</span>
-          {% endif %}
-          {% if assignment.is_cancelled %}
-            <span class="asg-tag asg-tag--late">ملغى</span>
-          {% endif %}
-        </div>
-
-        <div class="dtl-meta">
-          <div>
-            <div class="dtl-meta__l">موعد التسليم</div>
-            <div class="dtl-meta__v">
-              {{ assignment.due_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ assignment.due_at|date:'c' }}">{{ assignment.due_at|date:"Y-m-d H:i" }} م</time>
-            </div>
-          </div>
-          <div>
-            <div class="dtl-meta__l">نسبة الإنجاز</div>
-            <div class="dtl-meta__v">{{ target.progress_percent }}%</div>
-          </div>
-          <div>
-            <div class="dtl-meta__l">القسم</div>
-            <div class="dtl-meta__v">{{ assignment.department.name|default:"—" }}</div>
-          </div>
-          <div>
-            <div class="dtl-meta__l">القبول</div>
-            <div class="dtl-meta__v">
-              {% if target.accepted_at %}
-                {{ target.accepted_at|hijri }} هـ
-                <time dir="ltr" datetime="{{ target.accepted_at|date:'c' }}">{{ target.accepted_at|date:"Y-m-d" }} م</time>
-              {% elif assignment.is_cancelled %}لم يُقبل قبل الإلغاء
-              {% else %}لم يُقبل بعد{% endif %}
-            </div>
-          </div>
-        </div>
-
-        {% if assignment.is_cancelled %}
-          <div class="dtl-alert dtl-alert--late" role="status">
-            <span class="dtl-alert__l">هذا التكليف ملغى ومحفوظ للسجل فقط</span>
-            لا يتطلب منك أي إجراء، وقد أوقفت جميع أدوات التنفيذ والإرسال.
-            {% if assignment.cancelled_at %}
-              أُلغي في {{ assignment.cancelled_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ assignment.cancelled_at|date:'c' }}">{{ assignment.cancelled_at|date:"Y-m-d H:i" }} م</time>.
-            {% endif %}
-            {% if assignment.cancel_reason %}<br>السبب: {{ assignment.cancel_reason }}{% endif %}
-          </div>
-        {% endif %}
-
-        {% if assignment.description %}
-          <div class="dtl-body">{{ assignment.description }}</div>
-        {% endif %}
-
-        {% if assignment.requires_evidence %}
-          <div class="dtl-alert {% if shortfall %}dtl-alert--late{% endif %}">
-            <span class="dtl-alert__l">شرط الشواهد</span>
-            {% if shortfall %}
-              هذا التكليف يتطلب {{ assignment.min_evidence_count }} شاهداً على الأقل —
-              ينقص {{ shortfall }}. لن يُقبل الإرسال للمراجعة قبل استيفائها.
-            {% else %}
-              استُوفي شرط الشواهد ({{ evidence|length }} من {{ assignment.min_evidence_count }}).
-            {% endif %}
-          </div>
-        {% endif %}
-
-        {% if target.clarification_note %}
-          <div class="dtl-alert">
-            <span class="dtl-alert__l">طلب توضيح من المكلَّف</span>
-            {{ target.clarification_note }}
-          </div>
-        {% endif %}
-
-        {% if target.review_note %}
-          <div class="dtl-alert">
-            <span class="dtl-alert__l">آخر ملاحظة من المراجع</span>
-            {{ target.review_note }}
-          </div>
-        {% endif %}
-
-        {% if target.progress_note %}
-          <div class="dtl-alert">
-            <span class="dtl-alert__l">ملاحظات التنفيذ</span>
-            {{ target.progress_note }}
-          </div>
-        {% endif %}
+  <div class="assignment-workspace">
+    <div class="assignment-workspace__main">
+      <section class="twq-section assignment-section" aria-labelledby="assignmentExecutionContextTitle">
+        <header class="twq-section__header"><div><p class="twq-section__kicker">سياق التنفيذ</p><h2 class="twq-section__title" id="assignmentExecutionContextTitle">المطلوب والحالة الحالية</h2></div><div class="assignment-row__status">{% if target.is_overdue %}<span class="twq-status" data-status="danger">متأخر</span>{% endif %}{% if assignment.is_cancelled %}<span class="twq-status" data-status="danger">ملغى</span>{% endif %}</div></header>
+        <dl class="assignment-meta-grid"><div><dt>نسبة الإنجاز</dt><dd>{{ target.progress_percent }}%</dd></div><div><dt>القسم</dt><dd><bdi>{{ assignment.department.name|default:"غير محدد" }}</bdi></dd></div><div><dt>القبول</dt><dd>{% if target.accepted_at %}{{ target.accepted_at|hijri }} هـ · <time dir="ltr" datetime="{{ target.accepted_at|date:'c' }}">{{ target.accepted_at|date:"Y-m-d" }} م</time>{% elif assignment.is_cancelled %}لم يُقبل قبل الإلغاء{% else %}لم يُقبل بعد{% endif %}</dd></div><div><dt>الأولوية</dt><dd>{{ assignment.get_priority_display }}</dd></div></dl>
+        {% if assignment.description %}<div class="assignment-body">{{ assignment.description }}</div>{% endif %}
+        {% if assignment.is_cancelled %}<div class="assignment-callout" data-tone="danger" role="status"><strong>هذا التكليف ملغى ومحفوظ للسجل فقط</strong>لا يتطلب أي إجراء، وقد أوقفت أدوات التنفيذ والإرسال.{% if assignment.cancelled_at %} أُلغي في {{ assignment.cancelled_at|hijri }} هـ <time dir="ltr" datetime="{{ assignment.cancelled_at|date:'c' }}">{{ assignment.cancelled_at|date:"Y-m-d H:i" }} م</time>.{% endif %}{% if assignment.cancel_reason %}<br>السبب: {{ assignment.cancel_reason }}{% endif %}</div>{% endif %}
+        {% if assignment.requires_evidence %}<div class="assignment-callout" data-tone="{% if shortfall %}danger{% else %}success{% endif %}"><strong>شرط الشواهد</strong>{% if shortfall %}يتطلب التكليف {{ assignment.min_evidence_count }} شاهدًا على الأقل، وينقص {{ shortfall }} قبل الإرسال للمراجعة.{% else %}استُوفي الشرط: {{ evidence|length }} من {{ assignment.min_evidence_count }}.{% endif %}</div>{% endif %}
+        {% if target.clarification_note %}<div class="assignment-callout"><strong>طلب توضيح من المكلَّف</strong>{{ target.clarification_note }}</div>{% endif %}
+        {% if target.review_note %}<div class="assignment-callout" data-tone="warning"><strong>آخر ملاحظة من المراجع</strong>{{ target.review_note }}</div>{% endif %}
+        {% if target.progress_note %}<div class="assignment-callout"><strong>ملاحظات التنفيذ</strong>{{ target.progress_note }}</div>{% endif %}
       </section>
 
-      {# ═══ الشواهد ══════════════════════════════════════ #}
-      <section class="asg-card">
-        <h2 class="asg-card__title">الشواهد</h2>
-        <p class="asg-card__hint">
-          {% if assignment.is_cancelled %}
-            الشواهد السابقة محفوظة للتوثيق فقط، ولا يمكن إضافة شاهد أو حذفه بعد إلغاء التكليف.
-          {% elif is_assignee %}
-            ارفع ما يُثبت التنفيذ. بعد اعتماد تنفيذك لا يمكن حذف شاهد — فحذفه
-            يفرّغ الاعتماد من سنده.
-          {% else %}
-            ما رفعه المكلَّف إثباتاً للتنفيذ.
-          {% endif %}
-        </p>
-
+      <section class="twq-section assignment-section" aria-labelledby="assignmentEvidenceTitle">
+        <header class="twq-section__header"><div><p class="twq-section__kicker">إثبات التنفيذ</p><h2 class="twq-section__title" id="assignmentEvidenceTitle">الشواهد</h2><p class="twq-section__description">{% if assignment.is_cancelled %}الشواهد السابقة محفوظة للتوثيق ولا تقبل تعديلًا بعد الإلغاء.{% elif is_assignee %}ارفع ما يثبت التنفيذ. بعد الاعتماد لا يمكن حذف الشاهد الذي بُني عليه القرار.{% else %}ملفات رفعها المكلَّف لدعم التنفيذ المعروض للمراجعة.{% endif %}</p></div></header>
         {% if evidence %}
-          <div class="dtl-ev">
-            {% for item in evidence %}
-              <div class="dtl-ev__row">
-                <div class="dtl-ev__name">
-                  <a href="{{ item.file.url }}" target="_blank" rel="noopener">
-                    {{ item.note|default:"شاهد" }}
-                  </a>
-                  <div class="dtl-ev__sub">
-                    {{ item.uploaded_by.name|default:"—" }} · {{ item.created_at|date:"Y-m-d H:i" }}
-                  </div>
-                </div>
-                {% if is_assignee and not target.is_final and not assignment.is_cancelled %}
-                  <form method="post" action="{% url 'reports:assignment_target_action' target.pk %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="target_action" value="remove_evidence">
-                    <input type="hidden" name="evidence_id" value="{{ item.pk }}">
-                    <button type="submit" class="asg-btn asg-btn--danger asg-btn--sm">حذف</button>
-                  </form>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="asg-card__hint u-m-0">لم تُرفع شواهد بعد.</p>
-        {% endif %}
-
-        {% if is_assignee and not target.is_final and not assignment.is_cancelled %}
-          <form method="post" enctype="multipart/form-data"
-                action="{% url 'reports:assignment_target_action' target.pk %}" class="u-mt-lg">
-            {% csrf_token %}
-            <input type="hidden" name="target_action" value="add_evidence">
-            <div class="asg-field">
-              <label for="{{ evidence_form.file.id_for_label }}">{{ evidence_form.file.label }}</label>
-              {{ evidence_form.file }}
-            </div>
-            <div class="asg-field">
-              <label for="{{ evidence_form.note.id_for_label }}">{{ evidence_form.note.label }}</label>
-              {{ evidence_form.note }}
-            </div>
-            <button type="submit" class="asg-btn asg-btn--ghost">
-              <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-              رفع الشاهد
-            </button>
-          </form>
-        {% endif %}
+          <ul class="assignment-evidence-list">
+            {% for item in evidence %}<li class="assignment-evidence-item"><div><a href="{{ item.file.url }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> <bdi>{{ item.note|default:"شاهد تنفيذ" }}</bdi></a><small><bdi>{{ item.uploaded_by.name|default:"—" }}</bdi> · <time dir="ltr" datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"Y-m-d H:i" }}</time></small></div>{% if is_assignee and not target.is_final and not assignment.is_cancelled %}<form method="post" action="{% url 'reports:assignment_target_action' target.pk %}">{% csrf_token %}<input type="hidden" name="target_action" value="remove_evidence"><input type="hidden" name="evidence_id" value="{{ item.pk }}"><button type="submit" class="twq-btn twq-btn--danger" aria-label="حذف الشاهد: {{ item.note|default:'شاهد تنفيذ' }}">حذف</button></form>{% endif %}</li>{% endfor %}
+          </ul>
+        {% else %}<div class="twq-empty twq-empty--local"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-file"></i></span><h3 class="twq-empty__title">لم تُرفع شواهد بعد</h3><p class="twq-empty__message">{% if is_assignee and not assignment.is_cancelled %}أضف شاهدًا عندما يصبح لديك ملف يثبت التنفيذ.{% else %}لا توجد ملفات مرتبطة بهذا التنفيذ.{% endif %}</p></div>{% endif %}
+        {% if is_assignee and not target.is_final and not assignment.is_cancelled %}<form method="post" enctype="multipart/form-data" action="{% url 'reports:assignment_target_action' target.pk %}" class="assignment-action-form">{% csrf_token %}<input type="hidden" name="target_action" value="add_evidence"><div class="twq-field"><label class="twq-label" for="{{ evidence_form.file.id_for_label }}">{{ evidence_form.file.label }}</label>{{ evidence_form.file }}<p class="twq-field__help">PDF أو صورة أو مستند حتى 5MB.</p></div><div class="twq-field"><label class="twq-label" for="{{ evidence_form.note.id_for_label }}">{{ evidence_form.note.label }}</label>{{ evidence_form.note }}</div><div><button type="submit" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-paperclip" aria-hidden="true"></i><span>رفع الشاهد</span></button></div></form>{% endif %}
       </section>
 
-      {# ═══ سجل التنفيذ ══════════════════════════════════ #}
-      <section class="asg-card">
-        <h2 class="asg-card__title">سجل التنفيذ</h2>
-        {% if timeline %}
-          <ul class="dtl-timeline">
-            {% for step in timeline %}
-              <li class="dtl-step" data-action="{{ step.action }}">
-                <span class="dtl-step__dot" aria-hidden="true">
-                  {% if step.action == 'approve' %}<i class="fa-solid fa-check"></i>
-                  {% elif step.action == 'recommend' %}<i class="fa-solid fa-thumbs-up"></i>
-                  {% elif step.action == 'return' %}<i class="fa-solid fa-rotate-left"></i>
-                  {% elif step.action == 'request_info' %}<i class="fa-solid fa-circle-question"></i>
-                  {% elif step.action == 'submit' %}<i class="fa-solid fa-paper-plane"></i>
-                  {% else %}<i class="fa-solid fa-eye"></i>{% endif %}
-                </span>
-                <div class="dtl-step__head">
-                  {{ step.get_action_display }}
-                  {% if step.by_proxy %}
-                    <span class="dtl-proxy">بالنيابة عن {{ step.on_behalf_of.name|default:"المدير" }}</span>
-                  {% endif %}
-                </div>
-                <div class="dtl-step__who">
-                  {{ step.actor_display }}{% if step.actor_role %} · {{ step.actor_role }}{% endif %}
-                  · {{ step.created_at|hijri }} هـ
-                  <time dir="ltr" datetime="{{ step.created_at|date:'c' }}">{{ step.created_at|date:"Y-m-d H:i" }} م</time>
-                </div>
-                {% if step.note %}<div class="dtl-step__note">{{ step.note }}</div>{% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p class="asg-card__hint u-m-0">لم تبدأ دورة المراجعة بعد.</p>
-        {% endif %}
+      <section class="twq-section assignment-section" aria-labelledby="assignmentTimelineTitle">
+        <header class="twq-section__header"><div><p class="twq-section__kicker">سجل غير قابل للتعديل</p><h2 class="twq-section__title" id="assignmentTimelineTitle">سجل التنفيذ والقرارات</h2></div></header>
+        {% if timeline %}<ol class="assignment-timeline">{% for step in timeline %}<li class="assignment-timeline-item" data-action="{{ step.action }}"><strong>{{ step.get_action_display }}{% if step.by_proxy %} · بالنيابة عن <bdi>{{ step.on_behalf_of.name|default:"المدير" }}</bdi>{% endif %}</strong><p class="assignment-timeline-item__meta"><bdi>{{ step.actor_display }}</bdi>{% if step.actor_role %} · {{ step.actor_role }}{% endif %} · {{ step.created_at|hijri }} هـ <time dir="ltr" datetime="{{ step.created_at|date:'c' }}">{{ step.created_at|date:"Y-m-d H:i" }} م</time></p>{% if step.note %}<p class="assignment-timeline-item__note">{{ step.note }}</p>{% endif %}</li>{% endfor %}</ol>{% else %}<div class="twq-empty twq-empty--local"><p class="twq-empty__message">لم تبدأ دورة المراجعة بعد.</p></div>{% endif %}
       </section>
     </div>
 
-    {# ═══ العمود الثاني ══════════════════════════════════ #}
-    <div>
+    <aside class="assignment-workspace__rail" aria-label="إجراءات التكليف">
       {% if is_assignee and not target.is_final and not assignment.is_cancelled %}
-        <section class="asg-card u-mt-2xl">
-          <h2 class="asg-card__title">تقدّمك</h2>
-          <p class="asg-card__hint">
-            النسبة تنزل كما تصعد — عملٌ ظُنّ منجزاً ثم تبيّن نقصه يجب أن يعود
-            رقمه إلى الحقيقة.
-          </p>
-
-          <form method="post" action="{% url 'reports:assignment_target_action' target.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="target_action" value="progress">
-            <div class="asg-field">
-              <label for="{{ progress_form.percent.id_for_label }}">{{ progress_form.percent.label }}</label>
-              {{ progress_form.percent }}
-            </div>
-            <div class="asg-field">
-              <label for="{{ progress_form.note.id_for_label }}">{{ progress_form.note.label }}</label>
-              {{ progress_form.note }}
-            </div>
-            <button type="submit" class="asg-btn asg-btn--primary">
-              <i class="fa-solid fa-arrow-up-right-dots" aria-hidden="true"></i>
-              تحديث الإنجاز
-            </button>
-          </form>
-
-          <div class="dtl-actions">
-            {% if not target.accepted_at %}
-              <form method="post" action="{% url 'reports:assignment_target_action' target.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="target_action" value="accept">
-                <button type="submit" class="asg-btn asg-btn--ghost">
-                  <i class="fa-solid fa-handshake" aria-hidden="true"></i>
-                  قبول التكليف
-                </button>
-              </form>
-            {% endif %}
-          </div>
-
-          <form method="post" action="{% url 'reports:assignment_target_action' target.pk %}" class="u-mt-lg">
-            {% csrf_token %}
-            <input type="hidden" name="target_action" value="clarify">
-            <div class="asg-field">
-              <label for="clarifyNote">طلب توضيح</label>
-              <textarea id="clarifyNote" name="note" class="dtl-note"
-                        placeholder="ما الذي تحتاج بيانه قبل الشروع؟"></textarea>
-            </div>
-            <button type="submit" class="asg-btn asg-btn--ghost">
-              <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-              إرسال طلب التوضيح
-            </button>
-          </form>
-        </section>
+        <section class="twq-section assignment-section" aria-labelledby="assignmentProgressTitle"><header class="twq-section__header"><div><p class="twq-section__kicker">الإجراء التالي</p><h2 class="twq-section__title" id="assignmentProgressTitle">تحديث التنفيذ</h2><p class="twq-section__description">اكتب النسبة الحقيقية وما أُنجز. يمكن خفض النسبة إذا تغير واقع العمل.</p></div></header><form method="post" action="{% url 'reports:assignment_target_action' target.pk %}" class="assignment-action-form">{% csrf_token %}<input type="hidden" name="target_action" value="progress"><div class="twq-field"><label class="twq-label" for="{{ progress_form.percent.id_for_label }}">{{ progress_form.percent.label }}</label>{{ progress_form.percent }}</div><div class="twq-field"><label class="twq-label" for="{{ progress_form.note.id_for_label }}">{{ progress_form.note.label }}</label>{{ progress_form.note }}</div><button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i><span>حفظ التقدم</span></button></form>{% if not target.accepted_at %}<form method="post" action="{% url 'reports:assignment_target_action' target.pk %}" class="assignment-action-form">{% csrf_token %}<input type="hidden" name="target_action" value="accept"><button type="submit" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-handshake" aria-hidden="true"></i><span>تأكيد استلام التكليف</span></button></form>{% endif %}<form method="post" action="{% url 'reports:assignment_target_action' target.pk %}" class="assignment-action-form">{% csrf_token %}<input type="hidden" name="target_action" value="clarify"><div class="twq-field"><label class="twq-label" for="assignmentClarificationNote">طلب توضيح</label><textarea id="assignmentClarificationNote" name="note" placeholder="ما الذي تحتاج بيانه قبل الشروع؟"></textarea></div><button type="submit" class="twq-btn twq-btn--ghost"><i class="fa-solid fa-circle-question" aria-hidden="true"></i><span>إرسال طلب التوضيح</span></button></form></section>
       {% endif %}
 
-      {# ═══ الاعتماد ═════════════════════════════════════ #}
-      <section class="asg-card" {% if not is_assignee %}style="margin-top:1.2rem"{% endif %}>
-        <h2 class="asg-card__title">
-          {% if assignment.is_cancelled %}حالة التكليف{% elif is_assignee %}الإرسال للمراجعة{% else %}قرارك{% endif %}
-        </h2>
-
-        {% if actions %}
-          <form method="post" action="{% url 'reports:assignment_approval_action' target.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="approval_action" id="asgApprovalAction" value="">
-
-            {% if not is_assignee %}
-              <div class="asg-field">
-                <textarea name="note" class="dtl-note" placeholder="ملاحظتك على التنفيذ…"></textarea>
-              </div>
-            {% endif %}
-
-            <div class="dtl-actions u-mt-0">
-              {% if 'submit' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-asg="submit">
-                  <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                  إرسال للمراجعة
-                </button>
-              {% endif %}
-              {% if 'withdraw' in actions %}
-                <button type="submit" class="asg-btn asg-btn--ghost" data-asg="withdraw">سحب للتعديل</button>
-              {% endif %}
-              {% if 'start_review' in actions %}
-                <button type="submit" class="asg-btn asg-btn--ghost" data-asg="start_review">بدء المراجعة</button>
-              {% endif %}
-              {% if 'recommend' in actions %}
-                <button type="submit" class="asg-btn asg-btn--violet" data-asg="recommend">توصية بالاعتماد</button>
-              {% endif %}
-              {% if 'request_info' in actions %}
-                <button type="submit" class="asg-btn asg-btn--warn" data-asg="request_info">طلب استكمال</button>
-              {% endif %}
-              {% if 'return' in actions %}
-                <button type="submit" class="asg-btn asg-btn--warn" data-asg="return">إعادة للملاحظة</button>
-              {% endif %}
-              {% if 'approve' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-asg="approve">
-                  <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                  اعتماد التنفيذ
-                </button>
-              {% endif %}
-            </div>
-          </form>
-
-          <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-            (function () {
-              var field = document.getElementById('asgApprovalAction');
-              if (!field) return;
-              document.querySelectorAll('[data-asg]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                  field.value = button.getAttribute('data-asg');
-                });
-              });
-            })();
-          </script>
-        {% else %}
-          <p class="asg-card__hint u-m-0">
-            {% if assignment.is_cancelled %}
-              أُلغي هذا التكليف؛ لا توجد إجراءات مطلوبة أو متاحة عليه.
-            {% elif target.is_final %}
-              اعتُمد تنفيذ هذا التكليف. لا يُعدَّل بعد اعتماده.
-            {% elif shortfall %}
-              استوفِ شواهد التكليف أولاً ليصبح الإرسال للمراجعة متاحاً.
-            {% else %}
-              لا توجد إجراءات متاحة لك في الحالة الحالية.
-            {% endif %}
-          </p>
-        {% endif %}
+      <section class="twq-section assignment-section" aria-labelledby="assignmentDecisionTitle"><header class="twq-section__header"><div><p class="twq-section__kicker">حركة الحالة</p><h2 class="twq-section__title" id="assignmentDecisionTitle">{% if assignment.is_cancelled %}حالة التكليف{% elif is_assignee %}الإرسال للمراجعة{% else %}القرار المتاح{% endif %}</h2><p class="twq-section__description">لا تظهر إلا الإجراءات التي يسمح بها الدور والحالة الحالية؛ ويبقى الخادم هو الحاكم.</p></div></header>
+        {% if actions %}<form method="post" action="{% url 'reports:assignment_approval_action' target.pk %}" class="assignment-action-form">{% csrf_token %}<input type="hidden" name="approval_action" id="assignmentApprovalAction" value="">{% if not is_assignee %}<div class="twq-field"><label class="twq-label" for="assignmentDecisionNote">ملاحظة القرار</label><textarea id="assignmentDecisionNote" name="note" placeholder="ملاحظتك على التنفيذ…"></textarea></div>{% endif %}<div class="assignment-action-list">{% if 'submit' in actions %}<button type="submit" class="twq-btn twq-btn--primary" data-assignment-approval="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>إرسال للمراجعة</span></button>{% endif %}{% if 'withdraw' in actions %}<button type="submit" class="twq-btn twq-btn--ghost" data-assignment-approval="withdraw">سحب للتعديل</button>{% endif %}{% if 'start_review' in actions %}<button type="submit" class="twq-btn twq-btn--secondary" data-assignment-approval="start_review">بدء المراجعة</button>{% endif %}{% if 'recommend' in actions %}<button type="submit" class="twq-btn twq-btn--secondary" data-assignment-approval="recommend">توصية بالاعتماد</button>{% endif %}{% if 'request_info' in actions %}<button type="submit" class="twq-btn twq-btn--ghost" data-assignment-approval="request_info">طلب استكمال</button>{% endif %}{% if 'return' in actions %}<button type="submit" class="twq-btn twq-btn--danger" data-assignment-approval="return">إعادة للملاحظة</button>{% endif %}{% if 'approve' in actions %}<button type="submit" class="twq-btn twq-btn--primary" data-assignment-approval="approve"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>اعتماد التنفيذ</span></button>{% endif %}</div></form>
+        {% else %}<div class="twq-empty twq-empty--local"><p class="twq-empty__message">{% if assignment.is_cancelled %}أُلغي هذا التكليف؛ لا توجد إجراءات مطلوبة أو متاحة عليه.{% elif target.is_final %}اعتُمد التنفيذ، ولا يقبل تعديلًا أو قرارًا عاديًا جديدًا.{% elif shortfall %}استوفِ الشواهد المطلوبة أولًا ليصبح الإرسال للمراجعة متاحًا.{% else %}لا توجد إجراءات متاحة لك في الحالة الحالية.{% endif %}</p></div>{% endif %}
       </section>
-    </div>
-
+    </aside>
   </div>
 </div>
+<script src="{% static 'js/assignments.js' %}?v=20260922.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

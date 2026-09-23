@@ -1,3 +1,4 @@
+from pathlib import Path
 from urllib.parse import quote
 
 from django.test import TestCase, override_settings
@@ -551,3 +552,97 @@ class MyRequestsViewTests(TestCase):
             response,
             f"?q={encoded_q}&status=done&order=created_at&view=table&page=2",
         )
+
+    def test_list_pilot_keeps_status_and_detail_in_card_and_table_modes(self):
+        ticket = Ticket.objects.create(
+            creator=self.user,
+            school=self.school,
+            is_platform=False,
+            title="طلب اختبار الواجهة",
+            body="محتوى الطلب",
+            status=Ticket.Status.IN_PROGRESS,
+        )
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_school_id"] = self.school.id
+        session.save()
+
+        for view_mode in ("list", "table"):
+            with self.subTest(view_mode=view_mode):
+                response = self.client.get(
+                    reverse("reports:my_requests"), {"view": view_mode}
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "طلب اختبار الواجهة")
+                self.assertContains(response, "قيد المعالجة")
+                self.assertContains(
+                    response, reverse("reports:ticket_detail", args=[ticket.pk])
+                )
+                self.assertContains(response, "css/my-requests.css")
+                template_path = (
+                    Path(__file__).resolve().parents[1]
+                    / "templates"
+                    / "reports"
+                    / "my_requests.html"
+                )
+                self.assertNotIn("<style", template_path.read_text(encoding="utf-8"))
+
+        table_response = self.client.get(
+            reverse("reports:my_requests"), {"view": "table"}
+        )
+        self.assertContains(table_response, 'class="requests-table-wrap"')
+        self.assertContains(table_response, 'class="requests-table-mobile requests-cards"')
+
+    def test_list_pilot_distinguishes_empty_results_from_no_requests(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_school_id"] = self.school.id
+        session.save()
+
+        empty = self.client.get(reverse("reports:my_requests"))
+        self.assertContains(empty, "لا توجد طلبات بعد")
+        self.assertContains(empty, reverse("reports:request_create"))
+
+        filtered = self.client.get(
+            reverse("reports:my_requests"), {"q": "مفقود", "view": "table"}
+        )
+        self.assertContains(filtered, "لا توجد طلبات مطابقة")
+        self.assertContains(filtered, 'href="?view=table"')
+        self.assertNotContains(filtered, 'class="twq-table requests-table"')
+
+    def test_request_status_has_same_semantic_tone_in_list_and_detail(self):
+        ticket = Ticket.objects.create(
+            creator=self.user,
+            school=self.school,
+            is_platform=False,
+            title="طلب توحيد الحالة",
+            body="تفاصيل الطلب",
+        )
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_school_id"] = self.school.id
+        session.save()
+
+        cases = (
+            (Ticket.Status.OPEN, "info", "جديد"),
+            (Ticket.Status.IN_PROGRESS, "warning", "قيد المعالجة"),
+            (Ticket.Status.DONE, "success", "مكتمل"),
+            (Ticket.Status.REJECTED, "danger", "مرفوض"),
+        )
+        for status, tone, label in cases:
+            ticket.status = status
+            ticket.save(update_fields=["status"])
+            for view_mode in ("list", "table"):
+                with self.subTest(status=status, view=view_mode):
+                    response = self.client.get(
+                        reverse("reports:my_requests"), {"view": view_mode}
+                    )
+                    self.assertContains(response, f"twq-status twq-status--{tone}")
+                    self.assertContains(response, label)
+
+            with self.subTest(status=status, view="detail"):
+                response = self.client.get(
+                    reverse("reports:ticket_detail", args=[ticket.pk])
+                )
+                self.assertContains(response, f"twq-status twq-status--{tone}")
+                self.assertContains(response, label)

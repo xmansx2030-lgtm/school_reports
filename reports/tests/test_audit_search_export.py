@@ -196,4 +196,5 @@ class AuditSearchExportTests(TestCase):
         self.assertContains(response, "يستطيع")
         self.assertContains(response, "لا يستطيع")
         self.assertContains(response, "لا يعتمد الأعمال اعتمادًا نهائيًا")
-        self.assertContains(response, ".scp-summary__group li[hidden] { display: none; }")
+        self.assertContains(response, 'id="scopeDeniedList"')
+        self.assertContains(response, "hidden")

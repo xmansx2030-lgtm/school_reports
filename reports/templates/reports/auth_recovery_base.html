@@ -1,0 +1,80 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#eafaf3">
+  <meta name="color-scheme" content="light dark">
+  {% include "reports/partials/theme_bootstrap.html" %}
+  <title>{% block title %}استعادة كلمة المرور{% endblock %} | منصة توثيق</title>
+  {% include "reports/partials/pwa_install_head.html" %}
+
+  {% comment %}كل أصول صفحة الاستعادة محلية ولا تضيف طلبات لطرف ثالث.{% endcomment %}
+  <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+  {% include "reports/_identity.html" %}
+  <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
+  <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
+  <link rel="stylesheet" href="{% static 'css/auth-core.css' %}?v=20260921.1">
+  <link rel="stylesheet" href="{% static 'css/auth-recovery.css' %}?v=20260921.1">
+  <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
+  <script src="{% static 'js/auth-password-toggle.js' %}?v=20260921.1" defer data-cfasync="false"></script>
+</head>
+<body class="recovery-page">
+  <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
+
+  <main class="twq-auth twq-auth--recovery" id="mainContent">
+    <section class="twq-auth__card twq-recovery" aria-labelledby="recoveryTitle">
+      <a class="twq-auth__brand" href="{% url 'reports:landing' %}" aria-label="العودة إلى منصة توثيق">
+        <span class="twq-auth__mark" aria-hidden="true">
+          <img src="{% static 'img/brand-mark.svg' %}" alt="" class="twq-auth__logo">
+        </span>
+        <span class="twq-auth__product">منصة توثيق</span>
+        <span class="twq-auth__trust">استعادة آمنة للوصول إلى الحساب</span>
+      </a>
+
+      <nav class="twq-recovery__progress" aria-label="مراحل استعادة كلمة المرور">
+        <ol>
+          {% with step=recovery_step|default:1 %}
+            <li class="{% if step > 1 %}is-done{% elif step == 1 %}is-current{% endif %}"{% if step == 1 %} aria-current="step"{% endif %}>
+              <span class="twq-recovery__step-number" aria-hidden="true">{% if step > 1 %}<i class="fa-solid fa-check"></i>{% else %}١{% endif %}</span>
+              <span>الطلب</span>
+            </li>
+            <li class="{% if step > 2 %}is-done{% elif step == 2 %}is-current{% endif %}"{% if step == 2 %} aria-current="step"{% endif %}>
+              <span class="twq-recovery__step-number" aria-hidden="true">{% if step > 2 %}<i class="fa-solid fa-check"></i>{% else %}٢{% endif %}</span>
+              <span>البريد</span>
+            </li>
+            <li class="{% if step > 3 %}is-done{% elif step == 3 %}is-current{% endif %}"{% if step == 3 %} aria-current="step"{% endif %}>
+              <span class="twq-recovery__step-number" aria-hidden="true">{% if step > 3 %}<i class="fa-solid fa-check"></i>{% else %}٣{% endif %}</span>
+              <span>كلمة المرور</span>
+            </li>
+            <li class="{% if step == 4 %}is-current{% endif %}"{% if step == 4 %} aria-current="step"{% endif %}>
+              <span class="twq-recovery__step-number" aria-hidden="true">٤</span>
+              <span>اكتملت</span>
+            </li>
+          {% endwith %}
+        </ol>
+      </nav>
+
+      <header class="twq-auth__header">
+        <p class="twq-auth__eyebrow">{% block eyebrow %}استعادة الحساب{% endblock %}</p>
+        <h1 class="twq-auth__title" id="recoveryTitle">{% block heading %}استعادة كلمة المرور{% endblock %}</h1>
+        <p class="twq-auth__lead">{% block lead %}{% endblock %}</p>
+      </header>
+
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+
+  <footer class="twq-auth__footer">
+    &copy; {% now "Y" %} جميع الحقوق محفوظة — منصة توثيق
+  </footer>
+
+  {% include "reports/partials/pwa_install.html" %}
+</body>
+</html>

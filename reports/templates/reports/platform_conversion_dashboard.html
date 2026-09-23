@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}مساعد التحويل الذكي | توثيق{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/conversion-intelligence.css' %}?v=20260923.4">{% endblock %}
+
+{% block content %}
+<div class="twq-page conversion-page">
+  <header class="twq-page-header conversion-hero">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> ذكاء تجاري منضبط</p>
+      <h1 class="twq-page-header__title">مساعد التحويل الذكي</h1>
+      <p class="twq-page-header__lead">يكتشف فرص التفعيل والتحويل والتجديد من استخدام خدمات توثيق، ثم يجهز رسالة مخصصة تبقى بانتظار مراجعتك واعتمادك.</p>
+    </div>
+    <aside class="twq-page-header__aside conversion-hero__trust" aria-label="ضوابط الأداة">
+      <span><i class="fa-solid fa-calculator" aria-hidden="true"></i> الدرجات محسوبة من النظام</span>
+      <span><i class="fa-solid fa-user-check" aria-hidden="true"></i> لا إرسال دون اعتمادك</span>
+      <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> لا يقرأ محتوى التقارير</span>
+      <span><i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> {% if mail_status.enabled %}البريد الرسمي مفعّل{% else %}الإرسال متوقف{% endif %}</span>
+    </aside>
+  </header>
+
+  {% if not mail_status.enabled %}
+  <section class="conversion-alert" role="status">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    <div><strong>إرسال البريد متوقف من إعدادات المنصة</strong><p>يمكنك تحليل المدارس وإنشاء المسودات الآن، ثم تفعيل الإرسال من مركز بريد توثيق عند الجاهزية.</p></div>
+    <a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_email_settings' %}">مراجعة البريد</a>
+  </section>
+  {% endif %}
+
+  <section class="conversion-summary" aria-label="ملخص الفرص المعروضة">
+    <article><span>مدارس مستهدفة</span><strong>{{ summary.total }}</strong><small>وفق المرشحات الحالية</small></article>
+    <article><span>أولوية مرتفعة</span><strong>{{ summary.high }}</strong><small>تحويل أو متابعة دفع</small></article>
+    <article><span>تحتاج تفعيلًا</span><strong>{{ summary.activate }}</strong><small>القيمة أولًا قبل البيع</small></article>
+    <article><span>اشتراك منتهٍ</span><strong>{{ summary.expired }}</strong><small>مجاني أو مدفوع</small></article>
+  </section>
+
+  <section class="twq-card conversion-filter-card" aria-labelledby="conversionFilterTitle">
+    <div class="conversion-section-heading">
+      <div><p>قائمة العمل</p><h2 id="conversionFilterTitle">المدارس وفرص التحويل</h2></div>
+      <span class="conversion-live-note"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> تحسب من بيانات توثيق الحالية</span>
+    </div>
+    <form method="get" class="conversion-filters">
+      <label class="conversion-search"><span>بحث</span><span class="conversion-control"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" name="q" value="{{ query }}" placeholder="اسم المدرسة أو المدينة أو الرمز"></span></label>
+      <label><span>حالة الاشتراك</span><select name="segment">
+        <option value="targets" {% if segment == 'targets' %}selected{% endif %}>الفرص المستهدفة</option>
+        <option value="all" {% if segment == 'all' %}selected{% endif %}>كل المدارس</option>
+        <option value="trial_active" {% if segment == 'trial_active' %}selected{% endif %}>مجانية نشطة</option>
+        <option value="trial_expired" {% if segment == 'trial_expired' %}selected{% endif %}>مجانية منتهية</option>
+        <option value="paid_expired" {% if segment == 'paid_expired' %}selected{% endif %}>مدفوعة منتهية</option>
+        <option value="cancelled" {% if segment == 'cancelled' %}selected{% endif %}>ملغية</option>
+        <option value="no_subscription" {% if segment == 'no_subscription' %}selected{% endif %}>بلا اشتراك</option>
+      </select></label>
+      <label><span>الأولوية</span><select name="priority">
+        <option value="">كل الأولويات</option>
+        <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>متابعة دفع</option>
+        <option value="high" {% if priority == 'high' %}selected{% endif %}>مرتفعة</option>
+        <option value="activate" {% if priority == 'activate' %}selected{% endif %}>تفعيل أولًا</option>
+        <option value="medium" {% if priority == 'medium' %}selected{% endif %}>متوسطة</option>
+      </select></label>
+      <label><span>الترتيب</span><select name="sort">
+        <option value="priority" {% if sort == 'priority' %}selected{% endif %}>الأولوية</option>
+        <option value="intent" {% if sort == 'intent' %}selected{% endif %}>نية الشراء</option>
+        <option value="utilization" {% if sort == 'utilization' %}selected{% endif %}>الاستفادة</option>
+        <option value="recent" {% if sort == 'recent' %}selected{% endif %}>آخر نشاط</option>
+      </select></label>
+      <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-filter" aria-hidden="true"></i> تطبيق</button>
+    </form>
+  </section>
+
+  <section class="conversion-results" aria-label="نتائج المدارس">
+    <div class="twq-table-wrap conversion-table-wrap">
+      <table class="twq-table conversion-table">
+        <thead><tr><th scope="col">المدرسة</th><th scope="col">الاشتراك</th><th scope="col">الاستفادة</th><th scope="col">نية الشراء</th><th scope="col">التوصية</th><th scope="col"><span class="sr-only">إجراء</span></th></tr></thead>
+        <tbody>
+          {% for row in page_obj %}
+          <tr>
+            <td><strong>{{ row.school.name }}</strong><small>{{ row.school.get_stage_display }}{% if row.school.city %} · {{ row.school.city }}{% endif %}</small></td>
+            <td><span class="twq-status" data-status="{% if row.segment == 'paid_active' %}success{% elif row.segment == 'trial_expired' or row.segment == 'paid_expired' or row.segment == 'cancelled' %}warning{% else %}info{% endif %}">{{ row.segment_label }}</span>{% if row.subscription %}<small>{{ row.subscription.plan.name }} · حتى {{ row.subscription.end_date|date:'Y/m/d' }}</small>{% endif %}</td>
+            <td><div class="conversion-score"><strong>{{ row.utilization_score }}<small>/100</small></strong><progress max="100" value="{{ row.utilization_score }}" aria-label="درجة الاستفادة {{ row.utilization_score }} من 100">{{ row.utilization_score }}%</progress><small>{{ row.services_used }} خدمات · {{ row.completed_total }} أعمال مكتملة</small></div></td>
+            <td><div class="conversion-score"><strong>{{ row.intent_score }}<small>/100</small></strong><progress max="100" value="{{ row.intent_score }}" aria-label="درجة نية الشراء {{ row.intent_score }} من 100">{{ row.intent_score }}%</progress><small>{% if row.pending_payments %}طلب دفع قائم{% elif row.intent_factors %}{{ row.intent_factors.0 }}{% else %}لا توجد إشارة قوية بعد{% endif %}</small></div></td>
+            <td><span class="conversion-priority is-{{ row.priority }}">{{ row.priority_label }}</span><p>{{ row.recommended_action }}</p></td>
+            <td class="twq-table__actions"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_conversion_school' row.school.pk %}">فتح الفرصة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6"><div class="twq-empty"><i class="fa-solid fa-school-circle-check" aria-hidden="true"></i><h2>لا توجد مدارس مطابقة</h2><p>غيّر المرشحات أو اعرض كل المدارس.</p></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="conversion-mobile-list">
+      {% for row in page_obj %}
+      <article class="twq-card conversion-school-card">
+        <header><div><strong>{{ row.school.name }}</strong><small>{{ row.school.get_stage_display }}{% if row.school.city %} · {{ row.school.city }}{% endif %}</small></div><span class="twq-status" data-status="{% if row.segment == 'trial_expired' or row.segment == 'paid_expired' %}warning{% else %}info{% endif %}">{{ row.segment_label }}</span></header>
+        <div class="conversion-mobile-scores"><div><span>الاستفادة</span><strong>{{ row.utilization_score }}/100</strong><progress max="100" value="{{ row.utilization_score }}">{{ row.utilization_score }}%</progress></div><div><span>نية الشراء</span><strong>{{ row.intent_score }}/100</strong><progress max="100" value="{{ row.intent_score }}">{{ row.intent_score }}%</progress></div></div>
+        <p><span class="conversion-priority is-{{ row.priority }}">{{ row.priority_label }}</span> {{ row.recommended_action }}</p>
+        <a class="twq-btn twq-btn--primary" href="{% url 'reports:platform_conversion_school' row.school.pk %}">فتح الفرصة</a>
+      </article>
+      {% empty %}<div class="twq-empty"><h2>لا توجد مدارس مطابقة</h2><p>غيّر المرشحات أو اعرض كل المدارس.</p></div>{% endfor %}
+    </div>
+  </section>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav class="conversion-pagination" aria-label="صفحات النتائج">
+    {% if page_obj.has_previous %}<a class="twq-btn twq-btn--secondary" href="?q={{ query|urlencode }}&segment={{ segment }}&priority={{ priority }}&sort={{ sort }}&page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}
+    <span>صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary" href="?q={{ query|urlencode }}&segment={{ segment }}&priority={{ priority }}&sort={{ sort }}&page={{ page_obj.next_page_number }}">التالي</a>{% endif %}
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

@@ -15,7 +15,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from django.core.cache import cache
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -156,6 +158,94 @@ class CompletenessTestCase(TestCase):
 class ScopedSchoolReportsTests(CompletenessTestCase):
     """الوكيل كان يراجع فرداً فرداً ولا يملك كشفاً يسأل منه «ما وثّقه قسمي؟»."""
 
+    def test_approval_states_match_the_report_in_desktop_and_mobile(self):
+        self.school.report_approval_enabled = True
+        self.school.save(update_fields=["report_approval_enabled"])
+        report_type = ReportType.objects.create(
+            school=self.school, code="approval-list", name="تقارير الاعتماد"
+        )
+        report_type.departments.add(self.department)
+        expected = []
+        for state in ApprovalState:
+            report = Report.objects.create(
+                school=self.school,
+                teacher=self.teacher,
+                category=report_type,
+                title=f"تقرير الاعتماد {state.value}",
+                report_date=date(2026, 8, 1),
+                approval_state=state,
+            )
+            expected.append(report)
+
+        self._enter(self.manager)
+        response = self.client.get(reverse("reports:admin_reports"))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        desktop, mobile = html.split('<div class="repdash-mobile"', 1)
+        for report in expected:
+            label = f"<span>{report.get_approval_state_display()}</span>"
+            self.assertIn(label, desktop)
+            self.assertIn(label, mobile)
+            self.assertIn(f'data-status="{report.approval_tone}"', desktop)
+            self.assertIn(f'data-status="{report.approval_tone}"', mobile)
+
+        # ApprovalTransition is history, not the current state source. A report
+        # without a transition still has its real persisted draft state.
+        draft = next(report for report in expected if report.approval_state == ApprovalState.DRAFT)
+        self.assertEqual(draft.get_approval_state_display(), "مسودة")
+
+    def test_approval_state_does_not_bypass_school_isolation(self):
+        own = self._report(self.teacher, self.department, "تقرير المدرسة الحالية")
+        own.approval_state = ApprovalState.SUBMITTED
+        own.save(update_fields=["approval_state"])
+        other_school = _school("مدرسة أخرى", "approval-other-school")
+        other_teacher = _user("معلم مدرسة أخرى", "0500041999")
+        other = Report.objects.create(
+            school=other_school,
+            teacher=other_teacher,
+            title="تقرير مدرسة أخرى خاص",
+            report_date=date(2026, 8, 1),
+            approval_state=ApprovalState.APPROVED,
+        )
+
+        self._enter(self.manager)
+        response = self.client.get(reverse("reports:admin_reports"))
+        report_ids = {report.pk for report in response.context["reports"]}
+        self.assertIn(own.pk, report_ids)
+        self.assertNotIn(other.pk, report_ids)
+        self.assertNotContains(response, other.title)
+
+    def test_approval_state_does_not_add_per_report_queries(self):
+        first = self._report(self.teacher, self.department, "تقرير قياس الاستعلام")
+        self._enter(self.manager)
+        cache.clear()
+        with CaptureQueriesContext(connection) as one_report_queries:
+            one_report = self.client.get(reverse("reports:admin_reports"))
+        self.assertEqual(one_report.status_code, 200)
+
+        for index in range(6):
+            Report.objects.create(
+                school=self.school,
+                teacher=self.teacher,
+                category=first.category,
+                title=f"تقرير قياس إضافي {index}",
+                report_date=date(2026, 8, 1),
+                approval_state=ApprovalState.SUBMITTED,
+            )
+        cache.clear()
+        with CaptureQueriesContext(connection) as many_report_queries:
+            many_reports = self.client.get(reverse("reports:admin_reports"))
+        self.assertEqual(many_reports.status_code, 200)
+        # The second request may reuse warmed caches, but adding six rows must
+        # not increase the query count by one query per row.
+        self.assertLessEqual(len(many_report_queries), len(one_report_queries))
+        with self.assertNumQueries(0):
+            states = [
+                (report.get_approval_state_display(), report.approval_tone)
+                for report in many_reports.context["reports"]
+            ]
+        self.assertEqual(len(states), 7)
+
     def test_the_reviewer_reaches_the_school_reports_list(self):
         self._grant(caps.REVIEW_REPORTS)
         self._enter(self.deputy)
@@ -190,6 +280,7 @@ class ScopedSchoolReportsTests(CompletenessTestCase):
         self._enter(self.deputy)
         response = self.client.get(reverse("reports:admin_reports"))
         self.assertFalse(response.context["can_delete"])
+        self.assertNotContains(response, f'href="{reverse("reports:report_trash")}"')
         for report in response.context["reports"]:
             self.assertFalse(report.user_can_delete)
             self.assertFalse(report.user_can_edit)

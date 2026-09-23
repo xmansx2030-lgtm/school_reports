@@ -758,6 +758,13 @@ try:
 except (TypeError, ValueError):
     OVERLOAD_RETRY_AFTER_SECONDS = 5
 
+try:
+    OVERLOAD_LOG_INTERVAL_SECONDS = max(
+        0.0, float(os.getenv("OVERLOAD_LOG_INTERVAL_SECONDS", "5") or "5")
+    )
+except (TypeError, ValueError):
+    OVERLOAD_LOG_INTERVAL_SECONDS = 5.0
+
 # Aggregate tenant budget. This complements per-user/IP throttles and prevents
 # one large school from consuming the whole database/concurrency allowance.
 SCHOOL_RATE_LIMIT_ENABLED = _env_bool("SCHOOL_RATE_LIMIT_ENABLED", True)
@@ -851,8 +858,11 @@ CELERY_BROKER_URL = (os.getenv("CELERY_BROKER_URL") or REDIS_URL).strip()
 REDIS_CACHE_URL = os.getenv("REDIS_CACHE_URL", "").strip()
 REDIS_CHANNEL_LAYER_URL = (os.getenv("REDIS_CHANNEL_LAYER_URL") or "").strip() or REDIS_URL
 
-# Database URL is needed by strict production checks below.
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+# Keep the direct URL as a rollback path while allowing web/worker services to
+# opt into the bundled transaction pooler without rewriting the credential.
+DATABASE_DIRECT_URL = os.getenv("DATABASE_URL", "").strip()
+DATABASE_POOL_URL = os.getenv("DATABASE_POOL_URL", "").strip()
+DATABASE_URL = DATABASE_POOL_URL or DATABASE_DIRECT_URL
 
 
 def _derive_cache_redis_url(broker_url: str) -> str:
@@ -1649,7 +1659,17 @@ else:
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "filters": {
+        "skip_expected_load_shed": {
+            "()": "core.logging_filters.SkipExpectedLoadShed",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "filters": ["skip_expected_load_shed"],
+        }
+    },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
         "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},

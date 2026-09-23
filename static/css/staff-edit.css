@@ -1,0 +1,206 @@
+.staff-edit-page {
+  max-inline-size: 68rem;
+}
+
+.staff-edit-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  min-block-size: var(--twq-tap-target);
+  margin-block-end: var(--twq-space-4);
+  color: var(--twq-primary);
+  font-weight: var(--twq-font-weight-semibold);
+  text-decoration: none;
+}
+
+.staff-edit-back:hover,
+.staff-edit-scope-links a:hover {
+  text-decoration: underline;
+}
+
+.staff-edit-back:focus-visible,
+.staff-edit-scope-links a:focus-visible {
+  outline: 2px solid var(--twq-focus);
+  outline-offset: 3px;
+  border-radius: var(--twq-radius-sm);
+}
+
+.staff-edit-header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.staff-edit-header .twq-page-header__title {
+  overflow-wrap: anywhere;
+}
+
+.staff-edit-context {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.staff-edit-context > div {
+  flex: 1 1 10rem;
+}
+
+.staff-edit-context .twq-status {
+  vertical-align: middle;
+}
+
+.staff-edit-form {
+  max-inline-size: 56rem;
+  margin-inline: auto;
+}
+
+.staff-edit-summary {
+  margin-block-start: var(--twq-space-6);
+}
+
+.staff-edit-summary p {
+  margin-block: var(--twq-space-2) 0;
+}
+
+.staff-edit-section {
+  margin-block-start: var(--twq-space-8);
+}
+
+.staff-edit-grid,
+.staff-edit-account {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-5);
+}
+
+.staff-edit-page .twq-field {
+  min-inline-size: 0;
+}
+
+.staff-edit-page .twq-label {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+}
+
+.staff-edit-page .twq-control {
+  margin-block-start: var(--twq-space-2);
+}
+
+.staff-edit-page :is(input[name="phone"], input[name="national_id"]) {
+  direction: ltr;
+  text-align: start;
+}
+
+.staff-edit-page .twq-field__help {
+  margin-block-start: var(--twq-space-2);
+}
+
+.staff-edit-page .twq-field__message:not(:empty) {
+  margin-block-start: var(--twq-space-2);
+}
+
+.staff-edit-required,
+.staff-edit-optional {
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-xs);
+  font-weight: var(--twq-font-weight-medium);
+}
+
+.staff-edit-required {
+  color: var(--twq-primary);
+}
+
+.staff-edit-scope-note {
+  align-self: stretch;
+  min-inline-size: 0;
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-inline-start: 3px solid var(--twq-accent);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface-muted);
+  color: var(--twq-text-muted);
+  line-height: var(--twq-line-height-relaxed);
+}
+
+.staff-edit-scope-note p {
+  margin-block: 0 var(--twq-space-2);
+}
+
+.staff-edit-scope-note strong {
+  color: var(--twq-text);
+}
+
+.staff-edit-scope-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2) var(--twq-space-4);
+  margin-block-start: var(--twq-space-3);
+}
+
+.staff-edit-scope-links a {
+  color: var(--twq-primary);
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.staff-edit-active {
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.staff-edit-password {
+  display: flex;
+  align-items: stretch;
+  gap: var(--twq-space-2);
+}
+
+.staff-edit-password .twq-control {
+  min-inline-size: 0;
+  flex: 1 1 auto;
+}
+
+.staff-edit-password__toggle {
+  align-self: end;
+  flex: 0 0 var(--twq-tap-target);
+  min-inline-size: var(--twq-tap-target);
+  min-block-size: var(--twq-control-md);
+}
+
+.staff-edit-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--twq-space-3);
+  margin-block-start: var(--twq-space-8);
+  padding-block-start: var(--twq-space-6);
+  border-block-start: 1px solid var(--twq-border);
+}
+
+@media (max-width: 63.999rem) {
+  .staff-edit-form {
+    max-inline-size: 48rem;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .staff-edit-grid,
+  .staff-edit-account {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 39.999rem) {
+  .staff-edit-context {
+    gap: var(--twq-space-2);
+  }
+
+  .staff-edit-context > div {
+    flex-basis: calc(50% - var(--twq-space-2));
+  }
+
+  .staff-edit-context > div:first-child {
+    flex-basis: 100%;
+  }
+
+  .staff-edit-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

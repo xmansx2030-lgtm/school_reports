@@ -40,6 +40,7 @@ class AiUsageEvent(models.Model):
         REPORT_REVIEW = "report-review", "فحص الجاهزية"
         TRANSCRIPTION = "transcription", "تفريغ صوتي"
         VOICE_POLISH = "voice-polish", "تجميل التفريغ"
+        CONVERSION_OUTREACH = "conversion-outreach", "مساعد التحويل"
         OTHER = "other", "غير ذلك"
 
     class Outcome(models.TextChoices):

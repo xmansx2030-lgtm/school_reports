@@ -134,7 +134,9 @@ def teacher_report_stats(qs: QuerySet) -> dict:
     }
 
 
-def get_admin_reports_queryset(*, user, active_school: Optional[School]) -> QuerySet:
+def get_admin_reports_queryset(
+    *, user, active_school: Optional[School], include_approval_state: bool = False
+) -> QuerySet:
     qs = (
         Report.objects.select_related("teacher", "category", "school")
         .prefetch_related(REPORT_EVIDENCE_PREFETCH)
@@ -160,6 +162,7 @@ def get_admin_reports_queryset(*, user, active_school: Optional[School]) -> Quer
             "school_id",
             "school__id",
             "school__name",
+            *(("approval_state",) if include_approval_state else ()),
         )
         .order_by("-report_date", "-id")
     )

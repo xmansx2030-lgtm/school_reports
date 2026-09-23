@@ -1,0 +1,16 @@
+<div class="hs-field" data-handwritten-signature>
+  <div class="hs-field__header">
+    <div>
+      <strong id="signaturePadLabel">توقيعك بخط يدك</strong>
+      <span>ارسم توقيعك بإصبعك أو بالقلم أو بالفأرة.</span>
+    </div>
+    <button class="hs-field__clear" type="button" data-signature-clear>مسح التوقيع</button>
+  </div>
+  <div class="hs-field__frame">
+    <canvas width="900" height="300" aria-labelledby="signaturePadLabel" data-signature-canvas></canvas>
+    <span class="hs-field__hint" aria-hidden="true">وقّع هنا</span>
+    <span class="hs-field__baseline" aria-hidden="true"></span>
+  </div>
+  <input type="hidden" name="signature_data" data-signature-data>
+  <p class="hs-field__message" data-signature-message role="status" aria-live="polite">يُحفظ الرسم مع إقرارك بعد الاعتماد النهائي.</p>
+</div>

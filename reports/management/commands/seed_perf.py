@@ -214,43 +214,65 @@ class Command(BaseCommand):
 
                 # reports
                 categories = list(rtypes.values())
+                existing_report_keys = set(
+                    Report.objects.filter(
+                        school=school,
+                        teacher__in=teachers[1:],
+                        report_date__gte=now - timedelta(days=days - 1),
+                        report_date__lte=now,
+                    ).values_list("teacher_id", "report_date")
+                )
+                reports_to_create = []
                 for teacher in teachers[1:]:
                     for d in range(days):
                         cat = rnd.choice(categories)
                         dt = now - timedelta(days=d)
-                        obj, r_created = Report.objects.get_or_create(
-                            school=school,
-                            teacher=teacher,
-                            title=f"تقرير يومي - {teacher.name}",
-                            report_date=dt,
-                            defaults={
-                                "category": cat,
-                                "idea": "تقرير تجريبي",
-                            },
+                        if (teacher.pk, dt) in existing_report_keys:
+                            continue
+                        reports_to_create.append(
+                            Report(
+                                school=school,
+                                teacher=teacher,
+                                teacher_name=teacher.name,
+                                title=f"تقرير يومي - {teacher.name}",
+                                report_date=dt,
+                                category=cat,
+                                idea="تقرير تجريبي",
+                            )
                         )
-                        if r_created:
-                            created_reports += 1
+                # Benchmark fixtures must not run production post-save hooks:
+                # thousands of synthetic rows previously invalidated caches and
+                # dispatched Celery notifications, making the seeder measure its
+                # own side effects instead of database/query performance.
+                Report.objects.bulk_create(reports_to_create, batch_size=500)
+                created_reports += len(reports_to_create)
 
                 # tickets
                 dept_choices = [d for d in departments.values() if d.slug != "manager"]
+                existing_ticket_titles = set(
+                    Ticket.objects.filter(school=school).values_list("title", flat=True)
+                )
+                tickets_to_create = []
                 for k in range(tickets_per_school):
                     creator = rnd.choice(teachers[1:])
                     dep = rnd.choice(dept_choices)
                     assignee = officer_by_dept.get(dep.slug) or rnd.choice(teachers[1:])
                     title = f"طلب {k + 1} - {school.code}"
-                    tk, tk_created = Ticket.objects.get_or_create(
-                        school=school,
-                        creator=creator,
-                        department=dep,
-                        title=title,
-                        defaults={
-                            "body": "طلب تجريبي",
-                            "assignee": assignee,
-                            "status": Ticket.Status.OPEN,
-                        },
+                    if title in existing_ticket_titles:
+                        continue
+                    tickets_to_create.append(
+                        Ticket(
+                            school=school,
+                            creator=creator,
+                            department=dep,
+                            title=title,
+                            body="طلب تجريبي",
+                            assignee=assignee,
+                            status=Ticket.Status.OPEN,
+                        )
                     )
-                    if tk_created:
-                        created_tickets += 1
+                Ticket.objects.bulk_create(tickets_to_create, batch_size=500)
+                created_tickets += len(tickets_to_create)
 
                 # notifications
                 for n in range(notifications_per_school):

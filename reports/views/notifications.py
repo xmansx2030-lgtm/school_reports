@@ -2,9 +2,26 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from uuid import uuid4
+
+from django.core.files.base import ContentFile
+from django.views.decorators.http import require_GET
+
 from core.observability import report_degraded as _degraded, soft_call, soft_fail
+from ..circular_evidence import (
+    acknowledgement_digest, document_matches_snapshot, document_snapshot, evidence_digest,
+)
+from ..handwritten_signature import (
+    InvalidHandwrittenSignature, normalize_signature, stored_signature_digest,
+)
 
 from ..coverage import pending_documenters
+from ..services_notification_idempotency import (
+    NotificationSubmissionConflict,
+    notification_submission_fingerprint,
+    reserve_notification_submission,
+    validate_submission_fingerprint,
+)
 
 from ._helpers import *
 from ._helpers import (
@@ -121,6 +138,7 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
         active_school=active_school,
         initial=initial,
         mode=mode,
+        require_submission_key=not is_circular,
     )
     if request.method == "POST":
         if form.is_valid():
@@ -143,19 +161,60 @@ def notifications_create(request: HttpRequest, mode: str = "notification") -> Ht
                     },
                 )
             try:
+                existing_notification = None
+                reservation_created = True
                 with transaction.atomic():
-                    form.save(
-                        creator=request.user,
-                        default_school=active_school,
-                        force_requires_signature=True if is_circular else None,
-                    )
+                    if is_circular:
+                        form.save(
+                            creator=request.user,
+                            default_school=active_school,
+                            force_requires_signature=True,
+                        )
+                    else:
+                        payload_fingerprint, submission_school = (
+                            notification_submission_fingerprint(
+                                cleaned_data=form.cleaned_data,
+                                sender=request.user,
+                                default_school=active_school,
+                                mode=mode,
+                            )
+                        )
+                        submission, reservation_created = reserve_notification_submission(
+                            sender=request.user,
+                            submission_key=form.cleaned_data["submission_key"],
+                            school=submission_school,
+                            payload_fingerprint=payload_fingerprint,
+                        )
+                        if reservation_created:
+                            notification = form.save(
+                                creator=request.user,
+                                default_school=active_school,
+                                dispatch_realtime_on_commit=True,
+                            )
+                            submission.notification = notification
+                            submission.save(update_fields=["notification"])
+                        else:
+                            validate_submission_fingerprint(submission, payload_fingerprint)
+                            existing_notification = submission.notification
+
                 sent_label = "التعميم" if is_circular else ("النشرة" if is_newsletter else "الإشعار")
+                if not is_circular and not reservation_created:
+                    messages.success(request, f"تم إرسال {sent_label} مسبقًا، ولم يُكرر الإرسال.")
+                    if existing_notification is not None:
+                        return redirect(_sent_list_url(existing_notification))
+                    return redirect("reports:notifications_sent")
                 messages.success(request, f"تم إرسال {sent_label} إلى المستلمين المحددين.")
                 if is_circular:
                     return redirect("reports:circulars_sent")
                 if is_newsletter:
                     return redirect(f"{reverse('reports:notifications_sent')}?kind=newsletter")
                 return redirect("reports:notifications_sent")
+            except NotificationSubmissionConflict:
+                conflict_message = (
+                    "تعذّر إعادة استخدام طلب الإرسال. أعد فتح نموذج الإرسال وحاول مرة أخرى."
+                )
+                form.add_error(None, conflict_message)
+                messages.error(request, conflict_message)
             except Exception:
                 logger.exception("notifications_create failed")
                 messages.error(request, "تعذّر الإرسال. جرّب لاحقًا.")
@@ -329,6 +388,7 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
     sig_total = 0
     sig_signed = 0
     sig_read = 0
+    recipient_read = 0
     if NotificationRecipient is not None:
         # اكتشف اسم FK للإشعار
         notif_fk = None
@@ -365,6 +425,8 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
                 name = getattr(t, "name", None) or getattr(t, "phone", None) or getattr(t, "username", None) or f"مستخدم #{getattr(t, 'pk', '')}"
                 role_label = effective_user_role_label(t, active_school=active_school)
                 is_read, read_at_str = _recipient_is_read(r)
+                if is_read:
+                    recipient_read += 1
 
                 signed = bool(getattr(r, "is_signed", False))
                 signed_at_str = None
@@ -439,6 +501,7 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
     ctx = {
         "n": n,
+        "now": timezone.now(),
         "body": body,
         "recipients": recipients,
         "created_day_name": created_day_name,
@@ -450,6 +513,14 @@ def notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
             "unread": int(max(sig_total - sig_read, 0)),
             "signed_percentage": int(round((sig_signed / sig_total) * 100)) if sig_total else 0,
             "read_percentage": int(round((sig_read / sig_total) * 100)) if sig_total else 0,
+        },
+        "recipient_stats": {
+            "total": len(recipients),
+            "read": int(recipient_read),
+            "unread": int(max(len(recipients) - recipient_read, 0)),
+            "read_percentage": (
+                int(round((recipient_read / len(recipients)) * 100)) if recipients else 0
+            ),
         },
         "can_add_recipients": can_add_recipients,
         "eligible_new_recipients": eligible_new_recipients,
@@ -573,7 +644,7 @@ def circular_recipients_add(request: HttpRequest, pk: int) -> HttpResponse:
 @login_required(login_url="reports:login")
 @require_http_methods(["POST"])
 def notification_sign(request: HttpRequest, pk: int) -> HttpResponse:
-    """Teacher signs a circular (NotificationRecipient.pk) using phone re-entry + acknowledgement."""
+    """Record a recipient's drawn signature against an immutable document."""
     if NotificationRecipient is None:
         messages.error(request, "نظام الإشعارات غير متاح حالياً.")
         return redirect(_safe_next_url(request.POST.get("next")) or "reports:my_notifications")
@@ -596,88 +667,205 @@ def notification_sign(request: HttpRequest, pk: int) -> HttpResponse:
     detail_url_name = _recipient_detail_url_name(n)
 
     if not bool(getattr(n, "requires_signature", False)):
-        messages.error(request, "هذا الإشعار لا يتطلب توقيعاً.")
+        messages.error(request, "هذه الوثيقة لا تتطلب إقرارًا.")
         return redirect("reports:my_notification_detail", pk=rec.pk)
 
     if bool(getattr(rec, "is_signed", False)):
-        messages.info(request, f"تم تسجيل توقيعك مسبقاً على {label}.")
+        messages.info(request, f"تم تسجيل إقرارك مسبقًا على {label}.")
+        return redirect(detail_url_name, pk=rec.pk)
+
+    if n.expires_at and timezone.now() > n.expires_at:
+        messages.error(request, f"انتهت صلاحية {label}، ولم يعد الإقرار متاحًا.")
         return redirect(detail_url_name, pk=rec.pk)
 
     # ✅ منع التوقيع بعد انتهاء آخر موعد للتوقيع (إن حُدّد)
     deadline = getattr(n, "signature_deadline_at", None)
     if deadline and timezone.now() > deadline:
-        messages.error(request, f"انتهى آخر موعد للتوقيع على {label}، ولم يعد بالإمكان اعتماد التوقيع.")
+        messages.error(request, f"انتهى آخر موعد للإقرار على {label}.")
         return redirect(detail_url_name, pk=rec.pk)
 
-    now = timezone.now()
-    max_attempts = 5
     window = timedelta(minutes=15)
 
-    try:
-        attempts = int(getattr(rec, "signature_attempt_count", 0) or 0)
-    except Exception:
-        attempts = 0
-    last_attempt = getattr(rec, "signature_last_attempt_at", None)
-
-    # Reset attempts after window
-    if last_attempt and (now - last_attempt) > window:
-        attempts = 0
-
-    if last_attempt and (now - last_attempt) <= window and attempts >= max_attempts:
-        minutes_left = int(max(1, (window - (now - last_attempt)).total_seconds() // 60))
-        messages.error(request, f"تم تجاوز عدد المحاولات. حاول مرة أخرى بعد {minutes_left} دقيقة.")
-        return redirect(detail_url_name, pk=rec.pk)
-
-    entered_phone = (request.POST.get("phone") or "").strip()
     ack = request.POST.get("ack") in {"1", "on", "true", "yes"}
 
-    # Register an attempt (best-effort).
-    # عدّاد المحاولات هو ما يحدّ من تخمين رقم الجوال في التوقيع — فتعثّر حفظه
-    # يُبطل الحدّ ويجب أن يُرى، لا أن يُبتلع.
-    with soft_fail("notifications.signature_attempt_counter", recipient_id=rec.pk):
-        rec.signature_attempt_count = attempts + 1
-        rec.signature_last_attempt_at = now
-        rec.save(update_fields=["signature_attempt_count", "signature_last_attempt_at"])
+    # Serialize attempts per recipient; a failed counter write stops the request.
+    try:
+        with transaction.atomic():
+            attempt_rec = NotificationRecipient.objects.select_for_update().get(
+                pk=rec.pk, teacher=request.user,
+            )
+            if attempt_rec.is_signed:
+                messages.info(request, f"تم تسجيل إقرارك مسبقًا على {label}.")
+                return redirect(detail_url_name, pk=rec.pk)
+            now = timezone.now()
+            last_attempt = attempt_rec.signature_last_attempt_at
+            attempts = attempt_rec.signature_attempt_count or 0
+            if last_attempt and now - last_attempt > window:
+                attempts = 0
+            # Keep an operational count, without the phone-guessing lockout:
+            # there is no phone secret to brute-force in the drawing flow.
+            attempt_rec.signature_attempt_count = min(attempts + 1, 65535)
+            attempt_rec.signature_last_attempt_at = now
+            attempt_rec.save(update_fields=["signature_attempt_count", "signature_last_attempt_at"])
+    except Exception:
+        logger.exception("notification signature attempt counter failed")
+        messages.error(request, "تعذّر التحقق من المحاولة حاليًا. جرّب لاحقًا.")
+        return redirect(detail_url_name, pk=rec.pk)
 
     if not ack:
-        messages.error(request, "يلزم الموافقة على الإقرار قبل اعتماد التوقيع.")
+        messages.error(request, "يلزم الموافقة على نص الإقرار قبل اعتماده.")
         return redirect(detail_url_name, pk=rec.pk)
 
-    if not entered_phone:
-        messages.error(request, "يرجى إدخال رقم الجوال المسجل للتوقيع.")
-        return redirect(detail_url_name, pk=rec.pk)
-
-    if _phone_key(entered_phone) != _phone_key(getattr(request.user, "phone", "")):
-        messages.error(request, "رقم الجوال غير مطابق للرقم المسجل. تأكد وحاول مرة أخرى.")
-        return redirect(detail_url_name, pk=rec.pk)
-
-    # Sign + mark read
     try:
-        update_fields: list[str] = []
-        if hasattr(rec, "is_signed"):
-            rec.is_signed = True
-            update_fields.append("is_signed")
-        if hasattr(rec, "signed_at"):
-            rec.signed_at = now
-            update_fields.append("signed_at")
-        if hasattr(rec, "is_read") and not bool(getattr(rec, "is_read", False)):
-            rec.is_read = True
-            update_fields.append("is_read")
-        if hasattr(rec, "read_at") and getattr(rec, "read_at", None) is None:
-            rec.read_at = now
-            update_fields.append("read_at")
-        if update_fields:
-            try:
-                rec.save(update_fields=update_fields)
-            except Exception:
-                rec.save()
-    except Exception:
-        logger.exception("notification_sign failed")
-        messages.error(request, "تعذّر تسجيل التوقيع. جرّب لاحقًا.")
+        signature_png = normalize_signature(request.POST.get("signature_data") or "")
+    except InvalidHandwrittenSignature as exc:
+        messages.error(request, str(exc))
         return redirect(detail_url_name, pk=rec.pk)
 
-    messages.success(request, f"تم تسجيل توقيعك على {label}.")
+    # Capture exactly which document and declaration were acknowledged. Legacy
+    # documents are captured at first sign; their issue-time contents cannot be
+    # reconstructed, so the receipt explicitly identifies that limitation.
+    saved_image_name = ""
+    saved_image_storage = None
+    try:
+        with transaction.atomic():
+            locked_notification = Notification.objects.select_for_update().get(pk=n.pk)
+            rec = NotificationRecipient.objects.select_for_update().get(pk=rec.pk, teacher=request.user)
+            if rec.is_signed:
+                messages.info(request, f"تم تسجيل إقرارك مسبقًا على {label}.")
+                return redirect(detail_url_name, pk=rec.pk)
+            if locked_notification.expires_at and timezone.now() > locked_notification.expires_at:
+                messages.error(request, f"انتهت صلاحية {label}، ولم يعد الإقرار متاحًا.")
+                return redirect(detail_url_name, pk=rec.pk)
+            if locked_notification.signature_deadline_at and timezone.now() > locked_notification.signature_deadline_at:
+                messages.error(request, f"انتهى آخر موعد للإقرار على {label}.")
+                return redirect(detail_url_name, pk=rec.pk)
+            if not locked_notification.issued_digest:
+                snapshot = document_snapshot(locked_notification, basis="at_first_sign")
+                locked_notification.issued_snapshot = snapshot
+                locked_notification.issued_digest = evidence_digest(snapshot)
+                Notification.objects.filter(pk=n.pk, issued_digest="").update(
+                    issued_snapshot=snapshot, issued_digest=locked_notification.issued_digest,
+                )
+            if not document_matches_snapshot(locked_notification):
+                messages.error(request, "تغيّر محتوى الوثيقة أو مرفقها؛ أبلغ الإدارة قبل اعتماد الإقرار.")
+                return redirect(detail_url_name, pk=rec.pk)
+            rec.signed_document_digest = locked_notification.issued_digest
+            rec.signed_ack_text = locked_notification.issued_snapshot.get("ack_text", "")
+            rec.signature_method = "drawn_ack"
+            rec.signature_image.save(f"{rec.pk}/{uuid4().hex}.png", ContentFile(signature_png), save=False)
+            saved_image_name = rec.signature_image.name
+            saved_image_storage = rec.signature_image.storage
+            rec.signature_image_sha256 = stored_signature_digest(rec.signature_image)
+            rec.signed_at = timezone.now()
+            rec.signature_evidence_digest = acknowledgement_digest(rec, rec.signed_at)
+            rec.is_signed = True
+            rec.is_read = True
+            if rec.read_at is None:
+                rec.read_at = rec.signed_at
+            rec.save(update_fields=[
+                "is_signed", "signed_at", "is_read", "read_at", "signed_document_digest",
+                "signed_ack_text", "signature_method", "signature_evidence_digest",
+                "signature_image", "signature_image_sha256",
+            ])
+    except Exception:
+        if saved_image_name and saved_image_storage:
+            try:
+                saved_image_storage.delete(saved_image_name)
+            except Exception:
+                logger.exception("failed to remove uncommitted signature image")
+        logger.exception("notification_sign failed")
+        messages.error(request, "تعذّر تسجيل الإقرار. جرّب لاحقًا.")
+        return redirect(detail_url_name, pk=rec.pk)
+
+    messages.success(request, f"تم تسجيل إقرارك على {label}.")
     return redirect(detail_url_name, pk=rec.pk)
+
+
+@login_required(login_url="reports:login")
+@never_cache
+@require_http_methods(["GET"])
+def circular_receipt(request: HttpRequest, pk: int) -> HttpResponse:
+    """Private, printable acknowledgement receipt for its recipient."""
+    rec = get_object_or_404(
+        NotificationRecipient.objects.select_related("notification", "teacher"),
+        pk=pk,
+        teacher=request.user,
+        is_signed=True,
+    )
+    notification = rec.notification
+    snapshot = notification.issued_snapshot or {}
+    evidence_available = bool(
+        rec.signature_evidence_digest and rec.signed_document_digest and snapshot
+    )
+    evidence_valid = False
+    if evidence_available and rec.signed_at:
+        try:
+            evidence_valid = (
+                document_matches_snapshot(notification)
+                and rec.signed_document_digest == notification.issued_digest
+                and acknowledgement_digest(rec, rec.signed_at) == rec.signature_evidence_digest
+                and (
+                    not rec.signature_image_sha256
+                    or (
+                        bool(rec.signature_image)
+                        and stored_signature_digest(rec.signature_image) == rec.signature_image_sha256
+                    )
+                )
+            )
+        except Exception:
+            logger.exception("circular receipt verification failed for recipient %s", rec.pk)
+    return render(request, "reports/circular_receipt.html", {
+        "r": rec,
+        "n": notification,
+        "snapshot": snapshot,
+        "evidence_available": evidence_available,
+        "evidence_valid": evidence_valid,
+        "communication_label": _communication_label(notification),
+    })
+
+
+@login_required(login_url="reports:login")
+@never_cache
+@require_GET
+def circular_signature_image(request: HttpRequest, pk: int) -> HttpResponse:
+    """Serve a private signature only to its recipient or report viewer."""
+    rec = get_object_or_404(
+        NotificationRecipient.objects.select_related("notification"),
+        pk=pk, is_signed=True,
+    )
+    if not rec.signature_image or not rec.signature_image_sha256:
+        raise Http404
+    if rec.teacher_id != request.user.pk:
+        notification = rec.notification
+        active_school = _get_active_school(request)
+        if not _is_staff_or_officer(request.user):
+            raise Http404
+        if not request.user.is_superuser and (
+            active_school is None or notification.school_id != active_school.pk
+        ):
+            raise Http404
+        if not (
+            _is_manager_in_school(request.user, active_school)
+            or notification.created_by_id == request.user.pk
+        ):
+            raise Http404
+    try:
+        with rec.signature_image.storage.open(rec.signature_image.name, "rb") as source:
+            image = source.read(256 * 1024 + 1)
+    except Exception:
+        logger.exception("could not read signature image for recipient %s", rec.pk)
+        raise Http404 from None
+    if len(image) > 256 * 1024 or not image:
+        raise Http404
+    from hashlib import sha256
+    if sha256(image).hexdigest() != rec.signature_image_sha256:
+        logger.error("signature image integrity check failed for recipient %s", rec.pk)
+        raise Http404
+    response = HttpResponse(image, content_type="image/png")
+    response["Content-Disposition"] = "inline"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required(login_url="reports:login")
@@ -741,6 +929,7 @@ def notification_signatures_print(request: HttpRequest, pk: int) -> HttpResponse
         if is_signed:
             signed += 1
         rows.append({
+            "recipient_id": r.pk,
             "name": getattr(t, "name", "") or str(t),
             "role": effective_user_role_label(t, active_school=active_school),
             "phone": _mask_phone(getattr(t, "phone", "")),
@@ -748,10 +937,21 @@ def notification_signatures_print(request: HttpRequest, pk: int) -> HttpResponse
             "read_at": getattr(r, "read_at", None),
             "signed": is_signed,
             "signed_at": getattr(r, "signed_at", None),
+            "evidence_ref": r.signature_evidence_digest[:12] if r.signature_evidence_digest else "",
+            "has_drawn_signature": bool(r.signature_image and r.signature_image_sha256),
         })
+
+    document_verified = False
+    if n.issued_digest:
+        try:
+            document_verified = document_matches_snapshot(n)
+        except Exception:
+            logger.exception("notification signature report document verification failed for %s", n.pk)
 
     ctx = {
         "n": n,
+        "issued_snapshot": n.issued_snapshot or {},
+        "document_verified": document_verified,
         "communication_label": _communication_label(n),
         "communication_kind": _communication_kind(n),
         "rows": rows,
@@ -803,6 +1003,11 @@ def notification_signatures_csv(request: HttpRequest, pk: int) -> HttpResponse:
         "وقت القراءة",
         "الحالة (موقّع)",
         "وقت التوقيع",
+        "بصمة نسخة الوثيقة SHA-256",
+        "بصمة سجل الإقرار SHA-256",
+        "بصمة التوقيع المرسوم SHA-256",
+        "طريقة الاعتماد",
+        "نص الإقرار المعتمد",
     ])
 
     qs = (
@@ -833,6 +1038,11 @@ def notification_signatures_csv(request: HttpRequest, pk: int) -> HttpResponse:
             getattr(getattr(r, "read_at", None), "strftime", lambda fmt: "")("%Y-%m-%d %H:%M") if getattr(r, "read_at", None) else "",
             "نعم" if bool(getattr(r, "is_signed", False)) else "لا",
             getattr(getattr(r, "signed_at", None), "strftime", lambda fmt: "")("%Y-%m-%d %H:%M") if getattr(r, "signed_at", None) else "",
+            r.signed_document_digest,
+            r.signature_evidence_digest,
+            r.signature_image_sha256,
+            r.signature_method,
+            r.signed_ack_text,
         ])
 
     resp = HttpResponse(out.getvalue(), content_type="text/csv; charset=utf-8")
@@ -905,7 +1115,8 @@ def unread_notifications_count(request: HttpRequest) -> HttpResponse:
         notification__kind="circular",
         notification__requires_signature=True,
         is_signed=False,
-    )
+    ) & (Q(notification__signature_deadline_at__gte=now)
+         | Q(notification__signature_deadline_at__isnull=True))
 
     # count = items needing attention (backward compatible): unread notifications OR pending circular signatures
     attention_q = unread_q | pending_sig_q
@@ -984,7 +1195,7 @@ def my_notifications(request: HttpRequest) -> HttpResponse:
 @login_required(login_url="reports:login")
 @require_http_methods(["GET"])
 def my_circulars(request: HttpRequest) -> HttpResponse:
-    """قائمة التعاميم للمستخدم (التي تتطلب توقيعاً)."""
+    """قائمة التعاميم للمستخدم، سواء تطلبت إقرارًا أم كانت للاطلاع."""
     if NotificationRecipient is None:
         return render(request, "reports/my_circulars.html", {"page_obj": Paginator([], 12).get_page(1)})
 
@@ -1012,9 +1223,25 @@ def my_circulars(request: HttpRequest) -> HttpResponse:
     else:
         qs = qs.filter(notification__school__isnull=True)
 
-    # إخفاء المنتهية
+    # إخفاء الوثائق المنتهية، مع إبقاء ما انتهت مهلة إقراره ظاهرًا للمتابعة.
     now = timezone.now()
     qs = qs.exclude(notification__expires_at__lt=now)
+
+    status_filter = request.GET.get("status", "all")
+    if status_filter not in {"all", "pending", "closed", "signed", "reading"}:
+        status_filter = "all"
+    if status_filter == "pending":
+        qs = qs.filter(notification__requires_signature=True, is_signed=False).filter(
+            Q(notification__signature_deadline_at__gte=now)
+            | Q(notification__signature_deadline_at__isnull=True)
+        )
+    elif status_filter == "closed":
+        qs = qs.filter(notification__requires_signature=True, is_signed=False,
+                       notification__signature_deadline_at__lt=now)
+    elif status_filter == "signed":
+        qs = qs.filter(is_signed=True)
+    elif status_filter == "reading":
+        qs = qs.filter(notification__requires_signature=False)
 
     try:
         page = Paginator(qs, 12).get_page(request.GET.get("page") or 1)
@@ -1035,7 +1262,9 @@ def my_circulars(request: HttpRequest) -> HttpResponse:
     # لا نعدّ عرض المقتطف في القائمة قراءةً للتعميم الرسمي. تُسجّل القراءة
     # فقط عند فتح الوثيقة أو عبر إجراء صريح من المستخدم.
 
-    return render(request, "reports/my_circulars.html", {"page_obj": page})
+    return render(request, "reports/my_circulars.html", {
+        "page_obj": page, "status_filter": status_filter, "now": now,
+    })
 
 
 @login_required(login_url="reports:login")
@@ -1117,7 +1346,11 @@ def my_notification_detail(request: HttpRequest, pk: int) -> HttpResponse:
     signing_closed = False
     try:
         _deadline = getattr(n, "signature_deadline_at", None)
-        signing_closed = bool(_deadline and timezone.now() > _deadline)
+        _expires = getattr(n, "expires_at", None)
+        signing_closed = bool(
+            (_deadline and timezone.now() > _deadline)
+            or (_expires and timezone.now() > _expires)
+        )
     except Exception:
         signing_closed = False
 

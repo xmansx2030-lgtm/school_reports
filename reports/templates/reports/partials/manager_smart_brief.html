@@ -1,0 +1,96 @@
+<section class="manager-smart-brief twq-section"
+         id="managerBrief"
+         data-period="{{ manager_brief.period }}"
+         data-generated-at="{{ manager_brief.generated_at }}"
+         data-endpoint="{% url 'reports:manager_smart_brief' %}"
+         data-status="{{ manager_brief.status }}"
+         aria-labelledby="managerBriefTitle">
+  <div class="manager-smart-brief__header">
+    <div class="manager-smart-brief__identity">
+      <span class="manager-smart-brief__mark" aria-hidden="true">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+      </span>
+      <div>
+        <span class="manager-smart-brief__eyebrow">قراءة تنفيذية</span>
+        <h2 id="managerBriefTitle">موجز المدير الذكي</h2>
+        <p>يحوّل مؤشرات الفترة إلى أولويات واضحة، بينما تبقى الأرقام والإجراءات من النظام نفسه.</p>
+      </div>
+    </div>
+    <div class="manager-smart-brief__controls">
+      <span class="manager-smart-brief__period">
+        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+        <span data-brief-period>{{ manager_brief.period_label }}</span>
+      </span>
+      <button class="twq-btn twq-btn--secondary manager-smart-brief__refresh"
+              type="button"
+              data-brief-refresh>
+        <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
+        <span>{% if manager_brief_ai_enabled %}صياغة موجز جديد{% else %}تحديث الموجز{% endif %}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="manager-smart-brief__body">
+    <article class="manager-smart-brief__narrative" aria-labelledby="managerBriefHeadline">
+      <span class="manager-smart-brief__source" data-brief-source>
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        {{ manager_brief.source_label }}
+      </span>
+      <h3 id="managerBriefHeadline" data-brief-headline>{{ manager_brief.headline }}</h3>
+      <p data-brief-summary>{{ manager_brief.summary }}</p>
+      <div class="manager-smart-brief__meta">
+        <span><i class="fa-regular fa-clock" aria-hidden="true"></i> بيانات حتى <bdi data-brief-generated>{{ manager_brief.generated_at|default:"الآن" }}</bdi></span>
+        <span><i class="fa-solid fa-user-shield" aria-hidden="true"></i> لا تُرسل أسماء أو محتوى تقارير</span>
+      </div>
+    </article>
+
+    <div class="manager-smart-brief__signals" aria-label="المؤشرات التي بُني عليها الموجز" data-brief-signals>
+      {% for signal in manager_brief.signals %}
+        <a class="manager-smart-signal" href="{{ signal.url }}" data-tone="{{ signal.tone }}">
+          <span class="manager-smart-signal__icon" aria-hidden="true">
+            {% if signal.key == "coverage" %}
+              <i class="fa-solid fa-user-check"></i>
+            {% elif signal.key == "reports" %}
+              <i class="fa-solid fa-file-lines"></i>
+            {% else %}
+              <i class="fa-solid fa-inbox"></i>
+            {% endif %}
+          </span>
+          <span class="manager-smart-signal__content">
+            <small>{{ signal.label }}</small>
+            <strong>{{ signal.value }}</strong>
+            <span>{{ signal.context }}</span>
+          </span>
+          <i class="fa-solid fa-arrow-left manager-smart-signal__arrow" aria-hidden="true"></i>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="manager-smart-brief__priorities">
+    <div class="manager-smart-brief__priorities-head">
+      <div>
+        <span>الخطوات المقترحة</span>
+        <strong>ابدأ بالأولوية الأولى ثم راقب أثرها</strong>
+      </div>
+      <span class="manager-smart-brief__count"><span data-brief-priority-count>{{ manager_brief.priorities|length }}</span> أولويات</span>
+    </div>
+    <ol class="manager-smart-priority-list" data-brief-priorities>
+      {% for item in manager_brief.priorities %}
+        <li class="manager-smart-priority" data-tone="{{ item.tone }}">
+          <span class="manager-smart-priority__rank" aria-label="الأولوية {{ item.rank }}">{{ item.rank }}</span>
+          <span class="manager-smart-priority__content">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.description }}</span>
+          </span>
+          <a class="manager-smart-priority__action" href="{{ item.url }}">
+            {{ item.action_label }}
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <p class="manager-smart-brief__status" data-brief-status role="status" aria-live="polite"></p>
+</section>

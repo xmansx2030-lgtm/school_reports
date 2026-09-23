@@ -1,170 +1,90 @@
 {% extends "base.html" %}
-{% load hijri_tags %}
-{% load arabic_tags %}
+{% load static hijri_tags arabic_tags %}
 
 {% block title %}تكليفاتي | منصة توثيق{% endblock %}
 
-{% block head %}{% include "reports/_assignment_theme.html" %}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{% static 'css/assignments.css' %}?v=20260922.1">
+{% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <span class="asg-hero__eyebrow">
-      <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-      ما المطلوب مني
-    </span>
-    <h1 class="asg-hero__title">تكليفاتي</h1>
-    <p class="asg-hero__meta">
-      كل ما أُسند إليك في {{ active_school.name }} — مرتّباً بالأقرب موعداً.
-    </p>
+<div class="twq-page assignments-page assignments-recipient-page" aria-labelledby="myAssignmentsTitle">
+  <header class="twq-page-header assignment-page-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-list-check" aria-hidden="true"></i> مساحة عملي اليومية</p>
+      <h1 class="twq-page-header__title" id="myAssignmentsTitle">تكليفاتي</h1>
+      <p class="twq-page-header__lead">راجع ما أُسند إليك، وابدأ بالأقرب موعدًا أو المتأخر، ثم حدّث التنفيذ وارفع الشواهد من مساحة التكليف.</p>
+      <dl class="twq-page-header__context" aria-label="سياق التكليفات">
+        <div><dt>المدرسة</dt><dd><bdi>{{ active_school.name }}</bdi></dd></div>
+        <div><dt>إجمالي السجل</dt><dd><bdi>{{ total_count }}</bdi> تكليف</dd></div>
+      </dl>
+    </div>
+    <aside class="twq-page-header__aside assignment-page-header__aside">
+      <div class="assignment-context-card">
+        <i class="fa-solid fa-compass" aria-hidden="true"></i>
+        <strong>ابدأ بما يحتاج إجراءك</strong>
+        <span>المتأخر أولًا، ثم القريب موعده، وبعدها بقية الأعمال المفتوحة.</span>
+      </div>
+    </aside>
   </header>
 
-  <section class="asg-kpis" aria-label="ملخص تكليفاتي">
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ open_targets|length }}</div>
-      <div class="asg-kpi__l">قيد العمل</div>
-    </article>
-    <article class="asg-kpi" data-tone="danger">
-      <div class="asg-kpi__v">{{ overdue_count }}</div>
-      <div class="asg-kpi__l">متأخر</div>
-    </article>
-    <article class="asg-kpi" data-tone="warn">
-      <div class="asg-kpi__v">{{ due_soon_count }}</div>
-      <div class="asg-kpi__l">يستحق خلال 3 أيام</div>
-    </article>
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ done_targets|length }}</div>
-      <div class="asg-kpi__l">معتمد</div>
-    </article>
-    {% if cancelled_targets %}
-      <article class="asg-kpi">
-        <div class="asg-kpi__v">{{ cancelled_targets|length }}</div>
-        <div class="asg-kpi__l">ملغى ومحفوظ بالسجل</div>
-      </article>
-    {% endif %}
-  </section>
+  <dl class="twq-metrics assignment-metrics assignment-metrics--recipient" aria-label="ملخص تكليفاتي">
+    <div><dt>قيد العمل</dt><dd>{{ open_targets|length }}</dd></div>
+    <div data-tone="danger"><dt>متأخر</dt><dd>{{ overdue_count }}</dd></div>
+    <div data-tone="warning"><dt>يستحق خلال 3 أيام</dt><dd>{{ due_soon_count }}</dd></div>
+    <div><dt>معتمد</dt><dd>{{ done_targets|length }}</dd></div>
+    <div><dt>ملغى</dt><dd>{{ cancelled_targets|length }}</dd></div>
+  </dl>
 
   {% if open_targets %}
-    <section class="asg-card">
-      <h2 class="asg-card__title">قيد العمل</h2>
-      <p class="asg-card__hint">
-        حدِّث نسبتك وارفع شواهدك من صفحة التكليف، ثم أرسله للمراجعة. الاعتماد
-        بيد من كلّفك.
-      </p>
-
-      {% for t in open_targets %}
-        <article class="asg-item"
-                 data-late="{% if t.is_overdue %}1{% endif %}"
-                 data-soon="{% if not t.is_overdue and t.days_remaining <= 3 %}1{% endif %}">
-          <div class="asg-item__main">
-            <div class="asg-item__title">
-              <a href="{% url 'reports:assignment_detail' t.pk %}">{{ t.assignment.title }}</a>
+    <section class="twq-section assignment-section" aria-labelledby="openAssignmentsTitle">
+      <header class="twq-section__header">
+        <div><p class="twq-section__kicker">يحتاج إجراءك</p><h2 class="twq-section__title" id="openAssignmentsTitle">التكليفات المفتوحة</h2><p class="twq-section__description">حدّث نسبة الإنجاز وارفع الشواهد المطلوبة، ثم أرسل التنفيذ للمراجعة عندما يصبح جاهزًا.</p></div>
+        <span class="twq-section__meta">{{ open_targets|length }} مفتوح</span>
+      </header>
+      <ul class="assignment-list" aria-label="التكليفات المفتوحة">
+        {% for t in open_targets %}
+          <li class="assignment-row" data-overdue="{% if t.is_overdue %}true{% else %}false{% endif %}" data-due-soon="{% if not t.is_overdue and t.days_remaining <= 3 %}true{% else %}false{% endif %}">
+            <div class="assignment-row__identity">
+              <span class="assignment-row__eyebrow">من <bdi>{{ t.assignment.issuer_name|default:"—" }}</bdi>{% if t.assignment.department %} · <bdi>{{ t.assignment.department.name }}</bdi>{% endif %}</span>
+              <a class="assignment-row__title" href="{% url 'reports:assignment_detail' t.pk %}"><bdi>{{ t.assignment.title }}</bdi></a>
+              <p class="assignment-row__meta">يستحق {{ t.assignment.due_at|hijri }} هـ <time dir="ltr" datetime="{{ t.assignment.due_at|date:'c' }}">{{ t.assignment.due_at|date:"Y-m-d H:i" }} م</time></p>
+              <div class="assignment-row__status">
+                {% if t.assignment.priority == 'high' %}<span class="twq-status" data-status="danger"><i class="fa-solid fa-bolt" aria-hidden="true"></i> عاجل</span>{% endif %}
+                {% if t.is_overdue %}<span class="twq-status" data-status="danger"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> متأخر</span>{% elif t.days_remaining <= 3 %}<span class="twq-status" data-status="attention"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> {% if t.days_remaining == 0 %}اليوم{% else %}{{ t.days_remaining|arabic_count:"يوم,يومان,أيام,يوماً" }}{% endif %}</span>{% endif %}
+                <span class="twq-status" data-status="{{ t.approval_tone }}">{{ t.get_approval_state_display }}</span>
+              </div>
             </div>
-            <div class="asg-item__sub">
-              من {{ t.assignment.issuer_name|default:"—" }}
-              · يستحق {{ t.assignment.due_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ t.assignment.due_at|date:'c' }}">{{ t.assignment.due_at|date:"Y-m-d H:i" }} م</time>
-              {% if t.assignment.department %} · {{ t.assignment.department.name }}{% endif %}
-            </div>
-          </div>
-
-          <div class="asg-bar">
-            <div class="asg-bar__track">
-              <div class="asg-bar__fill" data-progress="{{ t.progress_percent }}"></div>
-            </div>
-            <div class="asg-bar__label">{{ t.progress_percent }}%</div>
-          </div>
-
-          <div class="asg-item__side">
-            {% if t.assignment.priority == 'high' %}
-              <span class="asg-tag asg-tag--urgent">
-                <i class="fa-solid fa-bolt" aria-hidden="true"></i> عاجل
-              </span>
-            {% endif %}
-            {% if t.is_overdue %}
-              <span class="asg-tag asg-tag--late">
-                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> متأخر
-              </span>
-            {% elif t.days_remaining <= 3 %}
-              <span class="asg-tag asg-tag--soon">
-                <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
-                {# «3 يوم» ← «3 أيام»؛ والصفر يُقال «اليوم» لا «لا أيام». #}
-                {% if t.days_remaining == 0 %}اليوم{% else %}{{ t.days_remaining|arabic_count:"يوم,يومان,أيام,يوماً" }}{% endif %}
-              </span>
-            {% endif %}
-            <span class="asg-tag">{{ t.get_approval_state_display }}</span>
-            <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{% url 'reports:assignment_detail' t.pk %}">فتح</a>
-          </div>
-        </article>
-      {% endfor %}
+            <div class="assignment-progress twq-progress"><div class="twq-progress__label"><span>نسبة الإنجاز</span><strong>{{ t.progress_percent }}%</strong></div><progress class="twq-progress__bar" value="{{ t.progress_percent }}" max="100" aria-label="نسبة إنجاز {{ t.assignment.title }}: {{ t.progress_percent }} بالمئة">{{ t.progress_percent }}%</progress></div>
+            <div class="assignment-row__actions"><a class="twq-btn twq-btn--primary" href="{% url 'reports:assignment_detail' t.pk %}" aria-label="فتح مساحة التكليف: {{ t.assignment.title }}"><span>متابعة العمل</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></div>
+          </li>
+        {% endfor %}
+      </ul>
     </section>
   {% else %}
-    <div class="asg-empty u-mt-2xl">
-      <div class="asg-empty__icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></div>
-      <h2>لا تكليفات مفتوحة</h2>
-      <p>ليس عليك شيء الآن. ستظهر هنا التكليفات فور إسنادها إليك، ومعها موعد كل واحد.</p>
-    </div>
+    <section class="twq-empty twq-empty--page assignment-empty" aria-labelledby="assignmentOpenEmptyTitle"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span><h2 class="twq-empty__title" id="assignmentOpenEmptyTitle">لا تكليفات مفتوحة</h2><p class="twq-empty__message">لا يوجد عمل يحتاج إجراءك الآن. ستظهر التكليفات الجديدة هنا فور إسنادها إليك.</p></section>
   {% endif %}
 
   {% if done_targets %}
-    <section class="asg-card">
-      <h2 class="asg-card__title">المعتمَد</h2>
-      <p class="asg-card__hint">ما اعتُمد تنفيذه. يبقى في سجلّك ولا يُعدَّل.</p>
-      {% for t in done_targets %}
-        <article class="asg-item">
-          <div class="asg-item__main">
-            <div class="asg-item__title">
-              <a href="{% url 'reports:assignment_detail' t.pk %}">{{ t.assignment.title }}</a>
-            </div>
-            <div class="asg-item__sub">
-              اعتُمد {{ t.decided_at|hijri }} هـ
-              <time dir="ltr" datetime="{{ t.decided_at|date:'c' }}">{{ t.decided_at|date:"Y-m-d" }} م</time>
-              {% if t.decided_by %} · بواسطة {{ t.decided_by.name }}{% endif %}
-            </div>
-          </div>
-          <div class="asg-item__side">
-            <span class="asg-tag asg-tag--done">
-              <i class="fa-solid fa-check" aria-hidden="true"></i> معتمد
-            </span>
-          </div>
-        </article>
-      {% endfor %}
+    <section class="twq-section assignment-section" aria-labelledby="completedAssignmentsTitle">
+      <header class="twq-section__header"><div><p class="twq-section__kicker">سجل الإنجاز</p><h2 class="twq-section__title" id="completedAssignmentsTitle">التنفيذ المعتمد</h2><p class="twq-section__description">أعمال اكتملت دورة مراجعتها، وتبقى متاحة للرجوع دون تعديل.</p></div></header>
+      <ul class="assignment-list" aria-label="التكليفات المعتمدة">
+        {% for t in done_targets %}
+          <li class="assignment-row"><div class="assignment-row__identity"><span class="assignment-row__eyebrow">تكليف معتمد</span><a class="assignment-row__title" href="{% url 'reports:assignment_detail' t.pk %}"><bdi>{{ t.assignment.title }}</bdi></a><p class="assignment-row__meta">اعتُمد {{ t.decided_at|hijri }} هـ <time dir="ltr" datetime="{{ t.decided_at|date:'c' }}">{{ t.decided_at|date:"Y-m-d" }} م</time>{% if t.decided_by %} · بواسطة <bdi>{{ t.decided_by.name }}</bdi>{% endif %}</p></div><div class="assignment-row__status"><span class="twq-status" data-status="approved"><i class="fa-solid fa-check" aria-hidden="true"></i> معتمد</span></div><div class="assignment-row__actions"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:assignment_detail' t.pk %}" aria-label="عرض سجل التكليف: {{ t.assignment.title }}">عرض السجل</a></div></li>
+        {% endfor %}
+      </ul>
     </section>
   {% endif %}
 
   {% if cancelled_targets %}
-    <section class="asg-card">
-      <h2 class="asg-card__title">الملغاة</h2>
-      <p class="asg-card__hint">
-        تكليفات أوقفتها الجهة المكلِّفة. تبقى هنا للسجل فقط ولا تتطلب منك
-        رفع شواهد أو إرسالاً للمراجعة.
-      </p>
-      {% for t in cancelled_targets %}
-        <article class="asg-item">
-          <div class="asg-item__main">
-            <div class="asg-item__title">
-              <a href="{% url 'reports:assignment_detail' t.pk %}">{{ t.assignment.title }}</a>
-            </div>
-            <div class="asg-item__sub">
-              من {{ t.assignment.issuer_name|default:"—" }}
-              {% if t.assignment.cancelled_at %}
-                · أُلغي {{ t.assignment.cancelled_at|hijri }} هـ
-                <time dir="ltr" datetime="{{ t.assignment.cancelled_at|date:'c' }}">{{ t.assignment.cancelled_at|date:"Y-m-d" }} م</time>
-              {% endif %}
-              {% if t.assignment.cancel_reason %} · {{ t.assignment.cancel_reason|truncatechars:90 }}{% endif %}
-            </div>
-          </div>
-          <div class="asg-item__side">
-            <span class="asg-tag asg-tag--late">
-              <i class="fa-solid fa-ban" aria-hidden="true"></i> ملغى
-            </span>
-            <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{% url 'reports:assignment_detail' t.pk %}">عرض السجل</a>
-          </div>
-        </article>
-      {% endfor %}
+    <section class="twq-section assignment-section" aria-labelledby="cancelledAssignmentsTitle">
+      <header class="twq-section__header"><div><p class="twq-section__kicker">للتوثيق فقط</p><h2 class="twq-section__title" id="cancelledAssignmentsTitle">الملغاة</h2><p class="twq-section__description">أوقفتها الجهة المكلِّفة، ولا تتطلب رفع شواهد أو إرسالًا للمراجعة.</p></div></header>
+      <ul class="assignment-list" aria-label="التكليفات الملغاة">
+        {% for t in cancelled_targets %}
+          <li class="assignment-row"><div class="assignment-row__identity"><span class="assignment-row__eyebrow">من <bdi>{{ t.assignment.issuer_name|default:"—" }}</bdi></span><a class="assignment-row__title" href="{% url 'reports:assignment_detail' t.pk %}"><bdi>{{ t.assignment.title }}</bdi></a><p class="assignment-row__meta">{% if t.assignment.cancelled_at %}أُلغي {{ t.assignment.cancelled_at|hijri }} هـ <time dir="ltr" datetime="{{ t.assignment.cancelled_at|date:'c' }}">{{ t.assignment.cancelled_at|date:"Y-m-d" }} م</time>{% endif %}{% if t.assignment.cancel_reason %} · {{ t.assignment.cancel_reason|truncatechars:90 }}{% endif %}</p></div><div class="assignment-row__status"><span class="twq-status" data-status="danger"><i class="fa-solid fa-ban" aria-hidden="true"></i> ملغى</span></div><div class="assignment-row__actions"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:assignment_detail' t.pk %}" aria-label="عرض سجل التكليف الملغى: {{ t.assignment.title }}">عرض السجل</a></div></li>
+        {% endfor %}
+      </ul>
     </section>
   {% endif %}
-
 </div>
 {% endblock %}

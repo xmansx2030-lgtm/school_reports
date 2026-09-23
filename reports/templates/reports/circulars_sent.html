@@ -1,685 +1,86 @@
-{# reports/templates/reports/circulars_sent.html #}
 {% extends "base.html" %}
 {% load static %}
 
 {% block title %}التعاميم المرسلة{% endblock %}
-
-{% block head %}
-<style nonce="{{ CSP_NONCE }}">
-	/* =========================================================
-		 التعاميم المرسلة - تصميم 2026
-		 تصميم عصري وفخم مع تأثيرات متقدمة
-		 ========================================================= */
-
-	:root {
-		--primary-gradient: linear-gradient(135deg, #006c35 0%, #b9975b 100%);
-		--accent-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-		--success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-		--dark-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
-	}
-
-	.ns-scope {
-		--primary: #006c35;
-		--secondary: #b9975b;
-		--accent: #f5576c;
-		--success: #00f2fe;
-
-		/* مشتقّة من جذر الهوية. إعلانها هنا بقيمٍ ثابتة كان يحجب القيم
-		   الليلية العامة: الرمز المُعاد تعريفه داخل النطاق يغلب تعريف
-		   `html[data-theme="dark"]` لكل ما تحت `.ns-scope`. */
-		--bg-main: var(--id-canvas);
-		--card-bg: var(--id-surface);
-		--text-primary: var(--id-ink);
-		--text-secondary: var(--id-ink-soft);
-		--text-light: var(--id-muted);
-		--border-color: var(--id-line);
-		--hover-bg: var(--id-surface-2);
-
-		--radius-xl: 24px;
-		--radius-lg: 16px;
-		--radius-md: 12px;
-		--shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-		--shadow-md: 0 10px 40px rgba(0, 0, 0, 0.08);
-		--shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
-		--shadow-colored: 0 10px 30px rgba(102, 126, 234, 0.25);
-		--transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		
-		background: var(--bg-main);
-		min-height: 100vh;
-		padding: 2rem 0;
-	}
-
-	.ns-scope .wrap {
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 0 24px;
-	}
-
-	/* ===== Header ===== */
-	.ns-scope .page-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 24px;
-		margin-bottom: 48px;
-		flex-wrap: wrap;
-		background: var(--card-bg);
-		padding: 32px;
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-md);
-		position: relative;
-		overflow: hidden;
-	}
-
-	.ns-scope .page-header::before {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 5px;
-		background: var(--primary-gradient);
-	}
-
-	.ns-scope .page-header h1 {
-		margin: 0;
-		font-size: 2.5rem;
-		font-weight: 800;
-		background: var(--primary-gradient);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		gap: 16px;
-	}
-
-	.ns-scope .page-header h1::before {
-		content: "📋";
-		font-size: 2rem;
-	}
-
-	/* ===== Button الإنشاء ===== */
-	.ns-scope .create-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 12px;
-		padding: 16px 32px;
-		border-radius: var(--radius-lg);
-		background: var(--primary-gradient);
-		color: #fff;
-		text-decoration: none;
-		font-weight: 700;
-		font-size: 1.05rem;
-		border: none;
-		box-shadow: var(--shadow-colored);
-		transition: var(--transition);
-		position: relative;
-		overflow: hidden;
-	}
-
-	.ns-scope .create-btn::before {
-		content: "";
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: 0;
-		height: 0;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.2);
-		transform: translate(-50%, -50%);
-		transition: width 0.6s, height 0.6s;
-	}
-
-	.ns-scope .create-btn:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 15px 40px rgba(102, 126, 234, 0.35);
-	}
-
-	.ns-scope .create-btn:hover::before {
-		width: 300px;
-		height: 300px;
-	}
-
-	.ns-scope .create-btn i {
-		font-size: 1.2rem;
-	}
-
-	/* ===== Cards Grid ===== */
-	.ns-scope .cards-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-		gap: 28px;
-	}
-
-	@media (max-width: 768px) {
-		.ns-scope .cards-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	/* ===== Notification Card ===== */
-	.ns-scope .notif-card {
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-radius: var(--radius-xl);
-		overflow: hidden;
-		box-shadow: var(--shadow-sm);
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		transition: var(--transition);
-		backdrop-filter: blur(10px);
-	}
-
-	.ns-scope .notif-card::before {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 4px;
-		background: var(--primary-gradient);
-		transform: scaleX(0);
-		transform-origin: right;
-		transition: transform 0.4s ease;
-	}
-
-	.ns-scope .notif-card:hover {
-		transform: translateY(-8px) scale(1.02);
-		box-shadow: var(--shadow-lg);
-		border-color: var(--primary);
-	}
-
-	.ns-scope .notif-card:hover::before {
-		transform: scaleX(1);
-	}
-
-	/* ===== Card Header ===== */
-	.ns-scope .notif-head {
-		padding: 24px;
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 16px;
-		background: linear-gradient(to bottom, rgba(102, 126, 234, 0.03), transparent);
-	}
-
-	.ns-scope .notif-title {
-		margin: 0 0 12px 0;
-		font-size: 1.25rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		line-height: 1.5;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
-	/* ===== Badges ===== */
-	.ns-scope .badges-container {
-		display: flex;
-		gap: 8px;
-		flex-wrap: wrap;
-		margin-top: 12px;
-	}
-
-	.ns-scope .pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		padding: 8px 14px;
-		border-radius: 999px;
-		font-weight: 600;
-		font-size: 0.85rem;
-		transition: var(--transition);
-	}
-
-	.ns-scope .pill.important {
-		background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-		color: #fff;
-		box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-	}
-
-	.ns-scope .pill.blue {
-		background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-		color: #fff;
-		box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
-	}
-
-	.ns-scope .pill:hover {
-		transform: scale(1.05);
-	}
-
-	/* ===== Time ===== */
-	.ns-scope .notif-time {
-		font-size: 0.9rem;
-		color: var(--text-light);
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		white-space: nowrap;
-		font-weight: 600;
-		background: var(--hover-bg);
-		padding: 8px 12px;
-		border-radius: var(--radius-md);
-	}
-
-	/* ===== Body ===== */
-	.ns-scope .notif-body {
-		padding: 0 24px 20px 24px;
-		color: var(--text-secondary);
-		line-height: 1.8;
-		font-weight: 500;
-		font-size: 1rem;
-		flex: 1;
-		display: -webkit-box;
-		-webkit-line-clamp: 4;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
-	/* ===== Meta ===== */
-	.ns-scope .meta {
-		padding: 0 24px 20px 24px;
-		color: var(--text-light);
-		display: flex;
-		gap: 16px;
-		flex-wrap: wrap;
-		font-size: 0.9rem;
-		font-weight: 600;
-	}
-
-	.ns-scope .meta span {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		background: var(--hover-bg);
-		padding: 6px 12px;
-		border-radius: var(--radius-md);
-	}
-
-	.ns-scope .meta i {
-		color: var(--primary);
-	}
-
-	/* ===== Progress ===== */
-	.ns-scope .progress-container {
-		padding: 0 24px 24px 24px;
-	}
-
-	.ns-scope .progress-info {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-
-	.ns-scope .progress-label {
-		font-weight: 700;
-		color: var(--text-primary);
-		font-size: 1rem;
-	}
-
-	.ns-scope .rate {
-		font-weight: 800;
-		font-size: 1.25rem;
-		background: var(--primary-gradient);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
-
-	.ns-scope .progress {
-		height: 12px;
-		border-radius: 999px;
-		background: var(--hover-bg);
-		overflow: hidden;
-		position: relative;
-	}
-
-	.ns-scope .progress .bar {
-		height: 100%;
-		width: 0;
-		background: var(--primary-gradient);
-		border-radius: 999px;
-		transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-		position: relative;
-		overflow: hidden;
-	}
-
-	.ns-scope .progress .bar::after {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-		animation: shimmer 2s infinite;
-	}
-
-	@keyframes shimmer {
-		0% { transform: translateX(-100%); }
-		100% { transform: translateX(100%); }
-	}
-
-	/* ===== Actions ===== */
-	.ns-scope .actions {
-		padding: 20px 24px;
-		border-top: 2px solid var(--border-color);
-		display: flex;
-		gap: 12px;
-		flex-wrap: wrap;
-		align-items: center;
-		background: linear-gradient(to top, rgba(102, 126, 234, 0.02), transparent);
-	}
-
-	.ns-scope .ns-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 20px;
-		border-radius: var(--radius-md);
-		border: 2px solid var(--border-color);
-		background: var(--card-bg);
-		color: var(--text-primary);
-		text-decoration: none;
-		font-weight: 600;
-		cursor: pointer;
-		transition: var(--transition);
-		font-size: 0.95rem;
-	}
-
-	.ns-scope .ns-btn:hover {
-		transform: translateY(-2px);
-		box-shadow: var(--shadow-md);
-	}
-
-	.ns-scope .ns-btn.primary {
-		background: var(--success-gradient);
-		color: #fff;
-		border-color: transparent;
-		box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
-	}
-
-	.ns-scope .ns-btn.primary:hover {
-		box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
-	}
-
-	.ns-scope .ns-btn.danger {
-		border-color: #ff6b6b;
-		color: #ff6b6b;
-		background: rgba(255, 107, 107, 0.05);
-	}
-
-	.ns-scope .ns-btn.danger:hover {
-		background: #ff6b6b;
-		color: #fff;
-		box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-	}
-
-	/* ===== Empty State ===== */
-	.ns-scope .empty-state {
-		text-align: center;
-		padding: 80px 40px;
-		color: var(--text-light);
-		border: 2px dashed var(--border-color);
-		border-radius: var(--radius-xl);
-		background: var(--card-bg);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.ns-scope .empty-state i {
-		font-size: 4rem;
-		margin-bottom: 24px;
-		opacity: 0.4;
-		background: var(--primary-gradient);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
-
-	.ns-scope .empty-state h3 {
-		margin: 0 0 12px 0;
-		color: var(--text-primary);
-		font-weight: 700;
-		font-size: 1.5rem;
-	}
-
-	.ns-scope .empty-state p {
-		font-size: 1.1rem;
-		color: var(--text-secondary);
-	}
-
-	/* ===== Pagination ===== */
-	.ns-scope .pager {
-		display: flex;
-		gap: 12px;
-		justify-content: center;
-		margin-top: 48px;
-		flex-wrap: wrap;
-	}
-
-	.ns-scope .pager .ns-btn {
-		padding: 12px 24px;
-	}
-
-	.ns-scope .pager .current {
-		background: var(--primary-gradient);
-		color: #fff;
-		border-color: transparent;
-		box-shadow: var(--shadow-colored);
-		font-weight: 700;
-	}
-
-	/* ===== Responsive ===== */
-	@media (max-width: 768px) {
-		.ns-scope .page-header {
-			padding: 24px;
-		}
-
-		.ns-scope .page-header h1 {
-			font-size: 1.75rem;
-		}
-
-		.ns-scope .create-btn {
-			width: 100%;
-			justify-content: center;
-		}
-
-		.ns-scope .notif-card {
-			margin: 0;
-		}
-	}
-
-  /* 👑 ROYAL OVERLAY — التعاميم المرسلة */
-  .ns-scope .page-header{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 150% at 92% -20%, rgba(212,177,109,.22), transparent 48%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border:1px solid rgba(212,177,109,.42) !important;
-    border-radius:22px !important; box-shadow:0 24px 56px -26px rgba(5,46,26,.7) !important;
-    padding:24px 22px !important; color:#fff !important;
-  }
-  .ns-scope .page-header::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .ns-scope .page-header h1{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .ns-scope .create-btn{
-    background:rgba(212,177,109,.18) !important; color:#fdf6e6 !important; border:1px solid rgba(212,177,109,.5) !important;
-  }
-  .ns-scope .create-btn:hover{ background:#d4b16d !important; color:#063d22 !important; }
-  .ns-scope .notif-card{
-    border:1px solid rgba(185,151,91,.20) !important;
-    box-shadow:0 14px 34px -24px rgba(10,92,51,.4) !important;
-    transition:transform .16s, box-shadow .16s;
-  }
-  .ns-scope .notif-card:hover{ transform:translateY(-3px); box-shadow:0 20px 38px -22px rgba(10,92,51,.5) !important; }
-</style>
-{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/sent-circulars.css' %}">{% endblock %}
 
 {% block content %}
-<div class="ns-scope" dir="rtl">
-	<div class="wrap">
-		<div class="page-header">
-			<h1>التعاميم المرسلة</h1>
-			<a class="create-btn" href="{% url 'reports:circulars_create' %}">
-				<i class="fa-solid fa-plus" aria-hidden="true"></i> إنشاء تعميم جديد
-			</a>
-		</div>
+<div class="twq-page sent-circulars" dir="rtl">
+  <header class="twq-page-header sent-circulars__header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-regular fa-file-lines" aria-hidden="true"></i> سجل المراسلات الرسمية</span>
+      <h1 class="twq-page-header__title">التعاميم المرسلة</h1>
+      <p class="twq-page-header__lead">تابع ما أرسلته، وعدد من اطّلعوا عليه، والإقرارات التي اكتملت.</p>
+    </div>
+    <div class="twq-page-header__aside">
+      <a class="twq-btn twq-btn--primary" href="{% url 'reports:circulars_create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> إنشاء تعميم جديد</a>
+    </div>
+  </header>
 
-		{% if page_obj and page_obj.object_list %}
-			<div class="cards-grid">
-				{% for n in page_obj %}
-					<article class="notif-card" data-id="{{ n.id }}" data-requires-signature="1">
-						<div class="notif-head">
-							<div>
-								<h3 class="notif-title"><span>{{ n.title|default:"تعميم" }}</span></h3>
+  <section class="twq-section sent-circulars__workspace" aria-labelledby="sentCircularsListTitle">
+    <div class="twq-section__header">
+      <div>
+        <span class="twq-section__kicker">سجل الإرسال</span>
+        <h2 class="twq-section__title" id="sentCircularsListTitle">الوثائق الصادرة</h2>
+        <p class="twq-section__description">افتح تفاصيل التعميم لمراجعة المستلمين والإيصالات وإجراءات المتابعة المتاحة.</p>
+      </div>
+      <span class="twq-section__meta"><bdi>{{ page_obj.paginator.count }}</bdi> تعميم</span>
+    </div>
 
-								<div class="badges-container">
-									{% if n.is_important %}
-										<span class="pill important"><i class="fa-solid fa-exclamation-circle" aria-hidden="true"></i> هام</span>
-									{% endif %}
-									{% if n.is_broadcast %}
-										<span class="pill blue"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i> للجميع</span>
-									{% endif %}
-									<span class="pill blue"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> يتطلب توقيع</span>
-								</div>
-							</div>
-
-							<time class="notif-time" datetime="{{ n.created_at|date:'c' }}">
-								<i class="fa-regular fa-clock" aria-hidden="true"></i> {{ n.created_at|date:"Y-m-d H:i" }}
-							</time>
-						</div>
-
-						{% firstof n.message n.body n.content n.text n.details as body %}
-						{% if body %}
-							<div class="notif-body">{{ body|linebreaksbr }}</div>
-						{% endif %}
-
-						<div class="meta">
-							{% if n.expires_at %}
-								<span><i class="fa-regular fa-calendar-times" aria-hidden="true"></i> ينتهي: {{ n.expires_at|date:"Y-m-d H:i" }}</span>
-							{% endif %}
-							{% if n.created_by and n.created_by.name %}
-								<span><i class="fa-regular fa-user" aria-hidden="true"></i> المُرسِل: {{ n.created_by.name }} — {{ n.created_by.display_role_label }}</span>
-							{% endif %}
-						</div>
-
-						<div class="progress-container">
-							<div class="progress-info">
-								<span class="progress-label">معدل التوقيع</span>
-								<span class="rate" id="rate-{{ n.id }}">0%</span>
-							</div>
-							<div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-								<div class="bar"></div>
-							</div>
-						</div>
-
-						<div class="actions">
-							<a class="ns-btn" href="{% url 'reports:notification_detail' n.id %}">
-								<i class="fa-regular fa-eye" aria-hidden="true"></i> عرض التفاصيل
-							</a>
-
-							{% if n.action_url %}
-								<a class="ns-btn primary" href="{{ n.action_url }}" rel="noopener">
-									<i class="fa-solid fa-link" aria-hidden="true"></i> فتح الرابط
-								</a>
-							{% endif %}
-
-							<form method="post" action="{% url 'reports:notification_delete' n.id %}" class="js-delete-form u-inline" data-confirm="هل تريد حذف هذا التعميم نهائيًا؟" data-confirm-type="danger">
-								{% csrf_token %}
-								<button class="ns-btn danger" type="submit">
-									<i class="fa-regular fa-trash-can" aria-hidden="true"></i> حذف
-								</button>
-							</form>
-						</div>
-					</article>
-				{% endfor %}
-			</div>
-
-			{% if page_obj.paginator.num_pages > 1 %}
-				<nav class="pager" aria-label="التنقل بين الصفحات">
-					{% if page_obj.has_previous %}
-						<a class="ns-btn" href="?page={{ page_obj.previous_page_number }}">
-							<i class="fa-solid fa-arrow-right" aria-hidden="true"></i> السابق
-						</a>
-					{% endif %}
-
-					<span class="ns-btn current">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
-
-					{% if page_obj.has_next %}
-						<a class="ns-btn" href="?page={{ page_obj.next_page_number }}">
-							التالي <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-						</a>
-					{% endif %}
-				</nav>
-			{% endif %}
-		{% else %}
-			<div class="empty-state">
-				<i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-				<h3>لا توجد تعاميم مرسلة حتى الآن</h3>
-				<p>يمكنك إنشاء أول تعميم بالنقر على زر “إنشاء تعميم جديد”.</p>
-			</div>
-		{% endif %}
-	</div>
+    {% if page_obj and page_obj.object_list %}
+      <div class="sent-circulars__list">
+        {% for n in page_obj %}
+          <article class="twq-document-item sent-circulars__item" aria-labelledby="sentCircularTitle{{ n.pk }}">
+            <span class="twq-document-item__icon sent-circulars__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></span>
+            <div class="twq-document-item__content sent-circulars__content">
+              <div class="sent-circulars__title-row">
+                <h3 id="sentCircularTitle{{ n.pk }}"><a href="{% url 'reports:notification_detail' n.id %}">{{ n.title|default:"تعميم" }}</a></h3>
+                {% if n.is_important %}<span class="twq-status twq-status--warning">هام</span>{% endif %}
+              </div>
+              <div class="sent-circulars__meta">
+                <time datetime="{{ n.created_at|date:'c' }}">أُرسل {{ n.created_at|date:"Y-m-d H:i" }}</time>
+                {% if n.school %}<span>{{ n.school.name }}</span>{% endif %}
+                {% if n.is_broadcast %}<span>مرسل للجميع</span>{% endif %}
+                {% if n.attachment %}<span><i class="fa-solid fa-paperclip" aria-hidden="true"></i> مرفق</span>{% endif %}
+              </div>
+              {% if n.signature_deadline_at and n.requires_signature %}
+                <p class="sent-circulars__deadline">آخر موعد للإقرار: <time datetime="{{ n.signature_deadline_at|date:'c' }}">{{ n.signature_deadline_at|date:"Y-m-d H:i" }}</time></p>
+              {% endif %}
+              <div class="sent-circulars__metrics" aria-label="حالة وصول التعميم">
+                <span><strong><bdi>{{ n.stat_total }}</bdi></strong> إجمالي المستلمين</span>
+                <span><strong><bdi>{{ n.stat_read }}/{{ n.stat_total }}</bdi></strong> اطّلعوا</span>
+                {% if n.requires_signature %}
+                  <span><strong><bdi>{{ n.stat_signed }}/{{ n.stat_total }}</bdi></strong> أقرّوا بالتوقيع</span>
+                {% else %}
+                  <span class="twq-status twq-status--info">للاطلاع فقط</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="twq-document-item__actions sent-circulars__actions">
+              <a class="twq-btn twq-btn--secondary" href="{% url 'reports:notification_detail' n.id %}">عرض التفاصيل</a>
+              {% if n.action_url %}<a class="twq-btn twq-btn--secondary" href="{{ n.action_url }}" rel="noopener">فتح الرابط</a>{% endif %}
+              <form method="post" action="{% url 'reports:notification_delete' n.id %}" class="js-delete-form sent-circulars__delete" data-confirm="هل تريد حذف هذا التعميم نهائيًا؟" data-confirm-type="danger">
+                {% csrf_token %}
+                <button class="twq-btn twq-btn--danger" type="submit">حذف</button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+      {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="twq-pagination sent-circulars__pagination" aria-label="صفحات التعاميم المرسلة">
+          {% if page_obj.has_previous %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}
+          <span class="twq-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ page_obj.next_page_number }}">التالي</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="twq-empty-state sent-circulars__empty">
+        <span class="twq-empty-state__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></span>
+        <h3>لا توجد تعاميم مرسلة بعد</h3>
+        <p>ستظهر هنا التعاميم التي ترسلها إلى مستلميها.</p>
+      </div>
+    {% endif %}
+  </section>
 </div>
-
-{{ stats|json_script:"notif-stats-data" }}
-{% endblock %}
-
-{% block scripts %}
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-	(function(){
-		const script = document.getElementById('notif-stats-data');
-		let stats = {};
-		if(script){
-			try{ stats = JSON.parse(script.textContent || "{}"); }
-			catch(e){ stats = {}; }
-		}
-
-		function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
-
-		document.querySelectorAll('.ns-scope .notif-card').forEach(function(card){
-			const id = card.getAttribute('data-id');
-			const bucket = stats[String(id)] || stats[id] || {};
-			const total = Number(bucket.total || 0);
-			const signed = Number(bucket.signed || 0);
-			const rate  = total ? Math.round((signed / total) * 100) : 0;
-			const safeRate = clamp(rate, 0, 100);
-
-			const bar = card.querySelector('.progress .bar');
-			const rateEl = card.querySelector('#rate-' + id);
-			const pb = card.querySelector('.progress');
-
-			if(pb){ pb.setAttribute('aria-valuenow', String(safeRate)); }
-			if(bar){ setTimeout(function(){ bar.style.width = safeRate + '%'; }, 120); }
-
-			if(rateEl){
-				let current = 0;
-				const duration = 900;
-				const steps = 45;
-				const inc = safeRate / steps;
-				const t = setInterval(function(){
-					current += inc;
-					if(current >= safeRate){
-						current = safeRate;
-						clearInterval(t);
-					}
-					rateEl.textContent = Math.round(current) + '%';
-				}, duration / steps);
-			}
-		});
-
-	})();
-</script>
 {% endblock %}

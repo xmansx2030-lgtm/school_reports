@@ -4,319 +4,18 @@
 {% block title %}إضافة منسوبي المدرسة{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  .onboard {
-    --ob-green: #006c35;
-    --ob-green-dark: #064e2c;
-    --ob-green-soft: #eaf7ef;
-    --ob-gold: #b9975b;
-    --ob-ink: #17221c;
-    --ob-muted: #647168;
-    --ob-border: #dbe7df;
-    --ob-card: #fff;
-    --ob-surface: #f6faf7;
-    max-width: 1320px;
-    margin: 0 auto;
-    padding: 24px 18px 90px;
-    color: var(--ob-ink);
-  }
-  html[data-theme="dark"] .onboard {
-    --ob-green-soft: rgba(38, 145, 85, .16);
-    --ob-ink: #edf7f0;
-    --ob-muted: #adbbb1;
-    --ob-border: #304b3a;
-    --ob-card: #16271d;
-    --ob-surface: #102018;
-  }
-  .ob-hero {
-    padding: 30px;
-    border: 1px solid rgba(185, 151, 91, .36);
-    border-radius: 25px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    color: #fff;
-    background:
-      radial-gradient(circle at 8% 10%, rgba(255,255,255,.15), transparent 28%),
-      radial-gradient(circle at 90% 110%, rgba(185,151,91,.34), transparent 36%),
-      linear-gradient(128deg, #064e2c, #006c35);
-    box-shadow: 0 20px 50px rgba(6, 78, 44, .18);
-  }
-  .ob-eyebrow { margin-bottom: 8px; color: #dff3e7; font-size: .8rem; font-weight: 900; }
-  .ob-title { margin: 0; color: #fff; font-size: clamp(1.5rem, 3vw, 2.15rem); font-weight: 950; }
-  .ob-subtitle { max-width: 720px; margin: 9px 0 0; color: rgba(255,255,255,.8); line-height: 1.8; }
-  .ob-capacity {
-    min-width: 190px;
-    padding: 16px 18px;
-    border: 1px solid rgba(255,255,255,.24);
-    border-radius: 17px;
-    background: rgba(3, 45, 25, .27);
-    text-align: center;
-  }
-  .ob-capacity strong { display: block; color: #fff; font-size: 1.35rem; }
-  .ob-capacity span { color: rgba(255,255,255,.72); font-size: .77rem; font-weight: 800; }
-
-  .ob-steps {
-    margin: 18px 0;
-    padding: 13px;
-    border: 1px solid var(--ob-border);
-    border-radius: 16px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    background: var(--ob-card);
-  }
-  .ob-step {
-    padding: 9px 10px;
-    border-radius: 11px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    color: var(--ob-muted);
-    font-size: .78rem;
-    font-weight: 900;
-  }
-  .ob-step span {
-    width: 27px;
-    height: 27px;
-    border-radius: 9px;
-    display: grid;
-    place-items: center;
-    background: var(--ob-surface);
-  }
-  .ob-step.is-active { color: var(--ob-green); background: var(--ob-green-soft); }
-  .ob-step.is-active span { color: #fff; background: var(--ob-green); }
-
-  .ob-card {
-    padding: 23px;
-    border: 1px solid var(--ob-border);
-    border-radius: 21px;
-    background: var(--ob-card);
-    box-shadow: 0 10px 34px rgba(22, 65, 38, .07);
-  }
-  .ob-card + .ob-card { margin-top: 16px; }
-  .ob-card-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-  }
-  .ob-card-title { margin: 0; font-size: 1.12rem; font-weight: 950; }
-  .ob-card-copy { margin: 5px 0 0; color: var(--ob-muted); font-size: .82rem; line-height: 1.7; }
-
-  .ob-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .ob-tab {
-    min-height: 116px;
-    padding: 18px;
-    border: 1px solid var(--ob-border);
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    color: inherit;
-    background: var(--ob-card);
-    text-decoration: none;
-    transition: transform .18s ease, border-color .18s ease, background .18s ease;
-  }
-  .ob-tab:hover { transform: translateY(-2px); border-color: rgba(0,108,53,.4); }
-  .ob-tab.is-active { border-color: rgba(0,108,53,.46); background: var(--ob-green-soft); }
-  .ob-tab-icon {
-    width: 52px;
-    height: 52px;
-    flex: 0 0 auto;
-    border-radius: 16px;
-    display: grid;
-    place-items: center;
-    color: var(--ob-green);
-    background: var(--ob-green-soft);
-    font-size: 1.25rem;
-  }
-  .ob-tab.is-active .ob-tab-icon { color: #fff; background: var(--ob-green); }
-  .ob-tab strong { display: block; font-size: .95rem; }
-  .ob-tab small { display: block; margin-top: 5px; color: var(--ob-muted); line-height: 1.6; }
-
-  .ob-table-wrap { overflow-x: auto; border: 1px solid var(--ob-border); border-radius: 15px; }
-  .ob-table { width: 100%; min-width: 930px; border-collapse: collapse; }
-  .ob-table th {
-    padding: 12px;
-    color: var(--ob-muted);
-    background: var(--ob-surface);
-    font-size: .73rem;
-    font-weight: 950;
-    text-align: right;
-    white-space: nowrap;
-  }
-  .ob-table td { padding: 9px; border-top: 1px solid var(--ob-border); vertical-align: top; }
-  .ob-input {
-    width: 100%;
-    min-height: 43px;
-    padding: 9px 11px;
-    border: 1px solid var(--ob-border);
-    border-radius: 11px;
-    color: var(--ob-ink);
-    background: var(--ob-card);
-    font: inherit;
-    font-size: .78rem;
-  }
-  .ob-input:focus { outline: 0; border-color: var(--ob-green); box-shadow: 0 0 0 3px rgba(0,108,53,.1); }
-  .ob-remove {
-    width: 40px;
-    height: 40px;
-    border: 1px solid #f0caca;
-    border-radius: 11px;
-    color: #b62f2f;
-    background: #fff4f4;
-    cursor: pointer;
-  }
-  .ob-table-actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 9px; }
-
-  .ob-btn {
-    min-height: 45px;
-    padding: 10px 16px;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: #fff;
-    background: var(--ob-green);
-    font-family: inherit;
-    font-size: .82rem;
-    font-weight: 950;
-    text-decoration: none;
-    cursor: pointer;
-  }
-  .ob-btn:hover { filter: brightness(.96); }
-  .ob-btn:disabled { opacity: .55; cursor: not-allowed; }
-  .ob-btn-secondary { color: var(--ob-ink); border-color: var(--ob-border); background: var(--ob-card); }
-  .ob-btn-gold { color: #2e2108; background: linear-gradient(135deg, #e6cf9a, #b9975b); }
-  .ob-actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
-
-  .ob-paste {
-    margin-top: 14px;
-    padding: 16px;
-    border: 1px dashed rgba(0,108,53,.35);
-    border-radius: 14px;
-    background: var(--ob-surface);
-  }
-  .ob-paste summary { color: var(--ob-green); font-weight: 950; cursor: pointer; }
-  .ob-paste p { margin: 8px 0; color: var(--ob-muted); font-size: .76rem; }
-  .ob-paste textarea { min-height: 112px; resize: vertical; }
-
-  .ob-login-note {
-    margin-top: 14px;
-    padding: 13px;
-    border: 1px solid #cce6d5;
-    border-radius: 13px;
-    display: flex;
-    gap: 10px;
-    color: #075c32;
-    background: #eff9f3;
-    font-size: .78rem;
-    line-height: 1.7;
-  }
-
-  .ob-upload-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 16px; }
-  .ob-drop {
-    min-height: 245px;
-    padding: 25px;
-    border: 2px dashed rgba(0,108,53,.35);
-    border-radius: 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background: var(--ob-surface);
-    transition: border-color .18s ease, background .18s ease;
-  }
-  .ob-drop.is-drag { border-color: var(--ob-green); background: var(--ob-green-soft); }
-  .ob-drop-icon { margin-bottom: 12px; color: var(--ob-green); font-size: 2.2rem; }
-  .ob-file-name { margin-top: 10px; color: var(--ob-muted); font-size: .76rem; font-weight: 800; }
-  .ob-hidden-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-  .ob-checklist { margin: 0; padding: 0; display: grid; gap: 11px; list-style: none; }
-  .ob-checklist li { display: flex; gap: 9px; color: var(--ob-muted); font-size: .78rem; line-height: 1.65; }
-  .ob-checklist i { margin-top: 4px; color: var(--ob-green); }
-
-  .ob-summary {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 9px;
-    margin-bottom: 16px;
-  }
-  .ob-summary-item { padding: 13px; border-radius: 13px; text-align: center; background: var(--ob-surface); }
-  .ob-summary-item strong { display: block; font-size: 1.25rem; }
-  .ob-summary-item span { color: var(--ob-muted); font-size: .67rem; font-weight: 850; }
-  .ob-state {
-    display: inline-flex;
-    padding: 5px 8px;
-    border-radius: 999px;
-    color: #075c32;
-    background: var(--ob-green-soft);
-    font-size: .67rem;
-    font-weight: 950;
-    white-space: nowrap;
-  }
-  .ob-state--invalid { color: #ad2828; background: #fff0f0; }
-  .ob-row-errors { margin-top: 5px; color: #b12828; font-size: .68rem; line-height: 1.5; }
-  .ob-row-warnings { margin-top: 5px; color: #9a5a12; font-size: .68rem; line-height: 1.5; }
-  .ob-alert {
-    margin-bottom: 14px;
-    padding: 13px 14px;
-    border: 1px solid #f0cf9e;
-    border-radius: 13px;
-    color: #8c500e;
-    background: #fff8e9;
-    font-size: .8rem;
-    font-weight: 800;
-  }
-  .ob-complete { max-width: 760px; margin: 18px auto 0; text-align: center; }
-  .ob-complete-icon {
-    width: 76px;
-    height: 76px;
-    margin: 0 auto 15px;
-    border-radius: 23px;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: var(--ob-green);
-    font-size: 1.8rem;
-  }
-  .ob-complete h2 { margin: 0; font-size: 1.45rem; }
-  .ob-complete p { color: var(--ob-muted); }
-
-  @media (max-width: 850px) {
-    .ob-hero { align-items: flex-start; flex-direction: column; }
-    .ob-capacity { width: 100%; }
-    .ob-upload-grid { grid-template-columns: 1fr; }
-    .ob-summary { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 620px) {
-    .onboard { padding: 11px 9px 80px; }
-    .ob-hero { padding: 23px 18px; border-radius: 20px; }
-    .ob-steps { grid-template-columns: 1fr; }
-    .ob-tabs { grid-template-columns: 1fr; }
-    .ob-card { padding: 16px; }
-    .ob-actions .ob-btn { width: 100%; }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/staff-bulk-import.css' %}?v=20260920.3">
 {% endblock %}
 
 {% block content %}
-<div class="onboard" dir="rtl">
-  <header class="ob-hero">
-    <div>
-      <div class="ob-eyebrow"><i class="fa-solid fa-users" aria-hidden="true"></i> إدارة منسوبي المدرسة</div>
-      <h1 class="ob-title">إضافة منسوبي المدرسة بسهولة</h1>
-      <p class="ob-subtitle">أضف عدة مستخدمين مباشرة أو ارفع ملف Excel، ثم راجع النتيجة قبل حفظ أي بيانات.</p>
+<div class="twq-page onboard" dir="rtl">
+  <a class="ob-back" href="{% url 'reports:manage_teachers' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى قائمة المنسوبين</a>
+  <header class="twq-page-header ob-hero">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-users" aria-hidden="true"></i> إدارة منسوبي المدرسة</span>
+      <h1 class="twq-page-header__title">إضافة منسوبي المدرسة بسهولة</h1>
+      <p class="twq-page-header__lead">أضف عدة منسوبين مباشرة أو ارفع ملف Excel أو CSV، ثم راجع النتائج قبل حفظ أي بيانات.</p>
+      {% if request.active_school %}<p class="ob-school">المدرسة الحالية: {{ request.active_school.name }}</p>{% endif %}
     </div>
     <div class="ob-capacity" aria-label="سعة باقة المستخدمين">
       {% if capacity.maximum %}
@@ -333,7 +32,7 @@
     <section class="ob-card ob-complete" aria-labelledby="completeTitle">
       <div class="ob-complete-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></div>
       <h2 id="completeTitle">اكتملت إضافة المستخدمين</h2>
-      <p>تمت معالجة {{ result.total }} مستخدم: {{ result.created }} حساب جديد، {{ result.linked }} حساب مرتبط، و{{ result.reactivated }} عضوية أُعيد تفعيلها.</p>
+      <p>تمت معالجة {{ result.total }} صف: {{ result.created }} حساب جديد، {{ result.linked }} حساب مرتبط، {{ result.reactivated }} عضوية أُعيد تفعيلها، و{{ result.existing }} عضوية موجودة مسبقًا.</p>
       {% if result.created %}
         <div class="ob-login-note">
           <i class="fa-solid fa-key" aria-hidden="true"></i>
@@ -365,7 +64,7 @@
       <div class="ob-card-head">
         <div>
           <h2 class="ob-card-title" id="previewTitle">راجع النتائج قبل الحفظ</h2>
-          <p class="ob-card-copy">لن يُحفظ أي مستخدم حتى تضغط زر التأكيد. الحسابات الموجودة ستُربط بالمدرسة فقط دون تغيير بياناتها أو كلمات مرورها.</p>
+          <p class="ob-card-copy">لن يُحفظ أي منسوب حتى تضغط زر التأكيد. الحساب الموجود يحتفظ ببياناته الشخصية وكلمة مروره؛ وقد تُربط عضويته بالمدرسة أو تُحدَّث وفق التكليف المعروض لكل صف.</p>
         </div>
         {% if preview.summary.invalid or preview.summary.warnings %}
           <a class="ob-btn ob-btn-secondary" href="{% url 'reports:bulk_import_teachers_issues' %}">
@@ -374,42 +73,48 @@
         {% endif %}
       </div>
 
-      <div class="ob-summary" aria-label="ملخص المعاينة">
+      <div class="ob-summary" role="group" aria-label="ملخص المعاينة">
         <div class="ob-summary-item"><strong>{{ preview.summary.total }}</strong><span>إجمالي الصفوف</span></div>
         <div class="ob-summary-item"><strong>{{ preview.summary.new }}</strong><span>حسابات جديدة</span></div>
         <div class="ob-summary-item"><strong>{{ preview.summary.link }}</strong><span>ربط حسابات موجودة</span></div>
+        <div class="ob-summary-item"><strong>{{ preview.summary.reactivate }}</strong><span>إعادة تفعيل عضوية</span></div>
         <div class="ob-summary-item"><strong>{{ preview.summary.existing }}</strong><span>مرتبطة مسبقًا</span></div>
         <div class="ob-summary-item"><strong>{{ preview.summary.invalid }}</strong><span>تحتاج تصحيحًا</span></div>
       </div>
 
       {% if preview.capacity_error %}
-        <div class="ob-alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ preview.capacity_error }}</div>
+        <div class="twq-alert twq-alert--danger ob-alert" role="alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ preview.capacity_error }}</div>
+      {% endif %}
+
+      {% if preview.summary.invalid %}
+        <div class="twq-alert twq-alert--danger ob-alert" role="alert">هناك {{ preview.summary.invalid }} صف يحتاج إلى تصحيح. لا يمكن تأكيد الإضافة حتى تعيد إدخال البيانات أو رفع الملف بعد تصحيحها.</div>
       {% endif %}
 
       <div class="ob-table-wrap" role="region" aria-label="جدول معاينة المستخدمين" tabindex="0">
         <table class="ob-table">
+          <caption class="sr-only">معاينة المنسوبين قبل حفظهم، مع نتيجة كل صف وملاحظاته</caption>
           <thead>
             <tr>
-              <th>الصف</th>
-              <th>الاسم</th>
-              <th>الجوال</th>
-              <th>المسمى / القسم / المختبر</th>
-              <th>النتيجة</th>
-              <th>الملاحظات</th>
+              <th scope="col">الصف</th>
+              <th scope="col">الاسم</th>
+              <th scope="col">الجوال</th>
+              <th scope="col">التكليف / القسم / المختبر</th>
+              <th scope="col">النتيجة</th>
+              <th scope="col">الملاحظات</th>
             </tr>
           </thead>
           <tbody>
             {% for row in preview.rows %}
               <tr>
-                <td>{{ row.row_number }}</td>
+                <th scope="row">{{ row.row_number }}</th>
                 <td>{{ row.name|default:"—" }}</td>
-                <td dir="ltr">{{ row.phone|default:"—" }}</td>
+                <td><bdi>{{ row.phone|default:"—" }}</bdi></td>
                 <td>
                   {{ row.job_title_label }}
                   {% if row.department_name %}<div class="ob-card-copy">{{ row.department_name }}</div>{% endif %}
                   {% if row.lab_kind_label %}<div class="ob-card-copy">{{ row.lab_kind_label }}</div>{% endif %}
                 </td>
-                <td><span class="ob-state {% if row.state == 'invalid' %}ob-state--invalid{% endif %}">{{ row.state_label }}</span></td>
+                <td><span class="ob-state ob-state--{{ row.state }}">{{ row.state_label }}</span></td>
                 <td>
                   {% for error in row.errors %}<div class="ob-row-errors">{{ error }}</div>{% endfor %}
                   {% for warning in row.warnings %}<div class="ob-row-warnings">{{ warning }}</div>{% endfor %}
@@ -427,7 +132,7 @@
           <input type="hidden" name="preview_token" value="{{ preview.token }}">
           <button class="ob-btn" type="submit" name="action" value="confirm" {% if not preview.can_confirm %}disabled{% endif %}>
             <i class="fa-solid fa-check" aria-hidden="true"></i>
-            تأكيد إضافة {{ preview.summary.total }} مستخدم
+            تأكيد معالجة {{ preview.summary.total }} صف
           </button>
         </form>
         <a class="ob-btn ob-btn-secondary" href="?mode={{ preview.source|default:'quick' }}">
@@ -463,7 +168,7 @@
         <div class="ob-card-head">
           <div>
             <h2 class="ob-card-title" id="fileModeTitle">رفع ملف المستخدمين</h2>
-            <p class="ob-card-copy">نزّل القالب الفارغ، املأ ورقة «{{ SCHOOL_TEACHERS_LABEL|default:"المعلمون" }}»، ثم ارفع الملف لمراجعته قبل الحفظ.</p>
+            <p class="ob-card-copy">نزّل القالب الفارغ، املأ ورقة المنسوبين النشطة، ثم ارفع الملف لمراجعته قبل الحفظ. ورقة التعليمات والأمثلة ليست للاستيراد.</p>
           </div>
           <a class="ob-btn ob-btn-gold" href="{% url 'reports:bulk_import_teachers_template' %}">
             <i class="fa-solid fa-download" aria-hidden="true"></i> تنزيل القالب الآمن
@@ -476,26 +181,35 @@
             <input type="hidden" name="action" value="file_preview">
             <div class="ob-drop" id="onboardingDropZone">
               <div class="ob-drop-icon"><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i></div>
-              <strong>اسحب ملف Excel أو CSV هنا</strong>
-              <div class="ob-card-copy">أو اختر الملف من جهازك</div>
-              <label class="ob-btn ob-btn-secondary" for="onboardingFile">اختيار ملف</label>
-              <input class="ob-hidden-file" id="onboardingFile" type="file" name="excel_file" accept=".xlsx,.csv" required>
-              <div class="ob-file-name" id="onboardingFileName">لم يتم اختيار ملف</div>
+              <label class="ob-file-label" for="onboardingFile">اختر ملف المنسوبين</label>
+              <p class="ob-card-copy" id="onboardingFileHelp">Excel ‎.xlsx أو CSV بترميز UTF-8، حتى 10 ميجابايت و2000 صف. يمكنك أيضًا سحب الملف هنا.</p>
+              <input class="ob-input ob-file-input" id="onboardingFile" type="file" name="excel_file" accept=".xlsx,.csv" aria-describedby="onboardingFileHelp onboardingFileName" required>
+              <div class="ob-file-name" id="onboardingFileName" aria-live="polite">لم يتم اختيار ملف</div>
             </div>
             <div class="ob-actions">
-              <button class="ob-btn" id="filePreviewButton" type="submit" disabled>
+              <button class="ob-btn" id="filePreviewButton" type="submit">
                 <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> معاينة الملف
               </button>
             </div>
           </form>
 
-          <aside class="ob-card">
+          <aside class="ob-instructions" aria-labelledby="fileStructureTitle">
+            <h3 class="ob-card-title" id="fileStructureTitle">بنية الملف</h3>
+            <p class="ob-card-copy">الصف الأول للعناوين، والبيانات تبدأ من الصف الثاني. يعتمد الاستيراد على الورقة النشطة في Excel؛ اجعل ورقة المنسوبين هي النشطة قبل الحفظ.</p>
+            <dl class="ob-columns">
+              <div><dt>الاسم الكامل</dt><dd>مطلوب</dd></div>
+              <div><dt>رقم الجوال</dt><dd>مطلوب؛ يبدأ بـ ‎05 ويتكون من 10 أرقام</dd></div>
+              <div><dt>رقم الهوية</dt><dd>اختياري؛ 10 أرقام عند إدخاله</dd></div>
+              <div><dt>المسمى الوظيفي / التكليف</dt><dd>اختياري؛ اختر قيمة من قالب المدرسة. بعض القيم تحدد دور العضوية وصلاحياتها.</dd></div>
+              <div><dt>القسم</dt><dd>اختياري؛ قسم موجود في المدرسة الحالية</dd></div>
+              <div><dt>المختبر</dt><dd>مطلوب لمحضر المختبر فقط</dd></div>
+            </dl>
             <h3 class="ob-card-title">قبل الرفع</h3>
             <ul class="ob-checklist">
-              <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>الاسم والجوال مطلوبان، وبقية الحقول اختيارية.</span></li>
               <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>القالب الأساسي فارغ؛ الأمثلة موجودة في ورقة تعليمات منفصلة.</span></li>
-              <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>الحساب الموجود يُربط فقط ولا تُغيّر بياناته أو كلمة مروره.</span></li>
+              <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>الحساب الموجود يُربط بالمدرسة أو تُحدَّث عضويته حسب معاينة الصف؛ لا تتغير بياناته الشخصية أو كلمة مروره.</span></li>
               <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>لن تُحفظ أي بيانات قبل شاشة المراجعة والتأكيد.</span></li>
+              <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>الصفوف التي تحتاج تصحيحًا تمنع تأكيد العملية كلها؛ بعد المعاينة يمكنك تنزيل ملف الملاحظات.</span></li>
             </ul>
             <div class="ob-login-note">
               <i class="fa-solid fa-key" aria-hidden="true"></i>
@@ -510,7 +224,7 @@
         <div class="ob-card-head">
           <div>
             <h2 class="ob-card-title" id="quickModeTitle">أدخل عدة مستخدمين مرة واحدة</h2>
-            <p class="ob-card-copy">يكفي الاسم ورقم الجوال. المسمى الافتراضي «{{ SCHOOL_TEACHER_INDEFINITE_LABEL|default:"معلم" }}»، ويُحدّد المختبر فقط لمحضر المختبر.</p>
+            <p class="ob-card-copy">يكفي الاسم ورقم الجوال. التكليف الافتراضي «{{ SCHOOL_TEACHER_INDEFINITE_LABEL|default:"معلم" }}»؛ اختيار وكيل أو موظف إداري أو محضر مختبر يحدد دور العضوية، ويُحدّد المختبر لمحضر المختبر فقط.</p>
           </div>
           <a class="ob-btn ob-btn-secondary" href="{% url 'reports:add_teacher' %}">إضافة فردية</a>
         </div>
@@ -520,15 +234,16 @@
           <input type="hidden" name="action" value="quick_preview">
           <div class="ob-table-wrap">
             <table class="ob-table">
+              <caption class="sr-only">الإضافة السريعة للمنسوبين</caption>
               <thead>
                 <tr>
-                  <th>الاسم الكامل *</th>
-                  <th>رقم الجوال *</th>
-                  <th>رقم الهوية</th>
-                  <th>المسمى الوظيفي</th>
-                  <th>القسم</th>
-                  <th>المختبر</th>
-                  <th><span class="sr-only">حذف</span></th>
+                  <th scope="col">الاسم الكامل *</th>
+                  <th scope="col">رقم الجوال *</th>
+                  <th scope="col">رقم الهوية</th>
+                  <th scope="col">التكليف المدرسي</th>
+                  <th scope="col">القسم</th>
+                  <th scope="col">المختبر</th>
+                  <th scope="col"><span class="sr-only">حذف</span></th>
                 </tr>
               </thead>
               <tbody id="quickRows">

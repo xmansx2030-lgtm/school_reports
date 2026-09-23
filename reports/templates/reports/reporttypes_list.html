@@ -1,284 +1,43 @@
-    {% extends "base.html" %}
-    {% block title %}أنواع التقارير{% endblock %}
-    {% block head %}
-    <style nonce="{{ CSP_NONCE }}">
-      body { background: linear-gradient(120deg, #e0e7ff 0%, #f0fdfa 100%); min-height: 100vh; }
-      .smart-card {
-        max-width: 1100px;
-        margin: 40px auto 24px auto;
-        background: #fff;
-        border-radius: 32px;
-        box-shadow: 0 8px 48px #006c3522, 0 1.5px 0 #006c3511;
-        padding: 0 0 32px 0;
-        overflow: hidden;
-        border: 1.5px solid #e0e7ff;
-        position: relative;
-        direction: rtl;
-      }
-      .smart-header {
-        background: linear-gradient(90deg, #006c35 0%, #0072bc 100%);
-        color: #fff;
-        padding: 32px 36px 18px 36px;
-        border-bottom-left-radius: 48px 32px;
-        border-bottom-right-radius: 48px 32px;
-        box-shadow: 0 2px 16px #006c3522;
-        position: relative;
-      }
-      .smart-header .icon {
-        font-size: 2.2rem;
-        margin-left: 12px;
-        vertical-align: middle;
-      }
-      .smart-header .breadcrumbs {
-        font-size: 1.05rem;
-        font-weight: 700;
-        margin-bottom: 8px;
-        opacity: 0.93;
-      }
-      .smart-header .breadcrumbs a {
-        color: #fff;
-        text-decoration: underline dotted;
-        margin: 0 4px;
-        transition: color .18s;
-      }
-      .smart-header .breadcrumbs a:hover {
-        color: #d4b16d;
-      }
-      .smart-header .title {
-        font-size: 2.1rem;
-        font-weight: 900;
-        margin: 0 0 6px;
-        letter-spacing: -1px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .smart-header .desc {
-        font-size: 1.08rem;
-        font-weight: 500;
-        opacity: 0.96;
-        margin-bottom: 0;
-      }
-      .smart-header .dashboard-btn {
-        position: absolute;
-        left: 36px;
-        top: 32px;
-        background: #fff;
-        color: #006c35;
-        border-radius: 999px;
-        font-weight: 900;
-        padding: 8px 22px;
-        box-shadow: 0 2px 12px #006c3522;
-        border: none;
-        font-size: 1.08rem;
-        text-decoration: none;
-        transition: background .18s, color .18s;
-        z-index: 2;
-      }
-      .smart-header .dashboard-btn:hover {
-        background: #006c35;
-        color: #fff;
-      }
-      .smart-actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 8px;
-        flex-wrap: wrap;
-      }
-      .smart-btn {
-        border-radius: 999px;
-        min-width: 120px;
-        font-weight: 900;
-        font-size: 1.08rem;
-        padding: 10px 28px;
-        border: none;
-        background: linear-gradient(90deg, #006c35 0%, #0072bc 100%);
-        color: #fff;
-        box-shadow: 0 2px 12px #006c3522;
-        transition: background .18s, color .18s, transform .18s;
-        cursor: pointer;
-      }
-      .smart-btn:hover {
-        background: #fff;
-        color: #006c35;
-        border: 1.5px solid #006c35;
-        transform: translateY(-2px);
-      }
-      .smart-btn.ghost {
-        background: #fff;
-        color: #006c35;
-        border: 1.5px solid #006c35;
-        box-shadow: none;
-      }
-      .smart-btn.ghost:hover {
-        background: #006c35;
-        color: #fff;
-      }
-      .smart-table-wrap {
-        overflow: auto;
-        border-radius: 18px;
-        background: #f8fafc;
-        margin-top: 18px;
-        box-shadow: 0 2px 12px #006c3511;
-        border: 1.5px solid #e0e7ff;
-      }
-      table.smart-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background: #fff;
-        border-radius: 18px;
-        overflow: hidden;
-      }
-      table.smart-table th, table.smart-table td {
-        padding: 13px 11px;
-        border-bottom: 1px solid #e0e7ff;
-        white-space: nowrap;
-        vertical-align: middle;
-        font-size: 1.04rem;
-      }
-      table.smart-table thead th {
-        background: #f1f5ff;
-        color: #006c35;
-        font-weight: 900;
-        text-align: right;
-        border-bottom: 2px solid #e0e7ff;
-      }
-      table.smart-table tbody tr:hover {
-        background: #f0fdfa;
-        transition: background .18s;
-      }
-      .smart-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 999px;
-        padding: 5px 10px;
-        border: 1px solid #e0e7ff;
-        font-weight: 900;
-        font-size: .98rem;
-      }
-      .smart-pill.on {
-        color: #16a34a;
-        background: #f0fdf4;
-        border-color: #bbf7d0;
-      }
-      .smart-pill.off {
-        color: #b45309;
-        background: #fff7ed;
-        border-color: #fed7aa;
-      }
-      .smart-table-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      @media (max-width: 900px) {
-        .smart-card, .smart-header { padding-left: 10px !important; padding-right: 10px !important; }
-        .smart-header .dashboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: .98rem; }
-      }
-
-      /* ============================================================
-         👑 ROYAL LUXURY — أنواع التقارير (زمرّدي + ذهبي)
-         ============================================================ */
-      body { background: linear-gradient(120deg, #eef3ee 0%, #f7f3ea 100%); }
-      .smart-card { border:1px solid rgba(185,151,91,.22); box-shadow:0 26px 60px -28px rgba(10,92,51,.5); }
-      .smart-card::before{ content:""; position:absolute; inset-inline:0; top:0; height:4px; z-index:3;
-        background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent); }
-      .smart-header{
-        background:
-          radial-gradient(120% 160% at 92% -30%, rgba(212,177,109,.26), transparent 50%),
-          linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-        border-bottom:none !important;
-      }
-      .smart-header .title{
-        background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-      }
-      .smart-header .title .icon{ -webkit-text-fill-color:#e6cf9a; color:#e6cf9a; }
-      .smart-header .dashboard-btn{ background:rgba(212,177,109,.18); color:#fdf6e6; border:1px solid rgba(212,177,109,.5); }
-      .smart-header .dashboard-btn:hover{ background:#d4b16d; color:#063d22; }
-      .smart-btn{ background:linear-gradient(135deg,#0a5c33,#074426); box-shadow:0 10px 22px -12px rgba(10,92,51,.6); }
-      .smart-btn:hover{ background:#fff; color:#0a5c33; border:1.5px solid #0a5c33; }
-      .smart-btn.ghost{ color:#0a5c33; border:1.5px solid rgba(185,151,91,.45); }
-      .smart-btn.ghost:hover{ background:#0a5c33; color:#fff; border-color:#0a5c33; }
-      .smart-btn.danger{ background:#fff; color:#dc2626; border:1.5px solid #fecaca; min-width:auto; padding:9px 16px; box-shadow:none; }
-      .smart-btn.danger:hover{ background:#dc2626; color:#fff; border-color:#dc2626; }
-
-      .smart-table-wrap{ border:1px solid rgba(185,151,91,.2); }
-      table.smart-table thead th{ background:#faf7ef; color:#0a5c33; border-bottom:2px solid rgba(185,151,91,.3); }
-      table.smart-table tbody tr:hover{ background:rgba(212,177,109,.06); }
-      .rt-name{ font-weight:900; color:#0f172a; }
-      .rt-name i{ color:#b9975b; margin-inline-end:4px; }
-      .rt-count{ display:inline-flex; align-items:center; gap:7px; padding:5px 13px; border-radius:999px; font-weight:950; font-size:1rem;
-        color:#0a5c33; background:rgba(10,92,51,.08); border:1px solid rgba(10,92,51,.2); }
-      .rt-count i{ color:#0a5c33; }
-      .smart-pill.on{ color:#16a34a; background:#f0fdf4; border-color:#bbf7d0; }
-      .smart-pill.off{ color:#b45309; background:#fff7ed; border-color:#fed7aa; }
-    </style>
-    {% endblock head %}
-
-    {% block content %}
-    <div class="smart-card" dir="rtl">
-      <div class="smart-header">
-        <a href="{% url 'reports:admin_dashboard' %}" class="dashboard-btn" title="عودة إلى لوحة المدرسة">
-          <i class="fa-solid fa-arrow-right-to-bracket"></i> لوحة المدرسة
-        </a>
-        <div class="breadcrumbs">
-          <a href="{% url 'reports:admin_dashboard' %}"><i class="fa-solid fa-gauge-high"></i> لوحة المدرسة</a>
-          <span>›</span>
-          <span><i class="fa-solid fa-tags"></i> أنواع التقارير</span>
-        </div>
-        <h1 class="title">
-          <span class="icon"><i class="fa-solid fa-tags"></i></span>
-          أنواع التقارير
-        </h1>
-        <div class="desc">
-          يمكنك من هنا التحكم في أنواع التقارير، ترتيبها، وتفعيلها أو إيقافها مع حماية الحذف عند وجود استخدام فعلي.
-        </div>
-      </div>
-      <div class="smart-actions">
-        <a class="smart-btn" href="{% url 'reports:reporttype_create' %}"><i class="fa-solid fa-plus"></i> إضافة نوع</a>
-       </div>
-      <div class="smart-table-wrap">
-        <table class="smart-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>الاسم</th>
-              <th>الحالة</th>
-              <th>مسار الاعتماد</th>
-              <th>الأقسام المستلمة</th>
-              <th>عدد التقارير</th>
-              <th>الترتيب</th>
-              <th>إجراءات</th>
-            </tr>
-          </thead>
+{% extends "base.html" %}
+{% load static %}
+{% block title %}إدارة أنواع التقارير{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/report-types-management.css' %}?v=20260921.1">{% endblock %}
+{% block content %}
+<div class="twq-page report-types-page" dir="rtl">
+  <a class="report-types-page__back" href="{% url 'reports:admin_dashboard' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى لوحة المدرسة</a>
+  <header class="twq-page-header report-types-page__header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow">تهيئة التقارير</span>
+      <h1 class="twq-page-header__title">إدارة أنواع التقارير</h1>
+      <p class="twq-page-header__lead">نظّم الأنواع المتاحة لمنسوبي المدرسة، ومسار اعتماد كل نوع، والأقسام التي تستلمه.</p>
+      {% if school %}<dl class="twq-page-header__context report-types-page__context"><div><dt>المدرسة الحالية</dt><dd>{{ school.name }}</dd></div><div><dt>عدد الأنواع</dt><dd>{{ items|length }}</dd></div></dl>{% endif %}
+    </div>
+    {% if db_backed %}<div class="twq-page-header__aside"><a class="twq-btn twq-btn--primary" href="{% url 'reports:reporttype_create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة نوع تقرير</a></div>{% endif %}
+  </header>
+  {% if not db_backed %}<div class="twq-alert twq-alert--danger report-types-page__notice" role="alert">إدارة أنواع التقارير غير متاحة حتى يكتمل إعداد قاعدة البيانات.</div>{% endif %}
+  <section class="twq-section report-types-page__section" aria-labelledby="report-types-list-title">
+    <div class="twq-section__header"><div><span class="twq-section__kicker">الإعداد التشغيلي</span><h2 class="twq-section__title" id="report-types-list-title">الأنواع المتاحة</h2><p class="twq-section__description">الحالة ومسار الاعتماد والنطاق التنظيمي لكل نوع. التعطيل يحفظ التقارير السابقة، والحذف محمي عند وجود تقارير مرتبطة.</p></div></div>
+    {% if items %}
+      <div class="twq-table-wrap report-types-table-wrap" tabindex="0" aria-label="جدول أنواع التقارير">
+        <table class="twq-table report-types-table">
+          <caption class="report-types-page__sr-only">أنواع تقارير {{ school.name|default:"المدرسة" }} وإعداداتها التشغيلية</caption>
+          <thead><tr><th scope="col">نوع التقرير</th><th scope="col">الحالة</th><th scope="col">مسار الاعتماد</th><th scope="col">الأقسام</th><th scope="col">التقارير</th><th scope="col">الترتيب</th><th scope="col">الإجراءات</th></tr></thead>
           <tbody>
-            {% for t in items %}
-              <tr>
-                <td>{{ forloop.counter }}</td>
-                <td class="rt-name"><i class="fa-solid fa-tag"></i> {{ t.name|default:"—" }}</td>
-                <td>
-                  {% if t.is_active %}
-                    <span class="smart-pill on"><i class="fa-solid fa-circle-check"></i> نشط</span>
-                  {% else %}
-                    <span class="smart-pill off"><i class="fa-solid fa-circle-pause"></i> غير نشط</span>
-                  {% endif %}
-                </td>
-                <td><span class="smart-pill"><i class="fa-solid fa-route"></i> {{ t.approval_route_label }}</span></td>
-                <td>{{ t.departments_label|default:"غير محددة" }}</td>
-                <td><span class="rt-count"><i class="fa-solid fa-file-lines"></i> {{ t.count|default:"0" }}</span></td>
-                <td>{{ t.order|default:"—" }}</td>
-                <td class="smart-table-actions">
-                  <a class="smart-btn ghost" href="{% url 'reports:reporttype_update' pk=t.obj.pk %}"><i class="fa-solid fa-pen-to-square"></i> تعديل</a>
-                  <form method="post" action="{% url 'reports:reporttype_delete' pk=t.obj.pk %}" data-confirm="هل تريد حذف النوع «{{ t.name|escapejs }}» نهائيًا؟" class="u-inline">{% csrf_token %}<button class="smart-btn danger" type="submit"><i class="fa-solid fa-trash-can"></i> حذف</button></form>
-                </td>
-              </tr>
-            {% empty %}
-              <tr><td colspan="8" class="xs-reporttypes-list-1">لا توجد أنواع تقارير بعد.</td></tr>
-            {% endfor %}
+            {% for t in items %}<tr>
+              <td data-label="نوع التقرير"><div class="report-types-table__identity"><span class="report-types-table__icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span><div><strong>{{ t.name|default:"—" }}</strong><span>{{ t.description|default:"لا يوجد وصف" }}</span></div></div></td>
+              <td data-label="الحالة">{% if t.is_active %}<span class="twq-status" data-status="active"><i class="fa-solid fa-circle" aria-hidden="true"></i> نشط</span>{% else %}<span class="twq-status" data-status="warning"><i class="fa-solid fa-circle" aria-hidden="true"></i> غير نشط</span>{% endif %}</td>
+              <td data-label="مسار الاعتماد"><span class="report-types-table__route">{{ t.approval_route_label }}</span></td>
+              <td data-label="الأقسام">{% if t.departments_label %}<span class="report-types-table__departments">{{ t.departments_label }}</span>{% else %}<span class="report-types-table__muted">لا توجد أقسام محددة</span>{% endif %}</td>
+              <td data-label="التقارير"><span class="report-types-table__metric"><strong>{{ t.count|default:"0" }}</strong> تقرير</span></td>
+              <td data-label="الترتيب"><bdi class="report-types-table__order">{{ t.order|default:"0" }}</bdi></td>
+              <td data-label="الإجراءات"><div class="twq-table__actions report-types-table__actions"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:reporttype_update' pk=t.obj.pk %}"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> تعديل</a><form method="post" action="{% url 'reports:reporttype_delete' pk=t.obj.pk %}" data-confirm="هل تريد حذف النوع «{{ t.name|escapejs }}» نهائيًا؟ لن يُسمح بالحذف عند وجود تقارير مرتبطة.">{% csrf_token %}<button class="twq-btn twq-btn--danger" type="submit"><i class="fa-solid fa-trash-can" aria-hidden="true"></i> حذف</button></form></div></td>
+            </tr>{% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-    {% endblock content %}
+    {% else %}
+      <div class="twq-empty twq-empty--page report-types-page__empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-file-circle-plus"></i></span><h3 class="twq-empty__title">لا توجد أنواع تقارير لهذه المدرسة بعد</h3><p class="twq-empty__message">أضف النوع الأول وحدد مسار اعتماده وحالته ليظهر في نماذج التقارير.</p>{% if db_backed %}<a class="twq-btn twq-btn--primary" href="{% url 'reports:reporttype_create' %}">إضافة أول نوع</a>{% endif %}</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

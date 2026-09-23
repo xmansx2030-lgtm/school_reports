@@ -46,7 +46,7 @@ class Row {
       new Control('input'),
       new Control('input'),
     ];
-    this.selects = [new Control('select', 'teacher'), new Control('select')];
+    this.selects = [new Control('select', 'teacher'), new Control('select'), new Control('select')];
     this.removeButton = new Control('button');
     this.removeButton.closest = () => this;
   }
@@ -135,6 +135,7 @@ assert.equal(rows.children.length, 4);
 assert.equal(rows.children[3].inputs[0].focused, true);
 assert.equal(rows.children[3].removeButton.value, '3');
 assert.equal(rows.children[3].inputs[0].attributes['aria-label'], 'الاسم الكامل للصف 4');
+assert.equal(rows.children[3].selects[2].attributes['aria-label'], 'المختبر للصف 4');
 
 assert.equal(rows.children[1].removeButton.click(), true);
 assert.deepEqual(

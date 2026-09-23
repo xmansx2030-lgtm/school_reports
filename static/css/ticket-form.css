@@ -1,0 +1,276 @@
+/* Request creation: shared presentation for school and platform-support forms.
+   Workflow, form fields, recipient loading, and upload validation remain owned
+   by their existing Django forms and scripts. */
+.twq-page.ticket-form-page {
+  --ticket-form-width: 64rem;
+  max-inline-size: var(--ticket-form-width);
+  margin-inline: auto;
+}
+
+.ticket-form-page .twq-page-header {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ticket-form-page .twq-page-header::after {
+  display: none;
+}
+
+.ticket-form__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  margin-block-end: var(--twq-space-4);
+  color: var(--twq-hero-text);
+  font-size: var(--twq-font-size-sm);
+  font-weight: var(--twq-font-weight-semibold);
+  text-decoration: none;
+}
+
+.ticket-form__back:hover { text-decoration: underline; }
+.ticket-form__back:focus-visible { outline: 3px solid var(--twq-focus); outline-offset: 3px; }
+
+.ticket-form__form {
+  display: grid;
+  gap: var(--twq-space-5);
+  margin-block-start: var(--twq-space-6);
+}
+
+.ticket-form__section {
+  min-inline-size: 0;
+  padding: var(--twq-space-6);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+  box-shadow: var(--twq-shadow-sm);
+}
+
+.ticket-form__section .twq-section__header { margin-block-end: var(--twq-space-6); }
+
+.ticket-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-5);
+}
+
+.ticket-form__field {
+  display: grid;
+  gap: var(--twq-space-2);
+  min-inline-size: 0;
+}
+
+.ticket-form__field + .ticket-form__field { margin-block-start: var(--twq-space-5); }
+.ticket-form__grid .ticket-form__field + .ticket-form__field { margin-block-start: 0; }
+
+.ticket-form__required {
+  margin-inline-start: var(--twq-space-2);
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-xs);
+  font-weight: var(--twq-font-weight-medium);
+}
+
+.ticket-form__field :is(input[type="text"], textarea, select, input[type="file"]),
+.ticket-form__field .form-control {
+  inline-size: 100%;
+  min-block-size: var(--twq-control-md);
+  padding-block: .6875rem;
+  padding-inline: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text);
+  background: var(--twq-surface);
+  font: inherit;
+  line-height: var(--twq-line-height-normal);
+  transition: border-color var(--twq-duration-fast) var(--twq-ease-standard),
+    box-shadow var(--twq-duration-fast) var(--twq-ease-standard);
+}
+
+.ticket-form__field :is(input[type="text"], textarea, select, input[type="file"]):hover {
+  border-color: var(--twq-border-strong);
+}
+
+.ticket-form__field :is(input[type="text"], textarea, select, input[type="file"]):focus-visible,
+.ticket-form__field :is(input[type="text"], textarea, select, input[type="file"]):focus {
+  border-color: var(--twq-focus);
+  outline: 3px solid var(--twq-focus);
+  outline-offset: 2px;
+}
+
+.ticket-form__field textarea {
+  min-block-size: 10rem;
+  resize: vertical;
+}
+
+.ticket-form__field input::placeholder,
+.ticket-form__field textarea::placeholder { color: var(--twq-text-muted); }
+
+.ticket-form__field--error :is(input, textarea, select),
+.ticket-form__field [aria-invalid="true"] { border-color: var(--twq-danger); }
+
+.ticket-form__help,
+.ticket-form__field .field-help,
+.ticket-form__field .help-text,
+.ticket-form__field .t-help {
+  margin: 0;
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-sm);
+  line-height: var(--twq-line-height-normal);
+}
+
+.ticket-form__error,
+.ticket-form__field .error-text {
+  margin: 0;
+  color: var(--twq-danger);
+  font-size: var(--twq-font-size-sm);
+  line-height: var(--twq-line-height-normal);
+}
+
+.ticket-form__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--twq-space-3);
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-inline-start: 3px solid var(--twq-accent);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text-secondary);
+  background: var(--twq-surface-secondary);
+  font-size: var(--twq-font-size-sm);
+  line-height: var(--twq-line-height-relaxed);
+}
+
+.ticket-form__notice i { color: var(--twq-accent); margin-block-start: .2rem; }
+.ticket-form__notice p { margin: 0; }
+
+.ticket-form__recipients {
+  min-block-size: var(--twq-control-md);
+  padding: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface-secondary);
+}
+
+.ticket-form__recipients.disabled { opacity: .75; }
+.ticket-form__recipients .recipients-dd { position: relative; }
+.ticket-form__recipients .recipients-dd > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--twq-space-3);
+  cursor: pointer;
+  font-weight: var(--twq-font-weight-semibold);
+}
+
+.ticket-form__recipients .recipients-dd > summary:focus-visible,
+.ticket-form__recipients :is(input, button):focus-visible {
+  outline: 3px solid var(--twq-focus);
+  outline-offset: 2px;
+}
+
+.ticket-form__recipients .recipients-dd[open] > summary { padding-block-end: var(--twq-space-3); }
+.ticket-form__recipients .recipients-panel {
+  display: grid;
+  gap: var(--twq-space-3);
+  padding-block-start: var(--twq-space-3);
+  border-block-start: 1px solid var(--twq-divider);
+}
+.ticket-form__recipients .recipients-search {
+  inline-size: 100%;
+  min-block-size: var(--twq-control-md);
+  padding-inline: var(--twq-space-3);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-text);
+  background: var(--twq-surface);
+  font: inherit;
+}
+.ticket-form__recipients .recipients-scroll { max-block-size: 15rem; overflow-y: auto; }
+.ticket-form__recipients .recipients-grid { display: grid; gap: var(--twq-space-1); }
+.ticket-form__recipients .rcpt {
+  display: flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  min-block-size: var(--twq-tap-target);
+  padding-inline: var(--twq-space-2);
+  border-radius: var(--twq-radius-sm);
+  cursor: pointer;
+}
+.ticket-form__recipients .rcpt:hover,
+.ticket-form__recipients .rcpt.selected { background: var(--twq-primary-soft); }
+.ticket-form__recipients .rcpt input { accent-color: var(--twq-primary); }
+
+.ticket-form__file::file-selector-button {
+  margin-inline-end: var(--twq-space-3);
+  padding: var(--twq-space-2) var(--twq-space-4);
+  border: 1px solid var(--twq-border-strong);
+  border-radius: var(--twq-radius-sm);
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+  font: inherit;
+  font-weight: var(--twq-font-weight-semibold);
+  cursor: pointer;
+}
+
+.ticket-form__previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr));
+  gap: var(--twq-space-3);
+  min-inline-size: 0;
+}
+
+.ticket-form__previews:empty,
+.ticket-form__message:empty,
+.ticket-form__preview:empty { display: none; }
+
+.ticket-form__previews .thumb,
+.ticket-form__preview {
+  min-inline-size: 0;
+  padding: var(--twq-space-2);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface-secondary);
+  overflow-wrap: anywhere;
+}
+
+.ticket-form__previews .thumb img,
+.ticket-form__preview img {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+  max-block-size: 8rem;
+  margin-inline: auto;
+  object-fit: contain;
+}
+
+.ticket-form__previews .badge,
+.ticket-form__preview .name { color: var(--twq-text-secondary); font-size: var(--twq-font-size-xs); }
+
+.ticket-form__message { font-size: var(--twq-font-size-sm); }
+
+.ticket-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--twq-space-3);
+  padding-block: var(--twq-space-2) var(--twq-space-6);
+}
+
+.ticket-form__actions .twq-btn { min-block-size: var(--twq-tap-target); }
+.ticket-form__actions .twq-btn:disabled { cursor: progress; }
+
+@media (max-width: 63.99rem) {
+  .twq-page.ticket-form-page { --ticket-form-width: 48rem; }
+}
+
+@media (max-width: 39.99rem) {
+  .ticket-form-page .twq-page-header { padding: var(--twq-space-6); }
+  .ticket-form__form { gap: var(--twq-space-4); }
+  .ticket-form__section { padding: var(--twq-space-4); }
+  .ticket-form__grid { grid-template-columns: minmax(0, 1fr); }
+  .ticket-form__actions { flex-direction: column; align-items: stretch; }
+  .ticket-form__actions .twq-btn { inline-size: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-form__field :is(input, textarea, select) { transition-duration: 0ms; }
+}

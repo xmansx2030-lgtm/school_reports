@@ -24,7 +24,6 @@ from ._helpers import _get_active_school
 from .. import capabilities as caps
 from ..model_parts.approvals import ApprovalState, PENDING_REVIEW_STATES
 from ..model_parts.assignments import AssignmentTarget
-from ..model_parts.documents import Document
 from ..model_parts.meetings import Meeting
 from ..model_parts.plans import PlanTask
 from ..coverage import pending_documenters, school_staff_queryset
@@ -34,6 +33,7 @@ from ..permissions import (
     is_school_manager,
     supervised_department_ids,
 )
+from ..services_documents import visible_documents
 
 __all__ = ["staff_dashboard"]
 
@@ -68,7 +68,10 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
     if is_school_manager(request.user, active_school=school):
         return redirect("reports:admin_dashboard")
 
-    if capability_source(request.user, caps.VIEW_SCHOOL_DASHBOARD, school) is None:
+    dashboard_access_source = capability_source(
+        request.user, caps.VIEW_SCHOOL_DASHBOARD, school
+    )
+    if dashboard_access_source is None:
         messages.error(request, "لا تملك صلاحية الاطلاع على مؤشرات المدرسة.")
         return redirect("reports:home")
 
@@ -199,8 +202,8 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
             )
 
         if granted["documents"]:
-            pending_docs = Document.objects.filter(
-                school=school, approval_state__in=PENDING_REVIEW_STATES
+            pending_docs = visible_documents(request.user, school).filter(
+                approval_state__in=PENDING_REVIEW_STATES
             ).count()
             cards.append(
                 {
@@ -260,6 +263,12 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
         except Exception:
             departments = []
 
+    # Presentation-only grouping.  The underlying counts, permissions and
+    # destinations stay exactly as supplied above; the dashboard merely puts
+    # work that needs attention before calm informational summaries.
+    attention_cards = [card for card in cards if card.get("tone") == "warn"]
+    operational_cards = [card for card in cards if card.get("tone") != "warn"]
+
     return render(
         request,
         "reports/staff_dashboard.html",
@@ -267,6 +276,9 @@ def staff_dashboard(request: HttpRequest) -> HttpResponse:
             "active": "staff_dashboard",
             "active_school": school,
             "cards": cards,
+            "attention_cards": attention_cards,
+            "operational_cards": operational_cards,
+            "dashboard_access_source": dashboard_access_source,
             "departments": departments,
             "supervised_count": len(supervised),
             "scoped_people": len(scoped_teacher_ids),

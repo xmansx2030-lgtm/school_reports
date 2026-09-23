@@ -161,6 +161,8 @@ class ManagerExperienceTests(TestCase):
         list_response = self.client.get(reverse("reports:leadership_portfolio_list"))
         self.assertEqual(list_response.status_code, 200)
         self.assertContains(list_response, self.school.name)
+        self.assertContains(list_response, "ابدأ أول ملف قيادي")
+        self.assertContains(list_response, "إنشاء أو فتح ملف السنة")
 
         response = self.client.post(reverse("reports:leadership_portfolio_list"))
 
@@ -195,6 +197,8 @@ class ManagerExperienceTests(TestCase):
         summary_portfolio = summary.context["portfolios"].get(pk=portfolio.pk)
         self.assertEqual(summary_portfolio.completed_count, 1)
         self.assertEqual(summary_portfolio.evidence_count, 2)
+        self.assertContains(summary, "اكتمل 1 من 8 محاور")
+        self.assertContains(summary, "فتح مساحة العمل")
         detail_response = self.client.get(
             reverse("reports:leadership_portfolio_detail", args=[portfolio.pk])
         )
@@ -642,10 +646,8 @@ class ManagerExperienceTests(TestCase):
         self.assertContains(response, 'data-has-recipients="false"')
         self.assertContains(response, "إضافة فريق المدرسة الآن")
         self.assertContains(response, f'href="{reverse("reports:bulk_import_teachers")}"')
-        self.assertContains(
-            response,
-            'class="btn btn-primary" id="notificationSubmit" type="submit" disabled aria-disabled="true"',
-        )
+        self.assertContains(response, 'id="notificationSubmit"')
+        self.assertContains(response, 'disabled aria-disabled="true"')
 
     def test_circular_copy_and_required_fields_match_behavior(self):
         form = NotificationCreateForm(

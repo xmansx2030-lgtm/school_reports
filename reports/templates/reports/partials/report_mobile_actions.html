@@ -17,6 +17,6 @@
   {% endif %}
   <button type="submit" class="rma-save" form="report-form"{% if not has_report_types %} disabled aria-disabled="true" aria-describedby="reportTypeSetupNotice"{% endif %}>
     <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
-    <span>حفظ التقرير</span>
+    <span>{% firstof submit_label "حفظ التقرير" %}</span>
   </button>
 </div>

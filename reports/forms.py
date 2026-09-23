@@ -367,6 +367,7 @@ class AccountPasswordResetForm(PasswordResetForm):
                 "dir": "ltr",
                 "placeholder": "name@example.com",
                 "autofocus": True,
+                "aria-describedby": "recoveryEmailHint recoveryEmailError",
             }
         ),
     )
@@ -392,6 +393,7 @@ class AccountSetPasswordForm(SetPasswordForm):
                 "autocomplete": "new-password",
                 "placeholder": "أدخل كلمة مرور جديدة",
                 "autofocus": True,
+                "aria-describedby": "newPasswordRequirements newPassword1Error",
             }
         )
         self.fields["new_password2"].widget.attrs.update(
@@ -399,6 +401,7 @@ class AccountSetPasswordForm(SetPasswordForm):
                 "class": "recovery-input",
                 "autocomplete": "new-password",
                 "placeholder": "أعد إدخال كلمة المرور الجديدة",
+                "aria-describedby": "newPassword2Hint newPassword2Error",
             }
         )
 
@@ -596,7 +599,49 @@ class ReportEvidenceForm(forms.ModelForm):
 class BaseReportEvidenceFormSet(BaseInlineFormSet):
     """يحفظ إعادة الترتيب دون اصطدام بالقيد الفريد أثناء تبديل موضعين."""
 
+    ownership_error_message = "أحد الشواهد المرسلة غير صالح لهذا التقرير."
+
+    def _validate_submitted_ownership(self):
+        """Reject submitted primary keys outside the bound report.
+
+        Django normally reports an out-of-queryset inline object as an invalid
+        choice.  A row marked for deletion is excluded from the formset's
+        validity calculation, however, so that field error can be ignored.
+        Validate the raw identifiers before DELETE or any other mutation is
+        considered.
+        """
+        if not self.is_bound:
+            return
+
+        pk_field = self.model._meta.pk
+        submitted_ids = set()
+        for form in self.forms:
+            raw_id = self.data.get(form.add_prefix(pk_field.name))
+            if raw_id in (None, ""):
+                continue
+            try:
+                submitted_ids.add(pk_field.to_python(raw_id))
+            except (TypeError, ValueError, ValidationError):
+                raise ValidationError(self.ownership_error_message) from None
+
+        if not submitted_ids:
+            return
+
+        owned_ids = set()
+        if self.instance.pk:
+            owned_ids = set(
+                self.model._default_manager.filter(
+                    **{
+                        f"{self.fk.name}_id": self.instance.pk,
+                        f"{pk_field.name}__in": submitted_ids,
+                    }
+                ).values_list(pk_field.name, flat=True)
+            )
+        if owned_ids != submitted_ids:
+            raise ValidationError(self.ownership_error_message)
+
     def clean(self):
+        self._validate_submitted_ownership()
         super().clean()
         if any(self.errors):
             return
@@ -1082,6 +1127,14 @@ class TeacherCreateForm(forms.ModelForm):
         self.fields["job_title"].choices = assignment_choices(self._active_school)
         self.assignment_cards = assignment_cards(self._active_school)
         self.initial.setdefault("job_title", SchoolMembership.RoleType.TEACHER)
+        # Presentation-only associations for the individual staff form.
+        for name in ("name", "phone", "national_id", "is_active", "lab_kind", "keep_teaching_role"):
+            widget = self.fields[name].widget
+            widget.attrs["aria-describedby"] = f"staff-create-{name}-help staff-create-{name}-error"
+            if name in ("name", "phone", "national_id", "lab_kind"):
+                widget.attrs["class"] = "twq-control"
+            if self.is_bound and name in self.errors:
+                widget.attrs["aria-invalid"] = "true"
 
     def clean(self):
         cleaned = super().clean()
@@ -1196,6 +1249,19 @@ class TeacherEditForm(forms.ModelForm):
         self._active_school = kwargs.pop("active_school", None)
         super().__init__(*args, **kwargs)
         self.fields["job_title"].choices = _school_job_title_choices(self._active_school)
+
+        # Presentation-only attributes for the staff edit workspace. The
+        # field names, choices, required flags and validation stay unchanged.
+        for field_name in ("name", "phone", "national_id", "job_title", "password"):
+            widget = self.fields[field_name].widget
+            widget.attrs["class"] = f"{widget.attrs.get('class', '')} twq-control".strip()
+            widget.attrs["aria-describedby"] = f"staff-{field_name}-help staff-{field_name}-error"
+        self.fields["phone"].widget.attrs["dir"] = "ltr"
+        self.fields["phone"].widget.attrs["autocomplete"] = "tel"
+        self.fields["national_id"].widget.attrs["dir"] = "ltr"
+        self.fields["is_active"].widget.attrs["aria-describedby"] = (
+            "staff-is-active-help staff-is-active-error"
+        )
 
         # initial job title from membership for active school (if available)
         try:
@@ -1818,9 +1884,7 @@ class DepartmentForm(forms.ModelForm):
         label="أنواع التقارير المرتبطة",
         queryset=ReportType.objects.filter(is_active=True).order_by("order", "name"),
         required=False,
-        widget=forms.CheckboxSelectMultiple(
-            attrs={"aria-label": "اختر نوع/أنواع التقارير للقسم"}
-        ),
+        widget=forms.CheckboxSelectMultiple(),
         help_text="المسؤولون عن هذا القسم سيشاهدون التقارير من هذه الأنواع فقط.",
     )
 
@@ -1865,7 +1929,9 @@ class DepartmentForm(forms.ModelForm):
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise forms.ValidationError("المعرّف (slug) مستخدم مسبقًا لقسم آخر.")
+            raise forms.ValidationError(
+                "يوجد قسم آخر بالاسم نفسه أو بمعرّف مطابق داخل هذه المدرسة."
+            )
         return slug
 
     def __init__(self, *args, **kwargs):
@@ -1878,6 +1944,28 @@ class DepartmentForm(forms.ModelForm):
         # لذا لا يجب أن يكون مطلوبًا على مستوى الحقل.
         if "slug" in self.fields:
             self.fields["slug"].required = False
+
+        # Presentation-only attributes for the departments workspace. The
+        # submitted names, values, validation, and model contract stay intact.
+        self.fields["name"].widget.attrs.update(
+            {
+                "class": "twq-control",
+                "autocomplete": "organization-title",
+                "aria-describedby": "id_name_helptext id_name_error",
+            }
+        )
+        self.fields["is_active"].widget.attrs.update(
+            {
+                "class": "twq-choice__control",
+                "aria-describedby": "id_is_active_helptext id_is_active_error",
+            }
+        )
+        self.fields["reporttypes"].widget.attrs.update(
+            {
+                "class": "departments-form__choices",
+                "aria-describedby": "id_reporttypes_helptext id_reporttypes_error",
+            }
+        )
 
         # حصر أنواع التقارير على المدرسة النشطة
         if ReportType is not None:
@@ -1897,15 +1985,13 @@ class ReportTypeForm(forms.ModelForm):
         queryset=Department.objects.none(),
         required=False,
         help_text="تظهر تقارير هذا النوع للوكلاء المرتبطين بقسم واحد على الأقل من هذه الأقسام.",
-        widget=forms.CheckboxSelectMultiple(
-            attrs={"aria-label": "اختر الأقسام المستلمة لهذا النوع"}
-        ),
+        widget=forms.CheckboxSelectMultiple(),
     )
     approval_route = forms.ChoiceField(
         label="مسار الاعتماد",
         choices=ApprovalRoute.choices,
         help_text="حدّد الجهة التي تستلم التقرير بعد إرساله للمراجعة.",
-        widget=forms.Select(attrs={"class": "smart-input"}),
+        widget=forms.Select(),
     )
 
     class Meta:
@@ -1919,15 +2005,39 @@ class ReportTypeForm(forms.ModelForm):
             "is_active",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"class": "smart-input", "maxlength": "120"}),
-            "description": forms.Textarea(attrs={"class": "smart-input", "rows": 6}),
-            "order": forms.NumberInput(attrs={"class": "smart-input", "min": "0", "inputmode": "numeric"}),
+            "name": forms.TextInput(attrs={"maxlength": "120"}),
+            "description": forms.Textarea(attrs={"rows": 6}),
+            "order": forms.NumberInput(attrs={"min": "0", "inputmode": "numeric"}),
             "is_active": forms.CheckboxInput(),
         }
 
     def __init__(self, *args, **kwargs):
         self.active_school = kwargs.pop("active_school", None)
         super().__init__(*args, **kwargs)
+
+        # Presentation attributes for the Report Types workspace. Field names,
+        # values, validation, and model behavior remain unchanged.
+        for field_name in ("name", "description", "approval_route", "order"):
+            self.fields[field_name].widget.attrs.update(
+                {
+                    "class": "twq-control",
+                    "aria-describedby": (
+                        f"id_{field_name}_helptext id_{field_name}_error"
+                    ),
+                }
+            )
+        self.fields["name"].widget.attrs["autocomplete"] = "off"
+        self.fields["order"].widget.attrs["dir"] = "ltr"
+        self.fields["is_active"].widget.attrs.update(
+            {
+                "class": "twq-choice__control",
+                "aria-describedby": "id_is_active_helptext id_is_active_error",
+            }
+        )
+        self.fields["departments"].widget.attrs.update(
+            {"class": "report-types-form__department-control"}
+        )
+
         departments = Department.objects.filter(is_active=True).order_by("name", "id")
         if self.active_school is not None:
             departments = departments.filter(school=self.active_school)
@@ -2018,6 +2128,7 @@ class FlexibleModelMultipleChoiceField(forms.ModelMultipleChoiceField):
 
 
 class NotificationCreateForm(forms.Form):
+    submission_key = forms.UUIDField(required=False, widget=forms.HiddenInput())
     communication_type = forms.ChoiceField(
         label="نوع التواصل",
         choices=(
@@ -2053,7 +2164,7 @@ class NotificationCreateForm(forms.Form):
         required=False,
         initial=False,
         label="يتطلب توقيع إلزامي (تعميم)",
-        help_text="عند تفعيل هذا الخيار سيُطلب من المستلم إدخال جواله المسجل + الإقرار قبل اعتماد التوقيع.",
+        help_text="عند تفعيل هذا الخيار سيُطلب من المستلم رسم توقيعه والموافقة على نص الإقرار.",
     )
     signature_deadline_at = forms.DateTimeField(
         required=False,
@@ -2102,12 +2213,22 @@ class NotificationCreateForm(forms.Form):
         user = kwargs.pop("user", None)
         active_school = kwargs.pop("active_school", None)
         mode = (kwargs.pop("mode", None) or "notification").strip().lower()
+        require_submission_key = bool(kwargs.pop("require_submission_key", False))
         super().__init__(*args, **kwargs)
 
         self.user = user
         self.active_school = active_school
         self.mode = mode if mode in {"notification", "circular"} else "notification"
         is_circular = self.mode == "circular"
+
+        if is_circular:
+            # Circular issuance has its own audited workflow and is explicitly
+            # outside notification-send idempotency.
+            self.fields.pop("submission_key", None)
+        else:
+            self.fields["submission_key"].required = require_submission_key
+            if not self.is_bound:
+                self.fields["submission_key"].initial = uuid.uuid4()
 
         requested_kind = (
             "circular"
@@ -2352,7 +2473,13 @@ class NotificationCreateForm(forms.Form):
                     )
         return cleaned
 
-    def save(self, creator, default_school=None, force_requires_signature: Optional[bool] = None):
+    def save(
+        self,
+        creator,
+        default_school=None,
+        force_requires_signature: Optional[bool] = None,
+        dispatch_realtime_on_commit: bool = False,
+    ):
         from core.task_dispatch import enqueue_named_task
         from django.db import transaction
 
@@ -2460,17 +2587,27 @@ class NotificationCreateForm(forms.Form):
                     [NotificationRecipient(notification=n, teacher_id=tid) for tid in teacher_ids],
                     ignore_conflicts=True,
                 )
-                try:
-                    from .realtime_notifications import push_new_notification_to_teachers
 
-                    push_new_notification_to_teachers(notification=n, teacher_ids=teacher_ids)
-                except Exception:
-                    logger.exception("Immediate realtime notification dispatch failed for notification %s", n.pk)
-                with soft_fail("forms.invalidate_recipient_caches", count=len(teacher_ids)):
-                    from .cache_utils import invalidate_user_notifications
+                def _publish_recipient_change():
+                    try:
+                        from .realtime_notifications import push_new_notification_to_teachers
 
-                    for tid in teacher_ids:
-                        invalidate_user_notifications(int(tid))
+                        push_new_notification_to_teachers(notification=n, teacher_ids=teacher_ids)
+                    except Exception:
+                        logger.exception(
+                            "Immediate realtime notification dispatch failed for notification %s",
+                            n.pk,
+                        )
+                    with soft_fail("forms.invalidate_recipient_caches", count=len(teacher_ids)):
+                        from .cache_utils import invalidate_user_notifications
+
+                        for tid in teacher_ids:
+                            invalidate_user_notifications(int(tid))
+
+                if dispatch_realtime_on_commit:
+                    transaction.on_commit(_publish_recipient_change)
+                else:
+                    _publish_recipient_change()
             except Exception:
                 logger.exception("Immediate notification recipient creation failed for notification %s", n.pk)
 

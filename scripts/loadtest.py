@@ -21,11 +21,14 @@ generates real traffic.
 from __future__ import annotations
 
 import argparse
+import http.cookiejar
+import re
 import statistics
 import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections import Counter
 
@@ -45,20 +48,78 @@ def _one_request(url: str, timeout: float, headers: dict[str, str] | None = None
     return outcome, (time.perf_counter() - started) * 1000
 
 
-def run(url: str, concurrency: int, total: int, timeout: float, headers: dict[str, str] | None = None) -> int:
+def _authenticated_headers(
+    base_url: str,
+    *,
+    phone: str,
+    password: str,
+    timeout: float,
+) -> dict[str, str]:
+    """Create one real Django session without exposing credentials in output."""
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    login_url = urllib.parse.urljoin(base_url.rstrip("/") + "/", "login/")
+    login_page = opener.open(
+        urllib.request.Request(login_url, headers={"User-Agent": "tawtheeq-loadtest/1.0"}),
+        timeout=timeout,
+    ).read().decode("utf-8", errors="replace")
+    match = re.search(
+        r'name=["\']csrfmiddlewaretoken["\'][^>]*value=["\']([^"\']+)',
+        login_page,
+    )
+    if not match:
+        raise RuntimeError("Login page did not contain a CSRF token")
+    payload = urllib.parse.urlencode(
+        {
+            "csrfmiddlewaretoken": match.group(1),
+            "phone": phone,
+            "password": password,
+        }
+    ).encode("utf-8")
+    response = opener.open(
+        urllib.request.Request(
+            login_url,
+            data=payload,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": login_url,
+                "User-Agent": "tawtheeq-loadtest/1.0",
+            },
+        ),
+        timeout=timeout,
+    )
+    response.read()
+    cookies = "; ".join(f"{cookie.name}={cookie.value}" for cookie in jar)
+    if "sessionid=" not in cookies:
+        raise RuntimeError("Login did not produce an authenticated session")
+    return {"Cookie": cookies}
+
+
+def run(
+    url: str,
+    concurrency: int,
+    total: int,
+    timeout: float,
+    headers: dict[str, str] | None = None,
+    paths: list[str] | None = None,
+) -> int:
     outcomes: Counter[str] = Counter()
     latencies: list[float] = []
     lock = threading.Lock()
     remaining = threading.Semaphore(0)
     counter = {"issued": 0}
+    targets = [urllib.parse.urljoin(url.rstrip("/") + "/", path.lstrip("/")) for path in (paths or [""])]
 
     def worker() -> None:
         while True:
             with lock:
                 if counter["issued"] >= total:
                     return
+                request_index = counter["issued"]
                 counter["issued"] += 1
-            outcome, elapsed = _one_request(url, timeout, headers)
+            outcome, elapsed = _one_request(
+                targets[request_index % len(targets)], timeout, headers
+            )
             with lock:
                 outcomes[outcome] += 1
                 latencies.append(elapsed)
@@ -91,6 +152,8 @@ def run(url: str, concurrency: int, total: int, timeout: float, headers: dict[st
     )
 
     print(f"url          {url}")
+    if paths:
+        print("paths        " + ", ".join(paths))
     print(f"concurrency  {concurrency}")
     print(f"requests     {sum(outcomes.values())} in {wall:.1f}s "
           f"({sum(outcomes.values()) / wall:.1f} req/s)")
@@ -113,6 +176,14 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=30.0, help="Per-request timeout in seconds")
     parser.add_argument("--host-header", help="Override Host when testing an origin directly")
     parser.add_argument(
+        "--path",
+        action="append",
+        dest="paths",
+        help="Relative path to exercise; repeat to rotate through multiple routes",
+    )
+    parser.add_argument("--login-phone", help="Log in once and reuse the resulting local test session")
+    parser.add_argument("--login-password", help=argparse.SUPPRESS)
+    parser.add_argument(
         "--forwarded-proto",
         choices=("http", "https"),
         help="Send X-Forwarded-Proto (usually https behind Caddy/Cloudflare)",
@@ -127,7 +198,28 @@ def main() -> int:
         headers["Host"] = args.host_header
     if args.forwarded_proto:
         headers["X-Forwarded-Proto"] = args.forwarded_proto
-    return run(args.url, args.concurrency, args.requests, args.timeout, headers)
+    if bool(args.login_phone) != bool(args.login_password):
+        parser.error("--login-phone and --login-password must be supplied together")
+    if args.login_phone:
+        try:
+            headers.update(
+                _authenticated_headers(
+                    args.url,
+                    phone=args.login_phone,
+                    password=args.login_password,
+                    timeout=args.timeout,
+                )
+            )
+        except Exception as exc:
+            parser.error(f"authenticated session setup failed: {exc}")
+    return run(
+        args.url,
+        args.concurrency,
+        args.requests,
+        args.timeout,
+        headers,
+        args.paths,
+    )
 
 
 if __name__ == "__main__":

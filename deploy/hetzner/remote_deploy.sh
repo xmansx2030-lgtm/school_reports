@@ -59,6 +59,8 @@ derive_env_file() {
 
 derive_env_file deploy/hetzner/env.postgres \
   '^(POSTGRES_DB|POSTGRES_USER|POSTGRES_PASSWORD)=' 3
+derive_env_file deploy/hetzner/env.pgbouncer \
+  '^(DATABASE_URL)=' 1
 derive_env_file deploy/hetzner/env.redis \
   '^(REDIS_PASSWORD|REDIS_MAXMEMORY|REDIS_MAXMEMORY_POLICY)=' 3
 
@@ -116,8 +118,8 @@ docker run --rm --user 0:0 --entrypoint chown \
 # `up -d` re-runs the one-shot `migrate` service (migrate --noinput +
 # collectstatic); web/worker/beat wait on service_completed_successfully, so a
 # failed migration aborts the release instead of serving a half-migrated app.
-# No --remove-orphans: compose counts services from inactive profiles (pgbouncer)
-# as orphans and would tear them down on every deploy.
+# No --remove-orphans: rollback and separately managed containers must not be
+# removed as a side effect of an application release.
 log "starting release"
 if ! docker compose "${COMPOSE_FILES[@]}" up -d; then
   log "release startup failed — last migrate log lines:"

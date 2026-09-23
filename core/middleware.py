@@ -112,6 +112,7 @@ class ConcurrencyLimitMiddleware:
 
     _lock = threading.Lock()
     _in_flight = 0
+    _last_overload_log_at = 0.0
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -153,6 +154,8 @@ class ConcurrencyLimitMiddleware:
             )
         response["Retry-After"] = retry_after
         response["Cache-Control"] = "no-store"
+        request.expected_load_shed = True
+        response.expected_load_shed = True
         return response
 
     def __call__(self, request):
@@ -166,20 +169,36 @@ class ConcurrencyLimitMiddleware:
             if cls._in_flight >= limit:
                 current = cls._in_flight
                 admitted = False
+                now = time.monotonic()
+                try:
+                    log_interval = max(
+                        0.0,
+                        float(getattr(settings, "OVERLOAD_LOG_INTERVAL_SECONDS", 5) or 5),
+                    )
+                except (TypeError, ValueError):
+                    log_interval = 5.0
+                should_log = (
+                    log_interval == 0
+                    or now - cls._last_overload_log_at >= log_interval
+                )
+                if should_log:
+                    cls._last_overload_log_at = now
             else:
                 cls._in_flight += 1
                 current = cls._in_flight
                 admitted = True
+                should_log = False
 
         if not admitted:
             opmetrics.increment("http.overload.shed")
-            logger.warning(
-                "Shedding request over concurrency limit path=%s in_flight=%s limit=%s trace_id=%s",
-                path,
-                current,
-                limit,
-                getattr(request, "trace_id", "-"),
-            )
+            if should_log:
+                logger.warning(
+                    "Shedding requests over concurrency limit path=%s in_flight=%s limit=%s trace_id=%s; further overload logs are sampled",
+                    path,
+                    current,
+                    limit,
+                    getattr(request, "trace_id", "-"),
+                )
             return self._overloaded_response(request)
 
         try:
