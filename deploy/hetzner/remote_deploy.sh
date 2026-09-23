@@ -122,8 +122,8 @@ docker run --rm --user 0:0 --entrypoint chown \
 # removed as a side effect of an application release.
 log "starting release"
 if ! docker compose "${COMPOSE_FILES[@]}" up -d; then
-  log "release startup failed — last migrate log lines:"
-  docker compose "${COMPOSE_FILES[@]}" logs --tail 120 migrate || true
+  log "release startup failed — last dependency and migrate log lines:"
+  docker compose "${COMPOSE_FILES[@]}" logs --tail 120 postgres pgbouncer migrate || true
   die "release startup failed."
 fi
 

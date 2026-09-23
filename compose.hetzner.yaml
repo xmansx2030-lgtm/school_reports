@@ -103,7 +103,13 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U $${POSTGRES_USER}"]
+      # env.pgbouncer intentionally contains DATABASE_URL only. The image
+      # derives DB_USER inside its entrypoint process, so that shell-local
+      # value is not available to Docker's separate healthcheck process.
+      # pg_isready does not need credentials to report whether PgBouncer is
+      # accepting connections; omitting -U also avoids an empty-argument
+      # command that marks a healthy pooler unhealthy.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
       interval: 15s
       timeout: 5s
       retries: 5
