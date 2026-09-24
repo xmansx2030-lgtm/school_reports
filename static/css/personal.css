@@ -31,6 +31,7 @@ button{cursor:pointer}
 .personal-heading h1,.personal-hero h1{font-size:clamp(1.8rem,3vw,2.65rem);letter-spacing:-.025em;line-height:1.4;margin:4px 0 7px}
 .personal-heading p{margin:0;color:var(--personal-muted)}
 .personal-heading>a,.personal-card__head>a,.personal-text-link{color:var(--personal-green);font-weight:800}
+.personal-heading>a.personal-button{color:var(--twq-primary-foreground)}
 .personal-button{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:46px;padding:9px 20px;border:1px solid transparent;border-radius:11px;background:var(--twq-primary);color:var(--twq-primary-foreground);font-weight:800;white-space:nowrap;transition:background .18s ease,transform .18s ease}
 .personal-button:hover{background:var(--twq-primary-hover);transform:translateY(-1px)}
 .personal-button--gold{background:var(--twq-primary);color:var(--twq-primary-foreground)}
@@ -80,6 +81,7 @@ button{cursor:pointer}
 .personal-actions>a{color:var(--personal-green);font-weight:800}
 .personal-actions>.personal-button{color:var(--twq-primary-foreground)}
 .personal-actions>.personal-button--outline{color:var(--personal-ink)}
+.personal-hero .personal-actions>.personal-button--outline{color:var(--twq-hero-text);border-color:color-mix(in srgb,var(--twq-hero-text) 35%,transparent)}
 .personal-card--form{max-width:870px}
 .personal-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .personal-field{display:grid;align-content:start;gap:5px;min-width:0}

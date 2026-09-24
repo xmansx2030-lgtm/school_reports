@@ -34,9 +34,9 @@
       {% elif principal_names %}
         <p>مدير المدرسة: <strong>{{ principal_names|join:"، " }}</strong></p>
       {% endif %}
-      <p>السنة الدراسية: <strong>{% if report %}{{ report.academic_year }}{% else %}{{ year }}{% endif %}</strong></p>
+      <p>السنة الدراسية: <strong><bdi dir="ltr">{% if report %}{{ report.academic_year }}{% else %}{{ year }}{% endif %}</bdi></strong></p>
     </div>
-    <h1>{{ document_title }}</h1>
+    <h1>{% if year %}ملف الإنجاز <bdi dir="ltr">{{ year }}</bdi>{% else %}{{ document_title }}{% endif %}</h1>
 
     {% if report %}
       <p class="print-meta">{{ report.report_date }} · {{ report.category|default:"عمل موثق" }} · {{ report.get_status_display }}</p>

@@ -51,6 +51,7 @@ def landing_personal_plan_cards():
     )
     cards = [
         {
+            "id": plan.pk,
             "name": plan.name,
             "description": plan.description,
             "price_display": f"{plan.price:,.2f}".rstrip("0").rstrip("."),

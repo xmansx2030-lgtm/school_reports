@@ -250,6 +250,27 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertContains(response, "حتى إن لم تشترك مدرسته")
         self.assertContains(response, "اسم مدرستك ومديرها للتعريف")
 
+    def test_paid_landing_card_guides_anonymous_teacher_to_selected_plan(self):
+        plan = PersonalPlan.objects.create(
+            code="landing_paid_test", name="باقة الإنجاز", price="49.00", duration_days=90,
+        )
+        with override_settings(MOYASAR_ENABLED=True, LANDING_PRICING_CACHE_TTL_SECONDS=0):
+            landing = self.client.get(reverse("reports:landing"))
+        self.assertEqual(landing.status_code, 200)
+        checkout_url = reverse("personal:checkout_start", args=[plan.pk])
+        self.assertIn(checkout_url, landing.content.decode())
+
+        checkout = self.client.get(checkout_url)
+        register_url = reverse("personal:register") + f"?plan={plan.pk}"
+        self.assertRedirects(checkout, register_url, fetch_redirect_response=False)
+        registration = self.client.get(register_url)
+        self.assertContains(registration, plan.name)
+        self.assertContains(registration, "بعد إنشاء حسابك")
+        self.assertContains(
+            registration,
+            reverse("reports:login") + f"?next={checkout_url}",
+        )
+
     @patch("personal.billing.create_moyasar_invoice")
     def test_paid_registration_starts_moyasar_checkout_without_creating_school_records(self, create_invoice):
         plan = PersonalPlan.objects.create(
@@ -265,7 +286,7 @@ class PersonalWorkspaceJourneyTests(TestCase):
                 {
                     "name": "معلم جديد", "phone": "0557000012", "email": "paid@example.com",
                     "school_name": "مدرسة مستقلة", "principal_name": "مدير المدرسة",
-                    "password": "Personal#2026", "password_confirm": "Personal#2026",
+                    "password": "Tawtheeq!River_8042", "password_confirm": "Tawtheeq!River_8042",
                     "accept_policies": "on",
                 },
             )
@@ -345,3 +366,102 @@ class PersonalWorkspaceJourneyTests(TestCase):
                 apply_paid_personal_invoice(payment.pk, {**valid, **changes})
         payment.refresh_from_db()
         self.assertEqual(payment.status, PersonalPayment.Status.PENDING)
+
+    @patch("reports.utils.run_task_safe")
+    @patch("personal.billing.fetch_moyasar_invoice")
+    def test_gateway_return_verifies_payment_then_exposes_invoice_only_to_owner(self, fetch_invoice, _queue_task):
+        plan = PersonalPlan.objects.create(
+            code="gateway_return_test", name="باقة التحقق", price="49.00", duration_days=30,
+        )
+        subscription = PersonalSubscription.objects.create(
+            workspace=self.workspace, plan=PersonalPlan.objects.get(code="personal_free")
+        )
+        payment = PersonalPayment.objects.create(
+            workspace=self.workspace, plan=plan, plan_name=plan.name,
+            duration_days=plan.duration_days, amount=plan.price,
+            customer_name=self.teacher.name, customer_email="teacher@example.com",
+            gateway_invoice_id="inv-return-test",
+        )
+        invoice_url = reverse("personal:payment_invoice", args=[payment.pk])
+        self.client.force_login(self.teacher)
+        self.assertEqual(self.client.get(invoice_url).status_code, 404)
+        fetch_invoice.return_value = {
+            "id": payment.gateway_invoice_id, "status": "paid", "currency": "SAR",
+            "amount": 4900,
+            "metadata": {
+                "personal_payment_ref": str(payment.pk),
+                "personal_workspace_id": str(self.workspace.pk),
+            },
+        }
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.get(reverse("personal:moyasar_return", args=[payment.pk]))
+        self.assertRedirects(response, reverse("personal:billing"), fetch_redirect_response=False)
+        fetch_invoice.assert_called_once_with("inv-return-test")
+        payment.refresh_from_db()
+        subscription.refresh_from_db()
+        self.assertEqual(payment.status, PersonalPayment.Status.PAID)
+        self.assertTrue(subscription.is_current)
+        self.assertEqual(subscription.plan_id, plan.pk)
+        invoice = self.client.get(invoice_url)
+        self.assertEqual(invoice.status_code, 200)
+        self.assertEqual(invoice["Content-Type"], "application/pdf")
+        self.assertEqual(invoice["Cache-Control"], "private, no-store")
+        invoice.close()
+
+        outsider = Teacher.objects.create_user(
+            phone="0557000040", name="معلم آخر", password="Personal#2026"  # noqa: S106
+        )
+        PersonalWorkspace.objects.create(owner=outsider, school_name="مدرسة أخرى")
+        self.client.force_login(outsider)
+        self.assertEqual(self.client.get(invoice_url).status_code, 404)
+
+    @patch("reports.utils.run_task_safe")
+    def test_renewal_keeps_paid_workspace_current_and_retains_remaining_days(self, _queue_task):
+        from .billing import apply_paid_personal_invoice
+
+        first_plan = PersonalPlan.objects.create(
+            code="renewal_first_test", name="باقة أولى", price="49.00", duration_days=30,
+        )
+        next_plan = PersonalPlan.objects.create(
+            code="renewal_next_test", name="باقة ثانية", price="75.00", duration_days=60,
+        )
+        subscription = PersonalSubscription.objects.create(workspace=self.workspace, plan=first_plan)
+        today = timezone.localdate()
+        old_start = today - timedelta(days=10)
+        old_end = today + timedelta(days=19)
+        PersonalSubscription.objects.filter(pk=subscription.pk).update(
+            start_date=old_start, end_date=old_end
+        )
+
+        for index, plan in enumerate((first_plan, next_plan), start=1):
+            payment = PersonalPayment.objects.create(
+                workspace=self.workspace, plan=plan, plan_name=plan.name,
+                duration_days=plan.duration_days, amount=plan.price,
+                customer_name=self.teacher.name, customer_email="teacher@example.com",
+                gateway_invoice_id=f"inv-renewal-{index}",
+            )
+            invoice = {
+                "id": payment.gateway_invoice_id, "status": "paid", "currency": "SAR",
+                "amount": int(plan.price * 100),
+                "metadata": {
+                    "personal_payment_ref": str(payment.pk),
+                    "personal_workspace_id": str(self.workspace.pk),
+                },
+            }
+            apply_paid_personal_invoice(payment.pk, invoice)
+            subscription.refresh_from_db()
+            self.assertTrue(subscription.is_current)
+            self.assertEqual(subscription.plan_id, plan.pk)
+            self.assertEqual(
+                subscription.end_date,
+                old_end + timedelta(days=first_plan.duration_days + (next_plan.duration_days if index == 2 else 0)),
+            )
+            self.assertEqual(subscription.start_date, old_start if index == 1 else today)
+
+            apply_paid_personal_invoice(payment.pk, invoice)
+            subscription.refresh_from_db()
+            self.assertTrue(subscription.is_current)
+            self.assertEqual(
+                subscription.end_date,
+                old_end + timedelta(days=first_plan.duration_days + (next_plan.duration_days if index == 2 else 0)),
+            )

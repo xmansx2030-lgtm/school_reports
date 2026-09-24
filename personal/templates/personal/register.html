@@ -17,8 +17,8 @@
   <section class="personal-card twq-card personal-onboarding__form" aria-labelledby="personalRegisterHeading">
     <span class="personal-kicker">ابدأ الآن</span>
     <h2 id="personalRegisterHeading">أنشئ حساب المعلم</h2>
-    {% if selected_plan %}<p class="personal-hint">بعد إنشاء حسابك، ستنتقل إلى الدفع الآمن لباقة {{ selected_plan.name }} بقيمة {{ selected_plan.price|floatformat:"-2" }} ريال.</p>{% else %}<p class="personal-muted">أدخل بريدك بدقة؛ سنرسل إليه فواتير اشتراكك وتنبيهات التفعيل.</p>{% endif %}
-    <p class="personal-muted">لديك حساب في توثيق؟ <a href="{% url 'reports:login' %}">سجّل الدخول إلى حسابك</a>.</p>
+    {% if selected_plan %}<p class="personal-hint">بعد إنشاء حسابك، ستنتقل إلى الدفع الآمن لاشتراك {{ selected_plan.name }} بقيمة {{ selected_plan.price|floatformat:"-2" }} ريال.</p>{% else %}<p class="personal-muted">أدخل بريدك بدقة؛ سنرسل إليه فواتير اشتراكك وتنبيهات التفعيل.</p>{% endif %}
+    <p class="personal-muted">لديك حساب في توثيق؟ <a href="{% url 'reports:login' %}{% if selected_plan %}?next={% url 'personal:checkout_start' selected_plan.pk %}{% endif %}">سجّل الدخول إلى حسابك</a>.</p>
     <form method="post" novalidate>
       {% csrf_token %}
       {% if form.non_field_errors %}<div class="personal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}

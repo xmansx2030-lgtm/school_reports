@@ -192,6 +192,7 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.workspace = workspace
         self.fields["report"].queryset = PersonalReport.objects.filter(workspace=workspace)
+        self.fields["report"].label = "التقرير المرتبط"
         self.fields["report"].required = False
 
     def clean_academic_year(self):

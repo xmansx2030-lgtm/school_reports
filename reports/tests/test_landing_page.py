@@ -20,19 +20,19 @@ class LandingPageTests(TestCase):
         response = self.client.get(reverse("reports:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "شغّل مدرستك من مكان واحد")
-        self.assertContains(response, "وحوّل كل عمل إلى إنجاز موثّق")
-        self.assertContains(response, "تقارير، ملفات إنجاز، طلبات، تعاميم، خطط وأرشيف")
+        self.assertContains(response, "مدرستك منظّمة.")
+        self.assertContains(response, "وإنجازك موثّق.")
+        self.assertContains(response, "إدارة التقارير والطلبات والخطط والاعتمادات من مكان واحد.")
         self.assertContains(response, "التعاميم")
         self.assertContains(response, "الأرشيف")
-        self.assertContains(response, "ابدأ مجانًا 30 يوم")
-        self.assertNotContains(response, "ابدأ مجانًا 14 يوم")
+        self.assertContains(response, "ابدأ بمدرستك 30 يومًا مجانًا")
+        self.assertNotContains(response, "ابدأ بمدرستك 14 يومًا مجانًا")
         self.assertContains(response, "أدخل عدد المعلمين واعرف السعر فورًا")
         self.assertContains(response, reverse("reports:register_school"))
         self.assertContains(response, "img/landing/dashboard-system.png")
         self.assertContains(response, "img/landing/report-system.png")
-        self.assertNotContains(response, "img/landing/tickets-system.png")
-        self.assertNotContains(response, "img/landing/archive-system.png")
+        self.assertContains(response, "img/landing/tickets-system.png")
+        self.assertContains(response, "img/landing/archive-system.png")
         self.assertContains(response, "بيانات تجريبية")
         self.assertContains(response, 'id="productLightbox"')
         self.assertContains(response, "img/brand-mark.svg")
@@ -48,7 +48,7 @@ class LandingPageTests(TestCase):
         self.assertIn('href="#pricing">الأسعار</a>', header)
         self.assertIn('href="#pricing">الأسعار</a>', mobile_menu)
         self.assertNotIn('href="#pricing">الباقات</a>', html)
-        self.assertContains(response, "اعرف سعر مدرستك")
+        self.assertContains(response, "سعر مدرستك")
 
     def test_landing_uses_a_short_decision_focused_information_architecture(self):
         response = self.client.get(reverse("reports:landing"))
@@ -76,7 +76,7 @@ class LandingPageTests(TestCase):
 
         self.assertContains(
             response,
-            "<title>منصة توثيق | إدارة وتشغيل المدارس والتقارير والإنجاز</title>",
+            "<title>منصة توثيق | للمدارس ومساحة إنجاز شخصية للمعلمين والمعلمات</title>",
             html=True,
         )
         for audience in ("مدير المدرسة", "المعلم", "المدير التنفيذي", "الموظف الإداري"):

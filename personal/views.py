@@ -133,7 +133,6 @@ def setup(request):
 
 
 @never_cache
-@login_required(login_url="reports:login")
 @ratelimit(key="user", rate="5/m", method="POST", block=True)
 @require_http_methods(["GET", "POST"])
 def checkout_start(request, plan_id):
@@ -141,6 +140,8 @@ def checkout_start(request, plan_id):
         PersonalPlan.objects.filter(is_active=True, is_published=True, price__gt=0),
         pk=plan_id,
     )
+    if not request.user.is_authenticated:
+        return redirect(f"{reverse('personal:register')}?{urlencode({'plan': plan.pk})}")
     school_membership = current_school_membership_for(request.user)
     if school_membership is not None:
         messages.warning(
