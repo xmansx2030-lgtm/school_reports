@@ -75,7 +75,7 @@
   {% else %}
     <div class="twq-empty twq-empty--page plan-empty">
       <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-compass-drafting"></i></span>
-      {% if can_plan %}<h2 class="twq-empty__title">لا خطط بعد</h2><p class="twq-empty__message">ابدأ بخطة تجمع الهدف والمهام، ثم حوّل المهام الجاهزة إلى تكليفات قابلة للمتابعة.</p><a class="twq-btn twq-btn--primary" href="{% url 'reports:plan_create' %}">إنشاء أول خطة</a>{% else %}<h2 class="twq-empty__title">لا توجد خطط في نطاق عملك</h2><p class="twq-empty__message">ستظهر الخطة عندما تكون مالكًا لها أو مسؤولًا عن مهمة فيها أو حين يمنحك نطاق العمل حق المتابعة.</p>{% endif %}
+      {% if can_plan %}<h2 class="twq-empty__title">لا خطط بعد</h2><p class="twq-empty__message">ابدأ بخطة تجمع الهدف والمهام، ثم حوّل المهام الجاهزة إلى تكليفات قابلة للمتابعة.</p><a class="twq-btn twq-btn--primary" href="{% url 'reports:plan_create' %}">إنشاء أول خطة</a>{% else %}<h2 class="twq-empty__title">لا توجد خطط في نطاق عملك</h2><p class="twq-empty__message">ستظهر الخطة عندما تكون مالكًا لها أو مسؤولًا عن مهمة فيها أو حين يمنحك نطاق العمل حق المتابعة.</p><a class="twq-btn twq-btn--secondary" href="{% url 'reports:initiative_list' %}">اقتراح مبادرة مدرسية</a>{% endif %}
     </div>
   {% endif %}
 </div>

@@ -128,24 +128,15 @@ class NotificationAlertExperienceTests(SimpleTestCase):
 
     def test_page_specific_toasts_delegate_to_the_unified_layer(self):
         subscription = (
-            self.project_root
-            / "reports"
-            / "templates"
-            / "reports"
-            / "my_subscription.html"
+            self.project_root / "static" / "js" / "subscription.js"
         ).read_text(encoding="utf-8")
         meeting_copy = (
-            self.project_root
-            / "reports"
-            / "templates"
-            / "reports"
-            / "partials"
-            / "_meeting_copy_link.html"
+            self.project_root / "static" / "js" / "meetings.js"
         ).read_text(encoding="utf-8")
 
         self.assertIn("window.showAppToast(msg, type)", subscription)
         self.assertNotIn("toastContainer", subscription)
-        self.assertIn("window.showAppToast(message, 'success')", meeting_copy)
+        self.assertIn('window.showAppToast(message, "success")', meeting_copy)
         self.assertNotIn("mtg-copy-toast", meeting_copy)
 
     def test_standalone_auth_and_registration_alerts_are_accessible(self):

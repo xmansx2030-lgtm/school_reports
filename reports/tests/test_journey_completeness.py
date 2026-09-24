@@ -544,8 +544,9 @@ class PlanListIsScopedTests(CompletenessTestCase):
         PlanTask.objects.create(plan=plan, title="ثانية", responsible=self.teacher)
         self.assertEqual(len(plans_visible_to(self.teacher, self.school)), 1)
 
-    def test_track_plans_opens_the_whole_list(self):
-        self._plan(self.manager, "خطة الإدارة")
+    def test_track_plans_opens_only_the_scoped_department_list(self):
+        plan = self._plan(self.manager, "خطة الإدارة")
+        PlanTask.objects.create(plan=plan, title="مهمة القسم", department=self.department)
         self._grant(caps.TRACK_PLANS)
         self.assertEqual(len(plans_visible_to(self.deputy, self.school)), 1)
 

@@ -101,11 +101,39 @@ class PlansPilotBase(TestCase):
 
 class PlansPilotSecurityTests(PlansPilotBase):
     def test_owner_relationship_does_not_bypass_active_school(self):
-        """School plans remain inside the active-school boundary."""
+        """Ownership never bypasses the active-school boundary."""
         plan = self._plan(school=self.school_a, owner=self.manager)
         client = self._enter(self.manager, self.school_b)
-        response = client.get(reverse("reports:plan_detail", args=[plan.pk]))
-        self.assertEqual(response.status_code, 404)
+        routes = [
+            ("get", reverse("reports:plan_detail", args=[plan.pk]), None),
+            ("get", reverse("reports:plan_edit", args=[plan.pk]), None),
+            ("get", reverse("reports:plan_print", args=[plan.pk]), None),
+            ("post", reverse("reports:plan_delete", args=[plan.pk]), {}),
+            (
+                "post",
+                reverse("reports:plan_action", args=[plan.pk]),
+                {"plan_action": "add_goal", "title": "هدف عابر للمدرسة"},
+            ),
+            (
+                "post",
+                reverse("reports:plan_approval_action", args=[plan.pk]),
+                {"approval_action": "issue"},
+            ),
+        ]
+        for method, url, data in routes:
+            with self.subTest(url=url):
+                response = getattr(client, method)(url, data or {})
+                self.assertEqual(response.status_code, 404)
+        self.assertTrue(Plan.objects.filter(pk=plan.pk).exists())
+        self.assertFalse(plan.goals.exists())
+
+    def test_manager_relationship_does_not_bypass_active_school(self):
+        plan = self._plan(school=self.school_a, owner=self.teacher)
+        client = self._enter(self.manager, self.school_b)
+        self.assertEqual(
+            client.get(reverse("reports:plan_detail", args=[plan.pk])).status_code,
+            404,
+        )
 
     def test_direct_track_plans_is_limited_to_staffscope_departments(self):
         """Direct tracking authority remains inside the granted department scope."""
@@ -119,14 +147,28 @@ class PlansPilotSecurityTests(PlansPilotBase):
         self._task(plan_b, department=self.department_b)
         visible_ids = set(plans_visible_to(self.deputy, self.school_a).values_list("id", flat=True))
         self.assertEqual(visible_ids, {plan_a.pk})
+        client = self._enter(self.deputy)
+        self.assertEqual(
+            client.get(reverse("reports:plan_detail", args=[plan_a.pk])).status_code,
+            200,
+        )
+        self.assertEqual(
+            client.get(reverse("reports:plan_detail", args=[plan_b.pk])).status_code,
+            404,
+        )
 
     def test_empty_staffscope_does_not_mean_every_plan(self):
         """An empty tracking scope grants no plans."""
         StaffScope.objects.create(
             membership=self.deputy_membership, capabilities=[caps.TRACK_PLANS]
         )
-        self._plan(title="خطة لا تقع في نطاق")
+        plan = self._plan(title="خطة لا تقع في نطاق")
         self.assertFalse(plans_visible_to(self.deputy, self.school_a).exists())
+        client = self._enter(self.deputy)
+        self.assertEqual(
+            client.get(reverse("reports:plan_detail", args=[plan.pk])).status_code,
+            404,
+        )
 
     def test_delegated_track_plans_preserves_staffscope_departments(self):
         """Delegated tracking authority keeps the existing department scope."""
@@ -146,6 +188,49 @@ class PlansPilotSecurityTests(PlansPilotBase):
         self._task(plan_b, department=self.department_b)
         visible_ids = set(plans_visible_to(self.deputy, self.school_a).values_list("id", flat=True))
         self.assertEqual(visible_ids, {plan_a.pk})
+        client = self._enter(self.deputy)
+        self.assertEqual(
+            client.get(reverse("reports:plan_detail", args=[plan_b.pk])).status_code,
+            404,
+        )
+
+    def test_wrong_school_expired_and_revoked_delegations_grant_no_plan_scope(self):
+        scope = StaffScope.objects.create(membership=self.deputy_membership)
+        scope.departments.add(self.department_a)
+        plan = self._plan(title="خطة لا يفتحها تفويض غير سار")
+        self._task(plan, department=self.department_a)
+
+        wrong_school = Delegation.objects.create(
+            school=self.school_b,
+            delegator=self.manager,
+            delegate=self.deputy,
+            capabilities=[caps.TRACK_PLANS],
+            starts_at=timezone.now() - timedelta(hours=1),
+            ends_at=timezone.now() + timedelta(hours=1),
+        )
+        expired = Delegation.objects.create(
+            school=self.school_a,
+            delegator=self.manager,
+            delegate=self.deputy,
+            capabilities=[caps.TRACK_PLANS],
+            starts_at=timezone.now() - timedelta(hours=2),
+            ends_at=timezone.now() - timedelta(hours=1),
+        )
+        revoked = Delegation.objects.create(
+            school=self.school_a,
+            delegator=self.manager,
+            delegate=self.deputy,
+            capabilities=[caps.TRACK_PLANS],
+            starts_at=timezone.now() - timedelta(hours=1),
+            ends_at=timezone.now() + timedelta(hours=1),
+            revoked_at=timezone.now(),
+            revoked_by=self.manager,
+        )
+        self.assertFalse(plans_visible_to(self.deputy, self.school_a).exists())
+        self.assertEqual(
+            {wrong_school.state, expired.state, revoked.state},
+            {"active", "expired", "revoked"},
+        )
 
     def test_submitted_plan_goal_cannot_be_removed_by_crafted_post(self):
         """Submitted plans preserve their review task structure."""
@@ -169,27 +254,66 @@ class PlansPilotSecurityTests(PlansPilotBase):
         )
         self.assertTrue(PlanTask.objects.filter(pk=task.pk).exists())
 
+    def test_submitted_and_approved_plans_reject_all_item_mutations(self):
+        client = self._enter(self.manager)
+        for approval_state in (ApprovalState.SUBMITTED, ApprovalState.APPROVED):
+            plan = self._plan(
+                title=f"خطة {approval_state}", approval_state=approval_state
+            )
+            goal = PlanGoal.objects.create(plan=plan, title="هدف ثابت")
+            task = self._task(plan)
+            attempts = [
+                {"plan_action": "add_goal", "title": "هدف دخيل"},
+                {
+                    "plan_action": "add_task",
+                    "title": "مهمة دخيلة",
+                    "description": "",
+                    "goal": "",
+                    "responsible": "",
+                    "department": "",
+                    "due_at": "",
+                },
+                {"plan_action": "remove_goal", "goal_id": goal.pk},
+                {"plan_action": "remove_task", "task_id": task.pk},
+            ]
+            for payload in attempts:
+                with self.subTest(state=approval_state, action=payload["plan_action"]):
+                    client.post(reverse("reports:plan_action", args=[plan.pk]), payload)
+            self.assertEqual(plan.goals.count(), 1)
+            self.assertEqual(plan.tasks.count(), 1)
+
     def test_closed_plan_rejects_new_items(self):
-        """Closed plans reject structural changes."""
+        """Closed means no structural mutation and no new execution link."""
         plan = self._plan(stage=Plan.Stage.CLOSED)
+        goal = PlanGoal.objects.create(plan=plan, title="هدف قبل الإغلاق")
         task = self._task(
             plan,
+            goal=goal,
             responsible=self.teacher,
             due_at=timezone.now() + timedelta(days=3),
         )
         client = self._enter(self.manager)
-        client.post(
-            reverse("reports:plan_action", args=[plan.pk]),
+        attempts = [
             {"plan_action": "add_goal", "title": "هدف بعد الإغلاق"},
-        )
-        client.post(
-            reverse("reports:plan_action", args=[plan.pk]),
+            {
+                "plan_action": "add_task",
+                "title": "مهمة بعد الإغلاق",
+                "description": "",
+                "goal": "",
+                "responsible": "",
+                "department": "",
+                "due_at": "",
+            },
+            {"plan_action": "remove_goal", "goal_id": goal.pk},
+            {"plan_action": "remove_task", "task_id": task.pk},
             {"plan_action": "track_task", "task_id": task.pk},
-        )
+        ]
+        for payload in attempts:
+            client.post(reverse("reports:plan_action", args=[plan.pk]), payload)
         task.refresh_from_db()
         self.assertEqual(
-            (plan.goals.filter(title="هدف بعد الإغلاق").exists(), task.assignment_id),
-            (False, None),
+            (plan.goals.count(), plan.tasks.count(), task.assignment_id),
+            (1, 1, None),
         )
 
     def test_stale_task_instance_cannot_create_a_second_assignment(self):
@@ -204,6 +328,22 @@ class PlansPilotSecurityTests(PlansPilotBase):
         convert_task_to_assignment(task, self.manager)
         with self.assertRaises(PlanError):
             convert_task_to_assignment(stale, self.manager)
+        self.assertEqual(Assignment.objects.filter(source=Assignment.Source.PLAN).count(), 1)
+
+    def test_repeated_conversion_post_creates_one_assignment(self):
+        plan = self._plan()
+        task = self._task(
+            plan,
+            responsible=self.teacher,
+            due_at=timezone.now() + timedelta(days=3),
+        )
+        client = self._enter(self.manager)
+        url = reverse("reports:plan_action", args=[plan.pk])
+        payload = {"plan_action": "track_task", "task_id": task.pk}
+        client.post(url, payload)
+        client.post(url, payload)
+        task.refresh_from_db()
+        self.assertIsNotNone(task.assignment_id)
         self.assertEqual(Assignment.objects.filter(source=Assignment.Source.PLAN).count(), 1)
 
     def test_stale_approval_cannot_overwrite_a_newer_state(self):

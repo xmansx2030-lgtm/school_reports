@@ -240,10 +240,10 @@ def _delete_block(plan: Plan) -> str | None:
     """
     if plan.stage == Plan.Stage.CLOSED:
         return "الخطة مغلقة — سجلٌ تشغيلي لا يُحذف."
-    if not plan.is_editable_by_owner:
-        return "الخطة في مرحلة اعتماد لا تسمح بحذفها."
     if plan.is_final:
         return "الخطة معتمدة — وثيقةٌ صادرة تُغلق ولا تُحذف."
+    if not plan.is_editable_by_owner:
+        return "الخطة في مرحلة اعتماد لا تسمح بحذفها."
     if plan.tasks.filter(assignment__isnull=False).exists():
         return "تحوّلت مهام من هذه الخطة إلى تكليفات قائمة — أغلقها بدل حذفها."
     return None
