@@ -1,0 +1,6 @@
+<div class="personal-field twq-field{% if field.errors %} personal-field--error twq-field--error{% endif %}">
+  <label class="twq-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="مطلوب">*</span>{% endif %}</label>
+  {{ field }}
+  {% if field.help_text %}<small id="id_{{ field.name }}_help" class="personal-field__help twq-field__help">{{ field.help_text }}</small>{% endif %}
+  {% if field.errors %}<span id="id_{{ field.name }}_errors">{% for error in field.errors %}<small class="personal-field__error twq-field__message" role="alert">{{ error }}</small>{% endfor %}</span>{% endif %}
+</div>

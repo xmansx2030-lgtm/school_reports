@@ -1,187 +1,72 @@
 {% extends "base.html" %}
 {% load hijri_tags %}
 
-{% block title %}الاجتماعات | منصة توثيق{% endblock %}
-
-{% block head %}
-{% include "reports/_meeting_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .mtg-list-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .2rem; }
-  .mtg-list-head .asg-card__title { margin: 0; }
-  .mtg-count {
-    padding: .16rem .55rem; border-radius: 999px; background: var(--asg-soft);
-    color: var(--asg-green); font-size: .73rem; font-weight: 900;
-  }
-</style>
-{% endblock %}
+{% block title %}اجتماعات المدرسة | منصة توثيق{% endblock %}
+{% block head %}{% include "reports/_meeting_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <span class="asg-hero__eyebrow">
-      <i class="fa-solid fa-users-rectangle" aria-hidden="true"></i>
-      التوثيق المؤسسي
-    </span>
-    <h1 class="asg-hero__title">الاجتماعات</h1>
-    <p class="asg-hero__meta">
-      {% if can_organize %}
-        ما نظّمتَه وما دُعيتَ إليه في {{ active_school.name }} — بجداول أعمالها
-        ومحاضرها وقراراتها، وكلٌّ منها يُطبع محضراً رسمياً جاهزاً للتوقيع.
-      {% else %}
-        الاجتماعات التي دُعيتَ إليها في {{ active_school.name }}، مع جدول الأعمال
-        والمحضر والقرارات المتاحة لك. تنظيم اجتماع جديد يحتاج صلاحية مستقلة من المدير.
-      {% endif %}
-    </p>
-    {% if can_organize %}
-      <div class="u-mt-xl">
-        <a class="asg-btn xs-meeting-list-1" href="{% url 'reports:meeting_create' %}">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          اجتماع جديد
-        </a>
-      </div>
-    {% endif %}
+<div class="twq-page meetings-page" aria-labelledby="meetingsPageTitle">
+  <header class="twq-page-header meeting-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-users-rectangle" aria-hidden="true"></i> عمليات المدرسة</span>
+      <h1 class="twq-page-header__title" id="meetingsPageTitle">اجتماعات {{ active_school.name }}</h1>
+      <p class="twq-page-header__lead">
+        {% if can_organize %}تابع الاجتماعات التي تنظّمها أو دُعيت إليها، واعرف ما يحتاج انعقادًا أو محضرًا أو متابعة.{% else %}الاجتماعات التي دُعيت إليها في المدرسة النشطة، مع جدول الأعمال والمحضر والقرارات المتاحة لك.{% endif %}
+      </p>
+    </div>
+    {% if can_organize %}<div class="twq-page-header__aside"><div class="meeting-page-header__actions"><a class="twq-btn twq-btn--primary" href="{% url 'reports:meeting_create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> تنظيم اجتماع</a></div></div>{% endif %}
   </header>
 
-  <section class="asg-kpis" aria-label="ملخص الاجتماعات">
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ upcoming|length }}</div>
-      <div class="asg-kpi__l">قادمة</div>
-    </article>
-    <article class="asg-kpi">
-      <div class="asg-kpi__v">{{ held|length }}</div>
-      <div class="asg-kpi__l">منعقدة</div>
-    </article>
-    <article class="asg-kpi" data-tone="warn">
-      <div class="asg-kpi__v">{{ pending_minutes_count }}</div>
-      <div class="asg-kpi__l">محضر لم يُعتمد</div>
-    </article>
-  </section>
+  <dl class="twq-metrics meeting-metrics" aria-label="ملخص اجتماعاتي">
+    <div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> قادمة</dt><dd><bdi>{{ upcoming|length }}</bdi></dd></div>
+    <div><dt><i class="fa-solid fa-circle-check" aria-hidden="true"></i> منعقدة</dt><dd><bdi>{{ held|length }}</bdi></dd></div>
+    <div {% if pending_minutes_count %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-file-signature" aria-hidden="true"></i> محاضر غير نهائية</dt><dd><bdi>{{ pending_minutes_count }}</bdi></dd></div>
+    <div><dt><i class="fa-solid fa-ban" aria-hidden="true"></i> ملغاة</dt><dd><bdi>{{ cancelled|length }}</bdi></dd></div>
+  </dl>
 
   {% if upcoming %}
-    <section class="asg-card">
-      <div class="mtg-list-head">
-        <h2 class="asg-card__title">اجتماعات قادمة</h2>
-        <span class="mtg-count">{{ upcoming|length }}</span>
-      </div>
-      <p class="asg-card__hint">
-        اطبع الدعوة وجدول أعمالها قبل الموعد، أو انسخ رابط الاجتماع لمن دُعي إليه.
-      </p>
-      {% for m in upcoming %}
-        <article class="mtg-row">
-          <span class="mtg-row__icon" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
-          <div class="mtg-row__main">
-            <div class="mtg-row__title">
-              <a href="{% url 'reports:meeting_detail' m.pk %}">{{ m.title }}</a>
-            </div>
-            <div class="mtg-row__sub">
-              <i class="fa-regular fa-clock" aria-hidden="true"></i>
-              {{ m.scheduled_at|hijri }} هـ — {{ m.scheduled_at|time:"H:i" }}
-              {% if m.location %} · <i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ m.location }}{% endif %}
-              {% if m.department %} · <i class="fa-solid fa-sitemap" aria-hidden="true"></i> {{ m.department.name }}{% endif %}
-              · <i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ m.attendees.count }} مدعو
-            </div>
-          </div>
-          <div class="mtg-row__side">
-            <span class="asg-tag">{{ m.get_status_display }}</span>
-            <button type="button" class="mtg-iconbtn mtg-iconbtn--sm mtg-iconbtn--square"
-                    data-copy-link="{{ request.scheme }}://{{ request.get_host }}{% url 'reports:meeting_detail' m.pk %}"
-                    title="نسخ رابط الاجتماع" aria-label="نسخ رابط الاجتماع">
-              <i class="fa-solid fa-link" aria-hidden="true"></i>
-            </button>
-            <a class="mtg-iconbtn mtg-iconbtn--sm mtg-iconbtn--square"
-               href="{% url 'reports:meeting_print' m.pk %}" target="_blank" rel="noopener"
-               title="طباعة" aria-label="طباعة الاجتماع">
-              <i class="fa-solid fa-print" aria-hidden="true"></i>
-            </a>
-            <a class="mtg-iconbtn mtg-iconbtn--sm" href="{% url 'reports:meeting_detail' m.pk %}">
-              فتح <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-            </a>
-          </div>
-        </article>
-      {% endfor %}
+    <section class="twq-section meeting-section" aria-labelledby="upcomingMeetingsTitle">
+      <header class="twq-section__header"><div class="meeting-section__heading"><span class="twq-section__kicker">الجدولة</span><h2 class="twq-section__title" id="upcomingMeetingsTitle">اجتماعات قادمة</h2><p class="twq-section__description">راجع الموعد والمدعوين وجدول الأعمال قبل تسجيل الانعقاد.</p></div><span class="meeting-list-count"><bdi>{{ upcoming|length }}</bdi> اجتماع</span></header>
+      <div class="twq-table-wrap meeting-table-wrap"><table class="twq-table meeting-table meeting-table--cards"><caption>الاجتماعات القادمة والإجراء التالي</caption><thead><tr><th scope="col">الاجتماع</th><th scope="col">الموعد</th><th scope="col">المنظّم</th><th scope="col">المدعوون</th><th scope="col">الحالة</th><th scope="col">الإجراء التالي</th></tr></thead><tbody>
+        {% for meeting in upcoming %}<tr>
+          <td data-label="الاجتماع"><div class="meeting-table__identity"><a href="{% url 'reports:meeting_detail' meeting.pk %}">{{ meeting.title }}</a><small>{% if meeting.department %}{{ meeting.department.name }}{% else %}اجتماع على مستوى المدرسة{% endif %}{% if meeting.location %} · {{ meeting.location }}{% endif %}</small></div></td>
+          <td data-label="الموعد"><time datetime="{{ meeting.scheduled_at|date:'c' }}"><bdi>{{ meeting.scheduled_at|hijri }} هـ — {{ meeting.scheduled_at|time:'H:i' }}</bdi></time></td>
+          <td data-label="المنظّم"><bdi>{% firstof meeting.organizer_name meeting.organizer.name "—" %}</bdi></td>
+          <td data-label="المدعوون"><bdi>{{ meeting.attendees.all|length }}</bdi></td>
+          <td data-label="الحالة"><span class="twq-status meeting-status" data-status="{{ meeting.status }}">{{ meeting.get_status_display }}</span></td>
+          <td data-label="الإجراء التالي"><div class="meeting-action-row"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:meeting_detail' meeting.pk %}">فتح مساحة الاجتماع</a><button type="button" class="twq-btn twq-btn--icon" data-copy-link="{{ request.scheme }}://{{ request.get_host }}{% url 'reports:meeting_detail' meeting.pk %}" aria-label="نسخ رابط {{ meeting.title }}"><i class="fa-solid fa-link" aria-hidden="true"></i></button></div></td>
+        </tr>{% endfor %}
+      </tbody></table></div>
     </section>
   {% endif %}
 
   {% if held %}
-    <section class="asg-card">
-      <div class="mtg-list-head">
-        <h2 class="asg-card__title">اجتماعات منعقدة</h2>
-        <span class="mtg-count">{{ held|length }}</span>
-      </div>
-      <p class="asg-card__hint">
-        المحضر يُكتب ثم يُرسل للاعتماد. واجتماعٌ بلا محضر معتمد يبقى واقعةً بلا
-        سند يُحتجّ به.
-      </p>
-      {% for m in held %}
-        <article class="mtg-row">
-          <span class="mtg-row__icon" aria-hidden="true"><i class="fa-solid fa-file-signature"></i></span>
-          <div class="mtg-row__main">
-            <div class="mtg-row__title">
-              <a href="{% url 'reports:meeting_detail' m.pk %}">{{ m.title }}</a>
-            </div>
-            <div class="mtg-row__sub">
-              <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-              انعقد {{ m.held_at|hijri }} هـ
-              · <i class="fa-solid fa-gavel" aria-hidden="true"></i> {{ m.decisions.count }} قرار
-              · <i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ m.attendees.count }} مدعو
-            </div>
-          </div>
-          <div class="mtg-row__side">
-            {% if m.minutes %}
-              <span class="asg-tag {% if m.minutes.is_final %}asg-tag--done{% endif %}">
-                {{ m.minutes.get_approval_state_display }}
-              </span>
-            {% else %}
-              <span class="asg-tag asg-tag--soon">بلا محضر</span>
-            {% endif %}
-            <button type="button" class="mtg-iconbtn mtg-iconbtn--sm mtg-iconbtn--square"
-                    data-copy-link="{{ request.scheme }}://{{ request.get_host }}{% url 'reports:meeting_detail' m.pk %}"
-                    title="نسخ رابط الاجتماع" aria-label="نسخ رابط الاجتماع">
-              <i class="fa-solid fa-link" aria-hidden="true"></i>
-            </button>
-            <a class="mtg-iconbtn mtg-iconbtn--sm mtg-iconbtn--square"
-               href="{% url 'reports:meeting_print' m.pk %}" target="_blank" rel="noopener"
-               title="طباعة المحضر" aria-label="طباعة المحضر">
-              <i class="fa-solid fa-print" aria-hidden="true"></i>
-            </a>
-            <a class="mtg-iconbtn mtg-iconbtn--sm" href="{% url 'reports:meeting_detail' m.pk %}">
-              فتح <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-            </a>
-          </div>
-        </article>
-      {% endfor %}
+    <section class="twq-section meeting-section" aria-labelledby="heldMeetingsTitle">
+      <header class="twq-section__header"><div class="meeting-section__heading"><span class="twq-section__kicker">المحاضر والمتابعة</span><h2 class="twq-section__title" id="heldMeetingsTitle">اجتماعات منعقدة</h2><p class="twq-section__description">حالة المحضر والقرارات هي ما يحدد الإجراء التشغيلي التالي.</p></div><span class="meeting-list-count"><bdi>{{ held|length }}</bdi> اجتماع</span></header>
+      <div class="twq-table-wrap meeting-table-wrap"><table class="twq-table meeting-table meeting-table--cards"><caption>الاجتماعات المنعقدة وحالة محاضرها</caption><thead><tr><th scope="col">الاجتماع</th><th scope="col">الانعقاد</th><th scope="col">المحضر</th><th scope="col">القرارات</th><th scope="col">الحضور</th><th scope="col">الإجراء التالي</th></tr></thead><tbody>
+        {% for meeting in held %}<tr>
+          <td data-label="الاجتماع"><div class="meeting-table__identity"><a href="{% url 'reports:meeting_detail' meeting.pk %}">{{ meeting.title }}</a><small>{% firstof meeting.organizer_name meeting.organizer.name "—" %}{% if meeting.department %} · {{ meeting.department.name }}{% endif %}</small></div></td>
+          <td data-label="الانعقاد">{% if meeting.held_at %}<time datetime="{{ meeting.held_at|date:'c' }}"><bdi>{{ meeting.held_at|hijri }} هـ</bdi></time>{% else %}—{% endif %}</td>
+          <td data-label="المحضر">{% if meeting.minutes %}<span class="twq-status meeting-status" data-status="{{ meeting.minutes.approval_state }}">{{ meeting.minutes.get_approval_state_display }}</span>{% else %}<span class="twq-status meeting-status" data-status="draft">لم يُفتح</span>{% endif %}</td>
+          <td data-label="القرارات"><bdi>{{ meeting.decisions.all|length }}</bdi></td>
+          <td data-label="الحضور"><bdi>{{ meeting.attendees.all|length }}</bdi> مدعو</td>
+          <td data-label="الإجراء التالي"><div class="meeting-action-row"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:meeting_detail' meeting.pk %}">{% if meeting.minutes and not meeting.minutes.is_final %}متابعة المحضر{% else %}فتح الاجتماع{% endif %}</a><a class="twq-btn twq-btn--ghost" href="{% url 'reports:meeting_print' meeting.pk %}" target="_blank" rel="noopener">طباعة</a></div></td>
+        </tr>{% endfor %}
+      </tbody></table></div>
     </section>
   {% endif %}
 
-  {% if not upcoming and not held %}
-    <div class="asg-empty u-mt-2xl">
-      <div class="asg-empty__icon"><i class="fa-solid fa-users-rectangle" aria-hidden="true"></i></div>
-      <h2>لا اجتماعات بعد</h2>
-      <p>
-        {% if can_organize %}
-          نظّم اجتماعاً لتوثيق جدول أعماله وحضوره ومحضره، ولتحويل قراراته إلى
-          تكليفات تُتابَع بمواعيدها.
-        {% else %}
-          ستظهر هنا الاجتماعات التي تدعوك إليها الإدارة. لا يلزمك إنشاء اجتماع،
-          وستتمكن من الاطلاع على جدول الأعمال والمحضر وفق دعوتك.
-        {% endif %}
-      </p>
-      {% if can_organize %}
-        <div class="u-mt-lg">
-          <a class="asg-btn asg-btn--primary" href="{% url 'reports:meeting_create' %}">
-            <i class="fa-solid fa-plus" aria-hidden="true"></i>
-            نظّم أول اجتماع
-          </a>
-        </div>
-      {% endif %}
-    </div>
+  {% if cancelled %}
+    <section class="twq-section meeting-section" aria-labelledby="cancelledMeetingsTitle">
+      <header class="twq-section__header"><div class="meeting-section__heading"><span class="twq-section__kicker">السجل</span><h2 class="twq-section__title" id="cancelledMeetingsTitle">اجتماعات ملغاة</h2><p class="twq-section__description">تبقى الدعوة وسبب الإلغاء محفوظين، دون إخفاء الواقعة.</p></div><span class="meeting-list-count"><bdi>{{ cancelled|length }}</bdi> اجتماع</span></header>
+      <div class="twq-table-wrap meeting-table-wrap"><table class="twq-table meeting-table meeting-table--cards"><caption>الاجتماعات الملغاة</caption><thead><tr><th scope="col">الاجتماع</th><th scope="col">الموعد الأصلي</th><th scope="col">المنظّم</th><th scope="col">سبب الإلغاء</th><th scope="col">الحالة</th><th scope="col">الإجراء</th></tr></thead><tbody>{% for meeting in cancelled %}<tr><td data-label="الاجتماع"><div class="meeting-table__identity"><a href="{% url 'reports:meeting_detail' meeting.pk %}">{{ meeting.title }}</a>{% if meeting.department %}<small>{{ meeting.department.name }}</small>{% endif %}</div></td><td data-label="الموعد الأصلي"><time datetime="{{ meeting.scheduled_at|date:'c' }}"><bdi>{{ meeting.scheduled_at|hijri }} هـ</bdi></time></td><td data-label="المنظّم"><bdi>{% firstof meeting.organizer_name meeting.organizer.name "—" %}</bdi></td><td data-label="سبب الإلغاء">{{ meeting.cancel_reason|default:"لم يُذكر سبب" }}</td><td data-label="الحالة"><span class="twq-status meeting-status" data-status="cancelled">{{ meeting.get_status_display }}</span></td><td data-label="الإجراء"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:meeting_detail' meeting.pk %}">فتح السجل</a></td></tr>{% endfor %}</tbody></table></div>
+    </section>
   {% endif %}
 
+  {% if not upcoming and not held and not cancelled %}
+    <div class="twq-empty twq-empty--page"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-users-rectangle"></i></span><h2 class="twq-empty__title">لا توجد اجتماعات في نطاقك الحالي</h2><p class="twq-empty__message">{% if can_organize %}نظّم أول اجتماع لتوثيق الدعوة وجدول الأعمال والحضور والمحضر والقرارات.{% else %}ستظهر هنا الاجتماعات التي يدعوك إليها المنظّم داخل المدرسة النشطة.{% endif %}</p>{% if can_organize %}<a class="twq-btn twq-btn--primary" href="{% url 'reports:meeting_create' %}">تنظيم أول اجتماع</a>{% endif %}</div>
+  {% endif %}
 </div>
 {% endblock %}
 
-{% block scripts %}
-  {{ block.super }}
-  {% include "reports/partials/_meeting_copy_link.html" %}
-{% endblock %}
+{% block scripts %}{{ block.super }}{% include "reports/partials/_meeting_copy_link.html" %}{% endblock %}

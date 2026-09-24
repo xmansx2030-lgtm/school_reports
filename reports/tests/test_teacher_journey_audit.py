@@ -167,7 +167,7 @@ class TeacherJourneyAuditTests(TestCase):
             "reports:achievement_my_files": "إنشاء",
             "reports:my_requests": reverse("reports:request_create"),
             "reports:my_assignments": "لا تكليفات مفتوحة",
-            "reports:plan_list": "لا توجد خطط معتمدة لك بعد",
+            "reports:plan_list": reverse("reports:initiative_list"),
         }
         missing = [
             name

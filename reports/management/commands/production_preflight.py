@@ -404,6 +404,7 @@ class Command(BaseCommand):
         required = {
             "cleanup-expired-sessions-daily": "session table would grow without bound",
             "reconcile-pending-gateway-payments": "a paid school could stay unactivated",
+            "reconcile-personal-gateway-payments": "a teacher could miss automatic personal-plan activation or receipt retry",
             "check-storage-thresholds-daily": "managers would hit the storage wall unwarned",
             "check-subscription-expiry-daily": "subscriptions would lapse silently",
             "monitor-infrastructure-capacity": "Redis pressure would go unnoticed",

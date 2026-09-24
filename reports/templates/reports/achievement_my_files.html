@@ -1,532 +1,89 @@
-{# reports/templates/reports/achievement_files.html (مثال اسم) #}
 {% extends "base.html" %}
-{% block title %}ملف الإنجاز{% endblock %}
+{% load static %}
+
+{% block title %}ملفات الإنجاز{% endblock %}
 
 {% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  /* =========================================================
-     Achievement Files — Luxury 2026 Theme
-     ========================================================= */
-  :root {
-    --brand: #006c35;
-    --brand-dark: #00542a;
-    --brand-light: #eff6ff;
-    --accent: #d97706; /* Gold/Bronze */
-    --surface: #f8fafc;
-    --surface-glass: rgba(255, 255, 255, 0.9);
-    --text-main: #0f172a;
-    --text-secondary: #64748b;
-    --border-color: #e2e8f0;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-  }
-
-  .af-wrap{ 
-    max-width:1100px; 
-    margin:40px auto; 
-    padding:clamp(20px, 4vw, 30px);
-    animation: fadeIn 0.6s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .af-card {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    position: relative;
-  }
-
-  /* Luxury Header */
-  .af-head {
-    padding: 30px 40px;
-    background: white;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .af-head::before {
-    content: '';
-    position: absolute;
-    top: 0; right: 0; width: 200px; height: 100%;
-    background: linear-gradient(135deg, transparent, rgba(0,108,53,0.03));
-    pointer-events: none;
-  }
-
-  .af-title-group h1 {
-    margin: 0;
-    font-weight: 800;
-    font-size: 1.8rem;
-    color: var(--text-main);
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, var(--text-main) 0%, var(--brand) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .af-title-group p {
-    margin: 6px 0 0;
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    font-weight: 500;
-  }
-
-  .af-body { padding: 40px; }
-
-  /* Create Form Area */
-  .af-create-area {
-    background: var(--surface);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 24px;
-    margin-bottom: 30px;
-  }
-
-  .af-row {
-    display: flex;
-    gap: 20px;
-    align-items: flex-end;
-  }
-  
-  .af-field { flex: 1; }
-  .af-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 700;
-    color: var(--text-main);
-    font-size: 0.95rem;
-  }
-
-  .af-input-wrapper {
-    position: relative;
-  }
-  .af-input-wrapper i {
-    position: absolute;
-    right: 16px; top: 50%; transform: translateY(-50%);
-    color: var(--text-secondary);
-    pointer-events: none;
-  }
-  
-  .af-field select, .af-field input {
-    width: 100%;
-    padding: 14px 45px 14px 16px;
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: white;
-    font-weight: 600;
-    color: var(--text-main);
-    outline: none;
-    transition: all 0.2s ease;
-    appearance: none;
-  }
-  .af-field select:focus, .af-field input:focus {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 4px rgba(0,108,53,0.1);
-  }
-
-  /* Buttons */
-  .af-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 14px 24px;
-    border-radius: 14px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid var(--border-color);
-    background: white;
-    color: var(--text-secondary);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .af-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    color: var(--brand);
-    border-color: var(--brand);
-  }
-  
-  .af-btn-primary {
-    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-    color: white;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 108, 53, 0.25);
-  }
-  .af-btn-primary:hover {
-    color: white;
-    box-shadow: 0 8px 20px rgba(0, 108, 53, 0.35);
-    transform: translateY(-2px);
-  }
-  .af-btn-danger {
-    color: #ef4444;
-    border-color: #fee2e2;
-    background: #fef2f2;
-  }
-  .af-btn-danger:hover {
-    background: #fee2e2;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
-  }
-
-  /* List Items */
-  .af-list { display: grid; gap: 16px; margin-top: 20px; }
-  
-  .af-item {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.3s ease;
-  }
-  .af-item:hover {
-    border-color: var(--brand);
-    box-shadow: 0 10px 30px -5px rgba(0,108,53,0.1);
-    transform: translateY(-2px);
-  }
-
-  .af-meta {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .af-icon-box {
-    width: 60px; height: 60px;
-    border-radius: 16px;
-    background: var(--brand-light);
-    color: var(--brand);
-    display: grid;
-    place-items: center;
-    font-size: 1.5rem;
-  }
-  .af-info h3 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--text-main);
-  }
-  .af-info span {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-  }
-
-  .af-status {
-    padding: 6px 14px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 800;
-  }
-  .status-draft { background: #f3f4f6; color: #4b5563; }
-  .status-submitted { background: #e0f2fe; color: #0284c7; }
-  .status-approved { background: #dcfce7; color: #16a34a; }
-  .status-returned { background: #fef2f2; color: #dc2626; }
-
-  .af-actions-group {
-    display: flex;
-    gap: 8px;
-  }
-
-  .af-empty {
-    text-align: center;
-    padding: 60px 20px;
-    border: 2px dashed var(--border-color);
-    border-radius: 24px;
-    background: var(--surface);
-  }
-  .af-empty i { font-size: 3rem; color: var(--text-secondary); margin-bottom: 20px; opacity: 0.5; }
-  .af-empty b { display: block; font-size: 1.2rem; color: var(--text-main); margin-bottom: 8px; }
-
-  /* Mobile Responsive */
-  @media (max-width: 768px) {
-    .af-head { flex-direction: column; text-align: center; gap: 20px; padding: 24px; }
-    .af-item { flex-direction: column; gap: 20px; padding: 20px; }
-    .af-meta { flex-direction: column; text-align: center; }
-    .af-actions-group { width: 100%; flex-wrap: wrap; justify-content: center; }
-    .af-btn { flex: 1; }
-    .af-row { flex-direction: column; gap: 15px; }
-    .af-field, .af-actions { width: 100%; }
-    .af-btn-primary { width: 100%; }
-  }
-
-  /* 👑 ROYAL OVERLAY — ملفات إنجازي */
-  .af-wrap .af-card{
-    border:1px solid rgba(185,151,91,.18) !important;
-    box-shadow:0 18px 44px -28px rgba(10,92,51,.4) !important;
-  }
-  .af-wrap .af-head{
-    position:relative; overflow:hidden;
-    background:
-      radial-gradient(120% 160% at 92% -30%, rgba(212,177,109,.22), transparent 50%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border-radius:18px !important; padding:24px 22px !important; color:#fff !important;
-    border:1px solid rgba(212,177,109,.4) !important;
-    box-shadow:0 16px 34px -22px rgba(5,46,26,.6) !important;
-  }
-  .af-wrap .af-head::after{
-    content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent);
-  }
-  .af-wrap .af-head h1{
-    color:#fff !important;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    font-weight:950 !important;
-  }
-  .af-wrap .af-head p{ color:rgba(255,255,255,.82) !important; font-weight:800 !important; }
-  .af-wrap .af-head [class] i{ }
-  .af-wrap .af-create-area{
-    border:1px solid rgba(185,151,91,.22) !important;
-    background:linear-gradient(180deg, rgba(212,177,109,.06), transparent 40%) !important;
-  }
-  .af-wrap .af-btn-primary, .af-wrap .btn-primary{
-    background:linear-gradient(135deg,#0a5c33,#074426) !important; border:none !important;
-    box-shadow:0 10px 22px -12px rgba(10,92,51,.6) !important;
-  }
-
-  /* Focused portfolio workspace */
-  .af-wrap { max-width: 1120px; margin: 0 auto; padding: 32px 24px 56px; }
-  .af-wrap * { letter-spacing: 0; }
-  .af-wrap .af-card { border: 0 !important; box-shadow: none !important; background: transparent; overflow: visible; }
-  .af-wrap .af-head {
-    min-height: 148px;
-    border-radius: 8px !important;
-    padding: 30px 34px !important;
-    background:
-      linear-gradient(115deg, rgba(181,138,70,.2), transparent 38%),
-      linear-gradient(135deg,#075b36,#043d25) !important;
-  }
-  .af-wrap .af-head::before { display: none; }
-  .af-wrap .af-head::after { width: 5px; height: 100%; right: auto; left: 0; background: #b58a46; }
-  .af-title-group h1 { font-size: 1.75rem; letter-spacing: 0; }
-  .af-head-mark { width: 52px; height: 52px; border-radius: 6px; display: grid; place-items: center; font-size: 1.4rem; color: #f6e6c8; background: rgba(255,255,255,.1); border: 1px solid rgba(246,230,200,.35); }
-  .af-body { padding: 24px 0 0; }
-  .af-create-area { border-radius: 8px; padding: 22px; background: #f5f8f6 !important; border-color: #d9e3dd !important; }
-  .af-create-title { display: flex; align-items: center; gap: 10px; margin: 0 0 5px; font-size: 1.1rem; color: var(--text-main); font-weight: 850; }
-  .af-create-title i { color: #9a7135; }
-  .af-create-copy { margin: 0 0 18px; color: var(--text-secondary); font-size: .9rem; }
-  .af-field select, .af-field input, .af-btn { border-radius: 6px; min-height: 44px; }
-  .af-list-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 30px 0 12px; }
-  .af-list-head h2 { margin: 0; font-size: 1.2rem; color: var(--text-main); }
-  .af-list-head span { color: var(--text-secondary); font-size: .9rem; }
-  .af-list { gap: 12px; margin-top: 0; }
-  .af-item { border-radius: 8px; padding: 20px; border-inline-start: 4px solid #b58a46; box-shadow: 0 12px 25px -26px rgba(7,91,54,.85); }
-  .af-item:hover { transform: translateY(-2px); box-shadow: 0 18px 32px -27px rgba(7,91,54,.85); }
-  .af-icon-box { width: 52px; height: 52px; border-radius: 6px; background: #edf7f1; }
-  .af-info h3 { font-size: 1.08rem; }
-  .af-status { border-radius: 5px; }
-  .af-empty { border-radius: 8px; background: #f7f9f8; }
-
-  /* These surfaces pinned a light background while their text stayed themed,
-     so on the dark theme they rendered light-on-light (down to 1.04:1). */
-  [data-theme="dark"] .af-create-area { background: var(--bg-sub) !important; border-color: var(--border-light) !important; }
-  [data-theme="dark"] .af-empty { background: var(--bg-sub); }
-  [data-theme="dark"] .af-icon-box { background: #113328; }
-  [data-theme="dark"] .af-btn-danger { color: #ff8c91; background: #2b1616; border-color: rgba(255, 140, 145, .34); }
-  [data-theme="dark"] .af-btn-danger:hover { background: #3a1c1c; }
-  @media (max-width: 768px) {
-    .af-wrap { padding: 18px 14px 40px; }
-    .af-wrap .af-head { min-height: 132px; padding: 24px 20px !important; flex-direction: row; text-align: right; }
-    .af-body { padding-top: 18px; }
-    .af-create-area { padding: 18px; }
-    .af-item { align-items: stretch; text-align: right; }
-    .af-meta { flex-direction: row; text-align: right; }
-    .af-actions-group { justify-content: stretch; }
-    .af-actions-group .af-btn { flex: 1 1 44px; padding-inline: 14px; }
-  }
-</style>
+<link rel="stylesheet" href="{% static 'css/achievement.css' %}?v=20260923.1">
 {% endblock %}
 
 {% block content %}
-<div class="af-wrap">
-  <div class="af-card">
-    <div class="af-head">
-      <div class="af-title-group">
-        <h1>ملفات الإنجاز</h1>
-        <p>إدارة ملفات الإنجاز السنوية الخاصة بك</p>
-      </div>
-      <div>
-        <div class="af-head-mark" aria-hidden="true">
-            <i class="fa-solid fa-briefcase"></i>
-        </div>
-      </div>
+<div class="twq-page achievement-page achievement-list-page" aria-labelledby="achievementMyFilesTitle">
+  <header class="twq-page-header achievement-page-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-briefcase" aria-hidden="true"></i><span>السجل المهني السنوي</span></p>
+      <h1 class="twq-page-header__title" id="achievementMyFilesTitle">ملفات الإنجاز</h1>
+      <p class="twq-page-header__lead">أنشئ ملف السنة الحالية، وثّق المحاور بالشواهد، ثم أرسله للمراجعة عندما يكتمل.</p>
+      <dl class="twq-page-header__context" aria-label="سياق ملفات الإنجاز">
+        <div><dt>المدرسة النشطة</dt><dd><bdi>{{ current_school.name }}</bdi></dd></div>
+        <div><dt>السنة الحالية</dt><dd><bdi>{{ current_school.current_academic_year|default:"لم تُحدد" }}</bdi>{% if current_school.current_academic_year %} هـ{% endif %}</dd></div>
+        <div><dt>عدد الملفات</dt><dd><bdi>{{ files|length }}</bdi></dd></div>
+      </dl>
     </div>
+    <div class="twq-page-header__aside"><div class="twq-page-header__mark" aria-hidden="true"><img src="{% static 'img/brand-mark.svg' %}" alt=""></div></div>
+  </header>
 
-    <div class="af-body">
-      
-      <!-- New File Section -->
-      <div class="af-create-area">
-        <h2 class="af-create-title">
-            <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
-            إنشاء ملف جديد
-        </h2>
-        <p class="af-create-copy">يُنشأ الملف للسنة الحالية المعتمدة من {{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }}.</p>
-        <form method="post" novalidate>
-            {% csrf_token %}
-            <input type="hidden" name="action" value="create" />
+  <section class="twq-section achievement-create" aria-labelledby="achievementCreateTitle">
+    <div class="twq-section__header">
+      <div><span class="twq-section__kicker">بداية الرحلة</span><h2 class="twq-section__title" id="achievementCreateTitle">إنشاء ملف السنة الحالية</h2><p class="twq-section__description">تحدد المدرسة السنة المتاحة، ويمنع النظام إنشاء ملفين للمعلم في المدرسة والسنة نفسيهما.</p></div>
+      <span class="twq-section__meta"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> سنة معتمدة من المدرسة</span>
+    </div>
+    {% if create_form.errors %}
+      <div class="achievement-error-summary twq-alert twq-alert--danger" role="alert" tabindex="-1"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><div><strong>تعذر إنشاء الملف</strong><p>راجع السنة الدراسية المحددة ثم أعد المحاولة.</p>{{ create_form.non_field_errors }}{{ create_form.academic_year.errors }}</div></div>
+    {% endif %}
+    {% if create_form.fields.academic_year.choices %}
+      <form class="achievement-create-form" method="post" novalidate>
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="twq-field"><label class="twq-label" for="{{ create_form.academic_year.id_for_label }}">السنة الدراسية</label>{{ create_form.academic_year }}<p class="twq-field__help">السنة الحالية المتاحة في المدرسة النشطة فقط.</p></div>
+        <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-plus" aria-hidden="true"></i><span>إنشاء الملف</span></button>
+      </form>
+    {% else %}
+      <div class="twq-empty twq-empty--local"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-calendar-xmark"></i></span><h3 class="twq-empty__title">لم تُحدد السنة الدراسية الحالية</h3><p class="twq-empty__message">اطلب من {{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }} تحديدها من إعدادات المدرسة أولًا.</p></div>
+    {% endif %}
+  </section>
 
-            {% if create_form.non_field_errors %}
-            <div class="af-err">{{ create_form.non_field_errors }}</div>
-            {% endif %}
-
-            {% if create_form.fields.academic_year.choices %}
-            <div class="af-row">
-            <div class="af-field">
-                <label class="af-label" for="{{ create_form.academic_year.id_for_label }}">اختر السنة الدراسية</label>
-                <div class="af-input-wrapper">
-                    {{ create_form.academic_year }}
-                    <i class="fa-solid fa-calendar-days"></i>
-                </div>
-                {% if create_form.academic_year.errors %}
-                <div class="af-err">{{ create_form.academic_year.errors }}</div>
-                {% endif %}
+  <section class="twq-section achievement-register" aria-labelledby="achievementRegisterTitle">
+    <div class="twq-section__header">
+      <div><span class="twq-section__kicker">متابعة التنفيذ</span><h2 class="twq-section__title" id="achievementRegisterTitle">سجل ملفاتك</h2><p class="twq-section__description">يعرض تقدم التوثيق والإجراء التالي لكل سنة. اكتمال التوثيق لا يعني الاعتماد.</p></div>
+      <span class="twq-section__meta"><bdi>{{ files|length }}</bdi> ملف</span>
+    </div>
+    {% if files %}
+      <div class="achievement-file-list">
+        {% for file in files %}
+          <article class="achievement-file-card twq-card twq-card--document">
+            <div class="achievement-file-card__main">
+              <div class="achievement-file-card__heading"><div><p class="achievement-file-card__eyebrow">ملف إنجاز سنوي</p><h3><a href="{% url 'reports:achievement_file_detail' file.pk %}">السنة <bdi>{{ file.academic_year }}</bdi> هـ</a></h3></div><span class="twq-status" data-status="{{ file.status_tone }}"><i class="fa-solid fa-circle" aria-hidden="true"></i><span>{{ file.get_status_display }}</span></span></div>
+              <div class="twq-progress achievement-file-card__progress"><div class="twq-progress__label"><span>تقدم التوثيق · {{ file.documented_section_count }} من {{ file.total_section_count }} محورًا</span><strong><bdi>{{ file.progress_percent }}%</bdi></strong></div><progress class="twq-progress__bar" value="{{ file.progress_percent }}" max="100" aria-label="تقدم توثيق ملف {{ file.academic_year }}: {{ file.progress_percent }} بالمئة">{{ file.progress_percent }}%</progress></div>
+              <dl class="achievement-file-card__metrics"><div><dt>صور الشواهد</dt><dd><bdi>{{ file.image_evidence_count }}</bdi></dd></div><div><dt>التقارير المرتبطة</dt><dd><bdi>{{ file.report_evidence_count }}</bdi></dd></div><div><dt>آخر تحديث</dt><dd><time datetime="{{ file.updated_at|date:'c' }}"><bdi>{{ file.updated_at|date:"Y/m/d" }}</bdi></time></dd></div></dl>
+              <p class="achievement-next-action"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>{{ file.next_action_label }}</span></p>
             </div>
-
-            <div class="af-actions u-shrink-0">
-                <button class="af-btn af-btn-primary" type="submit">
-                <i class="fa-solid fa-plus"></i>
-                <span>إنشاء الآن</span>
-                </button>
-            </div>
-            </div>
-            {% else %}
-            <div class="af-empty xs-achievement-my-files-1">
-              <i class="fa-solid fa-calendar-xmark"></i>
-              <b>لم تُحدد السنة الدراسية الحالية</b>
-              <p>يرجى من {{ SCHOOL_MANAGER_LABEL|default:"مدير المدرسة" }} تحديدها من إعدادات المدرسة أولًا.</p>
-            </div>
-            {% endif %}
-        </form>
-      </div>
-
-      <div class="af-list-head">
-        <h2>سجل ملفات الإنجاز</h2>
-        <span>{{ files|length }} ملف</span>
-      </div>
-
-      <div class="af-list" aria-label="ملفات الإنجاز">
-        {% for f in files %}
-          <div class="af-item">
-            <div class="af-meta">
-              <div class="af-icon-box">
-                <i class="fa-solid fa-folder-open"></i>
-              </div>
-              <div class="af-info">
-                <h3>ملف عام {{ f.academic_year }}</h3>
-                <span>
-                    <i class="fa-regular fa-clock"></i> آخر تحديث: {{ f.updated_at|date:"Y-m-d" }}
-                </span>
-                <div class="u-mt-2">
-                     {# Simple logic to pick class based on status #}
-                     <span class="af-status {% if f.status == 'draft' %}status-draft{% elif f.status == 'approved' %}status-approved{% else %}status-submitted{% endif %}">
-                        {{ f.get_status_display }}
-                     </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="af-actions-group">
-              <a class="af-btn" href="{% url 'reports:achievement_file_detail' f.pk %}">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                فتح
-              </a>
-
-              <a class="af-btn" href="{% url 'reports:achievement_share_manage' f.pk %}" title="مشاركة">
-                <i class="fa-solid fa-share-nodes"></i>
-              </a>
-
-              {% comment %} تعديل السنة والحذف يخرجان من يد المعلّم متى خرج الملف منها:
-                 المُرسَل ينتظر قراراً، والمعتمَد سجلٌّ يُقيَّم عليه صاحبه. وعرضُ
-                 زرٍّ يردّه الخادم أسوأ من غيابه. {% endcomment %}
-              {% if f.is_editable_by_owner %}
-                <button class="af-btn af-edit-year" type="button"
-                        data-url="{% url 'reports:achievement_file_update_year' f.pk %}"
-                        data-year="{{ f.academic_year }}"
-                        title="تعديل السنة الدراسية"
-                        aria-label="تعديل السنة الدراسية لملف {{ f.academic_year }}">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
-
-                <form action="{% url 'reports:achievement_file_delete' f.pk %}" method="post" class="af-delete-form u-inline" data-confirm="هل تريد حذف هذا الملف نهائيًا؟ لن يمكنك استرجاعه." data-confirm-type="danger">
-                  {% csrf_token %}
-                  <button type="submit" class="af-btn af-btn-danger" title="حذف الملف" aria-label="حذف ملف {{ f.academic_year }}">
-                     <i class="fa-solid fa-trash"></i>
-                  </button>
-                </form>
+            <div class="achievement-file-card__actions" aria-label="إجراءات ملف {{ file.academic_year }}">
+              <a class="twq-btn twq-btn--primary" href="{% url 'reports:achievement_file_detail' file.pk %}"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>{% if file.is_editable_by_owner %}متابعة الملف{% else %}عرض الملف{% endif %}</span></a>
+              <a class="twq-btn twq-btn--secondary" href="{% url 'reports:achievement_share_manage' file.pk %}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i><span>المشاركة</span></a>
+              {% if file.is_editable_by_owner %}
+                <button class="twq-btn twq-btn--ghost" type="button" data-achievement-year-edit data-url="{% url 'reports:achievement_file_update_year' file.pk %}" data-year="{{ file.academic_year }}" aria-label="تعديل سنة ملف {{ file.academic_year }}"><i class="fa-solid fa-calendar-pen" aria-hidden="true"></i><span>تعديل السنة</span></button>
+                <form method="post" action="{% url 'reports:achievement_file_delete' file.pk %}" data-confirm="هل تريد حذف هذا الملف نهائيًا؟ لن يمكنك استرجاعه." data-confirm-type="danger">{% csrf_token %}<button class="twq-btn twq-btn--danger" type="submit"><i class="fa-solid fa-trash" aria-hidden="true"></i><span>حذف</span></button></form>
               {% endif %}
             </div>
-          </div>
-        {% empty %}
-          <div class="af-empty">
-            <i class="fa-regular fa-folder-open"></i>
-            <b>لا يوجد ملفات حتى الآن</b>
-            <p>ابدأ بإنشاء ملفك الأول للسنة الدراسية الحالية من النموذج أعلاه</p>
-          </div>
+          </article>
         {% endfor %}
       </div>
-    </div>
-  </div>
+    {% else %}
+      <div class="twq-empty twq-empty--page"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-folder-open"></i></span><h3 class="twq-empty__title">لا يوجد ملف إنجاز حتى الآن</h3><p class="twq-empty__message">أنشئ ملف السنة الحالية من القسم أعلاه لتبدأ توثيق المحاور والشواهد.</p></div>
+    {% endif %}
+  </section>
 </div>
 
-<!-- Modal تعديل السنة -->
-<dialog id="yearModal" aria-labelledby="yearModalTitle" class="xs-achievement-my-files-2">
-  <form id="yearForm" method="post">
+<dialog class="achievement-dialog" id="achievementYearDialog" aria-labelledby="achievementYearDialogTitle">
+  <form method="post" id="achievementYearForm">
     {% csrf_token %}
-    <div class="xs-achievement-my-files-3">
-      <h3 id="yearModalTitle" class="u-m-0 u-fw-900">تعديل السنة الدراسية</h3>
-    </div>
-    <div class="u-p-6">
-      <label class="af-label" for="yearModalAcademicYear">السنة الجديدة (هجري)</label>
-      <select id="yearModalAcademicYear" name="academic_year" required class="input xs-achievement-my-files-4">
-        {% for val, label in create_form.fields.academic_year.choices %}
-          <option value="{{ val }}">{{ label }}</option>
-        {% endfor %}
-      </select>
-      <div class="xs-achievement-my-files-5">
-        تنبيه: لا يمكن اختيار سنة يوجد لها ملف آخر بالفعل.
-      </div>
-    </div>
-    <div class="xs-achievement-my-files-6">
-      <button type="button" class="af-btn" id="yearModalCancel">إلغاء</button>
-      <button type="submit" class="af-btn af-btn-primary">حفظ التغييرات</button>
-    </div>
+    <div class="achievement-dialog__header"><div><span class="twq-section__kicker">إجراء حساس</span><h2 id="achievementYearDialogTitle">تعديل السنة الدراسية</h2></div><button class="twq-btn twq-btn--ghost achievement-icon-button" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+    <div class="achievement-dialog__body"><div class="twq-alert twq-alert--warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><p>السنة هوية للملف، ولا يمكن تعديلها بعد الإرسال أو الاعتماد، أو إلى سنة لها ملف آخر.</p></div><div class="twq-field"><label class="twq-label" for="achievementYearSelect">السنة الجديدة</label><select class="twq-control" id="achievementYearSelect" name="academic_year" required>{% for value, label in create_form.fields.academic_year.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div></div>
+    <div class="achievement-dialog__footer"><button class="twq-btn twq-btn--ghost" type="button" data-dialog-close>إلغاء</button><button class="twq-btn twq-btn--primary" type="submit">حفظ السنة</button></div>
   </form>
 </dialog>
+{% endblock %}
 
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  document.addEventListener('DOMContentLoaded', function () {
-    var modal = document.getElementById('yearModal');
-    var form = document.getElementById('yearForm');
-    var select = form ? form.querySelector('select[name="academic_year"]') : null;
-    var cancelButton = document.getElementById('yearModalCancel');
-
-    document.querySelectorAll('.af-edit-year').forEach(function (button) {
-      button.addEventListener('click', function () {
-        if (!modal || !form || !select) return;
-        form.action = button.dataset.url;
-        select.value = button.dataset.year;
-        modal.showModal();
-      });
-    });
-
-    if (cancelButton && modal) {
-      cancelButton.addEventListener('click', function () {
-        modal.close();
-      });
-    }
-  });
-</script>
+{% block scripts %}
+<script src="{% static 'js/achievement.js' %}?v=20260923.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endblock %}

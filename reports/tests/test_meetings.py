@@ -225,9 +225,12 @@ class MinutesApprovalTests(MeetingBase):
 
     def test_minutes_of_a_meeting_that_never_happened_cannot_be_submitted(self):
         meeting = self._meeting()
-        minutes = ensure_minutes(meeting, recorder=self.staff)
-        minutes.body = "محضر لاجتماع لم ينعقد"
-        minutes.save(update_fields=["body"])
+        # سجل قديم سابق لحارس الإنشاء يجب ألا يتجاوز شرط الإرسال.
+        minutes = MeetingMinutes.objects.create(
+            meeting=meeting,
+            recorder=self.staff,
+            body="محضر لاجتماع لم ينعقد",
+        )
 
         with self.assertRaises(ValidationError):
             submit(minutes, self.staff, school=self.school)
@@ -556,17 +559,22 @@ class MeetingScreenTests(MeetingBase):
 
     def test_meeting_forms_render_unique_field_ids(self):
         meeting = self._meeting()
-        mark_held(meeting, self.manager)
         self._enter(self.manager)
 
-        response = self.client.get(
+        scheduled_response = self.client.get(
+            reverse("reports:meeting_detail", args=[meeting.pk])
+        )
+        self.assertContains(scheduled_response, 'id="id_agenda_title"', count=1)
+
+        mark_held(meeting, self.manager)
+        held_response = self.client.get(
             reverse("reports:meeting_detail", args=[meeting.pk])
         )
 
-        self.assertContains(response, 'id="id_agenda_title"', count=1)
-        self.assertContains(response, 'id="id_minutes_body"', count=1)
-        self.assertContains(response, 'id="id_decision_body"', count=1)
-        self.assertNotContains(response, 'id="id_body"')
+        self.assertNotContains(held_response, 'id="id_agenda_title"')
+        self.assertContains(held_response, 'id="id_minutes_body"', count=1)
+        self.assertContains(held_response, 'id="id_decision_body"', count=1)
+        self.assertNotContains(held_response, 'id="id_body"')
 
     def test_mark_held_confirmation_uses_action_language_not_delete_language(self):
         meeting = self._meeting()

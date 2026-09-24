@@ -1,0 +1,73 @@
+.teacher-plans { color: var(--twq-text); }
+.teacher-plans__header { margin-block-end: 1.25rem; }
+.teacher-plans__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin-block-end: 1.5rem;
+}
+.teacher-plans__summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .9rem 1rem;
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+}
+.teacher-plans__summary span { color: var(--twq-text-secondary); }
+.teacher-plans__summary strong { color: var(--twq-primary); font-size: 1.45rem; }
+.teacher-plans__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 1rem;
+}
+.teacher-plans__card {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  min-inline-size: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+}
+.teacher-plans__card-top { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
+.teacher-plans__state { padding: .25rem .65rem; border-radius: 999px; background: var(--twq-success-soft); color: var(--twq-success); font-size: .78rem; font-weight: 800; }
+.teacher-plans__state[data-state="hidden"] { background: var(--twq-warning-soft); color: var(--twq-warning); }
+.teacher-plans__state[data-state="inactive"] { background: var(--twq-neutral-soft); color: var(--twq-neutral); }
+.teacher-plans__order, .teacher-plans__description { color: var(--twq-text-muted); font-size: .83rem; }
+.teacher-plans__card h3 { margin: 0; font-size: 1.15rem; }
+.teacher-plans__description { margin: 0; line-height: 1.8; overflow-wrap: anywhere; }
+.teacher-plans__price { margin: 0; padding-block: .3rem; border-block-end: 1px solid var(--twq-divider); }
+.teacher-plans__price strong { color: var(--twq-primary); font-size: 1.5rem; }
+.teacher-plans__price small { color: var(--twq-text-muted); }
+.teacher-plans__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; }
+.teacher-plans__facts div { min-inline-size: 0; }
+.teacher-plans__facts dt { color: var(--twq-text-muted); font-size: .76rem; }
+.teacher-plans__facts dd { margin: 0; font-weight: 800; }
+.teacher-plans__edit { margin-block-start: auto; align-self: flex-start; }
+.teacher-plans__empty { padding: 2rem; border: 1px dashed var(--twq-border-strong); border-radius: var(--twq-radius-lg); background: var(--twq-surface); }
+.teacher-plans__empty h3 { margin-block: 0 .35rem; }
+.teacher-plans__empty p { color: var(--twq-text-secondary); }
+.teacher-plans__notice, .teacher-plan-form__hint { color: var(--twq-text-secondary); line-height: 1.8; }
+.teacher-plans__notice { margin-block: 1.25rem; }
+.teacher-plan-form__body { max-inline-size: 920px; }
+.teacher-plan-form__section { margin-block-end: 1rem; padding: 1.25rem; border: 1px solid var(--twq-border); border-radius: var(--twq-radius-lg); background: var(--twq-surface); }
+.teacher-plan-form__section h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+.teacher-plan-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.teacher-plan-form__field--wide { grid-column: 1 / -1; }
+.teacher-plan-form__field { min-inline-size: 0; }
+.teacher-plan-form__field .twq-control { inline-size: 100%; }
+.teacher-plan-form__choice { display: flex; gap: .65rem; align-items: center; min-block-size: 44px; cursor: pointer; font-weight: 700; }
+.teacher-plan-form__checkbox { inline-size: 20px; block-size: 20px; accent-color: var(--twq-primary); }
+.teacher-plan-form__checkbox:focus-visible { outline: 3px solid var(--twq-focus); outline-offset: 3px; }
+.teacher-plan-form__errors { padding: 1rem; margin-block-end: 1rem; border-radius: var(--twq-radius-md); background: var(--twq-danger-soft); color: var(--twq-danger); }
+.teacher-plan-form__actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-block: 1rem 2rem; }
+@media (max-width: 640px) {
+  .teacher-plans__summary { grid-template-columns: 1fr; }
+  .teacher-plan-form__grid { grid-template-columns: 1fr; }
+  .teacher-plan-form__section { padding: 1rem; }
+  .teacher-plan-form__actions .twq-button { flex: 1 1 auto; justify-content: center; }
+}

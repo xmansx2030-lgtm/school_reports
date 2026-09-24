@@ -15,13 +15,15 @@
 
 from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
+import hashlib
 from itertools import pairwise
 import json
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlparse
 import uuid
 
-from django.core.exceptions import ImproperlyConfigured
+from django.core import signing
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.views.decorators.csrf import csrf_exempt
 
 from core.observability import report_degraded as _degraded, soft_call, soft_fail
@@ -35,6 +37,7 @@ from ._helpers import (
 from ..mansour_knowledge import AUDIENCE_LABELS
 from ..permissions import executive_director_schools_qs
 from ..utils import create_system_notification
+from ..validators import validate_image_file
 from ..flexible_pricing import (
     ANCHOR_CAPACITIES,
     PERIODS,
@@ -601,6 +604,7 @@ def _resolve_payment_actor(request):
     طريقاً لتحصيل دفعةٍ على مدرسةٍ لم يقصدها الدافع.
     """
     requested_id = _requested_school_id(request)
+    active_school = _get_active_school(request)
     manager_qs = SchoolMembership.objects.filter(
         teacher=request.user,
         role_type=SchoolMembership.RoleType.MANAGER,
@@ -610,10 +614,18 @@ def _resolve_payment_actor(request):
     if requested_id:
         if not requested_id.isdigit():
             return None
-        membership = manager_qs.filter(school_id=requested_id).first()
-        if membership is not None:
-            return _PaymentActor(membership.school, Payment.PayerKind.SCHOOL)
 
+        # School-facing billing is anchored to the active school. A manager's
+        # membership in another school is not authority to switch billing
+        # context through a crafted query string or hidden POST field.
+        if active_school is not None and int(requested_id) == int(active_school.pk):
+            membership = manager_qs.filter(school=active_school).first()
+            if membership is not None:
+                return _PaymentActor(membership.school, Payment.PayerKind.SCHOOL)
+
+        # The one intentional exception is the established group-director
+        # workflow. Its scope comes from the group relationship, not from a
+        # school-manager membership or the active-school session.
         school = (
             executive_director_schools_qs(request.user)
             .select_related("group")
@@ -626,14 +638,10 @@ def _resolve_payment_actor(request):
             )
         return None
 
-    active_school = _get_active_school(request)
     if active_school:
         membership = manager_qs.filter(school=active_school).first()
         if membership is not None:
             return _PaymentActor(membership.school, Payment.PayerKind.SCHOOL)
-    membership = manager_qs.first()
-    if membership is not None:
-        return _PaymentActor(membership.school, Payment.PayerKind.SCHOOL)
     return None
 
 
@@ -744,6 +752,165 @@ def _group_payer_badge(school):
 
 class _PaymentSelectionError(Exception):
     pass
+
+
+class _CheckoutSubmissionError(_PaymentSelectionError):
+    pass
+
+
+_CHECKOUT_SUBMISSION_SALT = "reports.school-billing.checkout"
+_CHECKOUT_SUBMISSION_MAX_AGE_SECONDS = 24 * 60 * 60
+
+
+def _issue_checkout_submission_key(request, actor) -> str:
+    """Issue a signed, one-page checkout key scoped to actor and billing school."""
+    return signing.dumps(
+        {
+            "user_id": int(request.user.pk),
+            "school_id": int(actor.school_id),
+            "payer_kind": str(actor.payer_kind),
+            "nonce": uuid.uuid4().hex,
+        },
+        salt=_CHECKOUT_SUBMISSION_SALT,
+        compress=True,
+    )
+
+
+def _checkout_payload_fingerprint(items, payment_method: str) -> str:
+    """Fingerprint only server-authoritative quote values, never browser totals."""
+    normalized_items = []
+    for item in items:
+        plan = item.get("requested_plan")
+        normalized_items.append(
+            {
+                "purpose": str(item["purpose"]),
+                "plan_id": getattr(plan, "pk", None),
+                "plan_days": int(getattr(plan, "days_duration", 0) or 0),
+                "teacher_limit": int(item.get("requested_teacher_limit") or 0),
+                "amount": format(
+                    Decimal(str(item["amount"])).quantize(Decimal("0.01")),
+                    "f",
+                ),
+                "discount_code_id": getattr(item.get("discount_code"), "pk", None),
+                "discount_amount": format(
+                    Decimal(str(item.get("discount_amount", 0))).quantize(
+                        Decimal("0.01")
+                    ),
+                    "f",
+                ),
+                "archive_storage_gb": int(item.get("archive_storage_gb") or 0),
+            }
+        )
+    normalized_items.sort(
+        key=lambda value: (
+            value["purpose"],
+            value["plan_id"] or 0,
+            value["archive_storage_gb"],
+        )
+    )
+    encoded = json.dumps(
+        {"payment_method": str(payment_method), "items": normalized_items},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
+
+
+def _checkout_submission_identity(request, actor, items, payment_method: str):
+    """Return a durable 32-char batch reference and its per-key prefix."""
+    raw_key = (request.POST.get("checkout_submission_key") or "").strip()
+    if not raw_key:
+        raise _CheckoutSubmissionError(
+            "انتهت جلسة طلب الدفع. حدّث الصفحة ثم أعد المحاولة."
+        )
+    try:
+        key_data = signing.loads(
+            raw_key,
+            salt=_CHECKOUT_SUBMISSION_SALT,
+            max_age=_CHECKOUT_SUBMISSION_MAX_AGE_SECONDS,
+        )
+    except signing.BadSignature as exc:
+        raise _CheckoutSubmissionError(
+            "مرجع طلب الدفع غير صالح أو منتهي. حدّث الصفحة ثم أعد المحاولة."
+        ) from exc
+
+    expected = (
+        int(request.user.pk),
+        int(actor.school_id),
+        str(actor.payer_kind),
+    )
+    try:
+        actual = (
+            int(key_data["user_id"]),
+            int(key_data["school_id"]),
+            str(key_data["payer_kind"]),
+        )
+        nonce = str(key_data["nonce"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise _CheckoutSubmissionError("مرجع طلب الدفع غير صالح.") from exc
+    if actual != expected or len(nonce) < 16:
+        raise _CheckoutSubmissionError("مرجع طلب الدفع لا يخص هذا المستخدم أو المدرسة.")
+
+    key_material = f"{expected[0]}:{expected[1]}:{expected[2]}:{nonce}".encode(
+        "utf-8"
+    )
+    key_prefix = "I" + hashlib.sha256(key_material).hexdigest()[:15]
+    fingerprint = _checkout_payload_fingerprint(items, payment_method)
+    return f"{key_prefix}{fingerprint}", key_prefix
+
+
+def _lock_checkout_submission(request, actor, items, payment_method: str):
+    """Serialize one school's checkout key and detect replay or key misuse.
+
+    Callers must invoke this inside ``transaction.atomic()``. Locking the
+    existing School row gives us durable race safety without a new table or
+    migration; ``Payment.batch_ref`` persists the key digest and quote digest.
+    """
+    batch_ref, key_prefix = _checkout_submission_identity(
+        request, actor, items, payment_method
+    )
+    School.objects.select_for_update().get(pk=actor.school_id)
+    existing = list(
+        Payment.objects.filter(
+            school_id=actor.school_id,
+            created_by=request.user,
+            batch_ref__startswith=key_prefix,
+        ).order_by("pk")
+    )
+    if not existing:
+        return batch_ref, []
+    if any(payment.batch_ref != batch_ref for payment in existing):
+        raise _CheckoutSubmissionError(
+            "استُخدم مرجع طلب الدفع نفسه مع خيارات مختلفة. حدّث الصفحة لإنشاء طلب جديد."
+        )
+    return batch_ref, existing
+
+
+def _validate_payment_receipt(receipt) -> None:
+    """Run the canonical image validator before any Payment or storage write."""
+    if receipt is None:
+        raise _PaymentSelectionError("يرجى إرفاق صورة الإيصال.")
+    try:
+        validate_image_file(receipt)
+    except ValidationError as exc:
+        detail = " ".join(exc.messages) if exc.messages else str(exc)
+        raise _PaymentSelectionError(detail) from exc
+
+
+def _save_payment_receipt(payment: Payment, receipt):
+    """Save one validated receipt and remove it if model persistence fails."""
+    payment.receipt_image = receipt
+    try:
+        payment.save()
+    except Exception:
+        field_file = payment.receipt_image
+        if (
+            getattr(field_file, "name", "")
+            and getattr(field_file, "_committed", False)
+        ):
+            field_file.storage.delete(field_file.name)
+        raise
+    return payment.receipt_image.storage, payment.receipt_image.name
 
 
 def _subscription_quote_from_request(request, school, requested_plan):
@@ -954,8 +1121,6 @@ def _create_unified_payment(request, membership, subscription):
     زيادة مساحة التخزين مستقلة تمامًا عن إضافة الأرشفة السنوية، فيمكن طلبها وحدها
     أو ضمن نفس الطلب دون أي شرط مسبق.
     """
-    import uuid
-
     school = membership.school
     receipt = request.FILES.get("receipt_image")
     notes = (request.POST.get("notes") or "").strip()
@@ -970,64 +1135,109 @@ def _create_unified_payment(request, membership, subscription):
 
     # خصم 100% يجعل الطلب صفرياً: لا تحويل بنكي ولا إيصال — تفعيل مباشر.
     if total <= 0:
-        return _activate_free_discount_order(request, membership, subscription, items)
-
-    if not receipt:
-        messages.error(request, "يرجى إرفاق صورة الإيصال.")
-        return _subscription_redirect(membership)
-
-    batch = uuid.uuid4().hex[:8]
-    labels = "، ".join(it["label"] for it in items)
-    base_note = f"[طلب موحّد {batch}] {labels} — الإجمالي {total} ريال."
-    if membership.is_on_behalf:
-        group_name = getattr(membership.group, "name", "") or "مجموعة المدارس"
-        base_note = f"{base_note}\nدفعته {group_name} نيابةً عن المدرسة."
-    if notes:
-        base_note = f"{base_note}\nملاحظة المدير: {notes}"
+        return _activate_free_discount_order(
+            request,
+            membership,
+            subscription,
+            items,
+            payment_method=Payment.Method.BANK_TRANSFER,
+        )
 
     try:
+        _validate_payment_receipt(receipt)
+    except _PaymentSelectionError as exc:
+        messages.error(request, str(exc))
+        return _subscription_redirect(membership)
+
+    labels = "، ".join(it["label"] for it in items)
+    duplicate = False
+    stored_receipt = None
+    try:
         with transaction.atomic():
-            shared_name = None
-            for it in items:
-                payment = Payment(
-                    **_stamp_payer(
-                        {
-                            "school": school,
-                            "subscription": subscription,
-                            "requested_plan": it.get("requested_plan"),
-                            "requested_teacher_limit": it.get("requested_teacher_limit"),
-                            "purpose": it["purpose"],
-                            "amount": it["amount"],
-                            "discount_code": it.get("discount_code"),
-                            "discount_amount": it.get("discount_amount", 0),
-                            "archive_storage_gb": it.get("archive_storage_gb", 0),
-                            "notes": base_note,
-                            "batch_ref": batch if len(items) > 1 else "",
-                            "payment_method": Payment.Method.BANK_TRANSFER,
-                            "created_by": request.user,
-                        },
-                        membership,
-                    )
+            batch_ref, existing = _lock_checkout_submission(
+                request,
+                membership,
+                items,
+                Payment.Method.BANK_TRANSFER,
+            )
+            if existing:
+                duplicate = True
+            else:
+                base_note = (
+                    f"[طلب موحّد {batch_ref.upper()}] {labels} "
+                    f"— الإجمالي {total} ريال."
                 )
-                if shared_name is None:
-                    # نحفظ الملف مرة واحدة ثم نعيد استخدام اسمه لبقية السجلات
-                    payment.receipt_image = receipt
-                    payment.save()
-                    shared_name = payment.receipt_image.name
-                else:
-                    payment.receipt_image.name = shared_name
-                    payment.save()
-                if it.get("discount_code") is not None:
-                    reserve_redemption(
-                        it["discount_code"],
-                        school,
-                        payment=payment,
-                        batch_ref=payment.batch_ref,
-                        amount=it.get("discount_amount", Decimal("0.00")),
+                if membership.is_on_behalf:
+                    group_name = (
+                        getattr(membership.group, "name", "") or "مجموعة المدارس"
                     )
+                    base_note = f"{base_note}\nدفعته {group_name} نيابةً عن المدرسة."
+                if notes:
+                    base_note = f"{base_note}\nملاحظة المدير: {notes}"
+
+                shared_name = None
+                for it in items:
+                    payment = Payment(
+                        **_stamp_payer(
+                            {
+                                "school": school,
+                                "subscription": subscription,
+                                "requested_plan": it.get("requested_plan"),
+                                "requested_teacher_limit": it.get(
+                                    "requested_teacher_limit"
+                                ),
+                                "purpose": it["purpose"],
+                                "amount": it["amount"],
+                                "discount_code": it.get("discount_code"),
+                                "discount_amount": it.get("discount_amount", 0),
+                                "archive_storage_gb": it.get(
+                                    "archive_storage_gb", 0
+                                ),
+                                "notes": base_note,
+                                "batch_ref": batch_ref,
+                                "payment_method": Payment.Method.BANK_TRANSFER,
+                                "created_by": request.user,
+                            },
+                            membership,
+                        )
+                    )
+                    if shared_name is None:
+                        # نحفظ الملف مرة واحدة ثم نعيد استخدام اسمه لبقية السجلات
+                        stored_receipt = _save_payment_receipt(payment, receipt)
+                        shared_name = payment.receipt_image.name
+                    else:
+                        payment.receipt_image.name = shared_name
+                        payment.save()
+                    if it.get("discount_code") is not None:
+                        reserve_redemption(
+                            it["discount_code"],
+                            school,
+                            payment=payment,
+                            batch_ref=batch_ref,
+                            amount=it.get("discount_amount", Decimal("0.00")),
+                        )
+    except _CheckoutSubmissionError as exc:
+        messages.error(request, str(exc))
+        return _subscription_redirect(membership)
     except DiscountCodeError as exc:
         # سبقتنا مدرسة أخرى إلى آخر استخدام بين التحقق والحجز — الطلب كله تراجع.
+        if stored_receipt is not None:
+            stored_receipt[0].delete(stored_receipt[1])
         messages.error(request, str(exc))
+        return _subscription_redirect(membership)
+    except Exception:
+        if stored_receipt is not None:
+            try:
+                stored_receipt[0].delete(stored_receipt[1])
+            except Exception:
+                logger.exception("Failed to clean payment receipt after rollback")
+        raise
+
+    if duplicate:
+        messages.info(
+            request,
+            "تمت معالجة طلب الدفع هذا مسبقًا، ولم يُنشأ طلب مكرر.",
+        )
         return _subscription_redirect(membership)
 
     msg = format_html(
@@ -1053,7 +1263,14 @@ def _create_unified_payment(request, membership, subscription):
     return _subscription_redirect(membership)
 
 
-def _activate_free_discount_order(request, membership, subscription, items):
+def _activate_free_discount_order(
+    request,
+    membership,
+    subscription,
+    items,
+    *,
+    payment_method,
+):
     """يفعّل طلباً صار مجموعه صفراً بكود خصم 100% — بلا إيصال وبلا بوابة.
 
     مجموعٌ صفري لا يقع إلا حين يكون الطلب بندَ اشتراكٍ وحيداً خُصم بالكامل:
@@ -1085,40 +1302,63 @@ def _activate_free_discount_order(request, membership, subscription, items):
 
     today = timezone.localdate()
     pricing = _archive_pricing()
+    duplicate = False
     try:
         with transaction.atomic():
-            payment = Payment.objects.create(
-                **_stamp_payer(
-                    {
-                        "school": school,
-                        "subscription": subscription,
-                        "requested_plan": item.get("requested_plan"),
-                        "requested_teacher_limit": item.get("requested_teacher_limit"),
-                        "purpose": Payment.Purpose.SUBSCRIPTION,
-                        "amount": item["amount"],
-                        "discount_code": code,
-                        "discount_amount": item.get("discount_amount", 0),
-                        "notes": note,
-                        "payment_method": Payment.Method.BANK_TRANSFER,
-                        "status": Payment.Status.APPROVED,
-                        "created_by": request.user,
-                    },
-                    membership,
+            batch_ref, existing = _lock_checkout_submission(
+                request,
+                membership,
+                items,
+                payment_method,
+            )
+            if existing:
+                duplicate = True
+            else:
+                payment = Payment.objects.create(
+                    **_stamp_payer(
+                        {
+                            "school": school,
+                            "subscription": subscription,
+                            "requested_plan": item.get("requested_plan"),
+                            "requested_teacher_limit": item.get(
+                                "requested_teacher_limit"
+                            ),
+                            "purpose": Payment.Purpose.SUBSCRIPTION,
+                            "amount": item["amount"],
+                            "discount_code": code,
+                            "discount_amount": item.get("discount_amount", 0),
+                            "notes": note,
+                            "batch_ref": batch_ref,
+                            "payment_method": payment_method,
+                            "status": Payment.Status.APPROVED,
+                            "created_by": request.user,
+                        },
+                        membership,
+                    )
                 )
-            )
-            reserve_redemption(
-                code,
-                school,
-                payment=payment,
-                batch_ref="",
-                amount=item.get("discount_amount", Decimal("0.00")),
-            )
-            _apply_payment_effects(payment, today, pricing)
+                reserve_redemption(
+                    code,
+                    school,
+                    payment=payment,
+                    batch_ref=batch_ref,
+                    amount=item.get("discount_amount", Decimal("0.00")),
+                )
+                _apply_payment_effects(payment, today, pricing)
+    except _CheckoutSubmissionError as exc:
+        messages.error(request, str(exc))
+        return _subscription_redirect(membership)
     except DiscountCodeError as exc:
         messages.error(request, str(exc))
         return _subscription_redirect(membership)
     except _ApprovalError as exc:
         messages.error(request, f"تعذّر تفعيل الاشتراك: {exc}")
+        return _subscription_redirect(membership)
+
+    if duplicate:
+        messages.info(
+            request,
+            "تمت معالجة طلب الدفع هذا مسبقًا، ولم يُنشأ طلب مكرر.",
+        )
         return _subscription_redirect(membership)
 
     messages.success(

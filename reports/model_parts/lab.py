@@ -150,6 +150,16 @@ class LabAsset(models.Model):
         حركة تُحذف أو تُعدَّل، فيقول الجرد إن قطعتين خارج المختبر ولا يذكر
         السجل إلا واحدة.
         """
+        # قوائم المختبر تُحمِّل هذين المجموعين كـ annotations. استخدامهما هنا
+        # يمنع استعلاماً إضافياً لكل صف، مع إبقاء fallback نفسه للكائنات التي
+        # تأتي من نموذج أو خدمة بلا annotations.
+        if "handed_out" in self.__dict__ or "handed_back" in self.__dict__:
+            return max(
+                0,
+                int(self.__dict__.get("handed_out") or 0)
+                - int(self.__dict__.get("handed_back") or 0),
+            )
+
         totals = self.handovers.aggregate(
             out=models.Sum(
                 "quantity",
@@ -452,19 +462,22 @@ class LabExperiment(ApprovalMixin):
         """من يراجع التجربة غير مدير المدرسة.
 
         من مُنح ``manage_lab`` في هذه المدرسة وفي نطاق المختبر نفسه. التفويض
-        المؤقت من المدير يشمل المدرسة، أما الصلاحية الدائمة فتتقيد بالأقسام
-        المسندة حتى لا يراجع مسؤول مختبر العلوم عملاً يخص مختبر الحاسب.
+        يمنح القدرة مؤقتاً لكنه لا يوسّع ``StaffScope`` أو يحوّله إلى وصول
+        مدرسي شامل.
         """
         from ..capabilities import MANAGE_LAB
         from ..permissions import capability_source
-        from ..services_lab import lab_kinds_for_user
+        from ..services_lab import lab_resource_in_scope
 
         source = capability_source(user, MANAGE_LAB, school)
         if source is None:
             return False
-        if source == "delegation" or not self.lab_kind:
-            return True
-        return self.lab_kind in lab_kinds_for_user(user, school)
+        return lab_resource_in_scope(
+            user,
+            school,
+            lab_kind=self.lab_kind,
+            department_id=self.department_id,
+        )
 
     def can_finalize_approval(self, user, school):
         """Break the manager-owned experiment deadlock without self-approval.
@@ -481,7 +494,7 @@ class LabExperiment(ApprovalMixin):
             capability_source,
             is_school_manager,
         )
-        from ..services_lab import lab_kinds_for_user
+        from ..services_lab import lab_resource_in_scope
 
         recorder_id = getattr(self, "recorder_id", None)
         if not recorder_id or not is_school_manager(
@@ -494,6 +507,9 @@ class LabExperiment(ApprovalMixin):
         approval_source = capability_source(user, RECOMMEND_APPROVAL, school)
         if manage_source is None or approval_source is None:
             return False
-        if manage_source == "delegation" or not self.lab_kind:
-            return True
-        return self.lab_kind in lab_kinds_for_user(user, school)
+        return lab_resource_in_scope(
+            user,
+            school,
+            lab_kind=self.lab_kind,
+            department_id=self.department_id,
+        )

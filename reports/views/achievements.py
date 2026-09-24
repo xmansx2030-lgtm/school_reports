@@ -9,6 +9,57 @@ from ._helpers import (
 )
 from ..gender_labels import school_gender_labels, school_gender_template_context
 from ..services_achievement import ensure_achievement_sections as _ensure_achievement_sections
+from ..validators import validate_image_file
+
+
+_ACHIEVEMENT_SECTION_TOTAL = len(AchievementSection.Code.choices)
+_ACHIEVEMENT_STATUS_TONES = {
+    TeacherAchievementFile.Status.DRAFT: "draft",
+    TeacherAchievementFile.Status.SUBMITTED: "warning",
+    TeacherAchievementFile.Status.RETURNED: "danger",
+    TeacherAchievementFile.Status.APPROVED: "approved",
+}
+
+
+def _achievement_files_with_progress(queryset):
+    """Add presentation-only portfolio counts without per-row queries.
+
+    A documented section has teacher notes, a photographed evidence item, or a
+    linked report.  This is deliberately named documentation progress: it does
+    not infer approval readiness and never changes workflow state.
+    """
+    documented_filter = (
+        ~Q(sections__teacher_notes="")
+        | Q(sections__evidence_images__isnull=False)
+        | Q(sections__evidence_reports__isnull=False)
+    )
+    return queryset.annotate(
+        documented_section_count=Count(
+            "sections",
+            filter=documented_filter,
+            distinct=True,
+        ),
+        image_evidence_count=Count("sections__evidence_images", distinct=True),
+        report_evidence_count=Count("sections__evidence_reports", distinct=True),
+    )
+
+
+def _set_achievement_presentation(file, *, total_sections=_ACHIEVEMENT_SECTION_TOTAL):
+    documented = int(getattr(file, "documented_section_count", 0) or 0)
+    total = max(1, int(total_sections or _ACHIEVEMENT_SECTION_TOTAL))
+    file.progress_percent = min(100, round((documented / total) * 100))
+    file.total_section_count = total
+    file.status_tone = _ACHIEVEMENT_STATUS_TONES.get(file.status, "draft")
+
+    if file.status == TeacherAchievementFile.Status.RETURNED:
+        file.next_action_label = "راجع ملاحظات المراجع ثم أعد الإرسال"
+    elif file.status == TeacherAchievementFile.Status.SUBMITTED:
+        file.next_action_label = "بانتظار قرار المراجع"
+    elif file.status == TeacherAchievementFile.Status.APPROVED:
+        file.next_action_label = "ملف نهائي للعرض والمشاركة"
+    else:
+        file.next_action_label = "استكمل المحاور والشواهد ثم أرسل للاعتماد"
+    return file
 
 
 def _notify_achievement_submitted(ach_file, active_school):
@@ -155,6 +206,81 @@ def _may_read_achievement_file(user, active_school: Optional[School], ach_file) 
     return bool(scoped is not None and ach_file.teacher_id in scoped)
 
 
+def _apply_achievement_decision(
+    *,
+    ach_file: TeacherAchievementFile,
+    active_school: Optional[School],
+    actor: Teacher,
+    target_status: str,
+    manager_notes: str,
+) -> Optional[TeacherAchievementFile]:
+    """Apply one manager decision against the current locked database state.
+
+    Achievement has one decision endpoint, so this helper is the authoritative
+    transition gate without introducing a second workflow service.  Locking and
+    checking ``submitted`` inside the same transaction rejects stale/repeated
+    decisions as well as crafted transitions from draft, returned, or approved.
+    """
+    if target_status not in {
+        TeacherAchievementFile.Status.APPROVED,
+        TeacherAchievementFile.Status.RETURNED,
+    }:
+        return None
+
+    school_id = getattr(active_school, "pk", None) or ach_file.school_id
+    with transaction.atomic():
+        locked_file = (
+            TeacherAchievementFile.objects.select_for_update()
+            .filter(pk=ach_file.pk, school_id=school_id)
+            .first()
+        )
+        if locked_file is None or locked_file.status != TeacherAchievementFile.Status.SUBMITTED:
+            return None
+
+        locked_file.status = target_status
+        locked_file.manager_notes = manager_notes
+        locked_file.decided_at = timezone.now()
+        locked_file.decided_by = actor
+        locked_file.save(
+            update_fields=[
+                "status",
+                "decided_at",
+                "decided_by",
+                "manager_notes",
+                "updated_at",
+            ]
+        )
+        return locked_file
+
+
+def _save_achievement_evidence_images(*, section: AchievementSection, images: list) -> None:
+    """Persist a validated image batch and remove files if a later save fails."""
+    stored_files = []
+    try:
+        with transaction.atomic():
+            for uploaded_file in images:
+                evidence = AchievementEvidenceImage(section=section, image=uploaded_file)
+                try:
+                    evidence.save()
+                except Exception:
+                    field_file = getattr(evidence, "image", None)
+                    if (
+                        field_file
+                        and getattr(field_file, "name", "")
+                        and getattr(field_file, "_committed", False)
+                    ):
+                        field_file.storage.delete(field_file.name)
+                    raise
+                stored_files.append((evidence.image.storage, evidence.image.name))
+    except Exception:
+        for storage, name in stored_files:
+            try:
+                storage.delete(name)
+            except Exception:
+                logger.exception("Failed to clean achievement evidence after upload rollback")
+        raise
+
+
 @login_required(login_url="reports:login")
 @require_http_methods(["GET", "POST"])
 def achievement_my_files(request: HttpRequest) -> HttpResponse:
@@ -194,10 +320,12 @@ def achievement_my_files(request: HttpRequest) -> HttpResponse:
             return redirect("reports:achievement_file_detail", pk=ach_file.pk)
         messages.error(request, "تحقق من السنة الدراسية وأعد المحاولة.")
 
-    files = (
+    files = list(_achievement_files_with_progress(
         TeacherAchievementFile.objects.filter(teacher=request.user, school=active_school)
         .order_by("-academic_year", "-id")
-    )
+    ))
+    for achievement_file in files:
+        _set_achievement_presentation(achievement_file)
     return render(
         request,
         "reports/achievement_my_files.html",
@@ -387,7 +515,7 @@ def achievement_school_files(request: HttpRequest) -> HttpResponse:
 
     files_by_teacher_id = {}
     if year:
-        files = (
+        files = _achievement_files_with_progress(
             TeacherAchievementFile.objects.filter(school=active_school, academic_year=year)
             .select_related("teacher")
             .only("id", "teacher_id", "status", "academic_year")
@@ -408,9 +536,24 @@ def achievement_school_files(request: HttpRequest) -> HttpResponse:
             teachers = teachers.filter(id__in=matching_teacher_ids)
             files = files.filter(status=status)
 
-        files_by_teacher_id = {f.teacher_id: f for f in files}
+        files_by_teacher_id = {}
+        for achievement_file in files:
+            _set_achievement_presentation(achievement_file)
+            files_by_teacher_id[achievement_file.teacher_id] = achievement_file
 
     rows = [{"teacher": t, "file": files_by_teacher_id.get(t.id)} for t in teachers]
+    review_priority = {
+        TeacherAchievementFile.Status.SUBMITTED: 0,
+        TeacherAchievementFile.Status.RETURNED: 1,
+        TeacherAchievementFile.Status.DRAFT: 2,
+        TeacherAchievementFile.Status.APPROVED: 4,
+    }
+    rows.sort(
+        key=lambda row: (
+            review_priority.get(getattr(row["file"], "status", None), 3),
+            (getattr(row["teacher"], "name", "") or "").casefold(),
+        )
+    )
 
     return render(
         request,
@@ -476,17 +619,35 @@ def achievement_file_detail(request: HttpRequest, pk: int) -> HttpResponse:
             "report",
             "report__category",
         ).order_by("id")
-        sections = (
+        sections = list(
             AchievementSection.objects.filter(file=ach_file)
             .prefetch_related("evidence_images", Prefetch("evidence_reports", queryset=ev_reports_qs))
             .order_by("code", "id")
         )
     except Exception:
-        sections = (
+        sections = list(
             AchievementSection.objects.filter(file=ach_file)
             .prefetch_related("evidence_images", "evidence_reports")
             .order_by("code", "id")
         )
+
+    documented_sections = 0
+    image_evidence_count = 0
+    report_evidence_count = 0
+    for section in sections:
+        images = list(section.evidence_images.all())
+        reports = list(section.evidence_reports.all())
+        section.image_evidence_count = len(images)
+        section.report_evidence_count = len(reports)
+        section.is_documented = bool((section.teacher_notes or "").strip() or images or reports)
+        documented_sections += int(section.is_documented)
+        image_evidence_count += len(images)
+        report_evidence_count += len(reports)
+
+    ach_file.documented_section_count = documented_sections
+    ach_file.image_evidence_count = image_evidence_count
+    ach_file.report_evidence_count = report_evidence_count
+    _set_achievement_presentation(ach_file, total_sections=len(sections))
 
     can_edit_teacher = bool(is_owner and ach_file.is_editable_by_owner)
     can_post = bool(can_edit_teacher or is_manager)
@@ -635,12 +796,26 @@ def achievement_file_detail(request: HttpRequest, pk: int) -> HttpResponse:
                 messages.error(request, "لا يمكن إضافة أكثر من 8 صور لهذا المحور.")
                 return redirect("reports:achievement_file_detail", pk=ach_file.pk)
             imgs = imgs[:remaining]
+
+            # Validate the complete accepted batch before the first storage/DB
+            # mutation. This keeps invalid multi-upload requests all-or-nothing.
+            try:
+                for image in imgs:
+                    validate_image_file(image)
+            except ValidationError as exc:
+                messages.error(request, " ".join(exc.messages))
+                return redirect("reports:achievement_file_detail", pk=ach_file.pk)
+
             capacity_error = archive_storage_capacity_error(active_school, imgs)
             if capacity_error:
                 messages.error(request, capacity_error)
                 return redirect("reports:achievement_file_detail", pk=ach_file.pk)
-            for f in imgs:
-                AchievementEvidenceImage.objects.create(section=sec, image=f)
+            try:
+                _save_achievement_evidence_images(section=sec, images=imgs)
+            except Exception:
+                logger.exception("Failed to persist achievement evidence batch")
+                messages.error(request, "تعذر رفع الشواهد. لم يتم حفظ أي ملف.")
+                return redirect("reports:achievement_file_detail", pk=ach_file.pk)
             sync_school_archive_storage_usage(active_school)
             messages.success(request, "تم رفع الشواهد.")
             return redirect("reports:achievement_file_detail", pk=ach_file.pk)
@@ -772,22 +947,19 @@ def achievement_file_detail(request: HttpRequest, pk: int) -> HttpResponse:
             if not manager_notes_form.is_valid():
                 messages.error(request, "تعذر حفظ ملاحظات الاعتماد. راجع النص وحاول مرة أخرى.")
                 return redirect("reports:achievement_file_detail", pk=ach_file.pk)
-            manager_notes_form.save()
-            ach_file.status = TeacherAchievementFile.Status.APPROVED
-            ach_file.decided_at = timezone.now()
-            ach_file.decided_by = request.user
-            ach_file.save(
-                update_fields=[
-                    "status",
-                    "decided_at",
-                    "decided_by",
-                    "manager_notes",
-                    "updated_at",
-                ]
+            decided_file = _apply_achievement_decision(
+                ach_file=ach_file,
+                active_school=active_school,
+                actor=request.user,
+                target_status=TeacherAchievementFile.Status.APPROVED,
+                manager_notes=manager_notes_form.cleaned_data["manager_notes"],
             )
+            if decided_file is None:
+                messages.error(request, "تعذر تنفيذ القرار لأن الملف لم يعد بانتظار الاعتماد.")
+                return redirect("reports:achievement_file_detail", pk=ach_file.pk)
 
             # إشعار المعلم باعتماد ملف الإنجاز
-            _notify_achievement_decided(ach_file, "approved", active_school)
+            _notify_achievement_decided(decided_file, "approved", active_school)
 
             messages.success(request, "تم اعتماد ملف الإنجاز.")
             return redirect("reports:achievement_file_detail", pk=ach_file.pk)
@@ -796,14 +968,19 @@ def achievement_file_detail(request: HttpRequest, pk: int) -> HttpResponse:
             if not manager_notes_form.is_valid():
                 messages.error(request, "تعذر حفظ ملاحظات الإرجاع. راجع النص وحاول مرة أخرى.")
                 return redirect("reports:achievement_file_detail", pk=ach_file.pk)
-            manager_notes_form.save()
-            ach_file.status = TeacherAchievementFile.Status.RETURNED
-            ach_file.decided_at = timezone.now()
-            ach_file.decided_by = request.user
-            ach_file.save(update_fields=["status", "decided_at", "decided_by", "updated_at", "manager_notes"])
+            decided_file = _apply_achievement_decision(
+                ach_file=ach_file,
+                active_school=active_school,
+                actor=request.user,
+                target_status=TeacherAchievementFile.Status.RETURNED,
+                manager_notes=manager_notes_form.cleaned_data["manager_notes"],
+            )
+            if decided_file is None:
+                messages.error(request, "تعذر تنفيذ القرار لأن الملف لم يعد بانتظار الاعتماد.")
+                return redirect("reports:achievement_file_detail", pk=ach_file.pk)
 
             # إشعار المعلم بإرجاع ملف الإنجاز
-            _notify_achievement_decided(ach_file, "returned", active_school)
+            _notify_achievement_decided(decided_file, "returned", active_school)
 
             messages.success(request, f"تم إرجاع الملف لـ{labels['teacher']} مع الملاحظات.")
             return redirect("reports:achievement_file_detail", pk=ach_file.pk)

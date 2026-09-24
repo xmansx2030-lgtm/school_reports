@@ -1,219 +1,96 @@
 {% extends "base.html" %}
 {% load hijri_tags %}
 
-{% block title %}لوحة المختبر | منصة توثيق{% endblock %}
-
+{% block title %}عمليات المختبر | منصة توثيق{% endblock %}
 {% block head %}{% include "reports/_lab_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="lab">
-
-  <header class="lab-hero">
-    <span class="lab-hero__eyebrow">
-      <i class="fa-solid fa-flask" aria-hidden="true"></i>
-      المختبر
-    </span>
-    <h1>مختبر {{ active_school.name }}</h1>
-    <p class="lab-hero__lead">
-      {% if is_lab_tech %}
-        عهدتك وتجاربك في مكان واحد. الجرد يُحدَّث لحظةَ اكتشاف النقص لا بعد
-        اعتماده، والتجربة تُوثَّق مسودةً ثم تُرسَل لاعتماد المدير.
-      {% else %}
-        متابعةُ عهدة المختبر وتجاربه. الاطلاع والمراجعة دون التسجيل — فالتسجيل
-        عملُ المحضّر.
-      {% endif %}
-    </p>
-    <div class="lab-hero__actions">
-      {% if can_record %}
-        <a class="lab-act lab-act--solid" href="{% url 'reports:lab_assets' %}#new-asset">
-          <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-          إضافة صنف للعهدة
-        </a>
-        <a class="lab-act" href="{% url 'reports:lab_experiments' %}#new-experiment">
-          <i class="fa-solid fa-vials" aria-hidden="true"></i>
-          توثيق تجربة جديدة
-        </a>
-      {% else %}
-        <a class="lab-act lab-act--solid" href="{% url 'reports:lab_assets' %}">
-          <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-          استعراض عهدة المختبر
-        </a>
-        <a class="lab-act" href="{% url 'reports:lab_experiments' %}">
-          <i class="fa-solid fa-vials" aria-hidden="true"></i>
-          استعراض سجل التجارب
-        </a>
-      {% endif %}
-      <a class="lab-act" href="{% url 'reports:lab_assets_print' %}">
-        <i class="fa-solid fa-print" aria-hidden="true"></i>
-        طباعة كشف العهدة
-      </a>
+<div class="twq-page lab-page" aria-labelledby="labPageTitle">
+  <header class="twq-page-header lab-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-flask" aria-hidden="true"></i> عمليات المختبر</span>
+      <h1 class="twq-page-header__title" id="labPageTitle">مختبر {{ active_school.name }}</h1>
+      <p class="twq-page-header__lead">
+        {% if is_lab_tech %}
+          راقب العهدة وحركاتها، ثم وثّق التجارب وأرسل المكتمل منها للمراجعة.
+        {% else %}
+          تابع عهدة المختبر وتجارب نطاقك. الاطلاع والمراجعة منفصلان عن تسجيل عمل المحضّر.
+        {% endif %}
+      </p>
+    </div>
+    <div class="twq-page-header__aside">
+      <div class="lab-page-header__actions" aria-label="إجراءات المختبر">
+        {% if can_record %}
+          <a class="twq-btn twq-btn--primary" href="{% url 'reports:lab_assets' %}#new-asset"><i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة صنف للعهدة</a>
+          <a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_experiments' %}#new-experiment"><i class="fa-solid fa-vials" aria-hidden="true"></i> توثيق تجربة جديدة</a>
+        {% else %}
+          <a class="twq-btn twq-btn--primary" href="{% url 'reports:lab_assets' %}"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> استعراض عهدة المختبر</a>
+          <a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_experiments' %}"><i class="fa-solid fa-vials" aria-hidden="true"></i> استعراض سجل التجارب</a>
+        {% endif %}
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_assets_print' %}"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة كشف العهدة</a>
+      </div>
     </div>
   </header>
 
-  {# ═══ المؤشرات ══════════════════════════════════════════════ #}
-  <section class="lab-stats" aria-label="مؤشرات المختبر">
-    <a class="lab-stat" href="{% url 'reports:lab_assets' %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> أصناف الجرد</span>
-      <span class="lab-stat__v">{{ summary.assets_total }}</span>
-    </a>
-    <a class="lab-stat {% if summary.assets_attention %}lab-stat--warn{% endif %}"
-       href="{% url 'reports:lab_assets' %}?condition=needs_maintenance">
-      <span class="lab-stat__l"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> يحتاج انتباهاً</span>
-      <span class="lab-stat__v">{{ summary.assets_attention }}</span>
-    </a>
-    <a class="lab-stat {% if summary.assets_missing %}lab-stat--danger{% endif %}"
-       href="{% url 'reports:lab_assets' %}?condition=missing">
-      <span class="lab-stat__l"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> مفقود</span>
-      <span class="lab-stat__v">{{ summary.assets_missing }}</span>
-    </a>
-    <a class="lab-stat {% if summary.outstanding %}lab-stat--warn{% endif %}" href="#outstanding">
-      <span class="lab-stat__l"><i class="fa-solid fa-right-left" aria-hidden="true"></i> خارج المختبر</span>
-      <span class="lab-stat__v">{{ summary.outstanding }}</span>
-    </a>
-    <a class="lab-stat" href="{% url 'reports:lab_experiments' %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-vials" aria-hidden="true"></i> التجارب</span>
-      <span class="lab-stat__v">{{ summary.experiments_total }}</span>
-    </a>
-    <a class="lab-stat {% if summary.experiments_pending %}lab-stat--warn{% endif %}"
-       href="{% url 'reports:lab_experiments' %}?state=submitted">
-      <span class="lab-stat__l"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> تنتظر الاعتماد</span>
-      <span class="lab-stat__v">{{ summary.experiments_pending }}</span>
-    </a>
-  </section>
+  <nav class="lab-track-nav" aria-label="مسارات عمليات المختبر">
+    <a href="{% url 'reports:lab_assets' %}"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>الجرد والعهدة</span></a>
+    <a href="{% url 'reports:lab_experiments' %}"><i class="fa-solid fa-vials" aria-hidden="true"></i><span>التجارب والمراجعة</span></a>
+  </nav>
+
+  <dl class="twq-metrics lab-metrics" aria-label="ملخص عمليات المختبر">
+    <div><dt><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> أصناف الجرد</dt><dd><a href="{% url 'reports:lab_assets' %}" aria-label="فتح أصناف الجرد"><bdi>{{ summary.assets_total }}</bdi></a></dd></div>
+    <div {% if summary.assets_attention %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> يحتاج انتباهًا</dt><dd><a href="{% url 'reports:lab_assets' %}?condition=needs_maintenance" aria-label="فتح الأصناف التي تحتاج انتباهًا"><bdi>{{ summary.assets_attention }}</bdi></a></dd></div>
+    <div {% if summary.assets_missing %}data-tone="danger"{% endif %}><dt><i class="fa-solid fa-circle-question" aria-hidden="true"></i> مفقود</dt><dd><a href="{% url 'reports:lab_assets' %}?condition=missing" aria-label="فتح الأصناف المفقودة"><bdi>{{ summary.assets_missing }}</bdi></a></dd></div>
+    <div {% if summary.outstanding %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-right-left" aria-hidden="true"></i> عهد مفتوحة</dt><dd><a href="#outstanding" aria-label="الانتقال إلى العهد المفتوحة"><bdi>{{ summary.outstanding }}</bdi></a></dd></div>
+    <div><dt><i class="fa-solid fa-vials" aria-hidden="true"></i> التجارب</dt><dd><a href="{% url 'reports:lab_experiments' %}" aria-label="فتح سجل التجارب"><bdi>{{ summary.experiments_total }}</bdi></a></dd></div>
+    <div {% if summary.experiments_pending %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> بانتظار المراجعة</dt><dd><a href="{% url 'reports:lab_experiments' %}?state=submitted" aria-label="فتح التجارب بانتظار المراجعة"><bdi>{{ summary.experiments_pending }}</bdi></a></dd></div>
+  </dl>
 
   {% if my_draft_count and can_record %}
-    <div class="lab-card xs-lab-dashboard-1">
-      <strong>{{ my_draft_count }}</strong>
-      من تجاربك مسودةٌ لم تُرسَل بعد — والمسودة لا تصل المدير.
-      <a class="lab-link" href="{% url 'reports:lab_experiments' %}?state=draft">راجعها</a>
+    <div class="twq-alert twq-alert--warning lab-attention-note" role="status">
+      <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+      <div><strong><bdi>{{ my_draft_count }}</bdi> من تجاربك ما زالت مسودة.</strong> المسودة لا تصل إلى المراجع حتى تُرسل. <a href="{% url 'reports:lab_experiments' %}?state=draft">راجع المسودات</a></div>
     </div>
   {% endif %}
 
-  {# ═══ ما يحتاج انتباهاً ═════════════════════════════════════ #}
-  <section class="lab-section">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> أصناف تحتاج انتباهاً</h2>
-      <a class="lab-link" href="{% url 'reports:lab_assets' %}">كل الجرد</a>
-    </div>
-
+  <section class="twq-section lab-section" aria-labelledby="labAttentionTitle">
+    <header class="twq-section__header lab-section__header">
+      <div class="lab-section__heading"><span class="twq-section__kicker">الجرد</span><h2 class="twq-section__title" id="labAttentionTitle"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> أصناف تحتاج إجراء</h2><p class="twq-section__description">الصيانة والتلف والفقد حالات تشغيلية ظاهرة فور تسجيلها.</p></div>
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_assets' %}">كل الجرد</a>
+    </header>
     {% if attention_assets %}
-      <div class="lab-table-wrap">
-        <table class="lab-table lab-table--cards">
-          <thead>
-            <tr>
-              <th>الصنف</th><th>النوع</th><th>الكمية</th><th>الحالة</th><th>الموقع</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for asset in attention_assets %}
-              <tr>
-                <td data-label="الصنف"><a href="{% url 'reports:lab_asset_detail' asset.pk %}">{{ asset.name }}</a>{% if asset.lab_kind %}<small> · {{ asset.get_lab_kind_display }}</small>{% endif %}</td>
-                <td data-label="النوع">{{ asset.get_category_display }}</td>
-                <td data-label="الكمية">{{ asset.quantity }} {{ asset.unit }}</td>
-                <td data-label="الحالة">
-                  <span class="lab-chip {% if asset.condition == 'missing' or asset.condition == 'damaged' %}lab-chip--danger{% else %}lab-chip--warn{% endif %}">
-                    {{ asset.get_condition_display }}
-                  </span>
-                </td>
-                <td data-label="الموقع">{{ asset.location|default:"—" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <div class="twq-table-wrap lab-table-wrap"><table class="twq-table lab-table lab-table--cards"><caption>الأصناف التي تحتاج إجراء</caption><thead><tr><th scope="col">الصنف</th><th scope="col">النوع</th><th scope="col">الكمية</th><th scope="col">الحالة</th><th scope="col">الموقع</th><th scope="col">الإجراء</th></tr></thead><tbody>
+        {% for asset in attention_assets %}<tr><td data-label="الصنف"><div class="lab-table__identity"><a href="{% url 'reports:lab_asset_detail' asset.pk %}">{{ asset.name }}</a>{% if asset.lab_kind %}<small>{{ asset.get_lab_kind_display }}</small>{% endif %}</div></td><td data-label="النوع">{{ asset.get_category_display }}</td><td data-label="الكمية"><bdi>{{ asset.quantity }} {{ asset.unit }}</bdi></td><td data-label="الحالة"><span class="twq-status lab-status" data-status="{{ asset.condition }}">{{ asset.get_condition_display }}</span></td><td data-label="الموقع">{{ asset.location|default:"—" }}</td><td data-label="الإجراء"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_asset_detail' asset.pk %}">فتح الصنف</a></td></tr>{% endfor %}
+      </tbody></table></div>
     {% else %}
-      <div class="lab-empty">
-        <span class="lab-empty__icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span>
-        <strong>لا صنف يحتاج انتباهاً.</strong>
-        كل ما في الجرد سليم — وما يتغيّر يظهر هنا أولاً.
-      </div>
+      <div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span><h3 class="twq-empty__title">لا صنف يحتاج إجراء الآن</h3><p class="twq-empty__message">كل الحالات الحالية خارج قائمة الصيانة والتلف والفقد.</p></div>
     {% endif %}
   </section>
 
-  {# ═══ خارج المختبر ═════════════════════════════════════════ #}
-  <section class="lab-section" id="outstanding">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-right-left" aria-hidden="true"></i> ما زال خارج المختبر</h2>
-    </div>
-
+  <section class="twq-section lab-section" id="outstanding" aria-labelledby="labCustodyTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">العهدة</span><h2 class="twq-section__title" id="labCustodyTitle"><i class="fa-solid fa-right-left" aria-hidden="true"></i> عهد لم تُغلق بعد</h2><p class="twq-section__description">ما خرج من المختبر، وعند من، والكمية المتبقية حتى الإرجاع.</p></div></header>
     {% if outstanding %}
-      <div class="lab-table-wrap">
-        <table class="lab-table lab-table--cards">
-          <thead><tr><th>الصنف</th><th>عند</th><th>الكمية</th></tr></thead>
-          <tbody>
-            {% for row in outstanding %}
-              <tr>
-                <td data-label="الصنف"><a href="{% url 'reports:lab_asset_detail' row.asset_id %}">{{ row.asset_name }}</a></td>
-                <td data-label="عند">{{ row.person_name }}</td>
-                <td data-label="الكمية">{{ row.quantity }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <div class="twq-table-wrap lab-table-wrap"><table class="twq-table lab-table lab-table--cards"><caption>العهد المفتوحة حاليًا</caption><thead><tr><th scope="col">الصنف</th><th scope="col">المستلم</th><th scope="col">الكمية</th><th scope="col">الإجراء</th></tr></thead><tbody>
+        {% for row in outstanding %}<tr><td data-label="الصنف"><a href="{% url 'reports:lab_asset_detail' row.asset_id %}">{{ row.asset_name }}</a></td><td data-label="المستلم"><bdi>{{ row.person_name }}</bdi></td><td data-label="الكمية"><bdi>{{ row.quantity }}</bdi></td><td data-label="الإجراء"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_asset_detail' row.asset_id %}">تسجيل الإرجاع</a></td></tr>{% endfor %}
+      </tbody></table></div>
     {% else %}
-      <div class="lab-empty">
-        <span class="lab-empty__icon"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></span>
-        <strong>لا شيء خارج المختبر.</strong>
-        كل ما سُلِّم أُعيد.
-      </div>
+      <div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-rotate-left"></i></span><h3 class="twq-empty__title">لا توجد عهد مفتوحة</h3><p class="twq-empty__message">كل ما سُلّم من المختبر أُعيد وسُجّل.</p></div>
     {% endif %}
   </section>
 
-  {# ═══ أحدث التجارب ═════════════════════════════════════════ #}
-  <section class="lab-section">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-vials" aria-hidden="true"></i> أحدث التجارب</h2>
-      <a class="lab-link" href="{% url 'reports:lab_experiments' %}">كل التجارب</a>
-    </div>
-
+  <section class="twq-section lab-section" aria-labelledby="labExperimentsTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">التجارب</span><h2 class="twq-section__title" id="labExperimentsTitle"><i class="fa-solid fa-vials" aria-hidden="true"></i> أحدث التجارب</h2><p class="twq-section__description">آخر أعمال المختبر وحالتها في دورة المراجعة.</p></div><a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_experiments' %}">كل التجارب</a></header>
     {% if recent_experiments %}
-      <div class="lab-table-wrap">
-        <table class="lab-table lab-table--cards">
-          <thead>
-            <tr><th>التجربة</th><th>التاريخ</th><th>الصف</th><th>الحالة</th></tr>
-          </thead>
-          <tbody>
-            {% for experiment in recent_experiments %}
-              <tr>
-                <td data-label="التجربة"><a href="{% url 'reports:lab_experiment_detail' experiment.pk %}">{{ experiment.title|default:"مسودة بلا عنوان" }}</a>{% if experiment.lab_kind %}<small> · {{ experiment.get_lab_kind_display }}</small>{% endif %}</td>
-                <td data-label="التاريخ" dir="rtl">{% if experiment.experiment_date %}{{ experiment.experiment_date|hijri }}{% else %}—{% endif %}</td>
-                <td data-label="الصف">{{ experiment.class_name|default:"—" }}</td>
-                <td data-label="الحالة"><span class="lab-chip">{{ experiment.get_approval_state_display }}</span></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <div class="twq-table-wrap lab-table-wrap"><table class="twq-table lab-table lab-table--cards"><caption>أحدث تجارب المختبر</caption><thead><tr><th scope="col">التجربة</th><th scope="col">التاريخ</th><th scope="col">الصف</th><th scope="col">الحالة</th><th scope="col">الإجراء</th></tr></thead><tbody>
+        {% for experiment in recent_experiments %}<tr><td data-label="التجربة"><div class="lab-table__identity"><a href="{% url 'reports:lab_experiment_detail' experiment.pk %}">{{ experiment.title|default:"مسودة بلا عنوان" }}</a>{% if experiment.lab_kind %}<small>{{ experiment.get_lab_kind_display }}</small>{% endif %}</div></td><td data-label="التاريخ">{% if experiment.experiment_date %}<time datetime="{{ experiment.experiment_date|date:'Y-m-d' }}"><bdi>{{ experiment.experiment_date|hijri }}</bdi></time>{% else %}—{% endif %}</td><td data-label="الصف">{{ experiment.class_name|default:"—" }}</td><td data-label="الحالة"><span class="twq-status lab-status" data-status="{{ experiment.approval_state }}">{{ experiment.get_approval_state_display }}</span></td><td data-label="الإجراء"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_experiment_detail' experiment.pk %}">فتح التجربة</a></td></tr>{% endfor %}
+      </tbody></table></div>
     {% else %}
-      <div class="lab-empty">
-        <span class="lab-empty__icon"><i class="fa-solid fa-vials" aria-hidden="true"></i></span>
-        <strong>لم تُوثَّق تجربة بعد.</strong>
-        {% if can_record %}
-          ابدأ بأول محضر، ويمكنك حفظه مسودة وإكماله لاحقاً.
-          <a class="lab-btn lab-btn--ghost" href="{% url 'reports:lab_experiments' %}#new-experiment">توثيق أول تجربة</a>
-        {% endif %}
-      </div>
+      <div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-vials"></i></span><h3 class="twq-empty__title">لم تُوثّق تجربة بعد</h3><p class="twq-empty__message">{% if can_record %}ابدأ بمسودة أولى، ثم أكملها قبل الإرسال للمراجعة.{% else %}لا توجد تجربة في نطاقك الحالي.{% endif %}</p>{% if can_record %}<a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_experiments' %}#new-experiment">توثيق أول تجربة</a>{% endif %}</div>
     {% endif %}
   </section>
 
-  {# ═══ آخر الحركة ═══════════════════════════════════════════ #}
   {% if recent_handovers %}
-    <section class="lab-section">
-      <div class="lab-section__head">
-        <h2><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> آخر حركات العهدة</h2>
-      </div>
-      <ul class="lab-timeline">
-        {% for handover in recent_handovers %}
-          <li>
-            <b>{{ handover.get_direction_display }}</b>
-            {{ handover.asset.name }} × {{ handover.quantity }}
-            {% if handover.person_name %}— {{ handover.person_name }}{% endif %}
-            <time dir="rtl">{{ handover.happened_at|hijri }}</time>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
+    <section class="twq-section lab-section" aria-labelledby="labActivityTitle"><header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">النشاط</span><h2 class="twq-section__title" id="labActivityTitle"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> آخر حركات العهدة</h2></div></header><ol class="lab-timeline">{% for handover in recent_handovers %}<li><strong>{{ handover.get_direction_display }}</strong> {{ handover.asset.name }} × <bdi>{{ handover.quantity }}</bdi>{% if handover.person_name %} — <bdi>{{ handover.person_name }}</bdi>{% endif %}<time datetime="{{ handover.happened_at|date:'c' }}"><bdi>{{ handover.happened_at|hijri }}</bdi></time></li>{% endfor %}</ol></section>
   {% endif %}
 </div>
 {% endblock %}

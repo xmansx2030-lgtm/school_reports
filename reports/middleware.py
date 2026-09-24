@@ -599,6 +599,10 @@ class SubscriptionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # The personal workspace has its own ownership boundary and never uses
+        # the active school's subscription or permissions.
+        if request.path.startswith("/personal/"):
+            return self.get_response(request)
         # 1) تجاوز الفحص للمستخدمين غير المسجلين أو المدراء النظام (Superusers)
         if not request.user.is_authenticated or getattr(request.user, "is_superuser", False):
             return self.get_response(request)

@@ -1,6 +1,7 @@
 # reports/urls.py
 from django.urls import path
 from . import views
+from personal import platform_views as personal_platform_views
 
 app_name = "reports"
 
@@ -586,6 +587,9 @@ urlpatterns = [
     path("platform/plans/add/", views.platform_plan_form, name="platform_plan_add"),
     path("platform/plans/<int:pk>/edit/", views.platform_plan_form, name="platform_plan_edit"),
     path("platform/plans/<int:pk>/delete/", views.platform_plan_delete, name="platform_plan_delete"),
+    path("platform/personal-plans/", personal_platform_views.plan_list, name="platform_personal_plans"),
+    path("platform/personal-plans/add/", personal_platform_views.plan_form, name="platform_personal_plan_add"),
+    path("platform/personal-plans/<int:pk>/edit/", personal_platform_views.plan_form, name="platform_personal_plan_edit"),
     path("platform/payments/", views.platform_payments_list, name="platform_payments_list"),
     path("platform/payments/<int:pk>/", views.platform_payment_detail, name="platform_payment_detail"),
     path("platform/tickets/", views.platform_tickets_list, name="platform_tickets_list"),

@@ -15,7 +15,6 @@
 """
 from __future__ import annotations
 
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -30,14 +29,11 @@ from reports.models import (
     SubscriptionPlan,
     Teacher,
 )
+from reports.tests.billing_test_helpers import valid_receipt
 
 
 def _receipt():
-    png = bytes.fromhex(
-        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
-        "890000000a49444154789c6360000002000154a24f6f0000000049454e44ae426082"
-    )
-    return SimpleUploadedFile("receipt.png", png, content_type="image/png")
+    return valid_receipt()
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"])
@@ -81,10 +77,18 @@ class GroupDirectorPaysOnBehalfTests(TestCase):
         self.pay = reverse("reports:payment_create")
 
     def _order(self, school, **extra):
+        query = {"school": school.pk} if school is not None else {}
+        page = self.client.get(self.page, query)
+        submission_key = (
+            page.context["checkout_submission_key"]
+            if page.status_code == 200
+            else "invalid-out-of-scope-key"
+        )
         data = {
             "unified": "1",
             "include_subscription": "1",
             "plan_id": self.plan.pk,
+            "checkout_submission_key": submission_key,
             "receipt_image": _receipt(),
         }
         if school is not None:

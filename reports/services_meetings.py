@@ -20,6 +20,7 @@ from .model_parts.meetings import Decision, Meeting, MeetingAttendee, MeetingMin
 
 __all__ = [
     "MeetingError",
+    "assert_meeting_held",
     "mark_held",
     "cancel_meeting",
     "set_attendance",
@@ -37,6 +38,12 @@ class MeetingError(ValidationError):
 def _require_organizer(meeting: Meeting, user) -> None:
     if meeting.organizer_id != getattr(user, "pk", None):
         raise PermissionDenied("هذا الاجتماع ليس من تنظيمك.")
+
+
+def assert_meeting_held(meeting: Meeting) -> None:
+    """يفرض أن تكون مخرجات الاجتماع وتسجيلاته بعد انعقاده الفعلي."""
+    if not meeting.is_held:
+        raise MeetingError("هذا الإجراء متاح بعد تسجيل انعقاد الاجتماع فقط.")
 
 
 def mark_held(meeting: Meeting, user, *, when=None) -> Meeting:
@@ -79,8 +86,7 @@ def set_attendance(meeting: Meeting, user, *, rows: dict) -> None:
     البقية.
     """
     _require_organizer(meeting, user)
-    if meeting.is_cancelled:
-        raise MeetingError("هذا الاجتماع ملغى.")
+    assert_meeting_held(meeting)
 
     valid = {value for value, _label in MeetingAttendee.Status.choices}
     attendees = {item.pk: item for item in meeting.attendees.all()}
@@ -103,6 +109,7 @@ def set_attendance(meeting: Meeting, user, *, rows: dict) -> None:
 
 def ensure_minutes(meeting: Meeting, *, recorder=None) -> MeetingMinutes:
     """محضر الاجتماع، يُنشأ مسودةً عند أول فتح."""
+    assert_meeting_held(meeting)
     minutes = getattr(meeting, "minutes", None)
     if minutes is not None:
         return minutes
@@ -125,6 +132,7 @@ def convert_decision_to_assignment(decision: Decision, user) -> Assignment:
     مرتين ويظن أحدهما زائداً.
     """
     meeting = decision.meeting
+    assert_meeting_held(meeting)
     if decision.assignment_id is not None:
         raise MeetingError("هذا القرار محوَّل إلى تكليف بالفعل.")
     if meeting.organizer_id != getattr(user, "pk", None):
@@ -133,6 +141,8 @@ def convert_decision_to_assignment(decision: Decision, user) -> Assignment:
         raise MeetingError("حدّد المسؤول عن التنفيذ أولاً.")
     if decision.due_at is None:
         raise MeetingError("حدّد موعد التنفيذ أولاً — قرارٌ بلا موعد لا يُتابَع.")
+    if not meeting.attendees.filter(person_id=decision.responsible_id).exists():
+        raise MeetingError("مسؤول التنفيذ يجب أن يكون من مدعوي الاجتماع.")
 
     assignment = Assignment.objects.create(
         scope=(
@@ -188,8 +198,15 @@ def meetings_for_user(user, *, school=None, group=None):
 
     qs = (
         Meeting.objects.filter(Q(organizer=user) | Q(attendees__person=user))
-        .select_related("organizer", "department", "school", "group")
-        .prefetch_related("attendees")
+        .select_related(
+            "organizer",
+            "department",
+            "school",
+            "group",
+            "minutes",
+            "minutes__recorder",
+        )
+        .prefetch_related("attendees", "decisions")
         .distinct()
         .order_by("-scheduled_at", "-id")
     )

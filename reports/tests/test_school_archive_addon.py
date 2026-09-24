@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -18,6 +17,7 @@ from reports.models import (
     Teacher,
     TeacherAchievementFile,
 )
+from reports.tests.billing_test_helpers import checkout_submission_key, valid_receipt
 
 
 class SchoolArchiveAddonTests(TestCase):
@@ -107,12 +107,13 @@ class SchoolArchiveAddonTests(TestCase):
         page_response = self.client.get(reverse("reports:my_subscription"))
         self.assertEqual(page_response.status_code, 200)
 
-        receipt = SimpleUploadedFile("receipt.png", b"archive-receipt", content_type="image/png")
+        receipt = valid_receipt()
         response = self.client.post(
             reverse("reports:payment_create"),
             {
                 "payment_kind": Payment.Purpose.ARCHIVE_ADDON,
                 "notes": "تحويل الأرشفة",
+                "checkout_submission_key": checkout_submission_key(self.client),
                 "receipt_image": receipt,
             },
         )
@@ -168,11 +169,12 @@ class SchoolArchiveAddonTests(TestCase):
         )
         self.client.force_login(manager)
 
-        receipt = SimpleUploadedFile("receipt.png", b"archive-receipt", content_type="image/png")
+        receipt = valid_receipt()
         self.client.post(
             reverse("reports:payment_create"),
             {
                 "payment_kind": Payment.Purpose.ARCHIVE_ADDON,
+                "checkout_submission_key": checkout_submission_key(self.client),
                 "receipt_image": receipt,
             },
         )
@@ -198,12 +200,13 @@ class SchoolArchiveAddonTests(TestCase):
         self.assertEqual(addon.storage_limit_gb, 80)
 
         self.client.force_login(manager)
-        storage_receipt = SimpleUploadedFile("storage.png", b"storage-receipt", content_type="image/png")
+        storage_receipt = valid_receipt("storage.png")
         self.client.post(
             reverse("reports:payment_create"),
             {
                 "payment_kind": Payment.Purpose.WORK_STORAGE,
                 "archive_storage_option_id": str(storage_option.id),
+                "checkout_submission_key": checkout_submission_key(self.client),
                 "receipt_image": storage_receipt,
             },
         )

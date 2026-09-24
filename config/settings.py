@@ -672,6 +672,7 @@ INSTALLED_APPS = [
     # Our apps
     "core",
     "reports",
+    "personal",
     "maintenance",
     "operations",
 ]
@@ -1167,6 +1168,7 @@ CELERY_TASK_ROUTES = {
     "reports.tasks.send_notification_task": {"queue": "notifications"},
     "reports.tasks.send_password_change_email_task": {"queue": "notifications"},
     "reports.tasks.send_subscription_activation_email_task": {"queue": "notifications"},
+    "personal.tasks.send_personal_payment_receipt_task": {"queue": "notifications"},
     "reports.tasks.process_report_images": {"queue": "images"},
     "reports.tasks.process_ticket_image": {"queue": "images"},
     # توليد PDF: أثقل عملية في المنصة، ومكانها عامل الوسائط لا عامل الويب.
@@ -1181,6 +1183,7 @@ CELERY_TASK_ROUTES = {
     "reports.tasks.check_archive_addon_expiry_task": {"queue": "periodic"},
     "reports.tasks.check_storage_thresholds_task": {"queue": "periodic"},
     "reports.tasks.reconcile_pending_gateway_payments_task": {"queue": "periodic"},
+    "personal.tasks.reconcile_personal_payments_task": {"queue": "periodic"},
     "reports.tasks.remind_unsigned_circulars_task": {"queue": "periodic"},
     "reports.tasks.cleanup_audit_logs_task": {"queue": "periodic"},
     "reports.tasks.cleanup_ai_usage_task": {"queue": "periodic"},
@@ -1522,6 +1525,10 @@ if crontab is not None:
     if PAYMENT_RECONCILIATION_ENABLED:
         CELERY_BEAT_SCHEDULE["reconcile-pending-gateway-payments"] = {
             "task": "reports.tasks.reconcile_pending_gateway_payments_task",
+            "schedule": crontab(minute="*/20"),
+        }
+        CELERY_BEAT_SCHEDULE["reconcile-personal-gateway-payments"] = {
+            "task": "personal.tasks.reconcile_personal_payments_task",
             "schedule": crontab(minute="*/20"),
         }
 

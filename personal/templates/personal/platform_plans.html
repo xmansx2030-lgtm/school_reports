@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}باقات المعلمين والمعلمات | إدارة المنصة{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20260924.1">{% endblock %}
+{% block content %}
+<div class="twq-page teacher-plans">
+  <header class="twq-page-header teacher-plans__header">
+    <div class="twq-page-header__content">
+      <p class="twq-page-header__eyebrow">مالك المنصة · الاشتراكات الشخصية</p>
+      <h1>باقات المعلمين والمعلمات</h1>
+      <p class="twq-page-header__description">حدّد السعر والمدة والسعة وحالة النشر. الباقات المنشورة والنشطة تظهر في قسم المعلم بصفحة الهبوط، بمعزل عن تسعير المدارس.</p>
+    </div>
+    <div class="twq-page-header__actions">
+      <a class="twq-button twq-button--secondary" href="{% url 'reports:platform_plans_list' %}">باقات المدارس</a>
+      <a class="twq-button twq-button--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة شخصية</a>
+    </div>
+  </header>
+
+  <div class="teacher-plans__summary" aria-label="ملخص الباقات الشخصية">
+    <div><span>إجمالي الباقات</span><strong>{{ plans|length }}</strong></div>
+    <div><span>تظهر في صفحة الهبوط</span><strong>{{ published_count }}</strong></div>
+    <div><span>الاشتراكات المرتبطة</span><strong>{{ subscriber_count }}</strong></div>
+  </div>
+
+  <section class="twq-section" aria-labelledby="teacherPlansTitle">
+    <div class="twq-section__header">
+      <div><p class="twq-section__kicker">قائمة مستقلة</p><h2 class="twq-section__title" id="teacherPlansTitle">الباقات الشخصية</h2></div>
+    </div>
+    <div class="teacher-plans__grid">
+      {% for plan in plans %}
+        <article class="teacher-plans__card">
+          <div class="teacher-plans__card-top">
+            <span class="teacher-plans__state" data-state="{% if plan.is_active and plan.is_published %}published{% elif not plan.is_active %}inactive{% else %}hidden{% endif %}">{% if plan.is_active and plan.is_published %}منشورة{% elif not plan.is_active %}متوقفة{% else %}غير منشورة{% endif %}</span>
+            <span class="teacher-plans__order">الترتيب {{ plan.display_order }}</span>
+          </div>
+          <h3>{{ plan.name }}</h3>
+          {% if plan.description %}<p class="teacher-plans__description">{{ plan.description }}</p>{% endif %}
+          <p class="teacher-plans__price">{% if plan.price == 0 %}<strong>مجانية</strong>{% else %}<strong dir="ltr">{{ plan.price|floatformat:"-2" }}</strong><span> ريال</span>{% endif %}<small>{% if plan.duration_days %} / {{ plan.duration_days }} يومًا{% else %} · مستمرة{% endif %}</small></p>
+          <dl class="teacher-plans__facts">
+            <div><dt>التقارير</dt><dd>{{ plan.max_reports }}</dd></div>
+            <div><dt>الشواهد</dt><dd>{{ plan.max_evidence }}</dd></div>
+            <div><dt>التخزين</dt><dd>{{ plan.storage_limit_mb }} م.ب</dd></div>
+            <div><dt>مشتركون</dt><dd>{{ plan.subscriber_count }}</dd></div>
+          </dl>
+          <a class="twq-button twq-button--secondary teacher-plans__edit" href="{% url 'reports:platform_personal_plan_edit' plan.pk %}">تعديل الباقة</a>
+        </article>
+      {% empty %}
+        <div class="teacher-plans__empty"><h3>لا توجد باقات شخصية</h3><p>أضف الباقة الأولى لتظهر للمعلمين والمعلمات في صفحة الهبوط.</p><a class="twq-button twq-button--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة</a></div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <p class="teacher-plans__notice">{% if moyasar_enabled %}الدفع عبر ميسّر متاح لهذه الباقات؛ بعد تأكيد الفاتورة تُفعّل الباقة تلقائيًا. {% else %}الدفع الإلكتروني غير مفعّل في إعدادات هذه البيئة؛ لن يبدأ المعلم طلب دفع. {% endif %}{% if activation_email_enabled %}ترسل المنصة الفاتورة وإشعار التفعيل إلى البريد المسجل بعد نجاح الدفع.{% else %}إشعارات تفعيل الاشتراك متوقفة من إعدادات البريد.{% endif %} بيئة الاختبار لا تعني قبول دفعات حقيقية؛ يلزم ضبط مفتاح ميسّر الحي وإعداد بريد الإنتاج قبل الإطلاق.</p>
+</div>
+{% endblock %}

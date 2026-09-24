@@ -36,6 +36,7 @@ __all__ = [
     "experiments_for_school",
     "handovers_for_school",
     "lab_kinds_for_user",
+    "lab_resource_in_scope",
     "lab_summary",
     "record_handover",
     "set_asset_condition",
@@ -47,14 +48,16 @@ __all__ = [
 # استعلامات العرض
 # ─────────────────────────────────────────────────────────────────────────────
 def lab_kinds_for_user(user, school) -> tuple[str, ...]:
-    """Return laboratory kinds visible to the user, independently of departments."""
+    """Return laboratory kinds visible to the user.
+
+    A capability answers whether access exists; it never supplies operational
+    scope.  Both direct and delegated ``MANAGE_LAB`` therefore reuse the
+    user's existing ``StaffScope`` departments.  An empty scope grants no lab.
+    """
     if user is None or getattr(user, "is_superuser", False) or is_school_manager(user, school):
         return LAB_KIND_VALUES
 
     source = capability_source(user, MANAGE_LAB, school)
-    if source == "delegation":
-        return LAB_KIND_VALUES
-
     kinds = set(
         value
         for value in SchoolMembership.objects.filter(
@@ -78,7 +81,7 @@ def lab_kinds_for_user(user, school) -> tuple[str, ...]:
                 department__is_active=True,
             ).values_list("department_id", flat=True)
         )
-    if source == "scope" or is_lab_technician(user, school):
+    if source in {"scope", "delegation"} or is_lab_technician(user, school):
         department_ids.update(supervised_department_ids(user, school))
 
     if department_ids:
@@ -101,6 +104,29 @@ def lab_kinds_for_user(user, school) -> tuple[str, ...]:
     return tuple(value for value in LAB_KIND_VALUES if value in kinds)
 
 
+def lab_resource_in_scope(
+    user,
+    school,
+    *,
+    lab_kind: str = "",
+    department_id: int | None = None,
+) -> bool:
+    """Defense-in-depth scope check for sensitive Lab actions.
+
+    Normal lookups are filtered querysets.  Approval services may also receive
+    a model instance directly, so they re-check the same central lab scope.
+    Legacy unclassified records retain their department-based boundary.
+    """
+    allowed_kinds = set(lab_kinds_for_user(user, school))
+    if not allowed_kinds:
+        return False
+    if lab_kind:
+        return lab_kind in allowed_kinds
+    if department_id is not None:
+        return int(department_id) in supervised_department_ids(user, school)
+    return True
+
+
 def _assets_in_user_scope(school, user):
     qs = LabAsset.objects.filter(school=school)
     if user is None or getattr(user, "is_superuser", False) or is_school_manager(user, school):
@@ -121,9 +147,7 @@ def _assets_in_user_scope(school, user):
         ).distinct()
 
     source = capability_source(user, MANAGE_LAB, school)
-    if source == "delegation":
-        return qs
-    if source == "scope" and lab_kinds:
+    if source in {"scope", "delegation"} and lab_kinds:
         legacy_department_ids = supervised_department_ids(user, school)
         return qs.filter(
             Q(lab_kind__in=lab_kinds)
@@ -148,9 +172,7 @@ def _experiments_in_user_scope(school, user):
         return qs.filter(lab_kind="", recorder=user)
 
     source = capability_source(user, MANAGE_LAB, school)
-    if source == "delegation":
-        return qs
-    if source == "scope" and lab_kinds:
+    if source in {"scope", "delegation"} and lab_kinds:
         legacy_department_ids = supervised_department_ids(user, school)
         return qs.filter(
             Q(lab_kind__in=lab_kinds)
@@ -290,7 +312,7 @@ def outstanding_handovers(school, *, user=None):
     return sorted(result, key=lambda row: (row["asset_name"], row["person_name"]))
 
 
-def lab_summary(school, *, user=None) -> dict:
+def lab_summary(school, *, user=None, outstanding_rows=None) -> dict:
     """مؤشرات المختبر — في استعلامين لا استعلامٍ لكل رقم."""
     assets = _assets_in_user_scope(school, user).filter(is_active=True).aggregate(
         total=Count("id"),
@@ -306,6 +328,9 @@ def lab_summary(school, *, user=None) -> dict:
         approved=Count("id", filter=Q(approval_state=ApprovalState.APPROVED)),
         drafts=Count("id", filter=Q(approval_state=ApprovalState.DRAFT)),
     )
+    if outstanding_rows is None:
+        outstanding_rows = outstanding_handovers(school, user=user)
+
     return {
         "assets_total": int(assets.get("total") or 0),
         "assets_attention": int(assets.get("attention") or 0),
@@ -315,7 +340,7 @@ def lab_summary(school, *, user=None) -> dict:
         "experiments_pending": int(experiments.get("pending") or 0),
         "experiments_approved": int(experiments.get("approved") or 0),
         "experiments_drafts": int(experiments.get("drafts") or 0),
-        "outstanding": len(outstanding_handovers(school, user=user)),
+        "outstanding": len(outstanding_rows),
     }
 
 

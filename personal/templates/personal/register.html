@@ -1,0 +1,31 @@
+{% extends "personal/base.html" %}
+{% block title %}ابدأ مساحتك الشخصية{% endblock %}
+{% block content %}
+<div class="personal-onboarding">
+  <section class="personal-onboarding__story" aria-labelledby="personalJoinTitle">
+    <span class="personal-kicker">توثيق المعلم، حتى قبل اشتراك المدرسة</span>
+    <h1 id="personalJoinTitle">أعمالك تستحق ملفًا يبقى باسمك.</h1>
+    <p>أنشئ تقاريرك، احفظ شواهدك، واجمع إنجازات كل سنة في مساحة مهنية خاصة بك.</p>
+    <ul>
+      <li><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تقارير منظمة قابلة للطباعة والحفظ PDF</li>
+      <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> مكتبة شواهد مرتبطة بأعمالك</li>
+      <li><i class="fa-solid fa-book-open" aria-hidden="true"></i> ملف إنجاز سنوي يُبنى تلقائيًا من محتواك</li>
+    </ul>
+    <p class="personal-onboarding__note">اسم المدرسة والمدير للتعريف داخل مستنداتك الشخصية؛ لا يمنحان اعتمادًا أو صلاحية مدرسية.</p>
+    <a class="personal-button twq-btn twq-btn--primary personal-onboarding__jump" href="#personalRegisterHeading">ابدأ التسجيل <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
+  </section>
+  <section class="personal-card twq-card personal-onboarding__form" aria-labelledby="personalRegisterHeading">
+    <span class="personal-kicker">ابدأ الآن</span>
+    <h2 id="personalRegisterHeading">أنشئ حساب المعلم</h2>
+    {% if selected_plan %}<p class="personal-hint">بعد إنشاء حسابك، ستنتقل إلى الدفع الآمن لاشتراك {{ selected_plan.name }} بقيمة {{ selected_plan.price|floatformat:"-2" }} ريال.</p>{% else %}<p class="personal-muted">أدخل بريدك بدقة؛ سنرسل إليه فواتير اشتراكك وتنبيهات التفعيل.</p>{% endif %}
+    <p class="personal-muted">لديك حساب في توثيق؟ <a href="{% url 'reports:login' %}{% if selected_plan %}?next={% url 'personal:checkout_start' selected_plan.pk %}{% endif %}">سجّل الدخول إلى حسابك</a>.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="personal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="personal-form-grid">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
+      <p class="personal-muted personal-policy">بإنشاء الحساب توافق على <a href="{% url 'reports:terms_conditions' %}">الشروط</a> و<a href="{% url 'reports:privacy_policy' %}">سياسة الخصوصية</a>.</p>
+      <button class="personal-button twq-btn twq-btn--primary" type="submit">أنشئ مساحتي <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>
+    </form>
+  </section>
+</div>
+{% endblock %}

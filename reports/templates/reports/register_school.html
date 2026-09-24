@@ -9,547 +9,190 @@
   {% include "reports/partials/theme_bootstrap.html" %}
   <meta name="description" content="أنشئ حساب مدرستك وابدأ تجربة منصة توثيق الكاملة.">
   <meta name="robots" content="noindex,follow">
-  <title>ابدأ تجربة مدرستك | منصة توثيق</title>
+  <title>تسجيل مدرسة جديدة | منصة توثيق</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
   {% include "reports/partials/pwa_install_head.html" %}
-  {% comment %}الخط والأيقونات محلياً: لا طلب لطرف ثالث قبل أول حرف، ولا نطاق خارجي في سياسة المحتوى.{% endcomment %}
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-  <style nonce="{{ CSP_NONCE }}">
-    :root {
-      --forest: #071d15;
-      --forest-2: #0a3f2b;
-      --green: #0a6946;
-      --green-light: #e7f3ec;
-      --gold: #c5a365;
-      --gold-light: #ecd8ad;
-      --ink: #111a16;
-      --muted: #68736d;
-      --line: #dde4df;
-      --paper: #f8f7f3;
-      --white: #fff;
-      --danger: #b42318;
-      --danger-bg: #fff1f0;
-      --shadow: 0 30px 90px rgba(4, 28, 19, .2);
-    }
-    *, *::before, *::after { box-sizing: border-box; }
-    html { min-height: 100%; }
-    body {
-      min-height: 100vh;
-      margin: 0;
-      padding: 28px;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 12% 8%, rgba(197,163,101,.2), transparent 26%),
-        linear-gradient(135deg, #061912, #0b3022);
-      font-family: "Cairo", system-ui, sans-serif;
-      line-height: 1.7;
-    }
-    a { color: inherit; text-decoration: none; }
-    button, input, select { font: inherit; }
-    :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-    .registration-shell {
-      display: grid;
-      width: min(1160px, 100%);
-      min-height: calc(100vh - 56px);
-      margin: auto;
-      overflow: hidden;
-      background: var(--white);
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 26px;
-      box-shadow: var(--shadow);
-      grid-template-columns: .78fr 1.22fr;
-    }
-    .experience-panel {
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      padding: 46px;
-      color: var(--white);
-      background:
-        radial-gradient(circle at 15% 15%, rgba(197,163,101,.18), transparent 28%),
-        linear-gradient(150deg, #0b4b34, var(--forest));
-      flex-direction: column;
-    }
-    .experience-panel::after {
-      position: absolute;
-      width: 360px;
-      height: 360px;
-      inset: auto -190px -170px auto;
-      content: "";
-      border: 1px solid rgba(236,216,173,.18);
-      border-radius: 50%;
-    }
-    .brand {
-      position: relative;
-      z-index: 1;
-      display: inline-flex;
-      width: max-content;
-      align-items: center;
-      gap: 11px;
-    }
-    .brand img { width: 44px; height: 44px; }
-    .brand strong, .brand small { display: block; }
-    .brand strong { font-size: 1.08rem; font-weight: 900; }
-    .brand small { color: rgba(255,255,255,.58); font-size: .63rem; }
-    .experience-copy {
-      position: relative;
-      z-index: 1;
-      margin-block: auto;
-      padding-block: 54px;
-    }
-    .trial-label {
-      display: inline-flex;
-      padding: 6px 12px;
-      align-items: center;
-      gap: 7px;
-      color: var(--gold-light);
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 99px;
-      font-size: .72rem;
-      font-weight: 800;
-    }
-    .experience-copy h1 {
-      margin: 18px 0 12px;
-      font-size: clamp(2rem, 3.6vw, 3.15rem);
-      font-weight: 900;
-      line-height: 1.3;
-      letter-spacing: -.04em;
-    }
-    .experience-copy > p {
-      margin: 0;
-      color: rgba(255,255,255,.66);
-      font-size: .9rem;
-    }
-    .benefit-list {
-      display: grid;
-      margin: 32px 0 0;
-      padding: 0;
-      gap: 12px;
-      list-style: none;
-    }
-    .benefit-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 11px;
-      color: rgba(255,255,255,.8);
-      font-size: .8rem;
-    }
-    .benefit-list i {
-      display: grid;
-      width: 25px;
-      height: 25px;
-      flex: 0 0 auto;
-      color: var(--gold-light);
-      background: rgba(255,255,255,.08);
-      border-radius: 8px;
-      font-size: .68rem;
-      place-items: center;
-    }
-    .privacy-note {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      padding-block-start: 20px;
-      align-items: flex-start;
-      gap: 9px;
-      color: rgba(255,255,255,.48);
-      border-top: 1px solid rgba(255,255,255,.1);
-      font-size: .68rem;
-    }
-    .form-panel {
-      position: relative;
-      padding: 42px 52px;
-      background: var(--paper);
-    }
-    .back-link {
-      position: absolute;
-      inset-block-start: 30px;
-      inset-inline-end: 34px;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      color: var(--muted);
-      font-size: .74rem;
-      font-weight: 700;
-    }
-    .back-link:hover { color: var(--green); }
-    .form-head {
-      max-width: 610px;
-      margin: 48px auto 30px;
-    }
-    .steps {
-      display: flex;
-      margin-block-end: 23px;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: .68rem;
-      font-weight: 800;
-    }
-    .steps span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .steps span::before {
-      display: grid;
-      width: 23px;
-      height: 23px;
-      color: var(--green);
-      background: var(--green-light);
-      border-radius: 50%;
-      content: attr(data-step);
-      place-items: center;
-    }
-    .steps i { width: 28px; height: 1px; background: var(--line); }
-    .form-head h2 {
-      margin: 0 0 7px;
-      font-size: clamp(1.55rem, 3vw, 2.1rem);
-      line-height: 1.35;
-    }
-    .form-head p { margin: 0; color: var(--muted); font-size: .82rem; }
-    form { max-width: 610px; margin: 0 auto; }
-    .messages, .error-list, .form-errors {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .messages li, .form-errors {
-      margin-block-end: 18px;
-      padding: 12px 14px;
-      color: var(--danger);
-      background: var(--danger-bg);
-      border: 1px solid #fecdca;
-      border-radius: 12px;
-      font-size: .76rem;
-    }
-    .form-section {
-      margin-block-end: 16px;
-      padding: 22px;
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 17px;
-    }
-    .section-title {
-      display: flex;
-      margin-block-end: 18px;
-      align-items: center;
-      gap: 9px;
-      font-size: .84rem;
-      font-weight: 900;
-    }
-    .section-title i {
-      display: grid;
-      width: 32px;
-      height: 32px;
-      color: var(--green);
-      background: var(--green-light);
-      border-radius: 10px;
-      place-items: center;
-    }
-    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .form-group { min-width: 0; }
-    .form-group.full { grid-column: 1 / -1; }
-    .form-group label {
-      display: block;
-      margin-block-end: 6px;
-      font-size: .72rem;
-      font-weight: 800;
-    }
-    .optional { color: #8b958f; font-size: .62rem; font-weight: 600; }
-    .form-control, .form-select {
-      width: 100%;
-      min-height: 47px;
-      padding: 10px 12px;
-      color: var(--ink);
-      background: #fff;
-      border: 1px solid #d5ddd8;
-      border-radius: 11px;
-      transition: border-color .18s, box-shadow .18s;
-    }
-    .form-control::placeholder { color: #a2aba6; }
-    .form-control:focus, .form-select:focus {
-      outline: 0;
-      border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(10,105,70,.11);
-    }
-    .password-wrap { position: relative; }
-    .password-wrap .form-control { padding-inline-end: 44px; }
-    .password-toggle {
-      position: absolute;
-      width: 36px;
-      height: 36px;
-      inset-block-start: 5px;
-      inset-inline-end: 5px;
-      color: var(--muted);
-      background: transparent;
-      border: 0;
-      border-radius: 9px;
-      cursor: pointer;
-    }
-    .field-help {
-      margin: 5px 0 0;
-      color: var(--muted);
-      font-size: .64rem;
-    }
-    .error-list { margin-block-start: 5px; color: var(--danger); font-size: .68rem; }
-    .policy-consent { display: flex; align-items: flex-start; gap: 10px; margin: 16px 2px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #f8fbf9; color: var(--muted); font-size: .72rem; line-height: 1.8; }
-    .policy-consent input { width: 24px; height: 24px; flex: 0 0 24px; margin-top: 2px; accent-color: var(--green); }
-    .policy-consent a { color: var(--green); font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
-    .submit-row {
-      display: flex;
-      margin-block-start: 20px;
-      align-items: center;
-      gap: 18px;
-    }
-    .submit-button {
-      display: inline-flex;
-      min-height: 54px;
-      padding: 12px 24px;
-      flex: 1;
-      align-items: center;
-      justify-content: center;
-      gap: 9px;
-      color: var(--white);
-      background: var(--green);
-      border: 0;
-      border-radius: 13px;
-      box-shadow: 0 12px 30px rgba(10,105,70,.2);
-      cursor: pointer;
-      font-weight: 900;
-      transition: background .18s, transform .18s;
-    }
-    .submit-button:hover { background: var(--forest-2); transform: translateY(-2px); }
-    .submit-button[disabled] { cursor: wait; opacity: .72; transform: none; }
-    .login-link { color: var(--muted); font-size: .72rem; white-space: nowrap; }
-    .login-link a { color: var(--green); font-weight: 900; }
-    @media (max-width: 920px) {
-      body { padding: 0; background: var(--paper); }
-      .registration-shell { min-height: 100vh; border: 0; border-radius: 0; grid-template-columns: 1fr; }
-      .experience-panel { min-height: auto; padding: 28px; }
-      .experience-copy { padding: 38px 0 24px; }
-      .experience-copy h1 { max-width: 620px; }
-      .benefit-list { grid-template-columns: 1fr 1fr; }
-      .privacy-note { margin-block-start: 25px; }
-    }
-    @media (max-width: 620px) {
-      .registration-shell {
-        width: 100%;
-        max-width: 100%;
-        display: flex;
-        flex-direction: column;
-      }
-      .form-panel { order: 1; min-width: 0; }
-      .experience-panel { order: 2; min-width: 0; }
-      .experience-panel { padding: 22px 18px; }
-      .experience-copy { padding-block-start: 30px; }
-      .experience-copy h1 { font-size: 2rem; }
-      .benefit-list { grid-template-columns: 1fr; }
-      .form-panel { padding: 24px 12px 30px; }
-      .back-link { position: static; margin: 0 4px; }
-      .form-head { margin-block-start: 32px; padding-inline: 4px; }
-      .field-grid { grid-template-columns: 1fr; }
-      .form-group.full { grid-column: auto; }
-      .form-section { padding: 18px 14px; }
-      .submit-row { align-items: stretch; flex-direction: column; }
-      .login-link { text-align: center; }
-      .password-toggle { width: 44px; height: 44px; }
-      .policy-consent { padding: 12px 10px; font-size: .8rem; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
-    }
-  </style>
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260924.1">
   <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
+  <link rel="stylesheet" href="{% static 'css/registration.css' %}?v=20260924.1">
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
+  <script src="{% static 'js/auth-password-toggle.js' %}?v=20260920.1" defer></script>
+  <script src="{% static 'js/registration.js' %}?v=20260924.1" defer></script>
 </head>
 <body class="registration-page">
   <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
+
   <main class="registration-shell" id="mainContent">
-    <aside class="experience-panel" aria-label="مزايا التجربة المجانية">
-      <a class="brand" href="{% url 'reports:landing' %}">
-        <img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44">
-        <span><strong>منصة توثيق</strong><small>لتشغيل وتوثيق العمل المدرسي</small></span>
-      </a>
+    <section class="registration-form-panel" aria-labelledby="registrationTitle">
+      <nav class="registration-back" aria-label="العودة">
+        <a href="{% url 'reports:landing' %}">
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          <span>الصفحة الرئيسية</span>
+        </a>
+      </nav>
 
-      <div class="experience-copy">
-        <span class="trial-label"><i class="fa-solid fa-sparkles"></i> تجربة كاملة لمدة {{ trial_days }} يومًا</span>
-        <h1>ابدأ بمدرستك الحقيقية، لا بنسخة محدودة.</h1>
-        <p>بعد التسجيل ستدخل مباشرة إلى لوحة المدرسة، وتستطيع تجربة مسارات المنصة الأساسية قبل اتخاذ قرار الاشتراك.</p>
-        <ul class="benefit-list">
-          <li><i class="fa-solid fa-check"></i><span>التقارير وملفات الإنجاز والمخرجات بصيغة PDF</span></li>
-          <li><i class="fa-solid fa-check"></i><span>الطلبات والتذاكر والتعاميم والتوقيعات</span></li>
-          <li><i class="fa-solid fa-check"></i><span>إضافة حتى {{ trial_teacher_limit }} من أعضاء الكادر لتجربة العمل الجماعي</span></li>
-          <li><i class="fa-solid fa-check"></i><span>أرشيف تجريبي بسعة {{ trial_archive_storage_gb }}GB طوال فترة التجربة</span></li>
-        </ul>
-      </div>
+      <header class="registration-header">
+        <a class="registration-brand" href="{% url 'reports:landing' %}" aria-label="منصة توثيق — الصفحة الرئيسية">
+          <img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44">
+          <span><strong>منصة توثيق</strong><small>تشغيل وتوثيق العمل المدرسي</small></span>
+        </a>
+        <p class="registration-eyebrow">تسجيل مدرسة جديدة</p>
+        <h1 id="registrationTitle">أنشئ حساب المدرسة بثقة</h1>
+        <p class="registration-lead">أدخل بيانات المدرسة ومديرها. عند اكتمال التسجيل تُنشأ المدرسة والعضوية والتجربة معًا، ثم تنتقل إلى إيصال آمن لبيانات الدخول.</p>
 
-      <div class="privacy-note">
-        <i class="fa-solid fa-shield-halved"></i>
-        <span>بيانات المدرسة معزولة، ولا تحتاج إلى بطاقة ائتمانية لبدء التجربة.</span>
-      </div>
-    </aside>
-
-    <section class="form-panel">
-      <a class="back-link" href="{% url 'reports:landing' %}">
-        <i class="fa-solid fa-arrow-right"></i> العودة للصفحة الرئيسية
-      </a>
-
-      <header class="form-head">
-        <div class="steps" aria-label="خطوات البدء">
-          <span data-step="1">بيانات المدرسة</span><i></i>
-          <span data-step="2">حساب إدارة المدرسة</span><i></i>
-          <span data-step="3">ابدأ التجربة</span>
-        </div>
-        <h2>أنشئ حساب المدرسة</h2>
-        <p>أدخل البيانات الأساسية فقط. بعد الإنشاء سنعرض لك بيانات الدخول بوضوح في صفحة مستقلة.</p>
+        <ol class="registration-progress" aria-label="مراحل التسجيل">
+          <li aria-current="step"><span>1</span><strong>بيانات المدرسة</strong></li>
+          <li><span>2</span><strong>حساب المدير</strong></li>
+          <li><span>3</span><strong>بدء التجربة</strong></li>
+        </ol>
       </header>
 
       {% if messages %}
         <ul class="messages" role="region" aria-label="رسائل النظام" aria-live="polite" aria-atomic="false">
           {% for msg in messages %}
-            <li
-              class="{{ msg.tags|default:'info' }}"
-              role="{% if 'error' in msg.tags or 'danger' in msg.tags or 'warning' in msg.tags %}alert{% else %}status{% endif %}"
-            >
-              <i
-                class="fa-solid {% if 'success' in msg.tags %}fa-check-circle{% elif 'error' in msg.tags or 'danger' in msg.tags %}fa-circle-exclamation{% elif 'warning' in msg.tags %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"
-                aria-hidden="true"
-              ></i>
+            <li class="{{ msg.tags|default:'info' }}" role="{% if 'error' in msg.tags or 'danger' in msg.tags or 'warning' in msg.tags %}alert{% else %}status{% endif %}">
+              <i class="fa-solid {% if 'success' in msg.tags %}fa-check-circle{% elif 'error' in msg.tags or 'danger' in msg.tags %}fa-circle-exclamation{% elif 'warning' in msg.tags %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}" aria-hidden="true"></i>
               <span>{{ msg }}</span>
             </li>
           {% endfor %}
         </ul>
       {% endif %}
 
-      <form method="post" novalidate id="registrationForm">
+      <form method="post" novalidate id="registrationForm" class="registration-form" data-registration-form>
         {% csrf_token %}
-        {% if form.non_field_errors %}
-          <div class="form-errors">{{ form.non_field_errors }}</div>
+
+        {% if form.errors %}
+          <section class="twq-alert twq-alert--danger registration-error-summary" role="alert" tabindex="-1" data-registration-error-summary aria-labelledby="registrationErrorTitle">
+            <div>
+              <h2 id="registrationErrorTitle">راجع البيانات قبل إنشاء المدرسة</h2>
+              <p>لم تُحفظ أي بيانات. انتقل إلى الحقول التالية وصححها:</p>
+              <ul>
+                {% for field in form %}
+                  {% if field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ field.errors.0 }}</a></li>{% endif %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+              </ul>
+            </div>
+          </section>
         {% endif %}
 
-        <section class="form-section">
-          <div class="section-title"><i class="fa-solid fa-school"></i> معلومات المدرسة</div>
-          <div class="field-grid">
-            <div class="form-group full">
-              <label for="id_school_name">{{ form.school_name.label }}</label>
+        <section class="registration-section" aria-labelledby="schoolInformationTitle">
+          <header class="registration-section__header">
+            <span class="registration-section__icon" aria-hidden="true"><i class="fa-solid fa-school"></i></span>
+            <div><p>الخطوة الأولى</p><h2 id="schoolInformationTitle">معلومات المدرسة</h2><span>تُستخدم هذه البيانات لإنشاء مساحة المدرسة وعزل سجلاتها.</span></div>
+          </header>
+
+          <div class="registration-grid">
+            <div class="twq-field registration-field registration-field--wide{% if form.school_name.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.school_name.id_for_label }}">{{ form.school_name.label }} <span aria-hidden="true">*</span></label>
               {{ form.school_name }}
-              {% if form.school_name.errors %}<ul class="error-list">{% for error in form.school_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              {% if form.school_name.errors %}<ul class="registration-field__errors" id="id_school_name_error">{% for error in form.school_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group">
-              <label for="id_stage">{{ form.stage.label }}</label>
+            <div class="twq-field registration-field{% if form.stage.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.stage.id_for_label }}">{{ form.stage.label }} <span aria-hidden="true">*</span></label>
               {{ form.stage }}
-              {% if form.stage.errors %}<ul class="error-list">{% for error in form.stage.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              {% if form.stage.errors %}<ul class="registration-field__errors" id="id_stage_error">{% for error in form.stage.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group">
-              <label for="id_gender">{{ form.gender.label }}</label>
+            <div class="twq-field registration-field{% if form.gender.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.gender.id_for_label }}">{{ form.gender.label }} <span aria-hidden="true">*</span></label>
               {{ form.gender }}
-              {% if form.gender.errors %}<ul class="error-list">{% for error in form.gender.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              {% if form.gender.errors %}<ul class="registration-field__errors" id="id_gender_error">{% for error in form.gender.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group full">
-              <label for="id_city">{{ form.city.label }} <span class="optional">اختياري</span></label>
+            <div class="twq-field registration-field registration-field--wide{% if form.city.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.city.id_for_label }}">{{ form.city.label }} <span class="registration-optional">اختياري</span></label>
               {{ form.city }}
-              {% if form.city.errors %}<ul class="error-list">{% for error in form.city.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              {% if form.city.errors %}<ul class="registration-field__errors" id="id_city_error">{% for error in form.city.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
           </div>
         </section>
 
-        <section class="form-section">
-          <div class="section-title"><i class="fa-solid fa-user-shield"></i> حساب إدارة المدرسة</div>
-          <div class="field-grid">
-            <div class="form-group full">
-              <label for="id_manager_name">{{ form.manager_name.label }}</label>
+        <section class="registration-section" aria-labelledby="managerInformationTitle">
+          <header class="registration-section__header">
+            <span class="registration-section__icon" aria-hidden="true"><i class="fa-solid fa-user-shield"></i></span>
+            <div><p>الخطوة الثانية</p><h2 id="managerInformationTitle">حساب إدارة المدرسة</h2><span>هذا الحساب يحصل على عضوية مدير المدرسة الحالية فقط.</span></div>
+          </header>
+
+          <div class="registration-grid">
+            <div class="twq-field registration-field registration-field--wide{% if form.manager_name.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.manager_name.id_for_label }}">{{ form.manager_name.label }} <span aria-hidden="true">*</span></label>
               {{ form.manager_name }}
-              {% if form.manager_name.errors %}<ul class="error-list">{% for error in form.manager_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              {% if form.manager_name.errors %}<ul class="registration-field__errors" id="id_manager_name_error">{% for error in form.manager_name.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group full">
-              <label for="id_manager_phone">{{ form.manager_phone.label }}</label>
+            <div class="twq-field registration-field registration-field--wide{% if form.manager_phone.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.manager_phone.id_for_label }}">{{ form.manager_phone.label }} <span aria-hidden="true">*</span></label>
               {{ form.manager_phone }}
-              <p class="field-help">سيكون رقم الجوال هو اسم المستخدم عند تسجيل الدخول.</p>
-              {% if form.manager_phone.errors %}<ul class="error-list">{% for error in form.manager_phone.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              <p class="twq-field__help" id="id_manager_phone_help">يُطبّع النظام الصيغ السعودية المدعومة، وسيكون الرقم اسم المستخدم عند الدخول.</p>
+              {% if form.manager_phone.errors %}<ul class="registration-field__errors" id="id_manager_phone_error">{% for error in form.manager_phone.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group full">
-              <label for="id_manager_email">{{ form.manager_email.label }}</label>
+            <div class="twq-field registration-field registration-field--wide{% if form.manager_email.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.manager_email.id_for_label }}">{{ form.manager_email.label }} <span aria-hidden="true">*</span></label>
               {{ form.manager_email }}
-              <p class="field-help">سيُحفظ هذا البريد كبريد المدرسة الرسمي، ويُستخدم عند مراسلة المدرسة من مركز البريد.</p>
-              {% if form.manager_email.errors %}<ul class="error-list">{% for error in form.manager_email.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              <p class="twq-field__help" id="id_manager_email_help">يُحفظ كبريد المدرسة الرسمي ويُستخدم في التواصل واستعادة كلمة المرور.</p>
+              {% if form.manager_email.errors %}<ul class="registration-field__errors" id="id_manager_email_error">{% for error in form.manager_email.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group">
-              <label for="id_password">{{ form.password.label }}</label>
-              <div class="password-wrap">
+            <div class="twq-field registration-field{% if form.password.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.password.id_for_label }}">{{ form.password.label }} <span aria-hidden="true">*</span></label>
+              <div class="registration-password">
                 {{ form.password }}
-                <button class="password-toggle" type="button" data-password-toggle="id_password" aria-label="إظهار كلمة المرور"><i class="fa-regular fa-eye"></i></button>
+                <button class="registration-password__toggle" type="button" data-password-toggle="{{ form.password.id_for_label }}" aria-label="إظهار كلمة المرور" aria-pressed="false"><i class="fa-regular fa-eye-slash" aria-hidden="true"></i></button>
               </div>
-              {% if form.password.errors %}<ul class="error-list">{% for error in form.password.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              <p class="twq-field__help" id="id_password_help">ثمانية أحرف على الأقل. لا تُعرض كلمة المرور مجددًا بعد مغادرة إيصال التسجيل.</p>
+              {% if form.password.errors %}<ul class="registration-field__errors" id="id_password_error">{% for error in form.password.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
-            <div class="form-group">
-              <label for="id_password_confirm">{{ form.password_confirm.label }}</label>
-              <div class="password-wrap">
+            <div class="twq-field registration-field{% if form.password_confirm.errors %} twq-field--error{% endif %}">
+              <label class="twq-label" for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }} <span aria-hidden="true">*</span></label>
+              <div class="registration-password">
                 {{ form.password_confirm }}
-                <button class="password-toggle" type="button" data-password-toggle="id_password_confirm" aria-label="إظهار تأكيد كلمة المرور"><i class="fa-regular fa-eye"></i></button>
+                <button class="registration-password__toggle" type="button" data-password-toggle="{{ form.password_confirm.id_for_label }}" aria-label="إظهار تأكيد كلمة المرور" aria-pressed="false"><i class="fa-regular fa-eye-slash" aria-hidden="true"></i></button>
               </div>
-              {% if form.password_confirm.errors %}<ul class="error-list">{% for error in form.password_confirm.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+              {% if form.password_confirm.errors %}<ul class="registration-field__errors" id="id_password_confirm_error">{% for error in form.password_confirm.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
             </div>
           </div>
         </section>
 
-        <div class="policy-consent">
+        <div class="registration-policy{% if form.accept_policies.errors %} registration-policy--error{% endif %}">
           {{ form.accept_policies }}
-          <label for="id_accept_policies">
-            أوافق على
-            <a href="{% url 'reports:terms_conditions' %}" target="_blank" rel="noopener">الشروط والأحكام</a>،
-            <a href="{% url 'reports:privacy_policy' %}" target="_blank" rel="noopener">سياسة الخصوصية</a>،
-            و<a href="{% url 'reports:refund_policy' %}" target="_blank" rel="noopener">سياسة الإلغاء والاسترجاع</a>.
-            {% if form.accept_policies.errors %}<span class="error-list">{{ form.accept_policies.errors|striptags }}</span>{% endif %}
-          </label>
+          <div>
+            <label for="{{ form.accept_policies.id_for_label }}">أوافق على <a href="{% url 'reports:terms_conditions' %}" target="_blank" rel="noopener">الشروط والأحكام</a>، <a href="{% url 'reports:privacy_policy' %}" target="_blank" rel="noopener">سياسة الخصوصية</a>، و<a href="{% url 'reports:refund_policy' %}" target="_blank" rel="noopener">سياسة الإلغاء والاسترجاع</a>.</label>
+            <p id="id_accept_policies_help">تفتح روابط السياسات في نافذة جديدة حتى لا تفقد البيانات المدخلة.</p>
+            {% if form.accept_policies.errors %}<ul class="registration-field__errors" id="id_accept_policies_error">{% for error in form.accept_policies.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+          </div>
         </div>
 
-        <div class="submit-row">
-          <button class="submit-button" type="submit" id="submitButton">
-            <span>إنشاء المدرسة وبدء التجربة</span>
-            <i class="fa-solid fa-arrow-left"></i>
-          </button>
-          <span class="login-link">لديك حساب؟ <a href="{% url 'reports:login' %}">سجّل الدخول</a></span>
+        <div class="registration-submit">
+          <button class="twq-btn twq-btn--primary registration-submit__button" type="submit" id="submitButton" aria-describedby="registrationSubmitStatus"><span>إنشاء المدرسة وبدء التجربة</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>
+          <p id="registrationSubmitStatus" class="registration-submit__status" role="status" aria-live="polite">لا تحتاج إلى بطاقة ائتمانية.</p>
         </div>
       </form>
+
+      <footer class="registration-form-footer">
+        <span>لديك حساب؟ <a href="{% url 'reports:login' %}">سجّل الدخول</a></span>
+        <a href="{% url 'reports:faq' %}">الأسئلة الشائعة</a>
+      </footer>
     </section>
+
+    <aside class="registration-context" aria-labelledby="registrationContextTitle">
+      <div>
+        <span class="registration-context__badge"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> تجربة كاملة لمدة {{ trial_days }} يومًا</span>
+        <h2 id="registrationContextTitle">ابدأ بالمسارات التشغيلية الأساسية منذ اليوم الأول</h2>
+        <p>لا تُنشئ صفحة التسجيل اشتراكًا مدفوعًا، ولا تسمح باختيار دور أو خطة. التجربة تُجهّز تلقائيًا وفق سياسة المنصة الحالية.</p>
+      </div>
+      <ul class="registration-benefits">
+        <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>التقارير وملفات الإنجاز والمخرجات بصيغة PDF</span></li>
+        <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>الطلبات والتعاميم ومسارات التوثيق</span></li>
+        <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>حتى {{ trial_teacher_limit }} من أعضاء الكادر</span></li>
+        <li><i class="fa-solid fa-check" aria-hidden="true"></i><span>أرشيف تجريبي بسعة {{ trial_archive_storage_gb }}GB</span></li>
+      </ul>
+      <div class="registration-trust"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div><strong>إنشاء ذري وآمن</strong><span>إما أن تكتمل المدرسة والحساب والعضوية والتجربة معًا، أو لا تُحفظ سجلات جزئية.</span></div></div>
+    </aside>
   </main>
 
-  <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-    (function () {
-      document.querySelectorAll("[data-password-toggle]").forEach(function (button) {
-        button.addEventListener("click", function () {
-          var input = document.getElementById(button.getAttribute("data-password-toggle"));
-          if (!input) return;
-          var show = input.type === "password";
-          input.type = show ? "text" : "password";
-          button.setAttribute("aria-label", show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-          var icon = button.querySelector("i");
-          if (icon) {
-            icon.classList.toggle("fa-eye", !show);
-            icon.classList.toggle("fa-eye-slash", show);
-          }
-        });
-      });
-
-      var form = document.getElementById("registrationForm");
-      var submit = document.getElementById("submitButton");
-      if (form && submit) {
-        form.addEventListener("submit", function () {
-          if (!form.checkValidity()) return;
-          submit.disabled = true;
-          submit.querySelector("span").textContent = 'جارٍ تجهيز مدرستك...';
-          submit.querySelector("i").className = "fa-solid fa-circle-notch fa-spin";
-        });
-      }
-    }());
-  </script>
   {% include "reports/partials/pwa_install.html" %}
 </body>
 </html>

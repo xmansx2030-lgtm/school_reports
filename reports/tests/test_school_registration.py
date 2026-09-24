@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from pathlib import Path
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -42,8 +43,8 @@ class SchoolRegistrationFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "تجربة كاملة")
         self.assertContains(response, "أرشيف تجريبي")
-        self.assertContains(response, "بيانات الدخول بوضوح")
-        self.assertContains(response, "سيُحفظ هذا البريد كبريد المدرسة الرسمي")
+        self.assertContains(response, "إيصال آمن لبيانات الدخول")
+        self.assertContains(response, "يُحفظ كبريد المدرسة الرسمي")
         self.assertContains(response, 'autocomplete="tel"')
         self.assertContains(response, 'autocomplete="new-password"', count=2)
 
@@ -91,7 +92,7 @@ class SchoolRegistrationFlowTests(TestCase):
         self.assertContains(success, "0551234567")
         self.assertContains(success, "FreeTrial#2026")
         self.assertContains(success, "تظهر في هذه الصفحة مرة واحدة")
-        self.assertContains(success, "التجربة الكاملة مفعّلة الآن")
+        self.assertContains(success, "فُعّلت التجربة بنجاح")
         self.assertIn("no-cache", success.headers["Cache-Control"])
 
         self.assertNotIn("school_registration_receipt", self.client.session)
@@ -117,26 +118,22 @@ class SchoolRegistrationFlowTests(TestCase):
         self.assertEqual(success.status_code, 200)
         html = success.content.decode("utf-8")
 
-        dashboard_link = (
-            f'class="primary-action" href="{reverse("reports:admin_dashboard")}"'
-        )
+        dashboard_link = f'href="{reverse("reports:admin_dashboard")}" id="launchDashboard"'
         self.assertIn(dashboard_link, html)
         self.assertLess(html.index(dashboard_link), html.index('id="credentials"'))
 
         ordered_steps = [
-            "بيانات المدرسة والسنة",
-            "فريق المدرسة",
-            "الأقسام",
-            "أنواع التقارير",
-            "أول تقرير",
+            "راجع بيانات المدرسة والسنة",
+            "أضف فريق المدرسة",
+            "ابدأ أول مسار توثيق",
         ]
-        steps_html = html.split('<ol class="next-steps">', 1)[1].split("</ol>", 1)[0]
+        steps_html = html.split('<section class="registration-setup"', 1)[1].split("</section>", 1)[0]
         positions = [steps_html.index(step) for step in ordered_steps]
         self.assertEqual(positions, sorted(positions))
         self.assertContains(
             success,
             '<li><span aria-hidden="true">',
-            count=5,
+            count=3,
             html=False,
         )
         self.assertNotContains(success, "أضف شعارها")
@@ -148,44 +145,21 @@ class SchoolRegistrationFlowTests(TestCase):
         )
         self.assertContains(
             success,
-            'id="passwordVisibility" aria-label="إظهار كلمة المرور" '
-            'aria-controls="loginPassword"',
+            'id="passwordVisibility" data-password-toggle="loginPassword" '
+            'aria-label="إظهار كلمة المرور" aria-pressed="false"',
             html=False,
         )
-        self.assertNotIn('visibility.setAttribute("aria-pressed"', html)
-        self.assertIn(
-            'input.setAttribute("aria-label", show ? "كلمة المرور، ظاهرة الآن"',
-            html,
-        )
-        self.assertIn('navigator.clipboard.writeText(value).then(copied).catch(', html)
-        self.assertIn('copied = document.execCommand("copy")', html)
-        self.assertIn("تعذّر النسخ تلقائيًا", html)
         self.assertContains(success, 'class="credential-print-value"', count=2, html=False)
         self.assertNotIn('class="credential-print-value" aria-hidden', html)
-        self.assertIn(".credential-print-value { display: block !important; }", html)
         self.assertIn(
-            '<div class="toast" id="toast" role="status" aria-live="polite"></div>',
+            '<div class="registration-toast" id="toast" role="status" aria-live="polite"',
             html,
         )
         self.assertIn('id="launchDashboard"', html)
-        self.assertIn("var receiptPreserved = false;", html)
-        self.assertIn("var copiedCredentialTargets = {", html)
-        self.assertIn("copiedCredentialTargets[targetId] = true;", html)
-        self.assertIn(
-            "receiptPreserved = copiedCredentialTargets.loginPhone && "
-            "copiedCredentialTargets.loginPassword;",
-            html,
-        )
-        self.assertIn("function () { receiptPreserved = true; }", html)
         self.assertIn('id="leaveConfirmation" role="alertdialog"', html)
         self.assertIn('data-leave-cancel', html)
         self.assertIn('data-leave-confirm', html)
-        self.assertIn("pendingDashboardUrl = event.currentTarget.href;", html)
         self.assertNotIn("window.confirm(", html)
-        self.assertIn('html[data-theme="dark"] .credential {', html)
-        self.assertIn('html[data-theme="dark"] .login-address {', html)
-        self.assertIn('html[data-theme="dark"] .toast {', html)
-        self.assertIn("الأقسام ومسؤولوها", html)
         self.assertContains(
             success,
             'data-auto-prompt="false"',
@@ -193,18 +167,22 @@ class SchoolRegistrationFlowTests(TestCase):
             html=False,
         )
 
-        self.assertRegex(
-            html,
-            r'(?s)\.icon-button\s*\{.*?width:\s*44px;.*?height:\s*44px;',
-        )
-        self.assertRegex(
-            html,
-            r'(?s)\.quiet-button\s*\{.*?min-height:\s*44px;',
-        )
-        self.assertRegex(
-            html,
-            r'(?s)\.primary-action\s*\{.*?min-height:\s*56px;',
-        )
+        self.assertIn("css/registration.css", html)
+        self.assertIn("js/registration.js", html)
+        self.assertIn("js/auth-password-toggle.js", html)
+        self.assertNotIn("<style", html)
+
+        project_root = Path(__file__).resolve().parents[2]
+        css = (project_root / "static/css/registration.css").read_text(encoding="utf-8")
+        javascript = (project_root / "static/js/registration.js").read_text(encoding="utf-8")
+        self.assertIn(".credential-print-value", css)
+        self.assertIn(".registration-icon-button", css)
+        self.assertIn('navigator.clipboard.writeText(value).then(copied).catch(', javascript)
+        self.assertIn('copied = document.execCommand("copy")', javascript)
+        self.assertIn("تعذّر النسخ تلقائيًا", javascript)
+        self.assertIn("let receiptPreserved = false;", javascript)
+        self.assertIn("copiedCredentialTargets[targetId] = true;", javascript)
+        self.assertIn("pendingDashboardUrl = event.currentTarget.href;", javascript)
 
     def test_invalid_phone_does_not_create_partial_school_data(self):
         response = self.client.post(

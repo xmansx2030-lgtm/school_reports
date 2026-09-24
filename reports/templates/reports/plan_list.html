@@ -2,216 +2,81 @@
 {% load hijri_tags %}
 
 {% block title %}الخطط | منصة توثيق{% endblock %}
-
-{% block head %}
-{% include "reports/_assignment_theme.html" %}
-{% include "reports/_plan_theme.html" %}
-{% endblock %}
+{% block head %}{% include "reports/_plan_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="asg-page pln">
-
-  {# ═══ الترويسة ════════════════════════════════════════════ #}
-  <header class="pln-hero">
-    <div class="pln-hero__grid">
-      <div class="pln-hero__main">
-        <span class="pln-crumb">
-          <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-          التخطيط
-        </span>
-        <h1 class="pln-hero__title">خطط {{ active_school.name }}</h1>
-        <p class="pln-hero__lead">
-          كل خطة بأهدافها ومؤشراتها ومهامها. والنسبة محسوبة من تنفيذ المهام لا
-          من تقديرٍ يُدخَل يدوياً — فما تراه هنا هو ما أُنجز فعلاً.
-        </p>
-        <div class="pln-chips">
-          <span class="pln-chip">
-            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-            {{ totals.plans }} خطة
-          </span>
-          <span class="pln-chip">
-            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-            {{ totals.done }} من {{ totals.tasks }} مهمة منجَزة
-          </span>
-          {% if totals.late %}
-            <span class="pln-chip pln-chip--late">
-              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-              {{ totals.late }} متأخرة
-            </span>
-          {% endif %}
-        </div>
-      </div>
-
-      {% if totals.tasks %}
-        <div class="pln-ring" data-progress-var="--v" data-progress-value="{{ totals.percent }}" role="img"
-             aria-label="نسبة إنجاز مهام الخطط {{ totals.percent }}%">
-          <span class="pln-ring__v">{{ totals.percent }}%</span>
-          <span class="pln-ring__l">الإنجاز</span>
-        </div>
-      {% endif %}
+<div class="twq-page plans-page" aria-labelledby="plansPageTitle">
+  <header class="twq-page-header plans-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i> التخطيط والتنفيذ</span>
+      <h1 class="twq-page-header__title" id="plansPageTitle">خطط {{ active_school.name }}</h1>
+      <p class="twq-page-header__lead">وثائق تشغيلية تجمع الأهداف والمهام، وتقيس الإنجاز من التكليفات المكتملة لا من تقدير يدوي.</p>
     </div>
-
-    {% if can_plan %}
-      <div class="pln-hero__actions">
-        <a class="pln-act pln-act--solid" href="{% url 'reports:plan_create' %}">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          خطة جديدة
-        </a>
-        <a class="pln-act" href="{% url 'reports:initiative_list' %}">
-          <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
-          المبادرات
-        </a>
+    <div class="twq-page-header__aside">
+      <div class="plans-page-header__actions" aria-label="إجراءات التخطيط">
+        {% if can_plan %}<a class="twq-btn twq-btn--primary" href="{% url 'reports:plan_create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> خطة جديدة</a>{% endif %}
+        <a class="twq-btn twq-btn--secondary" href="{% url 'reports:initiative_list' %}"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> المبادرات</a>
       </div>
-    {% endif %}
+    </div>
   </header>
 
-  {# ═══ المؤشرات ════════════════════════════════════════════ #}
-  <section class="pln-stats" aria-label="ملخص الخطط">
-    <article class="pln-stat">
-      <span class="pln-stat__i"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ totals.plans }}</div>
-        <div class="pln-stat__l">خطة قائمة</div>
-      </div>
-    </article>
-    <article class="pln-stat">
-      <span class="pln-stat__i"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ totals.tasks }}</div>
-        <div class="pln-stat__l">مهمة في الخطط</div>
-      </div>
-    </article>
-    <article class="pln-stat" data-tone="gold">
-      <span class="pln-stat__i"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ totals.done }}</div>
-        <div class="pln-stat__l">مهمة اكتمل تنفيذها</div>
-      </div>
-    </article>
-    <article class="pln-stat" data-tone="danger">
-      <span class="pln-stat__i"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ totals.late }}</div>
-        <div class="pln-stat__l">مهمة متأخرة</div>
-      </div>
-    </article>
-  </section>
+  <nav class="plans-track-nav" aria-label="مسارات التخطيط">
+    <a href="{% url 'reports:plan_list' %}" aria-current="page"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>الخطط والأهداف</span></a>
+    <a href="{% url 'reports:initiative_list' %}"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span>المبادرات والممارسات</span></a>
+  </nav>
 
-  {# ═══ مهامي ═══════════════════════════════════════════════ #}
+  <dl class="twq-metrics plan-metrics" aria-label="ملخص الخطط">
+    <div><dt><i class="fa-solid fa-layer-group" aria-hidden="true"></i> الخطط</dt><dd><bdi>{{ totals.plans }}</bdi></dd></div>
+    <div><dt><i class="fa-solid fa-list-check" aria-hidden="true"></i> المهام</dt><dd><bdi>{{ totals.tasks }}</bdi></dd></div>
+    <div><dt><i class="fa-solid fa-circle-check" aria-hidden="true"></i> المكتمل</dt><dd><bdi>{{ totals.done }}</bdi></dd></div>
+    <div {% if totals.late %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> المتأخر</dt><dd><bdi>{{ totals.late }}</bdi></dd></div>
+  </dl>
+
   {% if my_tasks %}
-    <section class="pln-panel">
-      <div class="pln-panel__head">
-        <h2 class="pln-panel__t">مهامي في الخطط</h2>
-        <span class="pln-panel__grow"></span>
-        <span class="pln-panel__count">{{ my_tasks|length }}</span>
-      </div>
-      <p class="pln-panel__hint">ما أُسند إليك ضمن خطط المدرسة — ومتابعتُه من تكليفه.</p>
-
-      {% for task in my_tasks %}
-        <article class="pln-task" data-state="{{ task.state }}">
-          <span class="pln-task__who" aria-hidden="true">
-            <i class="fa-solid fa-flag"></i>
-          </span>
-          <div class="pln-task__main">
-            <div class="pln-task__t">
-              <a href="{% url 'reports:plan_detail' task.plan.pk %}">{{ task.title }}</a>
-            </div>
-            <div class="pln-task__sub">
-              خطة: {{ task.plan.title }}
-              {% if task.due_at %} · يستحق {{ task.due_at|hijri }} هـ{% endif %}
-            </div>
-          </div>
-          <div class="pln-task__side">
-            {% if task.state == 'done' %}<span class="pln-pill pln-pill--done">منجَزة</span>
-            {% elif task.state == 'late' %}<span class="pln-pill pln-pill--late">متأخرة</span>
-            {% elif task.state == 'running' %}<span class="pln-pill pln-pill--running">قيد التنفيذ</span>
-            {% else %}<span class="pln-pill pln-pill--wait">لم تُكلَّف بعد</span>{% endif %}
-          </div>
-        </article>
-      {% endfor %}
-    </section>
-  {% endif %}
-
-  {# ═══ الخطط ═══════════════════════════════════════════════ #}
-  <section class="pln-panel">
-    <div class="pln-panel__head">
-      <h2 class="pln-panel__t">الخطط</h2>
-      <span class="pln-panel__grow"></span>
-      {% if rows %}<span class="pln-panel__count">{{ rows|length }}</span>{% endif %}
-    </div>
-
-    {% if rows %}
-      <div class="pln-cards">
-        {% for row in rows %}
-          <article class="pln-card" data-late="{% if row.late %}1{% endif %}">
-            <div class="pln-card__t">
-              <a href="{% url 'reports:plan_detail' row.plan.pk %}">{{ row.plan.title }}</a>
-            </div>
-            <div class="pln-card__sub">
-              {{ row.plan.owner_name|default:"—" }}
-              {% if row.plan.academic_year %} · {{ row.plan.academic_year }}{% endif %}
-              {% if row.plan.ends_on %} · تنتهي {{ row.plan.ends_on|hijri }} هـ{% endif %}
-            </div>
-
-            <div class="pln-card__tags">
-              <span class="pln-tag">{{ row.plan.get_stage_display }}</span>
-              <span class="pln-tag">{{ row.plan.get_approval_state_display }}</span>
-              {% if row.late %}
-                <span class="pln-tag xs-plan-list-1">
-                  {{ row.late }} متأخرة
-                </span>
-              {% endif %}
-            </div>
-
-            <div class="pln-card__meter">
-              <div class="pln-card__nums">
-                <span>{{ row.done }} من {{ row.total }} مهمة</span>
-                <span>{{ row.percent }}%</span>
-              </div>
-              <div class="pln-meter__track">
-                <div class="pln-meter__fill" data-progress="{{ row.percent }}"></div>
-              </div>
-            </div>
-
-            <div class="pln-card__foot">
-              <a class="asg-btn asg-btn--primary asg-btn--sm" href="{% url 'reports:plan_detail' row.plan.pk %}">
-                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-                فتح الخطة
-              </a>
-              <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{% url 'reports:plan_print' row.plan.pk %}"
-                 target="_blank" rel="noopener">
-                <i class="fa-solid fa-print" aria-hidden="true"></i>
-                طباعة
-              </a>
-            </div>
+    <section class="twq-section plan-section" aria-labelledby="myPlanTasksTitle">
+      <header class="twq-section__header">
+        <div class="plan-section__heading"><span class="twq-section__kicker">مسؤوليتي</span><h2 class="twq-section__title" id="myPlanTasksTitle">مهامي في الخطط</h2><p class="twq-section__description">المهام المسندة إليك، وحالتها كما تعكسها التكليفات المرتبطة.</p></div>
+        <span class="plan-list-count"><bdi>{{ my_tasks|length }}</bdi> مهمة</span>
+      </header>
+      <div class="plan-task-list">
+        {% for task in my_tasks %}
+          <article class="plan-task" data-state="{{ task.state }}">
+            <span class="plan-task__avatar" aria-hidden="true"><i class="fa-solid fa-flag"></i></span>
+            <div class="plan-task__main"><div class="plan-task__title"><a href="{% url 'reports:plan_detail' task.plan.pk %}">{{ task.title }}</a></div><div class="plan-task__meta">خطة: {{ task.plan.title }}{% if task.due_at %} · يستحق <time datetime="{{ task.due_at|date:'c' }}"><bdi>{{ task.due_at|hijri }} هـ</bdi></time>{% endif %}</div></div>
+            <span class="twq-status" data-status="{% if task.state == 'done' %}approved{% elif task.state == 'late' %}danger{% elif task.state == 'running' %}info{% else %}draft{% endif %}">{% if task.state == 'done' %}منجزة{% elif task.state == 'late' %}متأخرة{% elif task.state == 'running' %}قيد التنفيذ{% else %}لم تُكلّف بعد{% endif %}</span>
           </article>
         {% endfor %}
       </div>
-    {% else %}
-      <div class="pln-empty">
-        <div class="pln-empty__i"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i></div>
-        {% if can_plan %}
-          <h2>لا خطط بعد</h2>
-          <p>
-            الخطة تجمع أهدافك ومؤشراتها ومهامها. وكل مهمة تتحوّل إلى تكليف بموعده
-            وشواهده، فتُقاس نسبة الإنجاز من التنفيذ الفعلي لا من تقدير.
-          </p>
-          <div class="u-mt-xl">
-            <a class="asg-btn asg-btn--primary" href="{% url 'reports:plan_create' %}">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i>
-              أنشئ أول خطة
-            </a>
-          </div>
-        {% else %}
-          <h2>لا توجد خطط معتمدة لك بعد</h2>
-          <p>
-            ستظهر هنا الخطط والمهام التي تعتمدها إدارة المدرسة. لا يلزمك إنشاء خطة؛
-            وعند إسناد مهمة إليك ستجد موعدها وشواهدها ونسبة إنجازها في هذه الصفحة.
-          </p>
-        {% endif %}
-      </div>
-    {% endif %}
-  </section>
+    </section>
+  {% endif %}
 
+  {% if rows %}
+    <section class="twq-section plan-section" aria-labelledby="plansTableTitle">
+      <header class="twq-section__header"><div class="plan-section__heading"><span class="twq-section__kicker">المتابعة</span><h2 class="twq-section__title" id="plansTableTitle">خطط المدرسة</h2><p class="twq-section__description">الملكية والفترة والحالة والإنجاز والإجراء التالي في كشف واحد.</p></div><span class="plan-list-count"><bdi>{{ rows|length }}</bdi> خطة</span></header>
+      <div class="twq-table-wrap plan-table-wrap">
+        <table class="twq-table plan-table">
+          <caption>خطط المدرسة وحالتها وإجراء المتابعة</caption>
+          <thead><tr><th scope="col">الخطة</th><th scope="col">الفترة</th><th scope="col">الحالة</th><th scope="col">الإنجاز</th><th scope="col">المهام</th><th scope="col">الإجراء التالي</th></tr></thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td data-label="الخطة"><div class="plan-table__identity"><a href="{% url 'reports:plan_detail' row.plan.pk %}">{{ row.plan.title }}</a><small>المُعِدّ: {{ row.plan.owner_name|default:"—" }}</small></div></td>
+                <td data-label="الفترة">{% if row.plan.academic_year %}<bdi>{{ row.plan.academic_year }}</bdi>{% else %}—{% endif %}{% if row.plan.ends_on %}<div class="plan-muted">حتى <time datetime="{{ row.plan.ends_on|date:'Y-m-d' }}"><bdi>{{ row.plan.ends_on|hijri }} هـ</bdi></time></div>{% endif %}</td>
+                <td data-label="الحالة"><div class="plan-statuses"><span class="twq-status" data-status="{{ row.plan.approval_state }}">{{ row.plan.get_approval_state_display }}</span><span class="twq-status" data-status="{% if row.plan.stage == 'closed' %}archived{% elif row.plan.stage == 'running' %}info{% else %}draft{% endif %}">{{ row.plan.get_stage_display }}</span></div></td>
+                <td data-label="الإنجاز"><div class="plan-progress" role="progressbar" aria-label="نسبة إنجاز {{ row.plan.title }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ row.percent }}"><div class="plan-progress__meta"><span><bdi>{{ row.percent }}%</bdi></span><span><bdi>{{ row.done }}/{{ row.total }}</bdi></span></div><span class="plan-progress__track"><span class="plan-progress__fill" data-progress="{{ row.percent }}"></span></span></div></td>
+                <td data-label="المهام"><bdi>{{ row.total }}</bdi>{% if row.late %}<div class="plan-muted"><bdi>{{ row.late }}</bdi> متأخرة</div>{% endif %}</td>
+                <td data-label="الإجراء التالي"><div class="plan-row-actions"><a class="twq-btn twq-btn--secondary plan-btn--sm" href="{% url 'reports:plan_detail' row.plan.pk %}">فتح مساحة الخطة</a><a class="twq-btn twq-btn--ghost plan-btn--sm" href="{% url 'reports:plan_print' row.plan.pk %}" target="_blank" rel="noopener">طباعة</a></div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% else %}
+    <div class="twq-empty twq-empty--page plan-empty">
+      <span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-compass-drafting"></i></span>
+      {% if can_plan %}<h2 class="twq-empty__title">لا خطط بعد</h2><p class="twq-empty__message">ابدأ بخطة تجمع الهدف والمهام، ثم حوّل المهام الجاهزة إلى تكليفات قابلة للمتابعة.</p><a class="twq-btn twq-btn--primary" href="{% url 'reports:plan_create' %}">إنشاء أول خطة</a>{% else %}<h2 class="twq-empty__title">لا توجد خطط في نطاق عملك</h2><p class="twq-empty__message">ستظهر الخطة عندما تكون مالكًا لها أو مسؤولًا عن مهمة فيها أو حين يمنحك نطاق العمل حق المتابعة.</p><a class="twq-btn twq-btn--secondary" href="{% url 'reports:initiative_list' %}">اقتراح مبادرة مدرسية</a>{% endif %}
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

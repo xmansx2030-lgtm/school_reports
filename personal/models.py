@@ -1,0 +1,228 @@
+import uuid
+from datetime import timedelta
+from pathlib import Path
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
+
+from reports.validators import validate_circular_attachment_file
+
+
+def personal_evidence_path(instance, filename):
+    suffix = Path(filename).suffix.lower()
+    return f"personal/{instance.workspace_id}/evidence/{uuid.uuid4().hex}{suffix}"
+
+
+class PersonalWorkspace(models.Model):
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="personal_workspace"
+    )
+    school_name = models.CharField("اسم المدرسة للتعريف", max_length=200)
+    principal_name = models.CharField("اسم مدير المدرسة للتعريف", max_length=150, blank=True)
+    school_stage = models.CharField("المرحلة", max_length=50, blank=True)
+    specialization = models.CharField("التخصص", max_length=120, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "مساحة معلم شخصية"
+        verbose_name_plural = "مساحات المعلمين الشخصية"
+
+    def __str__(self):
+        return f"المساحة الشخصية: {self.owner.name}"
+
+
+class PersonalPlan(models.Model):
+    code = models.SlugField("رمز الباقة", max_length=40, unique=True)
+    name = models.CharField("اسم الباقة", max_length=100)
+    description = models.CharField("وصف مختصر للعرض", max_length=240, blank=True)
+    price = models.DecimalField(
+        "السعر بالريال", max_digits=9, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)],
+    )
+    duration_days = models.PositiveIntegerField(
+        "مدة الاشتراك بالأيام", default=0,
+        help_text="صفر للباقة المجانية المستمرة؛ الباقات المدفوعة تتطلب مدة محددة.",
+    )
+    max_reports = models.PositiveIntegerField("الحد الأعلى للتقارير", default=500, validators=[MinValueValidator(1)])
+    max_evidence = models.PositiveIntegerField("الحد الأعلى للشواهد", default=250, validators=[MinValueValidator(1)])
+    storage_limit_mb = models.PositiveIntegerField("سعة الملفات بالميجابايت", default=500, validators=[MinValueValidator(1)])
+    is_active = models.BooleanField("متاحة للاشتراكات الجديدة", default=True)
+    is_published = models.BooleanField("تظهر في صفحة الهبوط", default=True)
+    display_order = models.PositiveSmallIntegerField("ترتيب العرض", default=0)
+
+    class Meta:
+        verbose_name = "باقة معلم شخصية"
+        verbose_name_plural = "باقات المعلمين الشخصية"
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+        if self.code != "personal_free" and self.price == 0:
+            raise ValidationError({"price": "الباقة المجانية الأساسية موجودة؛ حدد سعرًا للباقة الجديدة."})
+        if self.price and not self.duration_days:
+            raise ValidationError({"duration_days": "حدد مدة للباقة المدفوعة."})
+        if self.code == "personal_free" and (self.price != 0 or not self.is_active or self.duration_days):
+            raise ValidationError("الباقة الشخصية الأساسية مجانية ومستمرة ونشطة دائمًا.")
+        if self.pk and PersonalPlan.objects.filter(pk=self.pk, code="personal_free").exists():
+            if self.code != "personal_free":
+                raise ValidationError({"code": "لا يمكن تغيير رمز الباقة الأساسية."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class PersonalSubscription(models.Model):
+    workspace = models.OneToOneField(
+        PersonalWorkspace, on_delete=models.CASCADE, related_name="subscription"
+    )
+    plan = models.ForeignKey(PersonalPlan, on_delete=models.PROTECT)
+    start_date = models.DateField(default=timezone.localdate)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "اشتراك معلم شخصي"
+        verbose_name_plural = "اشتراكات المعلمين الشخصية"
+
+    def save(self, *args, **kwargs):
+        previous_plan_id = None
+        if self.pk:
+            previous_plan_id = PersonalSubscription.objects.filter(pk=self.pk).values_list("plan_id", flat=True).first()
+        if self._state.adding or previous_plan_id != self.plan_id:
+            self.start_date = timezone.localdate()
+            days = self.plan.duration_days
+            self.end_date = self.start_date + timedelta(days=days - 1) if days else None
+        return super().save(*args, **kwargs)
+
+    @property
+    def is_current(self):
+        today = timezone.localdate()
+        return self.is_active and self.start_date <= today and (
+            self.end_date is None or today <= self.end_date
+        )
+
+
+class PersonalPayment(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "بانتظار الدفع"
+        PAID = "paid", "مدفوع ومفعّل"
+        FAILED = "failed", "فشل الدفع"
+        CANCELLED = "cancelled", "ملغي"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        PersonalWorkspace, on_delete=models.CASCADE, related_name="payments"
+    )
+    plan = models.ForeignKey(PersonalPlan, on_delete=models.PROTECT)
+    plan_name = models.CharField("اسم الباقة وقت الشراء", max_length=100)
+    duration_days = models.PositiveIntegerField("مدة الباقة وقت الشراء")
+    amount = models.DecimalField("المبلغ بالريال", max_digits=9, decimal_places=2)
+    customer_name = models.CharField("اسم المشترك وقت الشراء", max_length=150)
+    customer_email = models.EmailField("بريد الفاتورة", max_length=254)
+    school_name = models.CharField("المدرسة للتعريف وقت الشراء", max_length=200, blank=True)
+    status = models.CharField(
+        "الحالة", max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True
+    )
+    gateway_invoice_id = models.CharField(max_length=160, blank=True, default="", db_index=True)
+    gateway_payment_id = models.CharField(max_length=160, blank=True, default="")
+    gateway_status = models.CharField(max_length=32, blank=True, default="", db_index=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_sending_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "created_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gateway_invoice_id"],
+                condition=~models.Q(gateway_invoice_id=""),
+                name="personal_payment_gateway_invoice_uniq",
+            ),
+        ]
+        verbose_name = "دفعة مساحة شخصية"
+        verbose_name_plural = "دفعات المساحات الشخصية"
+
+    def __str__(self):
+        return f"{self.plan_name} · {self.amount} SAR · {self.status}"
+
+
+class PersonalReport(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "مسودة"
+        COMPLETE = "complete", "مكتمل"
+        ARCHIVED = "archived", "مؤرشف"
+
+    workspace = models.ForeignKey(
+        PersonalWorkspace, on_delete=models.CASCADE, related_name="reports"
+    )
+    title = models.CharField("عنوان العمل", max_length=255)
+    category = models.CharField("نوع العمل", max_length=100, blank=True)
+    report_date = models.DateField("تاريخ العمل")
+    academic_year = models.CharField("السنة الدراسية", max_length=20)
+    description = models.TextField("وصف العمل")
+    goals = models.TextField("الأهداف", blank=True)
+    implementation = models.TextField("التنفيذ", blank=True)
+    results = models.TextField("النتائج", blank=True)
+    recommendations = models.TextField("التوصيات", blank=True)
+    status = models.CharField(
+        "الحالة", max_length=12, choices=Status.choices, default=Status.DRAFT
+    )
+    teacher_name = models.CharField("اسم المعلم وقت الحفظ", max_length=150)
+    school_name = models.CharField("اسم المدرسة وقت الحفظ", max_length=200)
+    principal_name = models.CharField("اسم المدير وقت الحفظ", max_length=150, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-report_date", "-id"]
+        indexes = [models.Index(fields=["workspace", "academic_year", "status"])]
+        verbose_name = "تقرير معلم شخصي"
+        verbose_name_plural = "تقارير المعلمين الشخصية"
+
+    def __str__(self):
+        return self.title
+
+
+class PersonalEvidence(models.Model):
+    workspace = models.ForeignKey(
+        PersonalWorkspace, on_delete=models.CASCADE, related_name="evidence"
+    )
+    report = models.ForeignKey(
+        PersonalReport, on_delete=models.SET_NULL, null=True, blank=True, related_name="evidence"
+    )
+    title = models.CharField("عنوان الشاهد", max_length=200)
+    description = models.TextField("الوصف", blank=True)
+    academic_year = models.CharField("السنة الدراسية", max_length=20)
+    file = models.FileField(
+        "الملف", upload_to=personal_evidence_path, blank=True,
+        validators=[validate_circular_attachment_file, FileExtensionValidator(["pdf", "jpg", "jpeg", "png"])],
+    )
+    source_url = models.URLField("رابط الشاهد", blank=True)
+    file_size = models.PositiveIntegerField(default=0, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["workspace", "academic_year"])]
+        verbose_name = "شاهد شخصي"
+        verbose_name_plural = "شواهد شخصية"
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if self.report_id and self.workspace_id:
+            if not PersonalReport.objects.filter(pk=self.report_id, workspace_id=self.workspace_id).exists():
+                raise ValidationError("الشاهد والتقرير يجب أن يكونا في المساحة الشخصية نفسها.")
+        return super().save(*args, **kwargs)

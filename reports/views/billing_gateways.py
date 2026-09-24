@@ -86,6 +86,8 @@ from .billing_core import (
     _stamp_payer,
     _notify_managers_of_group_payment,
     _group_payer_badge,
+    _CheckoutSubmissionError,
+    _lock_checkout_submission,
     _PaymentSelectionError,
     _subscription_quote_from_request,
     _build_unified_payment_items,
@@ -264,83 +266,134 @@ def moyasar_checkout_create(request):
 
     # كود خصم غطّى الطلب كاملاً: لا فاتورة لدى البوابة لمبلغ صفري — تفعيل مباشر.
     if total <= 0:
-        return _activate_free_discount_order(request, membership, subscription, items)
+        return _activate_free_discount_order(
+            request,
+            membership,
+            subscription,
+            items,
+            payment_method=Payment.Method.MOYASAR,
+        )
 
     _remember_acting_school(request, membership)
-    batch_ref = uuid.uuid4().hex[:16]
     labels = "، ".join(item["label"] for item in items)
-    callback_url = request.build_absolute_uri(
-        reverse("reports:moyasar_callback", args=[batch_ref])
-    )
-    success_url = request.build_absolute_uri(
-        reverse("reports:moyasar_return", args=[batch_ref])
-    )
-    back_url = request.build_absolute_uri(_subscription_redirect(membership).url)
-    try:
-        invoice = create_moyasar_invoice(
-            amount=total,
-            description=f"خدمات منصة توثيق: {labels}",
-            callback_url=callback_url,
-            success_url=success_url,
-            back_url=back_url,
-            metadata={
-                "batch_ref": batch_ref,
-                "school_id": str(membership.school_id),
-            },
-        )
-    except (MoyasarGatewayError, ImproperlyConfigured):
-        logger.exception("Moyasar invoice creation failed")
-        messages.error(request, "تعذّر بدء الدفع الإلكتروني. حاول مجددًا أو استخدم طريقة أخرى.")
-        return _subscription_redirect(membership)
-
-    checkout_url = str(invoice.get("url") or "").strip()
-    parsed_checkout_url = urlparse(checkout_url)
-    checkout_host = (parsed_checkout_url.hostname or "").lower()
-    if parsed_checkout_url.scheme != "https" or checkout_host != "checkout.moyasar.com":
-        logger.error("Moyasar returned an unsafe checkout URL")
-        messages.error(request, "تعذّر التحقق من رابط الدفع الإلكتروني.")
-        return _subscription_redirect(membership)
-
-    checkout_query = dict(parse_qsl(parsed_checkout_url.query, keep_blank_values=True))
-    checkout_query["lang"] = "ar"
-    checkout_url = parsed_checkout_url._replace(query=urlencode(checkout_query)).geturl()
-
-    invoice_id = str(invoice.get("id") or "").strip()
-    gateway_status = str(invoice.get("status") or "initiated")[:32]
-    note = f"[فاتورة دفع إلكتروني {batch_ref.upper()}] {labels} — الإجمالي {total} ريال."
+    duplicate = False
+    checkout_url = ""
     try:
         with transaction.atomic():
-            for item in items:
-                payment = Payment.objects.create(**_stamp_payer({
-                    "school": membership.school,
-                    "subscription": subscription,
-                    "requested_plan": item.get("requested_plan"),
-                    "requested_teacher_limit": item.get("requested_teacher_limit"),
-                    "purpose": item["purpose"],
-                    "amount": item["amount"],
-                    "discount_code": item.get("discount_code"),
-                    "discount_amount": item.get("discount_amount", 0),
-                    "archive_storage_gb": item.get("archive_storage_gb", 0),
-                    "notes": note,
-                    "batch_ref": batch_ref,
-                    "payment_method": Payment.Method.MOYASAR,
-                    "gateway_order_id": invoice_id,
-                    "gateway_checkout_id": invoice_id,
-                    "gateway_status": gateway_status,
-                    "created_by": request.user,
-                }, membership))
-                if item.get("discount_code") is not None:
-                    reserve_redemption(
-                        item["discount_code"],
-                        membership.school,
-                        payment=payment,
-                        batch_ref=batch_ref,
-                        amount=item.get("discount_amount", Decimal("0.00")),
+            batch_ref, existing = _lock_checkout_submission(
+                request,
+                membership,
+                items,
+                Payment.Method.MOYASAR,
+            )
+            if existing:
+                duplicate = True
+            else:
+                callback_url = request.build_absolute_uri(
+                    reverse("reports:moyasar_callback", args=[batch_ref])
+                )
+                success_url = request.build_absolute_uri(
+                    reverse("reports:moyasar_return", args=[batch_ref])
+                )
+                back_url = request.build_absolute_uri(
+                    _subscription_redirect(membership).url
+                )
+                invoice = create_moyasar_invoice(
+                    amount=total,
+                    description=f"خدمات منصة توثيق: {labels}",
+                    callback_url=callback_url,
+                    success_url=success_url,
+                    back_url=back_url,
+                    metadata={
+                        "batch_ref": batch_ref,
+                        "school_id": str(membership.school_id),
+                    },
+                )
+
+                checkout_url = str(invoice.get("url") or "").strip()
+                parsed_checkout_url = urlparse(checkout_url)
+                checkout_host = (parsed_checkout_url.hostname or "").lower()
+                if (
+                    parsed_checkout_url.scheme != "https"
+                    or checkout_host != "checkout.moyasar.com"
+                ):
+                    logger.error("Moyasar returned an unsafe checkout URL")
+                    raise _ApprovalError("تعذّر التحقق من رابط الدفع الإلكتروني.")
+
+                checkout_query = dict(
+                    parse_qsl(parsed_checkout_url.query, keep_blank_values=True)
+                )
+                checkout_query["lang"] = "ar"
+                checkout_url = parsed_checkout_url._replace(
+                    query=urlencode(checkout_query)
+                ).geturl()
+
+                invoice_id = str(invoice.get("id") or "").strip()
+                gateway_status = str(invoice.get("status") or "initiated")[:32]
+                note = (
+                    f"[فاتورة دفع إلكتروني {batch_ref.upper()}] {labels} "
+                    f"— الإجمالي {total} ريال."
+                )
+                for item in items:
+                    payment = Payment.objects.create(
+                        **_stamp_payer(
+                            {
+                                "school": membership.school,
+                                "subscription": subscription,
+                                "requested_plan": item.get("requested_plan"),
+                                "requested_teacher_limit": item.get(
+                                    "requested_teacher_limit"
+                                ),
+                                "purpose": item["purpose"],
+                                "amount": item["amount"],
+                                "discount_code": item.get("discount_code"),
+                                "discount_amount": item.get("discount_amount", 0),
+                                "archive_storage_gb": item.get(
+                                    "archive_storage_gb", 0
+                                ),
+                                "notes": note,
+                                "batch_ref": batch_ref,
+                                "payment_method": Payment.Method.MOYASAR,
+                                "gateway_order_id": invoice_id,
+                                "gateway_checkout_id": invoice_id,
+                                "gateway_status": gateway_status,
+                                "created_by": request.user,
+                            },
+                            membership,
+                        )
                     )
+                    if item.get("discount_code") is not None:
+                        reserve_redemption(
+                            item["discount_code"],
+                            membership.school,
+                            payment=payment,
+                            batch_ref=batch_ref,
+                            amount=item.get("discount_amount", Decimal("0.00")),
+                        )
+    except _CheckoutSubmissionError as exc:
+        messages.error(request, str(exc))
+        return _subscription_redirect(membership)
+    except (MoyasarGatewayError, ImproperlyConfigured):
+        logger.exception("Moyasar invoice creation failed")
+        messages.error(
+            request,
+            "تعذّر بدء الدفع الإلكتروني. حاول مجددًا أو استخدم طريقة أخرى.",
+        )
+        return _subscription_redirect(membership)
+    except _ApprovalError as exc:
+        messages.error(request, str(exc))
+        return _subscription_redirect(membership)
     except DiscountCodeError as exc:
         # نُفد الكود بين التحقق والحجز؛ فاتورة البوابة اليتيمة تنتهي صلاحيتها
         # وحدها ولا يملك أحد رابط دفعها.
         messages.error(request, str(exc))
+        return _subscription_redirect(membership)
+
+    if duplicate:
+        messages.info(
+            request,
+            "تمت معالجة طلب الدفع هذا مسبقًا، ولم تُنشأ فاتورة إلكترونية مكررة.",
+        )
         return _subscription_redirect(membership)
 
     if warnings:
@@ -511,13 +564,17 @@ def tamara_checkout_create(request):
 
     total = sum((Decimal(str(item["amount"])) for item in items), Decimal("0"))
     if total <= 0:
-        return _activate_free_discount_order(request, membership, subscription, items)
+        return _activate_free_discount_order(
+            request,
+            membership,
+            subscription,
+            items,
+            payment_method=Payment.Method.TAMARA,
+        )
 
     city = (request.POST.get("tamara_city") or membership.school.city or "").strip()
     address = (request.POST.get("tamara_address") or "").strip()
     _remember_acting_school(request, membership)
-    batch_ref = uuid.uuid4().hex[:16]
-    order_reference = f"TWQ-{batch_ref.upper()}"
     labels = "، ".join(item["label"] for item in items)
     user_agent = (request.headers.get("User-Agent") or "").lower()
 
@@ -532,25 +589,98 @@ def tamara_checkout_create(request):
         )
         return _subscription_redirect(membership)
 
+    duplicate = False
+    checkout_url = ""
     try:
-        payload = build_tamara_checkout_payload(
-            order_reference=order_reference,
-            items=items,
-            customer_name=request.user.name,
-            customer_phone=request.user.phone,
-            customer_email=request.user.email,
-            city=city,
-            address=address,
-            success_url=_tamara_return_url(request, "success", batch_ref),
-            failure_url=_tamara_return_url(request, "failure", batch_ref),
-            cancel_url=_tamara_return_url(request, "cancel", batch_ref),
-            risk_assessment=_tamara_risk_assessment(membership.school, items),
-            is_mobile=any(
-                marker in user_agent
-                for marker in ("android", "iphone", "ipad", "mobile")
-            ),
-        )
-        checkout = create_tamara_checkout(payload)
+        with transaction.atomic():
+            batch_ref, existing = _lock_checkout_submission(
+                request,
+                membership,
+                items,
+                Payment.Method.TAMARA,
+            )
+            if existing:
+                duplicate = True
+            else:
+                order_reference = f"TWQ-{batch_ref.upper()}"
+                payload = build_tamara_checkout_payload(
+                    order_reference=order_reference,
+                    items=items,
+                    customer_name=request.user.name,
+                    customer_phone=request.user.phone,
+                    customer_email=request.user.email,
+                    city=city,
+                    address=address,
+                    success_url=_tamara_return_url(request, "success", batch_ref),
+                    failure_url=_tamara_return_url(request, "failure", batch_ref),
+                    cancel_url=_tamara_return_url(request, "cancel", batch_ref),
+                    risk_assessment=_tamara_risk_assessment(
+                        membership.school, items
+                    ),
+                    is_mobile=any(
+                        marker in user_agent
+                        for marker in ("android", "iphone", "ipad", "mobile")
+                    ),
+                )
+                checkout = create_tamara_checkout(payload)
+
+                checkout_url = str(checkout.get("checkout_url") or "").strip()
+                parsed_checkout_url = urlparse(checkout_url)
+                checkout_host = (parsed_checkout_url.hostname or "").lower()
+                if (
+                    parsed_checkout_url.scheme != "https"
+                    or checkout_host != "tamara.co"
+                    and not checkout_host.endswith(".tamara.co")
+                ):
+                    logger.error("Tamara returned an unsafe checkout URL")
+                    raise _ApprovalError("تعذّر التحقق من رابط الدفع عبر تمارا.")
+
+                order_id = str(checkout["order_id"])
+                checkout_id = str(checkout.get("checkout_id") or "")
+                gateway_status = str(checkout.get("status") or "new").lower()[:32]
+                note = (
+                    f"[طلب تمارا {order_reference}] {labels} "
+                    f"— الإجمالي {total} ريال."
+                )
+                for item in items:
+                    payment = Payment.objects.create(
+                        **_stamp_payer(
+                            {
+                                "school": membership.school,
+                                "subscription": subscription,
+                                "requested_plan": item.get("requested_plan"),
+                                "requested_teacher_limit": item.get(
+                                    "requested_teacher_limit"
+                                ),
+                                "purpose": item["purpose"],
+                                "amount": item["amount"],
+                                "discount_code": item.get("discount_code"),
+                                "discount_amount": item.get("discount_amount", 0),
+                                "archive_storage_gb": item.get(
+                                    "archive_storage_gb", 0
+                                ),
+                                "notes": note,
+                                "batch_ref": batch_ref,
+                                "payment_method": Payment.Method.TAMARA,
+                                "gateway_order_id": order_id,
+                                "gateway_checkout_id": checkout_id,
+                                "gateway_status": gateway_status,
+                                "created_by": request.user,
+                            },
+                            membership,
+                        )
+                    )
+                    if item.get("discount_code") is not None:
+                        reserve_redemption(
+                            item["discount_code"],
+                            membership.school,
+                            payment=payment,
+                            batch_ref=batch_ref,
+                            amount=item.get("discount_amount", Decimal("0.00")),
+                        )
+    except _CheckoutSubmissionError as exc:
+        messages.error(request, str(exc))
+        return _subscription_redirect(membership)
     except (TamaraGatewayError, ImproperlyConfigured):
         logger.exception("Tamara checkout creation failed")
         messages.error(
@@ -558,61 +688,20 @@ def tamara_checkout_create(request):
             "تعذّر بدء الدفع عبر تمارا. حاول مجددًا أو استخدم طريقة أخرى.",
         )
         return _subscription_redirect(membership)
-
-    checkout_url = str(checkout.get("checkout_url") or "").strip()
-    parsed_checkout_url = urlparse(checkout_url)
-    checkout_host = (parsed_checkout_url.hostname or "").lower()
-    if (
-        parsed_checkout_url.scheme != "https"
-        or checkout_host != "tamara.co"
-        and not checkout_host.endswith(".tamara.co")
-    ):
-        logger.error("Tamara returned an unsafe checkout URL")
-        messages.error(request, "تعذّر التحقق من رابط الدفع عبر تمارا.")
+    except _ApprovalError as exc:
+        messages.error(request, str(exc))
         return _subscription_redirect(membership)
-
-    order_id = str(checkout["order_id"])
-    checkout_id = str(checkout.get("checkout_id") or "")
-    gateway_status = str(checkout.get("status") or "new").lower()[:32]
-    note = f"[طلب تمارا {order_reference}] {labels} — الإجمالي {total} ريال."
-    try:
-        with transaction.atomic():
-            for item in items:
-                payment = Payment.objects.create(
-                    **_stamp_payer(
-                        {
-                            "school": membership.school,
-                            "subscription": subscription,
-                            "requested_plan": item.get("requested_plan"),
-                            "requested_teacher_limit": item.get("requested_teacher_limit"),
-                            "purpose": item["purpose"],
-                            "amount": item["amount"],
-                            "discount_code": item.get("discount_code"),
-                            "discount_amount": item.get("discount_amount", 0),
-                            "archive_storage_gb": item.get("archive_storage_gb", 0),
-                            "notes": note,
-                            "batch_ref": batch_ref,
-                            "payment_method": Payment.Method.TAMARA,
-                            "gateway_order_id": order_id,
-                            "gateway_checkout_id": checkout_id,
-                            "gateway_status": gateway_status,
-                            "created_by": request.user,
-                        },
-                        membership,
-                    )
-                )
-                if item.get("discount_code") is not None:
-                    reserve_redemption(
-                        item["discount_code"],
-                        membership.school,
-                        payment=payment,
-                        batch_ref=batch_ref,
-                        amount=item.get("discount_amount", Decimal("0.00")),
-                    )
     except DiscountCodeError as exc:
         # The hosted checkout exists but its URL is never disclosed, so it will
         # expire without creating a locally payable order.
         messages.error(request, str(exc))
+        return _subscription_redirect(membership)
+
+    if duplicate:
+        messages.info(
+            request,
+            "تمت معالجة طلب الدفع هذا مسبقًا، ولم يُنشأ طلب تمارا مكرر.",
+        )
         return _subscription_redirect(membership)
 
     if warnings:

@@ -12,7 +12,6 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.core import mail
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -28,10 +27,14 @@ from reports.models import (
     Teacher,
 )
 from reports.pricing import DEFAULT_SUBSCRIPTION_PLANS
+from reports.tests.billing_test_helpers import (
+    checkout_submission_key,
+    valid_receipt,
+)
 
 
 def _receipt():
-    return SimpleUploadedFile("receipt.png", b"receipt-bytes", content_type="image/png")
+    return valid_receipt()
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
@@ -57,6 +60,7 @@ class PaymentAmountIntegrityTests(TestCase):
         session = self.client.session
         session["active_school_id"] = self.school.id
         session.save()
+        self.submission_key = checkout_submission_key(self.client)
 
     def _post(self, **extra):
         payload = {
@@ -64,6 +68,7 @@ class PaymentAmountIntegrityTests(TestCase):
             "include_subscription": "1",
             "plan_id": str(self.plan.id),
             "teacher_capacity": "25",
+            "checkout_submission_key": self.submission_key,
             "receipt_image": _receipt(),
         }
         payload.update(extra)
@@ -143,6 +148,7 @@ class PaymentAmountIntegrityTests(TestCase):
                 "include_archive_storage": "1",
                 "archive_storage_option_id": str(option.id),
                 "amount": "1",
+                "checkout_submission_key": self.submission_key,
                 "receipt_image": _receipt(),
             },
         )
@@ -164,6 +170,7 @@ class PaymentAmountIntegrityTests(TestCase):
                 "unified": "1",
                 "include_archive_storage": "1",
                 "archive_storage_option_id": str(option.id),
+                "checkout_submission_key": self.submission_key,
                 "receipt_image": _receipt(),
             },
         )

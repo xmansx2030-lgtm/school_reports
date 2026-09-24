@@ -12,7 +12,6 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.messages import get_messages
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -37,17 +36,14 @@ from reports.models import (
     SubscriptionPlan,
     Teacher,
 )
-
-
-def _png_bytes():
-    return bytes.fromhex(
-        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
-        "890000000a49444154789c6360000002000154a24f6f0000000049454e44ae426082"
-    )
+from reports.tests.billing_test_helpers import (
+    checkout_submission_key,
+    valid_receipt,
+)
 
 
 def _receipt():
-    return SimpleUploadedFile("receipt.png", _png_bytes(), content_type="image/png")
+    return valid_receipt()
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
@@ -72,6 +68,7 @@ class DiscountCodeBaseTests(TestCase):
         session = self.client.session
         session["active_school_id"] = self.school.id
         session.save()
+        self.submission_key = checkout_submission_key(self.client)
 
     def _make_code(self, **overrides):
         defaults = {
@@ -89,6 +86,7 @@ class DiscountCodeBaseTests(TestCase):
             "unified": "1",
             "include_subscription": "1",
             "plan_id": str(self.plan.id),
+            "checkout_submission_key": self.submission_key,
         }
         payload.update(data or {})
         if with_receipt:
@@ -200,6 +198,7 @@ class DiscountBankFlowTests(DiscountCodeBaseTests):
                 "include_archive_storage": "1",
                 "archive_storage_option_id": str(option.id),
                 "discount_code": "SAVE10",
+                "checkout_submission_key": self.submission_key,
                 "receipt_image": _receipt(),
             },
             follow=True,

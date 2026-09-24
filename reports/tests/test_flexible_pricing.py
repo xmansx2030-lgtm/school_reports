@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.core.cache import cache
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -19,15 +18,15 @@ from reports.models import (
     SubscriptionPlan,
     Teacher,
 )
+from reports.tests.billing_test_helpers import (
+    checkout_submission_key,
+    valid_receipt,
+)
 from reports.views.billing_core import _apply_payment_effects, _archive_pricing
 
 
 def _receipt():
-    png = bytes.fromhex(
-        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
-        "890000000a49444154789c6360000002000154a24f6f0000000049454e44ae426082"
-    )
-    return SimpleUploadedFile("receipt.png", png, content_type="image/png")
+    return valid_receipt()
 
 
 class FlexiblePricingTests(TestCase):
@@ -104,6 +103,7 @@ class FlexiblePricingTests(TestCase):
         session = self.client.session
         session["active_school_id"] = school.id
         session.save()
+        submission_key = checkout_submission_key(self.client)
 
         response = self.client.post(
             reverse("reports:payment_create"),
@@ -112,6 +112,7 @@ class FlexiblePricingTests(TestCase):
                 "include_subscription": "1",
                 "plan_id": str(self.annual_25.id),
                 "teacher_capacity": "27",
+                "checkout_submission_key": submission_key,
                 "receipt_image": _receipt(),
             },
             REMOTE_ADDR="127.0.0.27",

@@ -2,140 +2,55 @@
 {% load hijri_tags %}
 
 {% block title %}تجارب المختبر | منصة توثيق{% endblock %}
-
 {% block head %}{% include "reports/_lab_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="lab">
-
-  <header class="lab-hero">
-    <span class="lab-hero__eyebrow">
-      <i class="fa-solid fa-vials" aria-hidden="true"></i>
-      التجارب
-    </span>
-    <h1>سجل تجارب مختبر {{ active_school.name }}</h1>
-    <p class="lab-hero__lead">
-      تُوثَّق التجربة مسودةً ثم تُرسَل لاعتماد المدير. والشواهد تُقرأ من التقرير
-      المرتبط بها إن رُبِط — فلا يُرفع الشيء نفسه مرتين.
-    </p>
-    <div class="lab-hero__actions">
-      {% if can_record %}
-        <a class="lab-act lab-act--solid" href="#new-experiment">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-          توثيق تجربة جديدة
-        </a>
-      {% endif %}
-      <a class="lab-act" href="{% url 'reports:lab_dashboard' %}">
-        <i class="fa-solid fa-flask" aria-hidden="true"></i>
-        لوحة المختبر
-      </a>
+<div class="twq-page lab-page" aria-labelledby="labExperimentsTitle">
+  <header class="twq-page-header lab-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-vials" aria-hidden="true"></i> التجارب والمراجعة</span>
+      <h1 class="twq-page-header__title" id="labExperimentsTitle">تجارب مختبر {{ active_school.name }}</h1>
+      <p class="twq-page-header__lead">قائمة تشغيل لفصل المسودات عن التجارب المنتظرة للمراجعة والمعتمدة، مع إبقاء الشواهد في التقرير المرتبط.</p>
     </div>
+    <div class="twq-page-header__aside"><div class="lab-page-header__actions">
+      {% if can_record %}<a class="twq-btn twq-btn--primary" href="#new-experiment"><i class="fa-solid fa-plus" aria-hidden="true"></i> توثيق تجربة جديدة</a>{% endif %}
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_dashboard' %}"><i class="fa-solid fa-flask" aria-hidden="true"></i> لوحة المختبر</a>
+    </div></div>
   </header>
 
-  <section class="lab-stats" aria-label="ملخص التجارب">
-    <div class="lab-stat">
-      <span class="lab-stat__l"><i class="fa-solid fa-list" aria-hidden="true"></i> الإجمالي</span>
-      <span class="lab-stat__v">{{ summary.experiments_total }}</span>
-    </div>
-    <div class="lab-stat {% if summary.experiments_drafts %}lab-stat--warn{% endif %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-pen" aria-hidden="true"></i> مسودات</span>
-      <span class="lab-stat__v">{{ summary.experiments_drafts }}</span>
-    </div>
-    <div class="lab-stat {% if summary.experiments_pending %}lab-stat--warn{% endif %}">
-      <span class="lab-stat__l"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> تنتظر الاعتماد</span>
-      <span class="lab-stat__v">{{ summary.experiments_pending }}</span>
-    </div>
-    <div class="lab-stat">
-      <span class="lab-stat__l"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> معتمدة</span>
-      <span class="lab-stat__v">{{ summary.experiments_approved }}</span>
-    </div>
-  </section>
+  <nav class="lab-track-nav" aria-label="مسارات عمليات المختبر">
+    <a href="{% url 'reports:lab_assets' %}"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>الجرد والعهدة</span></a>
+    <a href="{% url 'reports:lab_experiments' %}" aria-current="page"><i class="fa-solid fa-vials" aria-hidden="true"></i><span>التجارب والمراجعة</span></a>
+  </nav>
 
-  {% if can_record %}
-    <section class="lab-section" id="new-experiment">
-      <details class="lab-entry" {% if form.errors or not summary.experiments_total %}open{% endif %}>
-        <summary>
-          <span class="lab-entry__title">
-            <span class="lab-entry__icon"><i class="fa-solid fa-plus" aria-hidden="true"></i></span>
-            <span class="lab-entry__copy">
-              <strong>توثيق تجربة جديدة</strong>
-              <small>احفظها مسودة الآن، وأكملها قبل الإرسال للاعتماد.</small>
-            </span>
-          </span>
-          <i class="fa-solid fa-chevron-down lab-entry__chevron" aria-hidden="true"></i>
-        </summary>
-        <div class="lab-entry__body">
-          {% include "reports/_lab_experiment_form.html" with save_label="احفظ المسودة" %}
-        </div>
-      </details>
-    </section>
-  {% endif %}
+  <dl class="twq-metrics lab-metrics" aria-label="ملخص التجارب">
+    <div><dt><i class="fa-solid fa-list" aria-hidden="true"></i> الإجمالي</dt><dd><bdi>{{ summary.experiments_total }}</bdi></dd></div>
+    <div {% if summary.experiments_drafts %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-pen" aria-hidden="true"></i> مسودات</dt><dd><bdi>{{ summary.experiments_drafts }}</bdi></dd></div>
+    <div {% if summary.experiments_pending %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> تنتظر المراجعة</dt><dd><bdi>{{ summary.experiments_pending }}</bdi></dd></div>
+    <div {% if summary.experiments_approved %}data-tone="success"{% endif %}><dt><i class="fa-solid fa-circle-check" aria-hidden="true"></i> معتمدة</dt><dd><bdi>{{ summary.experiments_approved }}</bdi></dd></div>
+  </dl>
 
-  <section class="lab-section">
-    <div class="lab-section__head">
-      <h2><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> البحث في السجل</h2>
-    </div>
-    <div class="lab-card u-mb-md">
-      <form method="get" class="lab-grid-2">
-        <div class="lab-field">
-          <label for="q">العنوان أو المادة أو الصف</label>
-          <input class="form-control" type="search" id="q" name="q" value="{{ q_term }}">
-        </div>
-        <div class="lab-field">
-          <label for="state">الحالة</label>
-          <select class="form-control" id="state" name="state">
-            <option value="">كل الحالات</option>
-            {% for value, label in states %}
-              <option value="{{ value }}" {% if q_state == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="lab-field u-self-end">
-          <button type="submit" class="lab-btn lab-btn--ghost">تصفية</button>
-        </div>
-      </form>
-    </div>
+  {% if can_record %}<section class="twq-section lab-section lab-section--plain" id="new-experiment" aria-labelledby="newExperimentTitle"><details class="twq-disclosure lab-disclosure" {% if form.errors or not summary.experiments_total %}open{% endif %}><summary class="twq-disclosure__summary"><span class="lab-disclosure__heading"><span class="lab-disclosure__icon" aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span class="lab-disclosure__copy"><strong id="newExperimentTitle">توثيق تجربة جديدة</strong><small>احفظها مسودةً ثم أكمل متطلبات الإرسال من صفحة التفاصيل.</small></span></span><i class="fa-solid fa-chevron-down twq-disclosure__chevron" aria-hidden="true"></i></summary><div class="twq-disclosure__body">{% include "reports/_lab_experiment_form.html" with save_label="احفظ المسودة" %}</div></details></section>{% endif %}
 
-    {% if page_obj.object_list %}
-      <div class="lab-table-wrap">
-        <table class="lab-table lab-table--cards">
-          <thead>
-            <tr>
-              <th>المختبر</th><th>التجربة</th><th>التاريخ</th><th>المادة</th>
-              <th>الصف</th><th>الطلاب</th><th>الحالة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for experiment in page_obj.object_list %}
-              <tr>
-                <td data-label="المختبر">{% firstof experiment.get_lab_kind_display "غير مصنّف" %}</td>
-                <td data-label="التجربة"><a href="{% url 'reports:lab_experiment_detail' experiment.pk %}">{{ experiment.title|default:"مسودة بلا عنوان" }}</a></td>
-                <td data-label="التاريخ" dir="rtl">{% if experiment.experiment_date %}{{ experiment.experiment_date|hijri }}{% else %}—{% endif %}</td>
-                <td data-label="المادة">{{ experiment.subject|default:"—" }}</td>
-                <td data-label="الصف">{{ experiment.class_name|default:"—" }}</td>
-                <td data-label="الطلاب">{{ experiment.students_count|default:"—" }}</td>
-                <td data-label="الحالة"><span class="lab-chip" data-tone="{{ experiment.approval_tone }}">{{ experiment.get_approval_state_display }}</span></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+  <section class="twq-section lab-section" aria-labelledby="experimentQueueTitle">
+    <header class="twq-section__header lab-section__header"><div class="lab-section__heading"><span class="twq-section__kicker">Operational queue</span><h2 class="twq-section__title" id="experimentQueueTitle">قائمة تشغيل التجارب</h2><p class="twq-section__description">افتح التجربة لإكمالها أو مراجعتها بحسب الحالة والصلاحية.</p></div></header>
+    <form method="get" class="twq-toolbar lab-toolbar lab-toolbar--experiments" role="search" aria-label="البحث والتصفية في سجل التجارب">
+      <div class="twq-toolbar__search"><label class="twq-label" for="q">العنوان أو المادة أو الصف</label><div class="twq-toolbar__control"><i class="fa-solid fa-magnifying-glass twq-toolbar__icon" aria-hidden="true"></i><input class="twq-control" type="search" id="q" name="q" value="{{ q_term }}" placeholder="تفاعل كيميائي"></div></div>
+      <div class="twq-toolbar__field"><label class="twq-label" for="state">الحالة</label><select class="twq-control" id="state" name="state"><option value="">كل الحالات</option>{% for value, label in states %}<option value="{{ value }}" {% if q_state == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="twq-toolbar__actions"><button type="submit" class="twq-btn twq-btn--primary">تطبيق</button>{% if has_filters %}<a class="twq-btn twq-btn--ghost" href="{% url 'reports:lab_experiments' %}">إزالة التصفية</a>{% endif %}</div>
+    </form>
+    {% if has_filters %}<div class="twq-toolbar__active-filters lab-toolbar__active" aria-label="المرشحات المطبقة"><span class="twq-toolbar__active-label">النطاق الحالي:</span>{% if q_term %}<span class="twq-filter-chip">بحث: <bdi>{{ q_term }}</bdi></span>{% endif %}{% if q_state %}<span class="twq-filter-chip">الحالة: {% for value, label in states %}{% if q_state == value %}{{ label }}{% endif %}{% endfor %}</span>{% endif %}</div>{% endif %}
 
-      {% include "reports/_pagination.html" with page_obj=page_obj %}
-    {% else %}
-      <div class="lab-empty">
-        {% if has_filters %}
-          <strong>لا نتائج لهذه التصفية.</strong>
-        {% else %}
-          <span class="lab-empty__icon"><i class="fa-solid fa-vials" aria-hidden="true"></i></span>
-          <strong>لم تُوثَّق تجربة بعد.</strong>
-          {% if can_record %}
-            أنشئ المسودة الأولى، ويمكنك إكمال تفاصيلها لاحقاً.
-            <a class="lab-btn lab-btn--ghost" href="#new-experiment">توثيق أول تجربة</a>
-          {% endif %}
-        {% endif %}
-      </div>
-    {% endif %}
+    {% if page_obj.object_list %}<div class="twq-table-wrap lab-table-wrap"><table class="twq-table lab-table lab-table--cards"><caption>التجارب وحالتها وإجراؤها التالي</caption><thead><tr><th scope="col">التجربة</th><th scope="col">المختبر</th><th scope="col">الموثّق</th><th scope="col">التاريخ</th><th scope="col">السياق</th><th scope="col">الحالة</th><th scope="col">الإجراء</th></tr></thead><tbody>{% for experiment in page_obj.object_list %}<tr>
+      <td data-label="التجربة"><div class="lab-table__identity"><a href="{% url 'reports:lab_experiment_detail' experiment.pk %}">{{ experiment.title|default:"مسودة بلا عنوان" }}</a><small>{% if experiment.report %}مرتبطة بتقرير{% else %}دون تقرير مرتبط{% endif %}</small></div></td>
+      <td data-label="المختبر">{% firstof experiment.get_lab_kind_display "غير مصنّف" %}</td>
+      <td data-label="الموثّق">{% firstof experiment.recorder.name "—" %}</td>
+      <td data-label="التاريخ">{% if experiment.experiment_date %}<bdi>{{ experiment.experiment_date|hijri }}</bdi>{% else %}—{% endif %}</td>
+      <td data-label="السياق">{{ experiment.subject|default:"—" }}{% if experiment.class_name %}<small class="lab-muted"> · {{ experiment.class_name }}</small>{% endif %}</td>
+      <td data-label="الحالة"><span class="twq-status lab-status" data-status="{{ experiment.approval_state }}">{{ experiment.get_approval_state_display }}</span></td>
+      <td data-label="الإجراء"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:lab_experiment_detail' experiment.pk %}">{% if experiment.approval_state == 'draft' or experiment.approval_state == 'returned' or experiment.approval_state == 'needs_info' %}فتح واستكمال{% elif experiment.approval_state == 'submitted' or experiment.approval_state == 'under_review' or experiment.approval_state == 'recommended' %}فتح للمراجعة{% else %}عرض التجربة{% endif %}</a></td>
+    </tr>{% endfor %}</tbody></table></div>{% include "reports/_pagination.html" with page_obj=page_obj %}
+    {% else %}<div class="twq-empty twq-empty--local lab-empty"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid {% if has_filters %}fa-filter-circle-xmark{% else %}fa-vials{% endif %}"></i></span><h3 class="twq-empty__title">{% if has_filters %}لا نتائج لهذه التصفية{% else %}لم تُوثَّق تجربة بعد{% endif %}</h3><p class="twq-empty__message">{% if has_filters %}جرّب مصطلحًا أعم أو أزل المرشح.{% elif can_record %}أنشئ المسودة الأولى وأكمل متطلبات الإرسال من صفحة تفاصيلها.{% else %}لا توجد تجارب في نطاق المختبر المتاح لك.{% endif %}</p>{% if can_record and not has_filters %}<a class="twq-btn twq-btn--secondary" href="#new-experiment">توثيق أول تجربة</a>{% endif %}</div>{% endif %}
   </section>
 </div>
 {% endblock %}

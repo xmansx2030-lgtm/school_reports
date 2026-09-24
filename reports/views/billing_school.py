@@ -75,10 +75,12 @@ from .billing_core import (
     _stamp_payer,
     _notify_managers_of_group_payment,
     _group_payer_badge,
+    _issue_checkout_submission_key,
     _PaymentSelectionError,
     _subscription_quote_from_request,
     _build_unified_payment_items,
     _create_unified_payment,
+    _validate_payment_receipt,
     _manager_payment_membership,
 )
 
@@ -211,6 +213,9 @@ def my_subscription(request):
         # المخفي والروابط كلها مشتقّة من هذين المفتاحين لا من تخمين القالب.
         "acting_on_behalf": membership.is_on_behalf,
         "acting_group": membership.group,
+        "checkout_submission_key": _issue_checkout_submission_key(
+            request, membership
+        ),
         "group_payer_payment": _group_payer_badge(membership.school),
         "plans": renewal_plans,
         "renewal_catalog": renewal_catalog,
@@ -371,8 +376,10 @@ def payment_create(request):
         requested_plan = None
         pricing = _archive_pricing()
 
-        if not receipt:
-            messages.error(request, "يرجى إرفاق صورة الإيصال.")
+        try:
+            _validate_payment_receipt(receipt)
+        except _PaymentSelectionError as exc:
+            messages.error(request, str(exc))
             return _subscription_redirect(membership)
 
         if payment_kind == Payment.Purpose.ARCHIVE_ADDON:

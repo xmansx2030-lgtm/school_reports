@@ -73,22 +73,41 @@ def _generate_unique_school_code(school_name: str) -> str:
 
 # ── Registration form ───────────────────────────────────────────────
 class SchoolRegistrationForm(forms.Form):
+    _DESCRIBED_BY = {
+        "manager_phone": ("id_manager_phone_help",),
+        "manager_email": ("id_manager_email_help",),
+        "password": ("id_password_help",),
+        "accept_policies": ("id_accept_policies_help",),
+    }
+
     # School info
     school_name = forms.CharField(
         label="اسم المدرسة", max_length=200,
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "مثال: مدرسة الأمل الابتدائية"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": "twq-control registration-control",
+                "placeholder": "مثال: مدرسة الأمل الابتدائية",
+                "autocomplete": "organization",
+            }
+        ),
     )
     stage = forms.ChoiceField(
         label="المرحلة", choices=School.Stage.choices,
-        widget=forms.Select(attrs={"class": "form-select"}),
+        widget=forms.Select(attrs={"class": "twq-control registration-control"}),
     )
     gender = forms.ChoiceField(
         label="بنين / بنات", choices=School.Gender.choices,
-        widget=forms.Select(attrs={"class": "form-select"}),
+        widget=forms.Select(attrs={"class": "twq-control registration-control"}),
     )
     city = forms.CharField(
         label="المدينة", max_length=120, required=False,
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "مثال: الرياض"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": "twq-control registration-control",
+                "placeholder": "مثال: الرياض",
+                "autocomplete": "address-level2",
+            }
+        ),
     )
 
     # Manager info
@@ -96,7 +115,7 @@ class SchoolRegistrationForm(forms.Form):
         label="اسم المسؤول عن إدارة المدرسة", max_length=120,
         widget=forms.TextInput(
             attrs={
-                "class": "form-control",
+                "class": "twq-control registration-control",
                 "placeholder": "الاسم الكامل",
                 "autocomplete": "name",
             }
@@ -106,7 +125,7 @@ class SchoolRegistrationForm(forms.Form):
         label="رقم الجوال", max_length=16,
         widget=forms.TextInput(
             attrs={
-                "class": "form-control",
+                "class": "twq-control registration-control",
                 "dir": "ltr",
                 "placeholder": "05XXXXXXXX",
                 "inputmode": "tel",
@@ -119,7 +138,7 @@ class SchoolRegistrationForm(forms.Form):
         required=True,
         widget=forms.EmailInput(
             attrs={
-                "class": "form-control",
+                "class": "twq-control registration-control",
                 "dir": "ltr",
                 "placeholder": "manager@school.edu.sa",
                 "autocomplete": "email",
@@ -130,7 +149,7 @@ class SchoolRegistrationForm(forms.Form):
         label="كلمة المرور", min_length=8,
         widget=forms.PasswordInput(
             attrs={
-                "class": "form-control",
+                "class": "twq-control registration-control",
                 "autocomplete": "new-password",
                 "placeholder": "8 أحرف على الأقل",
             }
@@ -140,7 +159,7 @@ class SchoolRegistrationForm(forms.Form):
         label="تأكيد كلمة المرور",
         widget=forms.PasswordInput(
             attrs={
-                "class": "form-control",
+                "class": "twq-control registration-control",
                 "autocomplete": "new-password",
                 "placeholder": "أعد كتابة كلمة المرور",
             }
@@ -149,8 +168,29 @@ class SchoolRegistrationForm(forms.Form):
     accept_policies = forms.BooleanField(
         label="أوافق على الشروط والأحكام وسياسة الخصوصية وسياسة الإلغاء والاسترجاع",
         required=True,
+        widget=forms.CheckboxInput(attrs={"class": "registration-policy__input"}),
         error_messages={"required": "يلزم الاطلاع على السياسات والموافقة عليها قبل إنشاء الحساب."},
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, described_by in self._DESCRIBED_BY.items():
+            self.fields[field_name].widget.attrs["aria-describedby"] = " ".join(described_by)
+
+    def full_clean(self):
+        """Attach rendered error semantics without changing validation rules."""
+        super().full_clean()
+        for field_name, field in self.fields.items():
+            attrs = field.widget.attrs
+            attrs.pop("aria-invalid", None)
+            described_by = list(self._DESCRIBED_BY.get(field_name, ()))
+            if field_name in self.errors:
+                attrs["aria-invalid"] = "true"
+                described_by.append(f"id_{field_name}_error")
+            if described_by:
+                attrs["aria-describedby"] = " ".join(described_by)
+            else:
+                attrs.pop("aria-describedby", None)
 
     def clean_school_name(self):
         name = " ".join((self.cleaned_data.get("school_name") or "").split())
@@ -319,8 +359,8 @@ def register_school(request):
 
             except Exception:
                 logger.exception(
-                    "School self-registration failed phone=%s",
-                    form.cleaned_data.get("manager_phone", ""),
+                    "School self-registration failed trace_id=%s",
+                    getattr(request, "trace_id", None),
                 )
                 messages.error(request, "تعذر إكمال التسجيل الآن. لم تُحفظ أي بيانات؛ حاول مرة أخرى.")
     else:

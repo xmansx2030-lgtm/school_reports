@@ -247,6 +247,13 @@ class MeetingMinutes(ApprovalMixin):
         """المدرسة التي يُنسب إليها المحضر — يقرأها مكوّن الاعتماد."""
         return getattr(self.meeting, "school", None)
 
+    @property
+    def approval_block_reason(self) -> str:
+        """لا تبدأ دورة اعتماد المحضر قبل ثبوت انعقاد اجتماعه."""
+        if not getattr(self.meeting, "is_held", False):
+            return "لم يُسجَّل انعقاد الاجتماع بعد."
+        return ""
+
     def _is_organizer(self, user) -> bool:
         return (
             user is not None

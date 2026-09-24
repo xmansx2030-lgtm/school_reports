@@ -8,15 +8,15 @@
   <meta name="color-scheme" content="light dark">
   {% include "reports/partials/theme_bootstrap.html" %}
   <meta name="domain-verification" content="044a91f3309b001cf46a66e8ee43e60ad827a8f7dadc1ba694212035d9f099a5">
-  <title>منصة توثيق | إدارة وتشغيل المدارس والتقارير والإنجاز</title>
-  <meta name="description" content="منصة سعودية تجمع مدير المدرسة والمعلم والمدير التنفيذي والموظف الإداري في تشغيل مدرسي واحد: تقارير وإنجاز وطلبات وتعاميم وخطط واجتماعات وتكليفات واعتمادات وأرشيف موثّق. ابدأ تجربة مجانية لمدة 30 يومًا.">
+  <title>منصة توثيق | للمدارس ومساحة إنجاز شخصية للمعلمين والمعلمات</title>
+  <meta name="description" content="منصة سعودية تجمع مدير المدرسة والمعلم والمدير التنفيذي والموظف الإداري في تشغيل مدرسي واحد: تقارير وإنجاز وطلبات وتعاميم وخطط واجتماعات وتكليفات واعتمادات وأرشيف موثّق. ابدأ تجربة مجانية لمدة 30 يومًا. وللمعلم مساحة شخصية يوثق فيها أعماله حتى إن لم تشترك مدرسته.">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta name="author" content="منصة توثيق">
   <meta property="og:locale" content="ar_SA">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="منصة توثيق">
-  <meta property="og:title" content="منصة توثيق | قرار أوضح وتشغيل مدرسي منضبط">
-  <meta property="og:description" content="لكل دور مساحة واضحة: قيادة للمدير، إنجاز أسرع للمعلم، متابعة موحدة للمدير التنفيذي، وتنفيذ منظم للموظف الإداري.">
+  <meta property="og:title" content="منصة توثيق | للمدارس ولإنجاز المعلمين والمعلمات">
+  <meta property="og:description" content="نظّم أعمال المدرسة وتقاريرها في منصة واحدة، أو أنشئ مساحة شخصية لتوثيق إنجازك كمعلم أو معلمة حتى إن لم تشترك مدرستك.">
   <meta property="og:url" content="{{ SITE_URL }}/">
   <meta property="og:image" content="{{ SITE_URL }}{% static 'img/landing/dashboard-system.png' %}">
   <meta property="og:image:secure_url" content="{{ SITE_URL }}{% static 'img/landing/dashboard-system.png' %}">
@@ -25,8 +25,8 @@
   <meta property="og:image:height" content="799">
   <meta property="og:image:alt" content="لوحة إدارة المدرسة في منصة توثيق">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="منصة توثيق | تشغيل مدرسي يضع القرار أولًا">
-  <meta name="twitter:description" content="صورة أوضح للمدير والمالك، ومسارات أقصر للفريق، وسجل مهني لكل ما أُنجز.">
+  <meta name="twitter:title" content="منصة توثيق | للمدارس والمعلمين والمعلمات">
+  <meta name="twitter:description" content="إدارة أوضح للمدرسة، ومساحة شخصية لتقارير المعلم وشواهده وملف إنجازه.">
   <meta name="twitter:image" content="{{ SITE_URL }}{% static 'img/landing/dashboard-system.png' %}">
   <meta name="twitter:image:alt" content="لوحة إدارة المدرسة في منصة توثيق">
   <link rel="canonical" href="{{ SITE_URL }}/">
@@ -38,13 +38,14 @@
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=20260826.1">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=20260924.2">
   <link rel="stylesheet" href="{% static 'css/flexible-pricing.css' %}?v=20260813.2">
   {% if AI_MANSOUR_PUBLIC_ENABLED %}
     <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260801.2">
   {% endif %}
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
+  <link rel="stylesheet" href="{% static 'css/landing-refresh.css' %}?v=20260924.3">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <noscript><style nonce="{{ CSP_NONCE }}">.reveal{opacity:1!important;transform:none!important}</style></noscript>
   <script type="application/ld+json" nonce="{{ CSP_NONCE }}" data-cfasync="false">
@@ -133,11 +134,9 @@
           <span class="brand-text"><strong>منصة توثيق</strong><small>للعمل المدرسي</small></span>
         </a>
 
-        {% comment %}خمسة روابط لا ثمانية: الشريط كان يزدحم حتى ينهار دفعةً واحدة عند
-        ٩٨٠px. ما حُذف من هنا (كيف تبدأ، ما الذي يتغير، مجموعة المدارس) يبقى في قائمة
-        الجوال وفي روابط التذييل.{% endcomment %}
         <div class="nav-links" id="navLinks">
           <a href="#features">المزايا</a>
+          <a href="#teacher-personal">للمعلمين والمعلمات</a>
           <a href="#product">شاهد المنصة</a>
           <a href="#pricing">الأسعار</a>
           <a href="#faq">الأسئلة</a>
@@ -146,7 +145,7 @@
         <div class="nav-actions">
           <a class="text-link desktop-login" href="{% url 'reports:login' %}">تسجيل الدخول</a>
           <a class="button button-primary nav-cta" href="{% url 'reports:register_school' %}">
-            ابدأ مجانًا
+            ابدأ بمدرستك
             <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
           </a>
           <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="mobileMenu" aria-label="فتح القائمة">
@@ -164,72 +163,60 @@
         <button id="menuClose" type="button" aria-label="إغلاق القائمة"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
       </div>
       <a href="#features">المزايا</a>
+      <a href="#teacher-personal">للمعلم الفردي</a>
       <a href="#product">شاهد المنصة</a>
       <a href="#pricing">الأسعار</a>
       <a href="#faq">الأسئلة الشائعة</a>
       <div class="mobile-menu-actions">
-        <a class="button button-primary" href="{% url 'reports:register_school' %}">ابدأ التجربة المجانية</a>
+        <a class="button button-primary" href="{% url 'reports:register_school' %}">ابدأ بمدرستك</a>
+        <a class="button button-quiet" href="{% url 'personal:register' %}">ابدأ كمعلم أو معلمة</a>
         <a class="button button-quiet" href="{% url 'reports:login' %}">تسجيل الدخول</a>
       </div>
     </div>
   </div>
 
   <main id="mainContent">
-    <section class="hero">
+    <section class="hero hero-refresh" aria-labelledby="landingHeroTitle">
       <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
       <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
       <div class="shell hero-stage">
         <div class="hero-intro reveal">
-          <div class="overline"><span aria-hidden="true"></span> منصة سعودية لإدارة وتوثيق العمل المدرسي</div>
-          <h1>
-            شغّل مدرستك من مكان واحد
-            <span>وحوّل كل عمل إلى إنجاز موثّق.</span>
-          </h1>
+          <div class="overline"><span aria-hidden="true"></span> منصة توثيق للمدرسة ولإنجاز المعلم</div>
+          <h1 id="landingHeroTitle">مدرستك منظّمة.<span>وإنجازك موثّق.</span></h1>
           <p class="hero-lead">
-            تقارير، ملفات إنجاز، طلبات، تعاميم، خطط وأرشيف في منصة واضحة للمدير والفريق.
+            للمدارس: إدارة التقارير والطلبات والخطط والاعتمادات من مكان واحد. وللمعلم والمعلمة خارج اشتراك المدرسة: مساحة شخصية لتوثيق الأعمال والشواهد وملف الإنجاز السنوي.
           </p>
           <div class="hero-actions">
             <a class="button button-primary button-large" href="{% url 'reports:register_school' %}">
-              ابدأ مجانًا {{ trial_days|default:30 }} يوم
+              ابدأ بمدرستك {{ trial_days|default:30 }} يومًا مجانًا
               <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
             </a>
-            <a class="button button-quiet button-large" href="#pricing">
-              <i class="fa-solid fa-calculator" aria-hidden="true"></i>
-              اعرف سعر مدرستك
+            <a class="button button-quiet button-large" href="{% url 'personal:register' %}">
+              <i class="fa-solid fa-user-pen" aria-hidden="true"></i>
+              ابدأ كمعلم أو معلمة
             </a>
           </div>
           <div class="assurance" aria-label="مزايا البدء">
-            <span><i class="fa-solid fa-check"></i> دون بطاقة ائتمانية</span>
-            <span><i class="fa-solid fa-check"></i> يعمل من الويب والجوال</span>
-            <span><i class="fa-solid fa-check"></i> تفعيل مباشر</span>
+            <span><i class="fa-solid fa-check" aria-hidden="true"></i> تجربة المدرسة دون بطاقة ائتمانية</span>
+            <span><i class="fa-solid fa-check" aria-hidden="true"></i> مساحة شخصية مستقلة للمعلم</span>
           </div>
         </div>
 
-        <div class="hero-personas reveal" aria-label="أبرز فوائد منصة توثيق">
-          <div class="hero-persona">
-            <span class="hero-persona-icon"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i></span>
-            <strong>صورة واضحة للمدير</strong>
-            <small>الأولوية والمسؤول والحالة</small>
-          </div>
-          <div class="hero-persona">
-            <span class="hero-persona-icon"><i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i></span>
-            <strong>عمل أسرع للفريق</strong>
-            <small>إدخال بسيط من الجوال</small>
-          </div>
-          <div class="hero-persona">
-            <span class="hero-persona-icon"><i class="fa-solid fa-box-archive" aria-hidden="true"></i></span>
-            <strong>أرشيف لا يضيع</strong>
-            <small>سجل منظم قابل للرجوع</small>
-          </div>
-        </div>
+        <figure class="hero-product reveal">
+          <div class="hero-product__top"><span><i class="fa-solid fa-circle" aria-hidden="true"></i> من داخل المنصة</span><strong>لوحة مدير المدرسة</strong></div>
+          <button type="button" data-product-image="{% static 'img/landing/dashboard-system.png' %}" data-product-caption="لوحة مدير المدرسة في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة لوحة مدير المدرسة بالحجم الكامل">
+            <img src="{% static 'img/landing/dashboard-system.png' %}" alt="لقطة فعلية من لوحة مدير المدرسة تعرض المؤشرات ومسارات العمل" width="1920" height="799" loading="eager" fetchpriority="high" decoding="async">
+          </button>
+          <figcaption>لقطة فعلية من المنصة · بيانات عرض تجريبية <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></figcaption>
+        </figure>
       </div>
 
       <div class="shell">
         <div class="trust-bar reveal">
           <div><strong>{{ trial_days|default:30 }}</strong><span>يومًا مجانية</span></div>
-          <a class="trust-bar-link" href="#pricing"><i class="fa-solid fa-tag"></i><span>سعر واضح حسب عدد المعلمين</span></a>
-          <a class="trust-bar-link" href="#product"><i class="fa-solid fa-display"></i><span>شاشات حقيقية من النظام</span></a>
-          <div><i class="fa-solid fa-shield-halved"></i><span>صلاحيات وتدقيق وحماية</span></div>
+          <a class="trust-bar-link" href="#pricing"><i class="fa-solid fa-school" aria-hidden="true"></i><span>اشتراك للمدرسة حسب حجم الفريق</span></a>
+          <a class="trust-bar-link" href="#teacher-personal"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i><span>باقة شخصية للمعلم والمعلمة</span></a>
+          <a class="trust-bar-link" href="#product"><i class="fa-solid fa-display" aria-hidden="true"></i><span>شاهد الشاشات الحقيقية</span></a>
         </div>
       </div>
     </section>
@@ -297,6 +284,68 @@
           </article>
         </div>
       </div>
+    </section>
+
+    <section class="section personal-offer-section" id="teacher-personal" aria-labelledby="personalOfferTitle">
+      <div class="shell personal-offer">
+        <div class="personal-offer__content">
+          <span class="section-kicker">للمعلم والمعلمة · حتى إن لم تشترك المدرسة</span>
+          <h2 id="personalOfferTitle">أعمالك باسمك. وملف إنجازك يتكوّن مع كل خطوة.</h2>
+          <p>وثّق التقارير والشواهد في مساحة تخصك، مع اسم مدرستك ومديرها للتعريف. تصفح حصيلة السنة واطبع تقريرك أو ملف إنجازك متى احتجت إليه.</p>
+          <div class="personal-offer__features" aria-label="مزايا مساحة المعلم الشخصية">
+            <span><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تقارير منظمة</span>
+            <span><i class="fa-solid fa-paperclip" aria-hidden="true"></i> شواهد محفوظة</span>
+            <span><i class="fa-solid fa-book-open" aria-hidden="true"></i> ملف إنجاز سنوي</span>
+          </div>
+          <div class="personal-offer__actions">
+            <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مساحتك الشخصية <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+          </div>
+          <p class="personal-offer__clarity"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> المستندات الشخصية من إعداد المعلم أو المعلمة، ولا تمثل اعتمادًا من المدرسة. الاعتماد المدرسي ضمن اشتراك المدرسة.</p>
+        </div>
+        <div class="personal-offer__preview">
+          <div class="personal-preview-heading"><span>من مساحة المعلمة الشخصية</span><strong>كل ما وثّقته في مكان واحد</strong></div>
+          <button class="personal-preview-shot personal-preview-shot--main" type="button" data-product-image="{% static 'img/landing/teacher-dashboard.png' %}" data-product-caption="مساحة المعلمة الشخصية في منصة توثيق: التقارير والشواهد والمؤشرات. الحساب والبيانات تجريبية." aria-label="عرض لقطة مساحة المعلمة الشخصية بالحجم الكامل">
+            <img src="{% static 'img/landing/teacher-dashboard.png' %}" alt="لقطة فعلية من مساحة المعلمة تعرض اسمها واسم مدرستها ومديرتها وتقاريرها وشواهدها، ببيانات تجريبية" width="1425" height="891" loading="lazy" decoding="async">
+          </button>
+          <button class="personal-preview-shot personal-preview-shot--secondary" type="button" data-product-image="{% static 'img/landing/teacher-portfolio.png' %}" data-product-caption="ملف إنجاز المعلمة الشخصي في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة ملف إنجاز المعلمة بالحجم الكامل">
+            <img src="{% static 'img/landing/teacher-portfolio.png' %}" alt="لقطة فعلية من ملف الإنجاز السنوي للمعلمة تعرض تقاريرها وشواهدها ببيانات تجريبية" width="1425" height="891" loading="lazy" decoding="async">
+          </button>
+          <p>لقطتان فعليتان من المنصة · بيانات عرض تجريبية</p>
+        </div>
+      </div>
+      {% if personal_plan_cards %}
+        <div class="shell personal-plan-catalog" aria-labelledby="personalPlanCatalogTitle">
+          <div class="personal-plan-catalog__heading">
+            <div><span class="section-kicker">خطتك تبدأ من هنا</span><h3 id="personalPlanCatalogTitle">باقات المساحة الشخصية</h3></div>
+            <p>للمعلم والمعلمة بصفة فردية؛ السعات والأسعار المعروضة تُدار من المنصة وتختلف عن اشتراك المدرسة.</p>
+          </div>
+          <div class="personal-plan-catalog__grid">
+            {% for plan in personal_plan_cards %}
+              <article class="personal-plan-card">
+                <div class="personal-plan-card__top"><span>{% if plan.is_free %}الباقة الأساسية{% else %}باقة شخصية{% endif %}</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></div>
+                <h4>{{ plan.name }}</h4>
+                {% if plan.description %}<p class="personal-plan-card__description">{{ plan.description }}</p>{% endif %}
+                <p class="personal-plan-card__price">{% if plan.is_free %}<strong>مجانية</strong>{% else %}<strong dir="ltr">{{ plan.price_display }}</strong><span> ريال</span>{% endif %}<small> · {{ plan.duration_label }}</small></p>
+                <ul>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> حتى {{ plan.max_reports }} تقرير</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> حتى {{ plan.max_evidence }} شاهد</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> {{ plan.storage_limit_mb }} ميجابايت للملفات</li>
+                </ul>
+                {% if plan.is_free %}
+                  <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مجانًا</a>
+                {% elif moyasar_enabled %}
+                  <a class="button button-quiet" href="{% url 'personal:checkout_start' plan.id %}">اشترك الآن عبر الدفع الآمن</a>
+                {% elif BUSINESS.support_email %}
+                  <a class="button button-quiet" href="mailto:{{ BUSINESS.support_email }}?subject={{ plan.name|urlencode }}">اطلب تفعيل الاشتراك</a>
+                {% else %}
+                  <a class="button button-quiet" href="{% url 'personal:register' %}">أنشئ حسابك أولًا</a>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+          {% if has_paid_personal_plans %}<p class="personal-plan-catalog__note">{% if moyasar_enabled %}بعد إتمام الدفع وتأكيده من ميسّر، تُفعّل الباقة تلقائيًا وتصل الفاتورة إلى بريدك الإلكتروني.{% else %}الدفع الإلكتروني غير متاح حاليًا؛ تواصل مع الدعم لطلب تفعيل الباقة.{% endif %}</p>{% endif %}
+        </div>
+      {% endif %}
     </section>
 
     <section class="section pricing-section" id="pricing">
@@ -385,8 +434,8 @@
       <div class="shell">
         <header class="section-heading reveal">
           <span class="section-kicker">دليل المنتج أمامك</span>
-          <h2>ليست وعودًا تسويقية؛ هذه هي المنصة التي سيستخدمها فريقك</h2>
-          <p>لقطتان من بيئة تجريبية توضحان لوحة المدير والمخرج الرسمي الجاهز للطباعة.</p>
+          <h2>تعرّف إلى يوم العمل داخل المدرسة</h2>
+          <p>من لوحة القيادة إلى التقرير والطلبات والأرشيف؛ هذه لقطات فعلية من المنصة ببيانات تجريبية.</p>
         </header>
 
         <div class="product-proof reveal">
@@ -423,10 +472,20 @@
               <span class="image-zoom"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> عرض واضح</span>
             </button>
           </article>
-
-          {% comment %}البطاقة الرابعة كانت تقع وحدها في صفٍّ من عمودين فيبقى نصفه فارغًا.
-          جعلها عريضةً مثل الأولى — بالصورة في الجهة المقابلة — يقفل الصف ويكسر رتابة
-          التبادل في آن.{% endcomment %}
+          <article class="showcase-card showcase-secondary reveal">
+            <div class="showcase-copy"><span>03 · المتابعة</span><h3>الطلب واضح حتى إغلاقه</h3><p>المسؤول والحالة والتفاصيل في شاشة تجمع مسار الطلب للمدرسة.</p></div>
+            <button class="showcase-image" type="button" data-product-image="{% static 'img/landing/tickets-system.png' %}" data-product-caption="شاشة الطلبات المدرسية في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة الطلبات المدرسية بالحجم الكامل">
+              <span class="showcase-frame"><span class="showcase-frame-bar" aria-hidden="true"></span><img src="{% static 'img/landing/tickets-system.png' %}" alt="لقطة فعلية من شاشة الطلبات المدرسية" width="1920" height="799" loading="lazy" decoding="async"></span>
+              <span class="image-zoom"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> عرض واضح</span>
+            </button>
+          </article>
+          <article class="showcase-card showcase-secondary reveal">
+            <div class="showcase-copy"><span>04 · الحفظ</span><h3>أعمال المدرسة قابلة للرجوع</h3><p>أرشيف سنوي مرتب يساعد الإدارة على الوصول إلى الوثائق عند الحاجة.</p></div>
+            <button class="showcase-image" type="button" data-product-image="{% static 'img/landing/archive-system.png' %}" data-product-caption="الأرشيف السنوي للمدرسة في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة أرشيف المدرسة بالحجم الكامل">
+              <span class="showcase-frame"><span class="showcase-frame-bar" aria-hidden="true"></span><img src="{% static 'img/landing/archive-system.png' %}" alt="لقطة فعلية من شاشة أرشيف المدرسة" width="1920" height="799" loading="lazy" decoding="async"></span>
+              <span class="image-zoom"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> عرض واضح</span>
+            </button>
+          </article>
         </div>
       </div>
     </section>
@@ -459,6 +518,10 @@
             <summary>هل يمكن إدارة أكثر من مدرسة؟ <i class="fa-solid fa-plus"></i></summary>
             <p>نعم، مع التبديل بينها من الحساب نفسه وبقاء بيانات واشتراك كل مدرسة مستقلين.</p>
           </details>
+          <details class="reveal">
+            <summary>مدرستي غير مشتركة؛ هل أستطيع إنشاء حساب شخصي؟ <i class="fa-solid fa-plus"></i></summary>
+            <p>نعم. يمكنك توثيق أعمالك وشواهدك باسمك وإضافة اسم المدرسة والمدير للتعريف، ثم إعداد ملف إنجاز سنوي. هذه مساحة شخصية، ولا تُنشئ اعتمادًا أو صلاحيات باسم المدرسة.</p>
+          </details>
         </div>
       </div>
     </section>
@@ -474,7 +537,7 @@
           </div>
           <div class="final-actions">
             <a class="button button-gold button-large" href="{% url 'reports:register_school' %}">أنشئ حساب المدرسة <i class="fa-solid fa-arrow-left"></i></a>
-            <a class="button button-dark-quiet" href="{% url 'reports:login' %}">لدي حساب بالفعل</a>
+            <a class="button button-dark-quiet" href="{% url 'personal:register' %}">أنشئ مساحتك كمعلم أو معلمة</a>
           </div>
         </div>
       </div>
@@ -489,9 +552,9 @@
             <span class="brand-mark"><img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44"></span>
             <span class="brand-text"><strong>منصة توثيق</strong><small>للعمل المدرسي</small></span>
           </a>
-          <p>منصة تشغيل وتوثيق للمدير والمالك والمدير التنفيذي؛ تمنح المدرسة صورة واضحة عن العمل وسجلًا مهنيًا لما أُنجز.</p>
+          <p>تنظيم للعمل المدرسي، ومساحة شخصية للمعلمين والمعلمات لتوثيق إنجازاتهم خارج اشتراك المدرسة.</p>
         </div>
-        <div class="footer-links"><strong>المنصة</strong><a href="#features">المزايا</a><a href="#product">شاهد المنصة</a><a href="#pricing">الأسعار</a><a href="#faq">الأسئلة</a></div>
+        <div class="footer-links"><strong>المنصة</strong><a href="#features">للمدارس</a><a href="#teacher-personal">للمعلمين والمعلمات</a><a href="#product">شاهد المنصة</a><a href="#pricing">الأسعار</a><a href="#faq">الأسئلة</a></div>
         <div class="footer-links"><strong>المساعدة</strong><a href="{% url 'reports:user_guide' %}">دليل المستخدم</a><a href="{% url 'reports:faq' %}">مركز الأسئلة</a><a href="{% url 'reports:login' %}">تسجيل الدخول</a>{% if PWA_INSTALL_ENABLED %}{% comment %}
           الزائر لا تظهر له بطاقة التثبيت تلقائياً عن قصد — طلبُ التثبيت قبل
           امتلاك حساب يقود إلى تطبيقٍ يفتح على شاشة دخول. لكنه كان بلا وسيلة
@@ -553,7 +616,8 @@
   </footer>
 
   <div class="mobile-sticky" aria-label="ابدأ الآن">
-    <a class="button button-primary" href="{% url 'reports:register_school' %}">ابدأ مجانًا</a>
+    <a class="button button-primary" href="{% url 'reports:register_school' %}">للمدرسة</a>
+    <a class="mobile-login mobile-teacher" href="{% url 'personal:register' %}"><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>للمعلم</span></a>
     <a class="mobile-login" href="{% url 'reports:login' %}">
       <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
       <span>دخول</span>

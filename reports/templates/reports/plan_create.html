@@ -1,84 +1,14 @@
 {% extends "base.html" %}
 
 {% block title %}خطة جديدة | منصة توثيق{% endblock %}
-
-{% block head %}
-{% include "reports/_assignment_theme.html" %}
-{% include "reports/_plan_theme.html" %}
-{% endblock %}
+{% block head %}{% include "reports/_plan_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="asg-page pln">
-
-  <header class="pln-hero">
-    <div class="pln-hero__grid">
-      <div class="pln-hero__main">
-        <a class="pln-crumb" href="{% url 'reports:plan_list' %}">
-          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-          الخطط
-        </a>
-        <h1 class="pln-hero__title">خطة جديدة</h1>
-        <p class="pln-hero__lead">
-          ابدأ بوثيقة الخطة: عنوانها وغايتها ومداها. ثم تُضاف أهدافها ومهامها من
-          صفحتها، وكل مهمة تتحوّل إلى تكليف بموعده وشواهده.
-        </p>
-      </div>
-    </div>
+<div class="twq-page plans-page" aria-labelledby="planCreateTitle">
+  <header class="twq-page-header plans-page-header">
+    <div class="twq-page-header__heading"><span class="twq-page-header__eyebrow"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i> إعداد الخطة</span><h1 class="twq-page-header__title" id="planCreateTitle">خطة جديدة</h1><p class="twq-page-header__lead">ابدأ بوثيقة موجزة، ثم أضف الأهداف والمهام من مساحة الخطة بعد إنشائها.</p></div>
+    <div class="twq-page-header__aside"><div class="plans-page-header__actions"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:plan_list' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى الخطط</a></div></div>
   </header>
-
-  <form method="post" novalidate>
-    {% csrf_token %}
-
-    <section class="pln-panel">
-      <div class="pln-panel__head">
-        <h2 class="pln-panel__t">بيانات الخطة</h2>
-      </div>
-
-      <div class="asg-field">
-        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-        {{ form.title }}
-        {% if form.title.errors %}
-          <ul class="asg-errors">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-        {% endif %}
-      </div>
-
-      <div class="asg-field">
-        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-        {{ form.description }}
-      </div>
-
-      <div class="pln-form">
-        <div class="asg-field">
-          <label for="{{ form.academic_year.id_for_label }}">{{ form.academic_year.label }}</label>
-          {{ form.academic_year }}
-          <div class="asg-field__help">{{ form.academic_year.help_text }}</div>
-        </div>
-        <div class="asg-field">
-          <label for="{{ form.starts_on.id_for_label }}">{{ form.starts_on.label }}</label>
-          {{ form.starts_on }}
-        </div>
-        <div class="asg-field">
-          <label for="{{ form.ends_on.id_for_label }}">{{ form.ends_on.label }}</label>
-          {{ form.ends_on }}
-          {% if form.ends_on.errors %}
-            <ul class="asg-errors">{% for e in form.ends_on.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-          {% endif %}
-        </div>
-      </div>
-
-      {% if form.non_field_errors %}
-        <ul class="asg-errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
-      {% endif %}
-    </section>
-
-    <div class="pln-actions u-mt-2xl">
-      <button type="submit" class="asg-btn asg-btn--primary">
-        <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-        إنشاء الخطة
-      </button>
-      <a class="asg-btn asg-btn--ghost" href="{% url 'reports:plan_list' %}">إلغاء</a>
-    </div>
-  </form>
-
+  <form method="post" novalidate>{% csrf_token %}{% include "reports/_plan_form.html" %}<div class="plan-actions"><button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i> إنشاء الخطة</button><a class="twq-btn twq-btn--ghost" href="{% url 'reports:plan_list' %}">إلغاء</a></div></form>
 </div>
 {% endblock %}
