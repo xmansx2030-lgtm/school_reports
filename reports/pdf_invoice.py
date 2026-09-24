@@ -114,7 +114,10 @@ def _generate_invoice_pdf_fallback(context: dict) -> bytes:
         seller_lines.append(f"وثيقة العمل الحر: {business['freelance_document_number']}")
     if business["address"]:
         seller_lines.append(business["address"])
-    customer_lines = [customer["name"], f"رمز المدرسة: {customer['code']}"]
+    customer_lines = [
+        customer["name"],
+        f"{customer.get('identity_label') or 'رمز المدرسة'}: {customer['code']}",
+    ]
     if customer["city"]:
         customer_lines.append(customer["city"])
     for index in range(max(len(seller_lines), len(customer_lines))):

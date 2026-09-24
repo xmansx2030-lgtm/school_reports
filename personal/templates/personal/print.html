@@ -1,0 +1,84 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{{ document_title }} | توثيق</title>
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  {% include "reports/_identity.html" %}
+  <link rel="stylesheet" href="{% static 'css/personal-print.css' %}">
+  <script src="{% static 'js/personal-print.js' %}" defer></script>
+</head>
+<body>
+  <div class="print-toolbar">
+    <button type="button" data-personal-print>طباعة أو حفظ PDF</button>
+    {% if report %}
+      <a href="{% url 'personal:report_detail' report.pk %}">العودة</a>
+    {% else %}
+      <a href="{% url 'personal:portfolio' %}?year={{ year|urlencode }}">العودة</a>
+    {% endif %}
+  </div>
+  <main class="print-sheet">
+    <header class="print-header">
+      <div class="print-mark"><img src="{% static 'img/brand-mark.svg' %}" alt=""><span>منصة توثيق <small>ملف المعلم الشخصي</small></span></div>
+      <span>مستند شخصي</span>
+    </header>
+    <div class="print-intro">
+      <p>إعداد المعلم: <strong>{% if report %}{{ report.teacher_name }}{% else %}{{ workspace.owner.name }}{% endif %}</strong></p>
+      <p>المدرسة: <strong>{% if report %}{{ report.school_name }}{% else %}{{ school_names|join:"، " }}{% endif %}</strong></p>
+      {% if report %}
+        {% if report.principal_name %}<p>مدير المدرسة: <strong>{{ report.principal_name }}</strong></p>{% endif %}
+      {% elif principal_names %}
+        <p>مدير المدرسة: <strong>{{ principal_names|join:"، " }}</strong></p>
+      {% endif %}
+      <p>السنة الدراسية: <strong>{% if report %}{{ report.academic_year }}{% else %}{{ year }}{% endif %}</strong></p>
+    </div>
+    <h1>{{ document_title }}</h1>
+
+    {% if report %}
+      <p class="print-meta">{{ report.report_date }} · {{ report.category|default:"عمل موثق" }} · {{ report.get_status_display }}</p>
+      <section><h2>وصف العمل</h2><p>{{ report.description|linebreaksbr }}</p></section>
+      {% if report.goals %}<section><h2>الأهداف</h2><p>{{ report.goals|linebreaksbr }}</p></section>{% endif %}
+      {% if report.implementation %}<section><h2>التنفيذ</h2><p>{{ report.implementation|linebreaksbr }}</p></section>{% endif %}
+      {% if report.results %}<section><h2>النتائج</h2><p>{{ report.results|linebreaksbr }}</p></section>{% endif %}
+      {% if report.recommendations %}<section><h2>التوصيات</h2><p>{{ report.recommendations|linebreaksbr }}</p></section>{% endif %}
+    {% else %}
+      <section>
+        <h2>الأعمال الموثقة</h2>
+        {% for item in reports %}
+          <article class="print-entry">
+            <h3>{{ item.title }}</h3>
+            <p class="print-meta">{{ item.report_date }} · {{ item.category|default:"عمل موثق" }} · {{ item.get_status_display }} · {{ item.school_name }}</p>
+            <p>{{ item.description|linebreaksbr }}</p>
+            {% if item.goals %}<p><strong>الأهداف:</strong> {{ item.goals|linebreaksbr }}</p>{% endif %}
+            {% if item.implementation %}<p><strong>التنفيذ:</strong> {{ item.implementation|linebreaksbr }}</p>{% endif %}
+            {% if item.results %}<p><strong>النتائج:</strong> {{ item.results|linebreaksbr }}</p>{% endif %}
+            {% if item.recommendations %}<p><strong>التوصيات:</strong> {{ item.recommendations|linebreaksbr }}</p>{% endif %}
+          </article>
+        {% empty %}
+          <p>لا توجد تقارير في هذه السنة.</p>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    <section>
+      <h2>الشواهد</h2>
+      {% for item in evidence %}
+        <article class="print-entry">
+          <strong>{{ item.title }}</strong>
+          {% if item.report %}<span> · {{ item.report.title }}</span>{% endif %}
+          {% if item.description %}<p>{{ item.description|linebreaksbr }}</p>{% endif %}
+          {% if item.file %}<p>ملف محفوظ في مكتبة الشواهد الشخصية</p>{% endif %}
+          {% if item.source_url %}<p>الرابط: <span dir="ltr">{{ item.source_url }}</span></p>{% endif %}
+        </article>
+      {% empty %}
+        <p>لا توجد شواهد مرتبطة.</p>
+      {% endfor %}
+    </section>
+    <footer>أُعد هذا المستند في مساحة المعلم الشخصية. أسماء المدرسة والمدير معلومات تعريفية أدخلها المعلم؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</footer>
+  </main>
+</body>
+</html>

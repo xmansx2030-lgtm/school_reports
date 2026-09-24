@@ -1049,3 +1049,36 @@ body.landing-page.landing-assistant-delayed:not(.landing-page-has-scrolled) .man
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   .reveal { opacity: 1; transform: none; }
 }
+/* Independent teacher offer: distinct from the school's pricing and official workflow. */
+.personal-offer-section{background:#f0f5ef;color:#173329}.personal-offer{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);align-items:center;gap:clamp(28px,6vw,90px)}.personal-offer__content h2{font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.4;letter-spacing:-.03em;margin:9px 0 15px}.personal-offer__content>p{max-width:670px;color:#536a5b;font-size:1.05rem;line-height:1.9}.personal-offer__features{display:flex;gap:10px;flex-wrap:wrap;margin:25px 0}.personal-offer__features span{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:#fff;border:1px solid #dbe8df;color:#1c5d3d;font-size:.82rem;font-weight:700}.personal-offer__actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.personal-offer__actions>span{max-width:290px;color:#65746a;font-size:.77rem}.personal-offer__preview{padding:27px;border-radius:24px;background:linear-gradient(130deg,#0a3c2b,#0e6642);box-shadow:0 24px 60px rgba(10,54,34,.16)}.personal-offer__paper{max-width:360px;margin:auto;padding:25px 25px 33px;border-radius:5px;background:#fff;box-shadow:0 14px 40px rgba(0,0,0,.18);transform:rotate(-2deg)}.personal-offer__paper-head{display:flex;justify-content:space-between;gap:12px;color:#145337;font-size:1.1rem}.personal-offer__paper-head span{font-size:.75rem}.personal-offer__paper>p{font-size:.75rem;color:#65746a}.personal-offer__rule{height:2px;background:#bb9e69;margin:14px 0}.personal-offer__paper-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #e8ede9;color:#324a3b;font-size:.8rem}.personal-offer__paper-row i{color:#0a7044}html[data-theme="dark"] .personal-offer-section{background:#13271d;color:#ecf4ee}html[data-theme="dark"] .personal-offer__content>p,html[data-theme="dark"] .personal-offer__actions>span{color:#b1c5b7}html[data-theme="dark"] .personal-offer__features span{background:#1f3b2a;border-color:#385840;color:#d7eee0}@media(max-width:780px){.personal-offer{grid-template-columns:1fr}.personal-offer__preview{max-width:430px}}@media(max-width:480px){.personal-offer__actions .button{width:100%;justify-content:center}.personal-offer__preview{padding:18px}.personal-offer__paper{transform:none}}
+
+.personal-plan-catalog { margin-block-start: clamp(2rem, 4vw, 3rem); }
+.personal-plan-catalog__heading { display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; margin-block-end: 1.1rem; }
+.personal-plan-catalog__heading h3 { margin: .3rem 0 0; font-size: clamp(1.45rem, 2.6vw, 2rem); }
+.personal-plan-catalog__heading p { max-width: 420px; margin: 0; color: #536a5b; line-height: 1.8; }
+.personal-plan-catalog__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 255px), 1fr)); gap: 1rem; }
+.personal-plan-card { display: flex; flex-direction: column; gap: .8rem; min-width: 0; padding: 1.45rem; border: 1px solid #d7e5da; border-radius: 18px; background: #fff; box-shadow: 0 14px 36px rgba(18, 58, 39, .06); }
+.personal-plan-card__top { display: flex; align-items: center; justify-content: space-between; color: #21624e; font-size: .78rem; font-weight: 800; }
+.personal-plan-card__top i { color: #9a6f2e; }
+.personal-plan-card h4 { margin: 0; color: #173329; font-size: 1.15rem; }
+.personal-plan-card__description { margin: 0; color: #536a5b; line-height: 1.7; overflow-wrap: anywhere; }
+.personal-plan-card__price { margin: .2rem 0; padding-block: .3rem .7rem; border-bottom: 1px solid #e5eee7; color: #173329; }
+.personal-plan-card__price strong { font-size: 1.65rem; }
+.personal-plan-card__price small { color: #65746a; }
+.personal-plan-card ul { display: grid; gap: .45rem; padding: 0; margin: 0 0 .5rem; list-style: none; color: #324a3b; }
+.personal-plan-card li { display: flex; align-items: baseline; gap: .55rem; }
+.personal-plan-card li i { color: #0a7044; font-size: .75rem; }
+.personal-plan-card .button { align-self: flex-start; margin-block-start: auto; }
+.personal-plan-catalog__note { margin: 1rem 0 0; color: #536a5b; font-size: .83rem; line-height: 1.8; }
+html[data-theme="dark"] .personal-plan-catalog__heading p,
+html[data-theme="dark"] .personal-plan-catalog__note { color: #b1c5b7; }
+html[data-theme="dark"] .personal-plan-card { background: #1f3b2a; border-color: #385840; }
+html[data-theme="dark"] .personal-plan-card h4,
+html[data-theme="dark"] .personal-plan-card__price,
+html[data-theme="dark"] .personal-plan-card ul { color: #ecf4ee; }
+html[data-theme="dark"] .personal-plan-card__top { color: #c4e7d0; }
+html[data-theme="dark"] .personal-plan-card__description,
+html[data-theme="dark"] .personal-plan-card__price small { color: #b1c5b7; }
+html[data-theme="dark"] .personal-plan-card__price { border-color: #385840; }
+@media (max-width: 780px) { .personal-plan-catalog__heading { align-items: start; flex-direction: column; } }
+@media (max-width: 480px) { .personal-plan-card .button { inline-size: 100%; justify-content: center; } }

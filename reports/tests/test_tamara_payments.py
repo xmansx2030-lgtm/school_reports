@@ -69,6 +69,8 @@ class TamaraPaymentTests(TestCase):
         session = self.client.session
         session["active_school_id"] = self.school.id
         session.save()
+        response = self.client.get(reverse("reports:my_subscription"))
+        self.submission_key = response.context["checkout_submission_key"]
 
     def _checkout_payload(self):
         return {
@@ -76,6 +78,7 @@ class TamaraPaymentTests(TestCase):
             "plan_id": str(self.plan.id),
             "tamara_city": "الرياض",
             "tamara_address": "حي الياسمين",
+            "checkout_submission_key": self.submission_key,
         }
 
     @override_settings(TAMARA_ENABLED=False)
@@ -153,6 +156,26 @@ class TamaraPaymentTests(TestCase):
             fetch_redirect_response=False,
         )
         self.assertFalse(Payment.objects.exists())
+
+    @override_settings(TAMARA_ENABLED=True, TAMARA_API_TOKEN="sandbox-api-token")
+    @patch("reports.views.billing_gateways.is_tamara_customer_eligible", return_value=True)
+    @patch("reports.views.billing_gateways.create_tamara_checkout")
+    def test_duplicate_checkout_key_creates_one_tamara_order(
+        self, create_checkout_mock, _eligibility_mock
+    ):
+        create_checkout_mock.return_value = {
+            "order_id": "14141414-1414-1414-1414-141414141414",
+            "checkout_id": "15151515-1515-1515-1515-151515151515",
+            "status": "new",
+            "checkout_url": "https://checkout.tamara.co/checkout/idempotent",
+        }
+        payload = self._checkout_payload()
+
+        self.client.post(reverse("reports:tamara_checkout_create"), payload)
+        self.client.post(reverse("reports:tamara_checkout_create"), payload)
+
+        self.assertEqual(Payment.objects.filter(school=self.school).count(), 1)
+        self.assertEqual(create_checkout_mock.call_count, 1)
 
     @override_settings(
         TAMARA_ENABLED=True,

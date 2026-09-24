@@ -47,11 +47,14 @@ class MoyasarPaymentTests(TestCase):
         session = self.client.session
         session["active_school_id"] = self.school.id
         session.save()
+        response = self.client.get(reverse("reports:my_subscription"))
+        self.submission_key = response.context["checkout_submission_key"]
 
     def _checkout_payload(self):
         return {
             "include_subscription": "1",
             "plan_id": str(self.plan.id),
+            "checkout_submission_key": self.submission_key,
         }
 
     @override_settings(MOYASAR_ENABLED=False)
@@ -183,6 +186,57 @@ class MoyasarPaymentTests(TestCase):
             fetch_redirect_response=False,
         )
         self.assertFalse(Payment.objects.exists())
+
+    @override_settings(
+        MOYASAR_ENABLED=True,
+        MOYASAR_ENVIRONMENT="test",
+        MOYASAR_SECRET_KEY="sk_test_example",
+    )
+    @patch("reports.views.billing_gateways.create_moyasar_invoice")
+    def test_duplicate_checkout_key_creates_one_gateway_invoice(
+        self, create_invoice_mock
+    ):
+        create_invoice_mock.return_value = {
+            "id": "12121212-1212-1212-1212-121212121212",
+            "status": "initiated",
+            "url": "https://checkout.moyasar.com/invoices/idempotent",
+        }
+        payload = self._checkout_payload()
+
+        self.client.post(reverse("reports:moyasar_checkout_create"), payload)
+        self.client.post(reverse("reports:moyasar_checkout_create"), payload)
+
+        self.assertEqual(Payment.objects.filter(school=self.school).count(), 1)
+        self.assertEqual(create_invoice_mock.call_count, 1)
+
+    @override_settings(
+        MOYASAR_ENABLED=True,
+        MOYASAR_ENVIRONMENT="test",
+        MOYASAR_SECRET_KEY="sk_test_example",
+    )
+    @patch("reports.views.billing_gateways.create_moyasar_invoice")
+    def test_same_checkout_key_rejects_changed_server_quote(self, create_invoice_mock):
+        create_invoice_mock.return_value = {
+            "id": "13131313-1313-1313-1313-131313131313",
+            "status": "initiated",
+            "url": "https://checkout.moyasar.com/invoices/fingerprint",
+        }
+        other_plan = SubscriptionPlan.objects.create(
+            name="باقة نصف سنوية",
+            price=Decimal("700.00"),
+            days_duration=180,
+            max_teachers=50,
+        )
+        self.client.post(
+            reverse("reports:moyasar_checkout_create"), self._checkout_payload()
+        )
+        changed = self._checkout_payload()
+        changed["plan_id"] = str(other_plan.pk)
+
+        self.client.post(reverse("reports:moyasar_checkout_create"), changed)
+
+        self.assertEqual(Payment.objects.filter(school=self.school).count(), 1)
+        self.assertEqual(create_invoice_mock.call_count, 1)
 
     @override_settings(
         MOYASAR_ENABLED=True,

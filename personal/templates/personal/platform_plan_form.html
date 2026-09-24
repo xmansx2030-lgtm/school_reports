@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if plan %}تعديل{% else %}إضافة{% endif %} باقة شخصية | إدارة المنصة{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20260924.1">{% endblock %}
+{% block content %}
+<div class="twq-page teacher-plans teacher-plan-form">
+  <header class="twq-page-header teacher-plans__header">
+    <div class="twq-page-header__content">
+      <p class="twq-page-header__eyebrow">مالك المنصة · باقات المعلمين والمعلمات</p>
+      <h1>{% if plan %}تعديل {{ plan.name }}{% else %}إضافة باقة شخصية{% endif %}</h1>
+      <p class="twq-page-header__description">تعكس صفحة الهبوط الاسم والوصف والسعر والمدة والسعات بعد حفظ باقة نشطة ومنشورة.</p>
+    </div>
+    <div class="twq-page-header__actions"><a class="twq-button twq-button--secondary" href="{% url 'reports:platform_personal_plans' %}">العودة إلى الباقات</a></div>
+  </header>
+
+  <form class="teacher-plan-form__body" method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="teacher-plan-form__errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <section class="teacher-plan-form__section" aria-labelledby="planIdentityTitle">
+      <h2 id="planIdentityTitle">التعريف والتسعير</h2>
+      <div class="teacher-plan-form__grid">
+        {% for field in form %}
+          {% if field.name == 'name' or field.name == 'description' or field.name == 'price' or field.name == 'duration_days' %}
+            {% include 'personal/_platform_plan_field.html' with field=field %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <section class="teacher-plan-form__section" aria-labelledby="planCapacityTitle">
+      <h2 id="planCapacityTitle">حدود الاستخدام</h2>
+      <div class="teacher-plan-form__grid">
+        {% for field in form %}
+          {% if field.name == 'max_reports' or field.name == 'max_evidence' or field.name == 'storage_limit_mb' %}
+            {% include 'personal/_platform_plan_field.html' with field=field %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <section class="teacher-plan-form__section" aria-labelledby="planPublishingTitle">
+      <h2 id="planPublishingTitle">النشر</h2>
+      <div class="teacher-plan-form__grid">
+        {% for field in form %}
+          {% if field.name == 'display_order' or field.name == 'is_active' or field.name == 'is_published' %}
+            {% include 'personal/_platform_plan_field.html' with field=field %}
+          {% endif %}
+        {% endfor %}
+      </div>
+      <p class="teacher-plan-form__hint">تظهر الباقة في صفحة الهبوط عند تفعيلها ونشرها معًا. إيقافها لا يحذف اشتراكات المعلمين الحالية.</p>
+    </section>
+    <div class="teacher-plan-form__actions"><button class="twq-button twq-button--primary" type="submit">حفظ الباقة</button><a class="twq-button twq-button--secondary" href="{% url 'reports:platform_personal_plans' %}">إلغاء</a></div>
+  </form>
+</div>
+{% endblock %}

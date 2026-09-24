@@ -161,9 +161,9 @@ def _validate_ext(name: str, *, allowed_exts: Iterable[str], label_ar: str) -> N
             f"صيغة {ext.lstrip('.').upper()} غير مسموحة لأسباب أمنية. "
             f"الصيغ المسموحة: {allowed_label}."
         )
-    if ext and ext not in allowed:
+    if not ext or ext not in allowed:
         raise ValidationError(
-            f"صيغة {label_ar} {ext.lstrip('.').upper()} غير مدعومة. "
+            f"صيغة {label_ar} {ext.lstrip('.').upper() or 'غير معروفة'} غير مدعومة. "
             f"الصيغ المسموحة: {allowed_label}."
         )
 
@@ -177,12 +177,22 @@ def validate_image_file(file_obj) -> None:
 
     content_type = (getattr(file_obj, "content_type", "") or "").lower()
     sniffed = _sniff_mime(file_obj, name)
+    expected_mime = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }[_get_ext(name)]
     if content_type and not content_type.startswith("image/"):
         raise ValidationError("يُسمح برفع الصور فقط.")
     if sniffed and not sniffed.startswith("image/"):
         raise ValidationError("الملف المرفوع ليس صورة صالحة.")
     if sniffed in BLOCKED_MIME_PREFIXES:
         raise ValidationError("نوع الملف غير مسموح.")
+    if content_type and content_type != expected_mime:
+        raise ValidationError("نوع الملف المعلن لا يطابق امتداد الصورة.")
+    if sniffed and sniffed != expected_mime:
+        raise ValidationError("محتوى الملف لا يطابق امتداد الصورة.")
 
     if Image is None:
         return
@@ -195,7 +205,7 @@ def validate_image_file(file_obj) -> None:
 
         img = Image.open(file_obj)
         img.verify()
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
         raise ValidationError("الملف المرفوع ليس صورة صالحة.") from exc
     finally:
         try:

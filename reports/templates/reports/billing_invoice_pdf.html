@@ -81,7 +81,7 @@
     </div>
     <div class="party">
       <h2>مفوتر إلى</h2><strong>{{ customer.name }}</strong>
-      <p>رمز المدرسة: <span class="ltr">{{ customer.code }}</span></p>
+      <p>{{ customer.identity_label|default:"رمز المدرسة" }}: <span class="ltr">{{ customer.code }}</span></p>
       {% if customer.city %}<p>{{ customer.city }}</p>{% endif %}
       {% if customer.phone %}<p class="ltr">{{ customer.phone }}</p>{% endif %}
       {% if customer.email %}<p class="ltr">{{ customer.email }}</p>{% endif %}

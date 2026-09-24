@@ -1,0 +1,17 @@
+{% extends "personal/base.html" %}
+{% block title %}بيانات المساحة{% endblock %}
+{% block content %}
+<div class="personal-heading"><div><span class="personal-kicker">هويتك المهنية</span><h1>{% if workspace %}بيانات المساحة{% else %}أكمل مساحتك الشخصية{% endif %}</h1><p>تُستخدم هذه البيانات في المستندات الجديدة. تحتفظ المستندات المحفوظة ببياناتها وقت الإنشاء.</p></div></div>
+<section class="personal-card twq-card personal-card--form">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    {% if form.non_field_errors %}<div class="personal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="personal-form-grid">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
+    {% if email_form.non_field_errors %}<div class="personal-alert" role="alert">{{ email_form.non_field_errors }}</div>{% endif %}
+    <div class="personal-form-grid">{% for field in email_form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
+    <p class="personal-hint"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> اسم المدير معلومة تعريفية تُدخلها أنت، ولا تعني موافقته أو اعتماده.</p>
+    <button class="personal-button twq-btn twq-btn--primary" type="submit">حفظ البيانات</button>
+  </form>
+</section>
+{% endblock %}

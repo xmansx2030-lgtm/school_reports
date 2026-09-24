@@ -1,6 +1,7 @@
 
+from pathlib import Path
+
 from django.contrib.messages import get_messages
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -15,18 +16,17 @@ from reports.models import (
     SubscriptionPlan,
     Teacher,
 )
+from reports.tests.billing_test_helpers import (
+    checkout_submission_key,
+    valid_receipt,
+)
 
 
-def _png_bytes():
-    # أصغر PNG صالح (1x1) لتمرير مدقّق الصور
-    return bytes.fromhex(
-        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4"
-        "890000000a49444154789c6360000002000154a24f6f0000000049454e44ae426082"
-    )
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _receipt():
-    return SimpleUploadedFile("receipt.png", _png_bytes(), content_type="image/png")
+    return valid_receipt()
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
@@ -54,9 +54,11 @@ class UnifiedPaymentTests(TestCase):
         session = self.client.session
         session["active_school_id"] = self.school.id
         session.save()
+        self.submission_key = checkout_submission_key(self.client)
 
     def _post(self, data):
         data.setdefault("receipt_image", _receipt())
+        data.setdefault("checkout_submission_key", self.submission_key)
         return self.client.post(reverse("reports:payment_create"), data, follow=False)
 
     def test_requires_at_least_one_item(self):
@@ -91,6 +93,7 @@ class UnifiedPaymentTests(TestCase):
                 "unified": "1",
                 "include_subscription": "1",
                 "plan_id": str(self.plan.id),
+                "checkout_submission_key": self.submission_key,
                 "receipt_image": _receipt(),
             },
             follow=True,
@@ -138,6 +141,7 @@ class UnifiedPaymentTests(TestCase):
                 "unified": "1",
                 "include_subscription": "1",
                 "plan_id": str(inactive_plan.id),
+                "checkout_submission_key": self.submission_key,
                 "receipt_image": _receipt(),
             },
             follow=False,
@@ -232,8 +236,15 @@ class UnifiedPaymentTests(TestCase):
             response,
             'src="/static/js/subscription-checkout.js?v=20260821.1"',
         )
-        self.assertContains(response, "document.readyState === 'loading'")
-        self.assertContains(response, "initSubscriptionPage()")
+        self.assertContains(
+            response,
+            'src="/static/js/subscription.js?v=20260924.1"',
+        )
+        subscription_script = (
+            PROJECT_ROOT / "static/js/subscription.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("document.readyState === 'loading'", subscription_script)
+        self.assertIn("initSubscriptionPage()", subscription_script)
 
         offered_ids = {
             option["plan"].id

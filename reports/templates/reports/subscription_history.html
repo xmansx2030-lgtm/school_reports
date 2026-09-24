@@ -2,10 +2,13 @@
 {% load static %}
 
 {% block title %}سجل عمليات الاشتراك{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'css/billing-invoice.css' %}?v=20260813.1">{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/billing-invoice.css' %}?v=20260813.1">
+<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=20260924.1">
+{% endblock %}
 
 {% block content %}
-<div class="royal-page">
+<div class="royal-page subscription-history">
   <header class="royal-hero">
     <div>
       <span class="royal-kicker">
@@ -39,9 +42,23 @@
         <tbody>
           {% for payment in payments %}
           <tr>
-            <td><span dir="ltr" class="u-fw-900">{{ payment.created_at|date:"Y-m-d" }}</span></td>
-            <td>{{ payment.requested_plan.name|default:"-" }}{% if payment.requested_teacher_limit %}<small class="u-block">سعة {{ payment.requested_teacher_limit }} معلماً</small>{% endif %}</td>
-            <td>
+            <td data-label="التاريخ"><span dir="ltr" class="u-fw-900">{{ payment.created_at|date:"Y-m-d" }}</span></td>
+            <td data-label="العملية">
+              {% if payment.purpose == 'archive_addon' %}
+                خدمة الأرشفة السنوية
+              {% elif payment.purpose == 'archive_storage' %}
+                زيادة مساحة عمل المدرسة {{ payment.archive_storage_gb }}GB
+              {% elif payment.purpose == 'archive_space' %}
+                زيادة مساحة الأرشفة السنوية {{ payment.archive_storage_gb }}GB
+              {% else %}
+                {{ payment.requested_plan.name|default:"اشتراك المدرسة" }}
+                {% if payment.requested_teacher_limit %}<small class="u-block">سعة {{ payment.requested_teacher_limit }} معلماً</small>{% endif %}
+              {% endif %}
+              {% if payment.discount_amount > 0 %}
+                <small class="u-block">خصم {{ payment.discount_amount|floatformat:2 }} ريال{% if payment.discount_code %} · <span dir="ltr">{{ payment.discount_code.code }}</span>{% endif %}</small>
+              {% endif %}
+            </td>
+            <td data-label="طريقة الدفع">
               {{ payment.get_payment_method_display }}
               {% if payment.payer_kind == 'group_director' %}
                 <small class="u-block">دفعتها {{ payment.payer_group.name|default:"مجموعة المدارس" }}</small>
@@ -49,14 +66,14 @@
                 <small class="u-block">سجّلتها إدارة المنصة</small>
               {% endif %}
             </td>
-            <td class="u-fw-950">
+            <td class="u-fw-950" data-label="المبلغ">
                 {% if payment.amount < 0 %}
                 <span class="royal-status danger" dir="ltr">{{ payment.amount }} SAR</span>
                 {% else %}
                 <span dir="ltr">{{ payment.amount }} SAR</span>
                 {% endif %}
             </td>
-            <td>
+            <td data-label="الحالة">
                {% if payment.status == 'approved' and payment.amount < 0 %}
                  <span class="royal-status danger"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> استرجاع</span>
                {% elif payment.status == 'approved' %}
@@ -75,13 +92,17 @@
                  <span class="royal-status"><i class="fa-solid fa-ban" aria-hidden="true"></i> ملغي</span>
                {% elif payment.status == 'rejected' %}
                  <span class="royal-status danger"><i class="fa-solid fa-xmark" aria-hidden="true"></i> مرفوض</span>
+               {% elif payment.payment_method == 'tamara' and payment.gateway_status == 'new' %}
+                 <span class="royal-status warn"><i class="fa-solid fa-wallet" aria-hidden="true"></i> بانتظار إكمال الدفع عبر تمارا</span>
+               {% elif payment.payment_method == 'tamara' %}
+                 <span class="royal-status warn"><i class="fa-solid fa-clock" aria-hidden="true"></i> بانتظار تأكيد تمارا</span>
                {% elif payment.payment_method == 'moyasar' %}
                  <span class="royal-status warn"><i class="fa-solid fa-wallet" aria-hidden="true"></i> بانتظار إكمال دفع ميّسر</span>
                {% else %}
                  <span class="royal-status warn"><i class="fa-solid fa-clock" aria-hidden="true"></i> قيد المراجعة · التفعيل قبل {{ payment.bank_review_due_date|date:"Y-m-d" }}</span>
                {% endif %}
             </td>
-            <td class="xs-subscription-history-1">
+            <td class="xs-subscription-history-1" data-label="ملاحظات">
                 {{ payment.notes|default:"-"|linebreaksbr }}
             </td>
           </tr>

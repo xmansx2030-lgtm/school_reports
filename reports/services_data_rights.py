@@ -144,6 +144,60 @@ def _reports_section(user) -> list[dict[str, Any]]:
     ]
 
 
+def _personal_workspace_section(user) -> dict[str, Any]:
+    from personal.models import PersonalWorkspace
+
+    workspace = PersonalWorkspace.objects.filter(owner=user).first()
+    if workspace is None:
+        return {"active": False, "reports": [], "evidence": []}
+    return {
+        "active": True,
+        "subscription": {
+            "plan": workspace.subscription.plan.name,
+            "start_date": _iso(workspace.subscription.start_date),
+            "end_date": _iso(workspace.subscription.end_date),
+            "is_active": workspace.subscription.is_active,
+        } if hasattr(workspace, "subscription") else None,
+        "school_name": workspace.school_name,
+        "principal_name": workspace.principal_name,
+        "school_stage": workspace.school_stage,
+        "specialization": workspace.specialization,
+        "reports": [
+            {
+                "id": row.pk,
+                "title": row.title,
+                "category": row.category,
+                "report_date": _iso(row.report_date),
+                "academic_year": row.academic_year,
+                "description": row.description,
+                "goals": row.goals,
+                "implementation": row.implementation,
+                "results": row.results,
+                "recommendations": row.recommendations,
+                "status": row.get_status_display(),
+                "teacher_name": row.teacher_name,
+                "school_name": row.school_name,
+                "principal_name": row.principal_name,
+                "url": reverse("personal:report_detail", args=[row.pk]),
+            }
+            for row in workspace.reports.all()
+        ],
+        "evidence": [
+            {
+                "id": row.pk,
+                "title": row.title,
+                "description": row.description,
+                "academic_year": row.academic_year,
+                "report_id": row.report_id,
+                "source_url": row.source_url,
+                "file": _file_reference(row.file),
+                "url": reverse("personal:evidence_download", args=[row.pk]) if row.file else None,
+            }
+            for row in workspace.evidence.all()
+        ],
+    }
+
+
 def _tickets_section(user) -> list[dict[str, Any]]:
     from .models import Ticket, TicketNote
 
@@ -492,6 +546,7 @@ SECTIONS = (
     ("profile", _profile_section),
     ("memberships", _memberships_section),
     ("reports", _reports_section),
+    ("personal_workspace", _personal_workspace_section),
     ("tickets", _tickets_section),
     ("notifications", _notifications_section),
     ("assignments", _assignments_section),
@@ -513,6 +568,7 @@ SECTION_LABELS = {
     "profile": "الملف الشخصي",
     "memberships": "العضويات والأدوار",
     "reports": "التقارير",
+    "personal_workspace": "مساحة المعلم الشخصية",
     "tickets": "طلبات الدعم والملاحظات",
     "notifications": "الإشعارات والتعاميم",
     "assignments": "التكليفات",
@@ -536,6 +592,12 @@ FIELD_LABELS = {
     "group": "مجموعة المدارس", "role": "الدور", "job_title": "المسمى الوظيفي",
     "created_at": "تاريخ الإنشاء", "updated_at": "آخر تحديث", "id": "المعرّف",
     "title": "العنوان", "body": "النص", "description": "الوصف", "category": "التصنيف",
+    "school_name": "اسم المدرسة", "principal_name": "اسم المدير",
+    "school_stage": "المرحلة المدرسية", "specialization": "التخصص",
+    "goals": "الأهداف", "implementation": "التنفيذ", "recommendations": "التوصيات",
+    "teacher_name": "اسم المعلم", "report_id": "معرّف التقرير",
+    "source_url": "رابط المصدر", "evidence": "الشواهد", "active": "نشطة",
+    "subscription": "الاشتراك الشخصي",
     "report_date": "تاريخ التقرير", "academic_year": "العام الدراسي", "idea": "الفكرة",
     "goal": "الهدف", "results": "النتائج", "url": "الرابط", "status": "الحالة",
     "received_at": "تاريخ الاستلام", "is_read": "تمت القراءة", "read_at": "تاريخ القراءة",

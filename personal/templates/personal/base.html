@@ -1,0 +1,55 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  {% include "reports/partials/theme_bootstrap.html" %}
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}مساحة المعلم الشخصية{% endblock %} | توثيق</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
+  <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  {% include "reports/_identity.html" %}
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1">
+  <link rel="stylesheet" href="{% static 'css/personal.css' %}?v=20260924.2">
+  <script src="{% static 'js/theme-manager.js' %}" defer></script>
+</head>
+<body class="personal-page id-root">
+  <a class="personal-skip" href="#personalMain">انتقل إلى المحتوى</a>
+  <header class="personal-header id-hairline">
+    <div class="personal-container personal-header__inner">
+      <a class="personal-brand" href="{% if request.user.is_authenticated %}{% url 'personal:dashboard' %}{% else %}{% url 'reports:landing' %}{% endif %}">
+        <img src="{% static 'img/brand-mark.svg' %}" alt="" width="42" height="42">
+        <span><strong>منصة توثيق</strong><small>مساحة المعلم الشخصية</small></span>
+      </a>
+      <nav class="personal-nav" aria-label="التنقل الشخصي">
+        {% if request.user.is_authenticated %}
+          <a class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'personal:dashboard' %}">الرئيسية</a>
+          <a class="{% if request.resolver_match.url_name == 'reports' or request.resolver_match.url_name == 'report_create' or request.resolver_match.url_name == 'report_detail' or request.resolver_match.url_name == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}">التقارير</a>
+          <a class="{% if request.resolver_match.url_name == 'evidence' or request.resolver_match.url_name == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}">الشواهد</a>
+          <a class="{% if request.resolver_match.url_name == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}">ملف الإنجاز</a>
+          <a class="{% if request.resolver_match.url_name == 'billing' or request.resolver_match.url_name == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}">الاشتراك والفواتير</a>
+          <a class="{% if request.resolver_match.url_name == 'setup' %}is-active{% endif %}" href="{% url 'personal:setup' %}">البيانات</a>
+          {% if request.user.school_memberships.exists %}<a href="{% url 'reports:home' %}">مساحة المدرسة</a>{% endif %}
+          <a href="{% url 'reports:logout' %}">خروج</a>
+        {% else %}
+          <a href="{% url 'reports:landing' %}">المنصة</a>
+          <a href="{% url 'reports:login' %}?next={% url 'personal:dashboard' %}">تسجيل الدخول</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  <main id="personalMain" class="personal-container personal-main twq-page">
+    {% if messages %}<div class="personal-messages" aria-live="polite">{% for message in messages %}<p class="personal-message personal-message--{{ message.tags|default:'info' }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="personal-footer personal-container">
+    <span>مساحتك الشخصية في توثيق</span>
+    <span>المستندات الشخصية من إعداد المعلم ولا تمثل اعتمادًا من المدرسة.</span>
+  </footer>
+</body>
+</html>

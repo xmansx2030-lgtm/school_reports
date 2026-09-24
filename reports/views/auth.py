@@ -309,6 +309,10 @@ def _default_login_redirect_name(user, *, active_school=None) -> str:
     # لا تخصّه ولا تعرض من مجموعته شيئاً.
     if is_executive_director(user):
         return "reports:executive_dashboard"
+    from personal.models import PersonalWorkspace
+
+    if PersonalWorkspace.objects.filter(owner=user).exists():
+        return "personal:dashboard"
     return "reports:home"
 
 
@@ -361,6 +365,17 @@ def _complete_passkey_login(request: HttpRequest, user: Teacher, *, next_url: st
                         active_manager_school = m.school
 
             if not any_active_subscription:
+                from personal.models import PersonalWorkspace
+
+                if (next_url or "").startswith("/personal/") or (
+                    not is_any_manager and PersonalWorkspace.objects.filter(owner=user).exists()
+                ):
+                    login(request, user)
+                    _set_active_school(request, None)
+                    return _passkey_response(
+                        True,
+                        redirect=_safe_next_url(next_url) or reverse("personal:dashboard"),
+                    )
                 if is_any_manager and manager_school is not None:
                     login(request, user)
                     is_force_password_change_required(request)
@@ -381,7 +396,10 @@ def _complete_passkey_login(request: HttpRequest, user: Teacher, *, next_url: st
                 _set_active_school(request, active_school)
         else:
             login(request, user)
-            messages.warning(request, "تنبيه: حسابك غير مرتبط بمدرسة فعّالة. تواصل مع إدارة النظام لربط الحساب بالمدرسة.")
+            from personal.models import PersonalWorkspace
+
+            if not PersonalWorkspace.objects.filter(owner=user).exists():
+                messages.warning(request, "تنبيه: حسابك غير مرتبط بمدرسة فعّالة. تواصل مع إدارة النظام لربط الحساب بالمدرسة.")
     else:
         login(request, user)
 
@@ -814,7 +832,9 @@ def login_view(request: HttpRequest, admin_only: bool = False) -> HttpResponse:
                         # هو ما يجعله لا يستهلك مقعداً مدفوعاً. فتحذير «حسابك غير
                         # مرتبط بمدرسة» كان يستقبله عند كل دخول برسالة عطلٍ عن
                         # حالةٍ صحيحة، ويدفعه إلى مراسلة الدعم بلا سبب.
-                        if not is_executive_director(user):
+                        from personal.models import PersonalWorkspace
+
+                        if not is_executive_director(user) and not PersonalWorkspace.objects.filter(owner=user).exists():
                             messages.warning(request, "تنبيه: حسابك غير مرتبط بمدرسة فعّالة. تواصل مع إدارة النظام لربط الحساب بالمدرسة.")
                         if force_password_change:
                             messages.warning(request, _force_password_change_notice())
@@ -860,6 +880,16 @@ def login_view(request: HttpRequest, admin_only: bool = False) -> HttpResponse:
                                 active_manager_school = m.school
 
                     if not any_active_subscription:
+                        from personal.models import PersonalWorkspace
+
+                        if (next_value or "").startswith("/personal/") or (
+                            not is_any_manager and PersonalWorkspace.objects.filter(owner=user).exists()
+                        ):
+                            login(request, user)
+                            _set_active_school(request, None)
+                            if is_force_password_change_required(request):
+                                return redirect("reports:my_profile")
+                            return redirect(next_value or "personal:dashboard")
                         if is_any_manager and manager_school is not None:
                             # المدير يُسمح له بالدخول للتجديد فقط
                             login(request, user)
@@ -1866,6 +1896,10 @@ def platform_landing(request: HttpRequest) -> HttpResponse:
     capture_marketing_attribution(request)
 
     ctx = dict(landing_pricing_context())
+    from personal.services import landing_personal_plan_cards
+
+    ctx["personal_plan_cards"] = landing_personal_plan_cards()
+    ctx["has_paid_personal_plans"] = any(not card["is_free"] for card in ctx["personal_plan_cards"])
     # A gateway's brand mark is a claim that we accept it. Show each one only
     # while its gateway is actually switched on, so the footer can never
     # advertise a payment method a visitor cannot use. Kept out of the cached

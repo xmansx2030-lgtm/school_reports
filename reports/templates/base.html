@@ -73,7 +73,7 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1" />
   {% comment %}رموز --twq-* الحاكمة ثم طبقة المكوّنات المشتركة؛ الترتيب مقصود للتوافق التدريجي.{% endcomment %}
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1" />
-  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260919.2" />
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1" />
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/progress-bars.js' %}?v=20260812.1" defer></script>
   {% if request.user.is_authenticated %}<script src="{% static 'js/global-search.js' %}?v=20260812.1" defer></script>{% endif %}
@@ -113,7 +113,7 @@
             <a class="tab {% if active == 'platform_tickets_list' %}is-active{% endif %}" href="{% url 'reports:platform_tickets_list' %}">الدعم</a>
             <a class="tab {% if active == 'platform_complaints_list' or active == 'platform_complaint_detail' %}is-active{% endif %}" href="{% url 'reports:platform_complaints_list' %}">الشكاوى</a>
             <a class="tab {% if active == 'platform_email_inbox' or active == 'platform_email_detail' or active == 'platform_email_compose' or active == 'platform_email_settings' %}is-active{% endif %}" href="{% url 'reports:platform_email_inbox' %}">البريد</a>
-            <a class="tab {% if active == 'platform_settings' or active == 'platform_archive_addons_list' or active == 'platform_plans_list' or active == 'platform_mansour_content' %}is-active{% endif %}" href="{% url 'reports:platform_settings' %}">الإعدادات</a>
+            <a class="tab {% if active == 'platform_settings' or active == 'platform_archive_addons_list' or active == 'platform_plans_list' or active == 'platform_personal_plans' or active == 'platform_personal_plan_add' or active == 'platform_personal_plan_edit' or active == 'platform_mansour_content' %}is-active{% endif %}" href="{% url 'reports:platform_settings' %}">الإعدادات</a>
           {% else %}
             <a class="tab {% if active == 'home' or IS_SCHOOL_MANAGER and active == 'admin_dashboard' or IS_EXECUTIVE_DIRECTOR and active == 'executive_dashboard' %}is-active{% endif %}" href="{% if IS_SCHOOL_MANAGER %}{% url 'reports:admin_dashboard' %}{% elif IS_EXECUTIVE_DIRECTOR and not SCHOOL_NAME %}{% url 'reports:executive_dashboard' %}{% else %}{% url 'reports:home' %}{% endif %}">الرئيسية</a>
 
@@ -732,6 +732,10 @@
           <a class="{% if active == 'platform_subscriptions_list' or active == 'platform_subscription_detail' or active == 'platform_subscription_add' %}is-active{% endif %}" href="{% url 'reports:platform_subscriptions_list' %}">
             <span>الاشتراكات</span>
             <i class="fa-solid fa-file-invoice-dollar"></i>
+          </a>
+          <a class="{% if active == 'platform_personal_plans' or active == 'platform_personal_plan_add' or active == 'platform_personal_plan_edit' %}is-active{% endif %}" href="{% url 'reports:platform_personal_plans' %}">
+            <span>باقات المعلمين والمعلمات</span>
+            <i class="fa-solid fa-book-open"></i>
           </a>
           <a class="{% if active == 'platform_conversion_dashboard' or active == 'platform_conversion_school' or active == 'platform_conversion_generate' or active == 'platform_conversion_send' %}is-active{% endif %}" href="{% url 'reports:platform_conversion_dashboard' %}">
             <span>التحويل الذكي</span>

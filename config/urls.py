@@ -191,6 +191,7 @@ urlpatterns = [
     path("api/v1/", include("reports.api_urls")),
     path("api/operations/v1/", include("operations.urls")),
     path("dashboard/system/", include("maintenance.urls")),
+    path("personal/", include("personal.urls")),
     path("", include("reports.urls")),  # واجهة المشروع الأساسية
 ]
 
