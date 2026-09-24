@@ -25,6 +25,12 @@ from reports.models import (
 
 TAMARA_LOGO = "paymentPanelTamara"
 TAMARA_WORD = "تمارا"
+PAYMENT_LOGO_ASSETS = (
+    "img/payment/mada.svg",
+    "img/payment/visa.svg",
+    "img/payment/mastercard.svg",
+    "img/payment/tamara-wordmark-ar.png",
+)
 
 # كل ما يبلغه زائر غير مسجَّل ويحمل — أو قد يحمل — ذكراً لوسيلة دفع.
 PUBLIC_PAGES = (
@@ -90,6 +96,15 @@ class TamaraBrandMarkIsGatedOnPublicPagesTests(TestCase):
         ).content.decode("utf-8", errors="replace")
         self.assertIn(TAMARA_WORD, body)
 
+    @override_settings(MOYASAR_ENABLED=True, TAMARA_ENABLED=True)
+    def test_payment_logos_are_not_repeated_across_other_public_pages(self):
+        for name in PUBLIC_PAGES[1:]:
+            response = self.client.get(reverse(name), follow=True)
+            self.assertEqual(response.status_code, 200, name)
+            body = response.content.decode("utf-8", errors="replace")
+            for asset in PAYMENT_LOGO_ASSETS:
+                self.assertNotIn(asset, body, f"{asset} appeared on {name}")
+
 
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class TamaraBrandMarkIsGatedOnMemberPagesTests(TestCase):
@@ -137,3 +152,18 @@ class TamaraBrandMarkIsGatedOnMemberPagesTests(TestCase):
 
         self.assertIn("paymentPanelMoyasar", body)
         self.assertNotIn("paymentPanelTamara", body)
+
+    @override_settings(MOYASAR_ENABLED=True, TAMARA_ENABLED=True)
+    def test_only_checkout_shows_the_active_payment_logos(self):
+        checkout = self.client.get(
+            reverse("reports:my_subscription"), follow=True
+        ).content.decode("utf-8", errors="replace")
+        history = self.client.get(
+            reverse("reports:subscription_history"), follow=True
+        ).content.decode("utf-8", errors="replace")
+
+        for asset in PAYMENT_LOGO_ASSETS:
+            self.assertIn(asset, checkout)
+            self.assertNotIn(asset, history)
+        self.assertNotIn("img/payment/apple-pay.svg", checkout)
+        self.assertNotIn("img/payment/samsung-pay.svg", checkout)

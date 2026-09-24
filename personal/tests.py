@@ -120,6 +120,31 @@ class PersonalWorkspaceJourneyTests(TestCase):
         )
         self.assertTrue(PersonalPayment.objects.filter(workspace=self.workspace).exists())
 
+    @override_settings(MOYASAR_ENABLED=True)
+    def test_personal_checkout_shows_only_moyasar_card_brands(self):
+        self.teacher.email = "teacher@example.com"
+        self.teacher.save(update_fields=["email"])
+        plan = PersonalPlan.objects.create(
+            code="personal_checkout_brand_test",
+            name="باقة المعلم",
+            price="49.00",
+            duration_days=30,
+        )
+        self.client.force_login(self.teacher)
+
+        response = self.client.get(reverse("personal:checkout_start", args=[plan.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        for asset in (
+            "img/payment/mada.svg",
+            "img/payment/visa.svg",
+            "img/payment/mastercard.svg",
+        ):
+            self.assertContains(response, asset)
+        self.assertNotContains(response, "tamara-wordmark-ar.png")
+        self.assertNotContains(response, "apple-pay.svg")
+        self.assertNotContains(response, "samsung-pay.svg")
+
     def test_personal_report_and_portfolio_do_not_enter_school_reporting(self):
         self.client.force_login(self.teacher)
         response = self.client.post(reverse("personal:report_create"), self.report_payload())

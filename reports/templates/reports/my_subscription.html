@@ -7,7 +7,7 @@
 {% block head %}
 <link rel="stylesheet" href="{% static 'css/flexible-pricing.css' %}?v=20260804.1">
 <link rel="stylesheet" href="{% static 'css/billing-invoice.css' %}?v=20260813.1">
-<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=20260924.1">
+<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=20260925.1">
 {% endblock %}
 
 {% block content %}
@@ -689,7 +689,7 @@
               </span>
               <span class="payment-method-status"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
               <span class="payment-method-brands" aria-label="تمارا، أربع دفعات">
-                <span class="deferred-payment-brand">تمارا</span>
+                <span class="deferred-payment-brand"><img class="payment-method-tamara-logo" src="{% static 'img/payment/tamara-wordmark-ar.png' %}" alt="" width="92" height="30"></span>
                 <span class="payment-mark">4 دفعات</span>
               </span>
             </button>
@@ -726,8 +726,6 @@
                 <span class="payment-mark"><img class="payment-brand-logo payment-brand-logo--mada" src="{% static 'img/payment/mada.svg' %}" alt="مدى" width="54" height="18"></span>
                 <span class="payment-mark"><img class="payment-brand-logo payment-brand-logo--visa" src="{% static 'img/payment/visa.svg' %}" alt="Visa" width="42" height="16"></span>
                 <span class="payment-mark"><img class="payment-brand-logo payment-brand-logo--mastercard" src="{% static 'img/payment/mastercard.svg' %}" alt="Mastercard" width="38" height="23"></span>
-                <span class="payment-mark"><img class="payment-brand-logo payment-brand-logo--apple" src="{% static 'img/payment/apple-pay.svg' %}" alt="Apple Pay" width="47" height="19"></span>
-                <span class="payment-mark"><img class="payment-brand-logo payment-brand-logo--samsung" src="{% static 'img/payment/samsung-pay.svg' %}" alt="Samsung Pay" width="39" height="25"></span>
               </div>
             </div>
             <div class="checkout-action">
@@ -750,7 +748,7 @@
           <section class="checkout-checkout payment-method-panel" id="paymentPanelTamara" data-payment-panel="tamara" aria-label="الدفع عبر تمارا"{% if moyasar_enabled %} hidden{% endif %}>
             <div class="checkout-content">
               <div class="checkout-brand-row">
-                <span class="checkout-logo-frame"><span class="deferred-payment-brand">تمارا</span></span>
+                <span class="checkout-logo-frame checkout-logo-frame--tamara"><img class="payment-method-tamara-logo" src="{% static 'img/payment/tamara-wordmark-ar.png' %}" alt="تمارا" width="92" height="30"></span>
                 <span class="checkout-installment-badge"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> 4 دفعات</span>
                 {% if tamara_environment != 'production' %}<span class="checkout-sandbox">بيئة اختبار</span>{% endif %}
               </div>

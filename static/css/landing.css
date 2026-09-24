@@ -689,26 +689,10 @@ button { font: inherit; }
 .footer-payments-copy strong { display: flex; align-items: center; gap: 7px; color: var(--brand-950); font-size: .78rem; }
 .footer-payments-copy strong i { color: var(--brand-800); }
 .footer-payments-copy small { color: var(--muted); font-size: .61rem; line-height: 1.6; }
-.payment-marks { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-width: 0; flex-wrap: wrap; }
-.payment-mark { height: 32px; min-width: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 0 0 auto; padding: 4px 9px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; color: #17251f; background: #fff; box-shadow: 0 4px 10px rgba(13,74,53,.07); font-family: Arial, sans-serif; font-size: .69rem; font-weight: 800; line-height: 1; white-space: nowrap; }
-.payment-mark img { display: block; max-width: 100%; height: auto; object-fit: contain; }
-.payment-mark--mada { gap: 2px; color: #097d75; font-family: "Cairo", sans-serif; }
-.payment-mark--mada b { font-size: .85rem; }
-.payment-mark--mada small { color: #4b8581; font-size: .45rem; }
-.payment-mark--visa { color: #17357e; font-size: .9rem; font-style: italic; letter-spacing: -.04em; }
-.payment-mark--mastercard { min-width: 68px; display: grid; grid-template-columns: 30px 1fr; gap: 2px; padding-inline: 6px; }
-.payment-mark--mastercard i { position: relative; width: 29px; height: 17px; display: block; }
-.payment-mark--mastercard i::before,
-.payment-mark--mastercard i::after { content: ""; position: absolute; top: 0; width: 17px; height: 17px; border-radius: 50%; }
-.payment-mark--mastercard i::before { right: 0; background: #eb001b; }
-.payment-mark--mastercard i::after { left: 0; background: rgba(247,158,27,.92); }
-.payment-mark--mastercard small { color: #222; font-size: .45rem; font-weight: 700; }
-.payment-mark--amex { min-width: 56px; padding-inline: 5px; color: #fff; background: #1976a3; font-size: .45rem; line-height: .9; text-align: center; }
-.payment-mark--apple { color: #080808; font-size: .78rem; }
-.payment-mark--apple i { font-size: 1rem; }
-.payment-mark--google b { color: #4285f4; font-size: .9rem; }
-.payment-mark--samsung { color: #1428a0; font-size: .51rem; }
-.payment-mark--stc { color: #4f008c; font-size: .76rem; }
+.payment-marks { display: flex; align-items: center; justify-content: flex-end; gap: 9px; min-width: 0; flex-wrap: wrap; }
+.payment-mark { height: 44px; min-width: 64px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; padding: 7px 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--white); box-shadow: 0 3px 10px rgba(13,74,53,.06); }
+.payment-mark img { display: block; max-width: 100%; max-height: 29px; height: auto; object-fit: contain; }
+.payment-mark--tamara { min-width: 108px; padding: 6px 9px; }
 .footer-bottom { min-height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); font-size: .69rem; }
 .footer-verification { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .footer-verification__label { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-soft); font-weight: 800; white-space: nowrap; }
