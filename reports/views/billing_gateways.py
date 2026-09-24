@@ -1042,6 +1042,10 @@ def tamara_webhook(request):
         amount__gt=0,
     )
     first_payment = payments.first()
+    if order_id and first_payment is None and not str(payload.get("order_reference_id") or "").startswith("TWQ-"):
+        # This merchant also serves other applications. Their signed order
+        # events are expected here, but have no local payment to update.
+        return JsonResponse({"ok": True, "ignored": "other_platform"})
     if not order_id or first_payment is None:
         return JsonResponse({"detail": "Unknown order."}, status=404)
     expected_reference = f"TWQ-{first_payment.batch_ref.upper()}"
