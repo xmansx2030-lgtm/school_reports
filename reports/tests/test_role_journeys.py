@@ -760,7 +760,7 @@ class AdministrativeStaffWorkspaceTests(RoleJourneyTestCase):
 
     def test_meeting_page_explains_read_only_mode(self):
         page = self._page(self.admin_staff, "reports:meeting_list")
-        self.assertIn("تنظيم اجتماع جديد يحتاج صلاحية مستقلة من المدير", page)
+        self.assertIn("الاجتماعات التي دُعيت إليها في المدرسة النشطة", page)
         self.assertNotIn(reverse("reports:meeting_create"), page)
 
     def test_mansour_launcher_has_an_accessible_name(self):

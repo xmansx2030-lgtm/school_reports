@@ -2,139 +2,56 @@
 {% load hijri_tags %}
 
 {% block title %}{{ plan.title }} | الخطط{% endblock %}
-
-{% block head %}
-{% include "reports/_assignment_theme.html" %}
-{% include "reports/_plan_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .pln-desc { font-size: .89rem; line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .pln-note {
-    margin-top: 1rem; padding: .75rem .9rem; border-radius: 12px; font-size: .83rem;
-    line-height: 1.85; background: var(--asg-soft); border-inline-start: 3px solid var(--asg-gold);
-    white-space: pre-wrap;
-  }
-  .pln-note__l { display: block; font-size: .72rem; font-weight: 900; color: var(--asg-gold); margin-bottom: .2rem; }
-  .pln-actions { display: flex; gap: .45rem; flex-wrap: wrap; }
-</style>
-{% endblock %}
+{% block head %}{% include "reports/_plan_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="asg-page pln">
+<div class="twq-page plans-page" aria-labelledby="planDetailTitle">
 
   {# ═══ الترويسة ════════════════════════════════════════════ #}
-  <header class="pln-hero">
-    <div class="pln-hero__grid">
-      <div class="pln-hero__main">
-        <a class="pln-crumb" href="{% url 'reports:plan_list' %}">
-          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-          الخطط
-        </a>
-        <h1 class="pln-hero__title">{{ plan.title }}</h1>
-        <div class="pln-chips">
-          <span class="pln-chip">
-            <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
-            {{ plan.owner_name|default:"—" }}
-          </span>
-          {% if plan.academic_year %}
-            <span class="pln-chip">
-              <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
-              {{ plan.academic_year }}
-            </span>
-          {% endif %}
-          <span class="pln-chip pln-chip--gold">{{ plan.get_stage_display }}</span>
-          <span class="pln-chip">{{ plan.get_approval_state_display }}</span>
-          {% if summary.late %}
-            <span class="pln-chip pln-chip--late">
-              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-              {{ summary.late }} مهمة متأخرة
-            </span>
-          {% endif %}
-        </div>
+  <header class="twq-page-header plans-page-header">
+    <div class="twq-page-header__heading">
+        <span class="twq-page-header__eyebrow"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i> مساحة الخطة</span>
+        <h1 class="twq-page-header__title" id="planDetailTitle">{{ plan.title }}</h1>
+        <dl class="twq-page-header__context">
+          <div><dt>مُعِدّ الخطة</dt><dd>{{ plan.owner_name|default:"—" }}</dd></div>
+          {% if plan.academic_year %}<div><dt>السنة الدراسية</dt><dd><bdi>{{ plan.academic_year }}</bdi></dd></div>{% endif %}
+          <div><dt>مرحلة التنفيذ</dt><dd>{{ plan.get_stage_display }}</dd></div>
+          <div><dt>الاعتماد</dt><dd>{{ plan.get_approval_state_display }}</dd></div>
+        </dl>
         {% if plan.starts_on or plan.ends_on %}
-          <p class="pln-hero__lead">
+          <p class="twq-page-header__lead">
             المدى:
-            {% if plan.starts_on %}من {{ plan.starts_on|hijri }} هـ{% endif %}
-            {% if plan.ends_on %} إلى {{ plan.ends_on|hijri }} هـ{% endif %}
+            {% if plan.starts_on %}من <bdi>{{ plan.starts_on|hijri }} هـ</bdi>{% endif %}
+            {% if plan.ends_on %} إلى <bdi>{{ plan.ends_on|hijri }} هـ</bdi>{% endif %}
           </p>
         {% endif %}
-      </div>
-
-      <div class="pln-ring" data-progress-var="--v" data-progress-value="{{ percent }}" role="img"
-           aria-label="نسبة إنجاز الخطة {{ percent }}%">
-        <span class="pln-ring__v">{{ percent }}%</span>
-        <span class="pln-ring__l">{{ summary.done }}/{{ summary.total }}</span>
-      </div>
     </div>
-
-    <div class="pln-hero__actions">
-      <a class="pln-act pln-act--solid" href="{% url 'reports:plan_print' plan.pk %}"
-         target="_blank" rel="noopener">
-        <i class="fa-solid fa-print" aria-hidden="true"></i>
-        طباعة رسمية
-      </a>
-      <button type="button" class="pln-act" id="planShare"
-              data-url="{{ share_url }}" data-title="{{ plan.title }}">
-        <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-        مشاركة
-      </button>
-      {% if may_edit %}
-        <a class="pln-act pln-act--gold" href="{% url 'reports:plan_edit' plan.pk %}">
-          <i class="fa-solid fa-pen" aria-hidden="true"></i>
-          تعديل بيانات الخطة
-        </a>
-      {% endif %}
+    <div class="twq-page-header__aside">
+      <div class="plan-progress-ring" data-progress-var="--v" data-progress-value="{{ percent }}" role="progressbar" aria-label="نسبة إنجاز الخطة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><span class="plan-progress-ring__value"><bdi>{{ percent }}%</bdi></span><span class="plan-progress-ring__label"><bdi>{{ summary.done }}/{{ summary.total }}</bdi> مهمة</span></div>
+      <div class="plans-page-header__actions"><a class="twq-btn twq-btn--primary" href="{% url 'reports:plan_print' plan.pk %}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة رسمية</a><button type="button" class="twq-btn twq-btn--ghost" data-plan-share data-url="{{ share_url }}" data-title="{{ plan.title }}"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> مشاركة</button>{% if may_edit %}<a class="twq-btn twq-btn--secondary" href="{% url 'reports:plan_edit' plan.pk %}"><i class="fa-solid fa-pen" aria-hidden="true"></i> تعديل البيانات</a>{% endif %}</div>
     </div>
   </header>
 
   {# ═══ المؤشرات ════════════════════════════════════════════ #}
-  <section class="pln-stats" aria-label="ملخص المهام">
-    <article class="pln-stat">
-      <span class="pln-stat__i"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ goals|length }}</div>
-        <div class="pln-stat__l">هدف</div>
-      </div>
-    </article>
-    <article class="pln-stat">
-      <span class="pln-stat__i"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ summary.total }}</div>
-        <div class="pln-stat__l">مهمة</div>
-      </div>
-    </article>
-    <article class="pln-stat" data-tone="gold">
-      <span class="pln-stat__i"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ summary.tracked }}</div>
-        <div class="pln-stat__l">مهمة صارت تكليفاً</div>
-      </div>
-    </article>
-    <article class="pln-stat" data-tone="danger">
-      <span class="pln-stat__i"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
-      <div>
-        <div class="pln-stat__v">{{ summary.late }}</div>
-        <div class="pln-stat__l">مهمة متأخرة</div>
-      </div>
-    </article>
-  </section>
+  <dl class="twq-metrics plan-metrics" aria-label="ملخص الخطة"><div><dt><i class="fa-solid fa-bullseye" aria-hidden="true"></i> الأهداف</dt><dd><bdi>{{ goals|length }}</bdi></dd></div><div><dt><i class="fa-solid fa-list-check" aria-hidden="true"></i> المهام</dt><dd><bdi>{{ summary.total }}</bdi></dd></div><div><dt><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> التكليفات</dt><dd><bdi>{{ summary.tracked }}</bdi></dd></div><div {% if summary.late %}data-tone="warning"{% endif %}><dt><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> المتأخرة</dt><dd><bdi>{{ summary.late }}</bdi></dd></div></dl>
 
-  <div class="pln-grid xs-plan-detail-1">
+  <div class="plan-workspace-grid">
 
     {# ═══ العمود الأول ══════════════════════════════════════ #}
     <div>
       {% if plan.description or plan.review_note %}
-        <section class="pln-panel u-mt-0">
-          <div class="pln-panel__head">
-            <h2 class="pln-panel__t">وصف الخطة</h2>
+        <section class="twq-section plan-section plan-section--flush">
+          <div class="twq-section__header">
+            <h2 class="twq-section__title">وصف الخطة</h2>
           </div>
           {% if plan.description %}
-            <div class="pln-desc">{{ plan.description }}</div>
+            <div class="plan-description">{{ plan.description }}</div>
           {% else %}
-            <p class="pln-panel__hint u-m-0">لم يُكتب وصف للخطة.</p>
+            <p class="twq-section__description">لم يُكتب وصف للخطة.</p>
           {% endif %}
           {% if plan.review_note %}
-            <div class="pln-note">
-              <span class="pln-note__l">آخر ملاحظة على الخطة</span>
+            <div class="plan-review-note">
+              <span class="plan-review-note__label">آخر ملاحظة على الخطة</span>
               {{ plan.review_note }}
             </div>
           {% endif %}
@@ -142,32 +59,31 @@
       {% endif %}
 
       {# ── الأهداف ─────────────────────────────────────────── #}
-      <section class="pln-panel" {% if not plan.description and not plan.review_note %}style="margin-top:0"{% endif %}>
-        <div class="pln-panel__head">
-          <h2 class="pln-panel__t">الأهداف ومؤشراتها</h2>
-          <span class="pln-panel__grow"></span>
-          {% if goals %}<span class="pln-panel__count">{{ goals|length }}</span>{% endif %}
+      <section class="twq-section plan-section{% if not plan.description and not plan.review_note %} plan-section--flush{% endif %}">
+        <div class="twq-section__header">
+          <div><span class="twq-section__kicker">الاتجاه</span><h2 class="twq-section__title">الأهداف ومؤشراتها</h2></div>
+          {% if goals %}<span class="plan-count"><bdi>{{ goals|length }}</bdi> هدف</span>{% endif %}
         </div>
-        <p class="pln-panel__hint">
+        <p class="twq-section__description">
           المؤشر نصٌّ حر — مؤشرات المدارس تُصاغ بلغتها ولا تُختزل في قائمة مغلقة.
           والقياس يقع على المهام المرتبطة بالهدف.
         </p>
 
         {% for goal in goals %}
-          <div class="pln-goal">
-            <span class="pln-goal__n">{{ goal.order }}</span>
-            <div class="pln-goal__main">
-              <div class="pln-goal__t">{{ goal.title }}</div>
+          <div class="plan-goal">
+            <span class="plan-goal__number">{{ goal.order }}</span>
+            <div class="plan-goal__main">
+              <div class="plan-goal__title">{{ goal.title }}</div>
               {% if goal.indicator or goal.target %}
-                <div class="pln-goal__tags">
+                <div class="plan-goal__tags">
                   {% if goal.indicator %}
-                    <span class="pln-tag">
+                    <span class="plan-tag">
                       <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                       {{ goal.indicator }}
                     </span>
                   {% endif %}
                   {% if goal.target %}
-                    <span class="pln-tag">
+                    <span class="plan-tag">
                       <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
                       المستهدف: {{ goal.target }}
                     </span>
@@ -175,18 +91,18 @@
                 </div>
               {% endif %}
             </div>
-            <div class="pln-meter">
-              <span class="pln-meter__track">
-                <span class="pln-meter__fill" data-progress="{{ goal.progress_percent }}"></span>
+            <div class="plan-progress" role="progressbar" aria-label="إنجاز هدف {{ goal.title }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ goal.display_progress_percent }}">
+              <span class="plan-progress__track">
+                <span class="plan-progress__fill" data-progress="{{ goal.display_progress_percent }}"></span>
               </span>
-              <span class="pln-meter__v">{{ goal.progress_percent }}%</span>
+              <span class="plan-muted"><bdi>{{ goal.display_progress_percent }}%</bdi></span>
             </div>
             {% if may_edit %}
               <form method="post" action="{% url 'reports:plan_action' plan.pk %}">
                 {% csrf_token %}
                 <input type="hidden" name="plan_action" value="remove_goal">
                 <input type="hidden" name="goal_id" value="{{ goal.pk }}">
-                <button type="submit" class="asg-btn asg-btn--danger asg-btn--sm"
+                <button type="submit" class="twq-btn twq-btn--danger plan-btn--sm" aria-label="حذف الهدف {{ goal.title }}"
                         data-confirm="حذف الهدف «{{ goal.title }}»؟">
                   <i class="fa-solid fa-trash" aria-hidden="true"></i>
                 </button>
@@ -194,19 +110,19 @@
             {% endif %}
           </div>
         {% empty %}
-          <p class="pln-panel__hint u-m-0">لم تُضف أهداف بعد.</p>
+          <p class="twq-section__description">لم تُضف أهداف بعد.</p>
         {% endfor %}
 
         {% if may_edit %}
           <form method="post" action="{% url 'reports:plan_action' plan.pk %}" class="u-mt-xl">
             {% csrf_token %}
             <input type="hidden" name="plan_action" value="add_goal">
-            <div class="pln-form">
-              <div class="asg-field"><label for="{{ goal_form.title.id_for_label }}">هدف جديد</label>{{ goal_form.title }}</div>
-              <div class="asg-field"><label>{{ goal_form.indicator.label }}</label>{{ goal_form.indicator }}</div>
-              <div class="asg-field"><label>{{ goal_form.target.label }}</label>{{ goal_form.target }}</div>
+            <div class="plan-form-grid">
+              <div class="twq-field"><label for="{{ goal_form.title.id_for_label }}">هدف جديد</label>{{ goal_form.title }}</div>
+              <div class="twq-field"><label for="{{ goal_form.indicator.id_for_label }}">{{ goal_form.indicator.label }}</label>{{ goal_form.indicator }}</div>
+              <div class="twq-field"><label for="{{ goal_form.target.id_for_label }}">{{ goal_form.target.label }}</label>{{ goal_form.target }}</div>
             </div>
-            <button type="submit" class="asg-btn asg-btn--ghost">
+            <button type="submit" class="twq-btn twq-btn--secondary">
               <i class="fa-solid fa-plus" aria-hidden="true"></i>
               إضافة هدف
             </button>
@@ -215,24 +131,23 @@
       </section>
 
       {# ── المهام ──────────────────────────────────────────── #}
-      <section class="pln-panel">
-        <div class="pln-panel__head">
-          <h2 class="pln-panel__t">المهام</h2>
-          <span class="pln-panel__grow"></span>
-          {% if tasks %}<span class="pln-panel__count">{{ tasks|length }}</span>{% endif %}
+      <section class="twq-section plan-section">
+        <div class="twq-section__header">
+          <div><span class="twq-section__kicker">التنفيذ</span><h2 class="twq-section__title">المهام والتكليفات</h2></div>
+          {% if tasks %}<span class="plan-count"><bdi>{{ tasks|length }}</bdi> مهمة</span>{% endif %}
         </div>
-        <p class="pln-panel__hint">
+        <p class="twq-section__description">
           المهمة تتحوّل إلى تكليف ولا تُنسخ إليه — فمتابعتها هي متابعة تكليفها
           بموعده وشواهده واعتماده.
         </p>
 
         {% for task in tasks %}
-          <article class="pln-task" data-state="{{ task.state }}">
-            <span class="pln-task__who" aria-hidden="true">
+          <article class="plan-task" data-state="{{ task.state }}">
+            <span class="plan-task__avatar" aria-hidden="true">
               {% if task.responsible %}{{ task.responsible.name|slice:":1" }}{% else %}<i class="fa-solid fa-user-slash xs-plan-detail-2"></i>{% endif %}
             </span>
-            <div class="pln-task__main">
-              <div class="pln-task__t">
+            <div class="plan-task__main">
+              <div class="plan-task__title">
                 {# لا يُعرض رابط التكليف إلا لمن يفتحه فعلاً: مالك الخطة أو #}
                 {# المسؤول عن المهمة. ورابطٌ يقود إلى 404 أسوأ من غيابه. #}
                 {% if task.assignment and may_manage or task.assignment and task.responsible_id == request.user.pk %}
@@ -241,27 +156,24 @@
                   {{ task.title }}
                 {% endif %}
               </div>
-              <div class="pln-task__sub">
+              <div class="plan-task__meta">
                 {% if task.responsible %}{{ task.responsible.name }}{% else %}بلا مسؤول{% endif %}
                 {% if task.goal %} · الهدف {{ task.goal.order }}: {{ task.goal.title }}{% endif %}
                 {% if task.due_at %} · يستحق {{ task.due_at|hijri }} هـ{% endif %}
               </div>
             </div>
 
-            <div class="pln-task__side">
-              {% if task.state == 'done' %}<span class="pln-pill pln-pill--done">منجَزة</span>
-              {% elif task.state == 'late' %}<span class="pln-pill pln-pill--late">متأخرة</span>
-              {% elif task.state == 'running' %}<span class="pln-pill pln-pill--running">قيد التنفيذ</span>
-              {% else %}<span class="pln-pill pln-pill--wait">لم تُكلَّف بعد</span>{% endif %}
+            <div class="plan-task__actions">
+              <span class="twq-status" data-status="{% if task.state == 'done' %}approved{% elif task.state == 'late' %}danger{% elif task.state == 'running' %}info{% else %}draft{% endif %}">{% if task.state == 'done' %}منجزة{% elif task.state == 'late' %}متأخرة{% elif task.state == 'running' %}قيد التنفيذ{% else %}لم تُكلّف بعد{% endif %}</span>
 
               {# تحويل المهمة إلى تكليف هو بدء التنفيذ، لا تعديلٌ لبنود الخطة. #}
               {# لذلك يبقى متاحاً لمالك الخطة/المدير حتى بعد اعتماد الوثيقة. #}
-              {% if may_manage and task.can_become_assignment %}
+              {% if may_convert_tasks and task.can_become_assignment %}
                 <form method="post" action="{% url 'reports:plan_action' plan.pk %}">
                   {% csrf_token %}
                   <input type="hidden" name="plan_action" value="track_task">
                   <input type="hidden" name="task_id" value="{{ task.pk }}">
-                  <button type="submit" class="asg-btn asg-btn--primary asg-btn--sm">
+                  <button type="submit" class="twq-btn twq-btn--primary plan-btn--sm">
                     <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
                     حوّلها إلى تكليف
                   </button>
@@ -271,7 +183,7 @@
                   {% csrf_token %}
                   <input type="hidden" name="plan_action" value="remove_task">
                   <input type="hidden" name="task_id" value="{{ task.pk }}">
-                  <button type="submit" class="asg-btn asg-btn--danger asg-btn--sm"
+                  <button type="submit" class="twq-btn twq-btn--danger plan-btn--sm" aria-label="حذف المهمة {{ task.title }}"
                           data-confirm="حذف المهمة «{{ task.title }}»؟">
                     <i class="fa-solid fa-trash" aria-hidden="true"></i>
                   </button>
@@ -280,25 +192,25 @@
             </div>
           </article>
         {% empty %}
-          <p class="pln-panel__hint u-m-0">لم تُضف مهام بعد.</p>
+          <p class="twq-section__description">لم تُضف مهام بعد.</p>
         {% endfor %}
 
         {% if may_edit %}
           <form method="post" action="{% url 'reports:plan_action' plan.pk %}" class="u-mt-2xl">
             {% csrf_token %}
             <input type="hidden" name="plan_action" value="add_task">
-            <div class="asg-field"><label for="{{ task_form.title.id_for_label }}">مهمة جديدة</label>{{ task_form.title }}</div>
-            <div class="asg-field">{{ task_form.description }}</div>
-            <div class="pln-form">
-              <div class="asg-field"><label>{{ task_form.goal.label }}</label>{{ task_form.goal }}</div>
-              <div class="asg-field"><label>{{ task_form.responsible.label }}</label>{{ task_form.responsible }}</div>
-              <div class="asg-field"><label>{{ task_form.department.label }}</label>{{ task_form.department }}</div>
-              <div class="asg-field">
-                <label>{{ task_form.due_at.label }}</label>{{ task_form.due_at }}
-                <div class="asg-field__help">{{ task_form.due_at.help_text }}</div>
+            <div class="twq-field"><label for="{{ task_form.title.id_for_label }}">مهمة جديدة</label>{{ task_form.title }}</div>
+            <div class="twq-field"><label for="{{ task_form.description.id_for_label }}">{{ task_form.description.label }}</label>{{ task_form.description }}</div>
+            <div class="plan-form-grid">
+              <div class="twq-field"><label for="{{ task_form.goal.id_for_label }}">{{ task_form.goal.label }}</label>{{ task_form.goal }}</div>
+              <div class="twq-field"><label for="{{ task_form.responsible.id_for_label }}">{{ task_form.responsible.label }}</label>{{ task_form.responsible }}</div>
+              <div class="twq-field"><label for="{{ task_form.department.id_for_label }}">{{ task_form.department.label }}</label>{{ task_form.department }}</div>
+              <div class="twq-field">
+                <label for="{{ task_form.due_at.id_for_label }}">{{ task_form.due_at.label }}</label>{{ task_form.due_at }}
+                <div class="twq-field__help">{{ task_form.due_at.help_text }}</div>
               </div>
             </div>
-            <button type="submit" class="asg-btn asg-btn--ghost">
+            <button type="submit" class="twq-btn twq-btn--secondary">
               <i class="fa-solid fa-plus" aria-hidden="true"></i>
               إضافة مهمة
             </button>
@@ -308,40 +220,40 @@
     </div>
 
     {# ═══ العمود الجانبي ════════════════════════════════════ #}
-    <div class="pln-rail">
-      <section class="pln-panel u-mt-0">
-        <div class="pln-panel__head">
-          <h2 class="pln-panel__t">اعتماد الخطة</h2>
+    <div class="plan-workspace-rail">
+      <section class="twq-section plan-section plan-section--flush">
+        <div class="twq-section__header">
+          <div><span class="twq-section__kicker">دورة الاعتماد</span><h2 class="twq-section__title">مراجعة الخطة</h2></div>
         </div>
 
         {% if actions %}
           <form method="post" action="{% url 'reports:plan_approval_action' plan.pk %}">
             {% csrf_token %}
-            <input type="hidden" name="approval_action" id="planAction" value="">
-            <div class="asg-field">
-              <textarea name="note" rows="3" placeholder="ملاحظتك (اختياري)…"></textarea>
+            <input type="hidden" name="approval_action" value="" data-plan-action-field>
+            <div class="twq-field">
+              <label for="planReviewNote">ملاحظة المراجع</label><textarea id="planReviewNote" name="note" rows="3" placeholder="ملاحظتك (اختياري)…"></textarea>
             </div>
-            <div class="pln-actions">
+            <div class="plan-actions">
               {% if 'issue' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-pl="issue">
+                <button type="submit" class="twq-btn twq-btn--primary" data-plan-action="issue">
                   <i class="fa-solid fa-stamp" aria-hidden="true"></i>
                   اعتماد وإصدار الخطة
                 </button>
               {% endif %}
               {% if 'submit' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-pl="submit">
+                <button type="submit" class="twq-btn twq-btn--primary" data-plan-action="submit">
                   <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
                   إرسال للاعتماد
                 </button>
               {% endif %}
               {% if 'withdraw' in actions %}
-                <button type="submit" class="asg-btn asg-btn--ghost" data-pl="withdraw">سحب للتعديل</button>
+                <button type="submit" class="twq-btn twq-btn--ghost" data-plan-action="withdraw">سحب للتعديل</button>
               {% endif %}
               {% if 'return' in actions %}
-                <button type="submit" class="asg-btn asg-btn--warn" data-pl="return">إعادة للملاحظة</button>
+                <button type="submit" class="twq-btn plan-btn--warning" data-plan-action="return">إعادة للملاحظة</button>
               {% endif %}
               {% if 'approve' in actions %}
-                <button type="submit" class="asg-btn asg-btn--primary" data-pl="approve">
+                <button type="submit" class="twq-btn twq-btn--primary" data-plan-action="approve">
                   <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                   اعتماد
                 </button>
@@ -349,7 +261,7 @@
             </div>
           </form>
         {% else %}
-          <p class="pln-panel__hint u-m-0">
+          <p class="twq-section__description">
             {% if plan.is_final %}
               الخطة معتمدة. تُتابَع مهامها ولا تُعدَّل بنودها.
             {% else %}
@@ -359,16 +271,13 @@
         {% endif %}
 
         {% if timeline %}
-          <ul class="pln-steps u-mt-xl">
+          <ul class="plan-timeline">
             {% for step in timeline %}
-              <li class="pln-step">
-                <span class="pln-step__d" aria-hidden="true"><i class="fa-solid fa-circle"></i></span>
-                <div>
-                  <div class="pln-step__t">{{ step.get_action_display }}</div>
-                  <div class="pln-step__m">
+              <li>
+                <strong>{{ step.get_action_display }}</strong>
+                  <span>
                     {{ step.actor_display }} · {{ step.created_at|hijri }} هـ
-                  </div>
-                </div>
+                  </span>
               </li>
             {% endfor %}
           </ul>
@@ -376,26 +285,26 @@
       </section>
 
       {# ── الرابط والإجراءات ───────────────────────────────── #}
-      <section class="pln-panel">
-        <div class="pln-panel__head">
-          <h2 class="pln-panel__t">مشاركة الخطة</h2>
+      <section class="twq-section plan-section">
+        <div class="twq-section__header">
+          <div><span class="twq-section__kicker">الوصول</span><h2 class="twq-section__title">مشاركة رابط الخطة</h2></div>
         </div>
-        <p class="pln-panel__hint">
+        <p class="twq-section__description">
           رابطٌ داخلي: يفتحه مُعِدُّ الخطة ومدير المدرسة ومن أُسندت إليه مهمة
           فيها. ومن سواهم لا يراه، فالخطة وثيقة عمل لا صفحة عامة.
         </p>
-        <div class="pln-link">
-          <input type="text" id="planUrl" value="{{ share_url }}" readonly aria-label="رابط الخطة">
-          <button type="button" class="asg-btn asg-btn--ghost asg-btn--sm" id="planCopy">نسخ</button>
+        <div class="plan-link">
+          <input type="text" value="{{ share_url }}" readonly aria-label="رابط الخطة" data-plan-url>
+          <button type="button" class="twq-btn twq-btn--ghost plan-btn--sm" data-plan-copy>نسخ الرابط</button>
         </div>
-        <div class="pln-actions u-mt-md">
-          <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{% url 'reports:plan_print' plan.pk %}"
+        <div class="plan-actions u-mt-md">
+          <a class="twq-btn twq-btn--ghost plan-btn--sm" href="{% url 'reports:plan_print' plan.pk %}"
              target="_blank" rel="noopener">
             <i class="fa-solid fa-print" aria-hidden="true"></i>
             خطة للطباعة
           </a>
           {% if may_edit %}
-            <a class="asg-btn asg-btn--ghost asg-btn--sm" href="{% url 'reports:plan_edit' plan.pk %}">
+            <a class="twq-btn twq-btn--ghost plan-btn--sm" href="{% url 'reports:plan_edit' plan.pk %}">
               <i class="fa-solid fa-pen" aria-hidden="true"></i>
               تعديل
             </a>
@@ -405,47 +314,47 @@
 
       {# ── الإغلاق والحذف ──────────────────────────────────── #}
       {% if may_manage %}
-        <section class="pln-panel">
-          <div class="pln-panel__head">
-            <h2 class="pln-panel__t">إدارة الخطة</h2>
+        <section class="twq-section plan-section">
+          <div class="twq-section__header">
+            <div><span class="twq-section__kicker">إجراءات حساسة</span><h2 class="twq-section__title">إدارة الخطة</h2></div>
           </div>
 
           {% if plan.stage != 'closed' %}
-            <p class="pln-panel__hint">
+            <p class="twq-section__description">
               الإغلاق يوقف العمل على الخطة ويُبقيها وسجلها كاملين.
             </p>
             <form method="post" action="{% url 'reports:plan_action' plan.pk %}">
               {% csrf_token %}
               <input type="hidden" name="plan_action" value="close">
-              <button type="submit" class="asg-btn asg-btn--ghost"
+              <button type="submit" class="twq-btn twq-btn--ghost"
                       data-confirm="إغلاق الخطة «{{ plan.title }}»؟">
                 <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
                 إغلاق الخطة
               </button>
             </form>
           {% else %}
-            <p class="pln-panel__hint u-m-0">هذه الخطة مُغلقة.</p>
+            <p class="twq-section__description">هذه الخطة مُغلقة.</p>
           {% endif %}
 
-          <div class="pln-danger">
-            <p class="pln-danger__t">
+          <div class="plan-danger-zone">
+            <p class="plan-danger-zone__title">
               <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
               حذف الخطة
             </p>
             {% if can_delete %}
-              <p class="pln-danger__x">
+              <p class="plan-hint">
                 يُمحى العنوان والوصف والأهداف والمهام معاً، ولا يُسترجع شيء منها.
               </p>
               <form method="post" action="{% url 'reports:plan_delete' plan.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="asg-btn asg-btn--danger"
+                <button type="submit" class="twq-btn twq-btn--danger"
                         data-confirm="حذف خطة «{{ plan.title }}» نهائياً؟ لا يمكن التراجع.">
                   <i class="fa-solid fa-trash" aria-hidden="true"></i>
                   حذف الخطة نهائياً
                 </button>
               </form>
             {% else %}
-              <p class="pln-danger__x u-m-0">{{ delete_block }}</p>
+              <p class="plan-hint">{{ delete_block }}</p>
             {% endif %}
           </div>
         </section>
@@ -454,50 +363,4 @@
   </div>
 </div>
 
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  (function () {
-    // زر الاعتماد يملأ الحقل المخفي، فالنموذج واحد والقرارات عدة.
-    var field = document.getElementById('planAction');
-    if (field) {
-      document.querySelectorAll('[data-pl]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          field.value = button.getAttribute('data-pl');
-        });
-      });
-    }
-
-    function copy(value, done) {
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(value).then(done, function () {});
-          return;
-        }
-        if (document.execCommand('copy')) done();
-      } catch (error) { /* يبقى الرابط محدَّداً للنسخ اليدوي. */ }
-    }
-
-    var copyButton = document.getElementById('planCopy');
-    var urlField = document.getElementById('planUrl');
-    if (copyButton && urlField) {
-      copyButton.addEventListener('click', function () {
-        urlField.select();
-        copy(urlField.value, function () { copyButton.textContent = 'نُسخ'; });
-      });
-    }
-
-    // مشاركة الجهاز حيث تتوفّر، ونسخ الرابط حيث لا تتوفّر — فلا يبقى الزر بلا أثر.
-    var shareButton = document.getElementById('planShare');
-    if (shareButton) {
-      shareButton.addEventListener('click', function () {
-        var url = shareButton.getAttribute('data-url');
-        var title = shareButton.getAttribute('data-title');
-        if (navigator.share) {
-          navigator.share({ title: title, text: title, url: url }).catch(function () {});
-          return;
-        }
-        copy(url, function () { shareButton.textContent = 'نُسخ الرابط'; });
-      });
-    }
-  }());
-</script>
 {% endblock %}

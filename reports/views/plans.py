@@ -34,7 +34,10 @@ from ..services_plans import (
     PlanError,
     convert_task_to_assignment,
     initiatives_visible_to,
+    plan_allows_task_conversion,
     plan_board_rows,
+    plan_items_are_mutable,
+    plan_resource_in_scope,
     plans_visible_to,
     share_initiative,
 )
@@ -68,24 +71,23 @@ def _may_manage(user, plan, school) -> bool:
     return plan.owner_id == user.pk or is_school_manager(user, active_school=school)
 
 
-def _plan_for(request, pk: int, school) -> Plan:
+def _plan_for(request, pk: int, school, *, for_update: bool = False) -> Plan:
     """الخطة التي يحق لهذا المستخدم رؤيتها.
 
     مُعِدُّها، أو مدير مدرستها، أو من أُسندت إليه مهمة فيها — فمن يُنفّذ جزءاً
     من خطة يحق له أن يرى موقعه منها.
     """
+    queryset = Plan.objects.select_related("owner", "school", "group")
+    if for_update:
+        queryset = queryset.select_for_update()
     plan = get_object_or_404(
-        Plan.objects.select_related("owner", "school", "group"), pk=pk
+        queryset,
+        pk=pk,
+        scope=Plan.Scope.SCHOOL,
+        school=school,
     )
-    if plan.owner_id == request.user.pk:
+    if plan_resource_in_scope(request.user, school, plan):
         return plan
-    if plan.school_id == getattr(school, "pk", None):
-        if is_school_manager(request.user, active_school=school):
-            return plan
-        if plan.tasks.filter(responsible=request.user).exists():
-            return plan
-        if capability_source(request.user, caps.TRACK_PLANS, school) is not None:
-            return plan
     raise Http404
 
 
@@ -103,6 +105,7 @@ def plan_list(request):
     my_tasks = list(
         PlanTask.objects.filter(plan__school=school, responsible=request.user)
         .select_related("plan", "assignment")
+        .prefetch_related("assignment__targets")
         .order_by("due_at", "id")[:50]
     )
     tasks_total = sum(row["total"] for row in rows)
@@ -174,6 +177,24 @@ def plan_detail(request, pk: int):
         .prefetch_related("assignment__targets")
         .order_by("order", "id")
     )
+    goals = list(plan.goals.all())
+    tasks_by_goal: dict[int, list[PlanTask]] = {}
+    for task in tasks:
+        if task.goal_id is not None:
+            tasks_by_goal.setdefault(task.goal_id, []).append(task)
+    for goal in goals:
+        goal_tasks = tasks_by_goal.get(goal.pk, [])
+        goal.display_progress_percent = (
+            round(sum(1 for task in goal_tasks if task.is_done) * 100 / len(goal_tasks))
+            if goal_tasks
+            else 0
+        )
+    summary = {
+        "total": len(tasks),
+        "done": sum(1 for task in tasks if task.is_done),
+        "tracked": sum(1 for task in tasks if task.assignment_id),
+        "late": sum(1 for task in tasks if task.is_late),
+    }
 
     return render(
         request,
@@ -185,14 +206,19 @@ def plan_detail(request, pk: int):
             # ``may_edit`` تحكم بنود الخطة: تُضاف الأهداف والمهام ما دامت الخطة
             # في مرحلة تسمح بذلك. و``may_manage`` تحكم ملكيتها: الطباعة والحذف
             # والوصول إلى شاشة التحرير.
-            "may_edit": may_manage and plan.is_editable_by_owner,
+            "may_edit": may_manage and plan_items_are_mutable(plan),
             "may_manage": may_manage,
+            "may_convert_tasks": may_manage and plan_allows_task_conversion(plan),
             "can_delete": may_manage and _delete_block(plan) is None,
             "delete_block": _delete_block(plan),
-            "goals": list(plan.goals.all()),
+            "goals": goals,
             "tasks": tasks,
-            "summary": plan.task_summary,
-            "percent": plan.progress_percent,
+            "summary": summary,
+            "percent": (
+                round(summary["done"] * 100 / summary["total"])
+                if summary["total"]
+                else 0
+            ),
             "goal_form": PlanGoalForm(),
             "task_form": PlanTaskForm(plan=plan),
             "actions": available_actions(plan, request.user, school=school),
@@ -212,6 +238,10 @@ def _delete_block(plan: Plan) -> str | None:
     حينها يترك تكليفاً بلا سند يُعرف منه لماذا صدر. وفي الحالتين تُغلق ولا
     تُحذف، فيبقى السجل مقروءاً.
     """
+    if plan.stage == Plan.Stage.CLOSED:
+        return "الخطة مغلقة — سجلٌ تشغيلي لا يُحذف."
+    if not plan.is_editable_by_owner:
+        return "الخطة في مرحلة اعتماد لا تسمح بحذفها."
     if plan.is_final:
         return "الخطة معتمدة — وثيقةٌ صادرة تُغلق ولا تُحذف."
     if plan.tasks.filter(assignment__isnull=False).exists():
@@ -265,13 +295,14 @@ def plan_edit(request, pk: int):
 
 @login_required(login_url="reports:login")
 @require_http_methods(["POST"])
+@transaction.atomic
 def plan_delete(request, pk: int):
     """حذف خطة لم يترتّب عليها شيء بعد."""
     school, redirect_response = _school_or_redirect(request)
     if redirect_response is not None:
         return redirect_response
 
-    plan = _plan_for(request, pk, school)
+    plan = _plan_for(request, pk, school, for_update=True)
     if not _may_manage(request.user, plan, school):
         messages.error(request, "حذف الخطة لمُعِدّها أو لمدير المدرسة.")
         return redirect("reports:plan_detail", pk=pk)
@@ -332,13 +363,14 @@ def plan_print(request, pk: int):
 
 @login_required(login_url="reports:login")
 @require_http_methods(["POST"])
+@transaction.atomic
 def plan_action(request, pk: int):
     """أهداف الخطة ومهامها وتحويلها إلى تكليفات."""
     school, redirect_response = _school_or_redirect(request)
     if redirect_response is not None:
         return redirect_response
 
-    plan = _plan_for(request, pk, school)
+    plan = _plan_for(request, pk, school, for_update=True)
     action = (request.POST.get("plan_action") or "").strip()
 
     may_edit = plan.owner_id == request.user.pk or is_school_manager(
@@ -348,7 +380,7 @@ def plan_action(request, pk: int):
     try:
         if action in {"add_goal", "add_task", "remove_goal", "remove_task"} and not may_edit:
             raise PermissionDenied("تعديل الخطة لمُعِدّها أو لمدير المدرسة.")
-        if action in {"add_goal", "add_task"} and not plan.is_editable_by_owner:
+        if action in {"add_goal", "add_task", "remove_goal", "remove_task"} and not plan_items_are_mutable(plan):
             raise PlanError("الخطة ليست في حالة تسمح بتعديلها.")
 
         if action == "add_goal":
@@ -386,7 +418,7 @@ def plan_action(request, pk: int):
 
         elif action == "track_task":
             task = get_object_or_404(PlanTask, pk=request.POST.get("task_id"), plan=plan)
-            convert_task_to_assignment(task, request.user)
+            convert_task_to_assignment(task, request.user, school=school)
             messages.success(request, "حُوِّلت المهمة إلى تكليف — تُتابَع الآن بموعدها.")
 
         elif action == "close":

@@ -1,0 +1,23 @@
+{% if form.errors %}
+  <div class="twq-alert twq-alert--danger plan-error-summary" role="alert" tabindex="-1" data-plan-error-summary>
+    <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+    <div><strong>تعذّر حفظ الخطة</strong><p>راجع الحقول التالية ثم أعد المحاولة.</p><ul>{% for field in form.visible_fields %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
+  </div>
+{% endif %}
+
+<section class="twq-section plan-section" aria-labelledby="planFormTitle">
+  <header class="twq-section__header"><div class="plan-section__heading"><span class="twq-section__kicker">وثيقة الخطة</span><h2 class="twq-section__title" id="planFormTitle">بيانات الخطة</h2><p class="twq-section__description">العنوان والغاية والفترة فقط؛ تُضاف الأهداف والمهام بعد حفظ الوثيقة.</p></div></header>
+  <div class="plan-form-grid">
+    <div class="twq-field twq-field--wide{% if form.title.errors %} twq-field--error{% endif %}">
+      <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}
+      {% if form.title.errors %}<div class="twq-field__message" id="{{ form.title.id_for_label }}-error">{% for error in form.title.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+    </div>
+    <div class="twq-field twq-field--wide{% if form.description.errors %} twq-field--error{% endif %}">
+      <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>{{ form.description }}
+      {% if form.description.errors %}<div class="twq-field__message" id="{{ form.description.id_for_label }}-error">{% for error in form.description.errors %}{{ error }}{% endfor %}</div>{% endif %}
+    </div>
+    <div class="twq-field{% if form.academic_year.errors %} twq-field--error{% endif %}"><label for="{{ form.academic_year.id_for_label }}">{{ form.academic_year.label }}</label>{{ form.academic_year }}<div class="twq-field__help">{{ form.academic_year.help_text }}</div>{% if form.academic_year.errors %}<div class="twq-field__message" id="{{ form.academic_year.id_for_label }}-error">{% for error in form.academic_year.errors %}{{ error }}{% endfor %}</div>{% endif %}</div>
+    <div class="twq-field{% if form.starts_on.errors %} twq-field--error{% endif %}"><label for="{{ form.starts_on.id_for_label }}">{{ form.starts_on.label }}</label>{{ form.starts_on }}{% if form.starts_on.errors %}<div class="twq-field__message" id="{{ form.starts_on.id_for_label }}-error">{% for error in form.starts_on.errors %}{{ error }}{% endfor %}</div>{% endif %}</div>
+    <div class="twq-field{% if form.ends_on.errors %} twq-field--error{% endif %}"><label for="{{ form.ends_on.id_for_label }}">{{ form.ends_on.label }}</label>{{ form.ends_on }}{% if form.ends_on.errors %}<div class="twq-field__message" id="{{ form.ends_on.id_for_label }}-error">{% for error in form.ends_on.errors %}{{ error }}{% endfor %}</div>{% endif %}</div>
+  </div>
+</section>

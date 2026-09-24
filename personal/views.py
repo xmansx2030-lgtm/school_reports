@@ -201,7 +201,7 @@ def moyasar_return(request, payment_id):
         messages.info(request, "يجري التحقق من الدفع؛ لا تعِد الدفع الآن. ستظهر النتيجة في سجل اشتراكك.")
     else:
         if status == "paid" and payment.activated_at:
-            messages.success(request, "تأكد الدفع وفُعّلت باقتك الشخصية تلقائيًا. أرسلنا الفاتورة إلى بريدك.")
+            messages.success(request, "تأكد الدفع وفُعّلت باقتك الشخصية تلقائيًا. فاتورتك متاحة للتنزيل من سجل الاشتراك.")
         elif status in {"failed", "canceled", "cancelled", "expired", "voided"}:
             messages.error(request, "لم تكتمل عملية الدفع. يمكنك بدء محاولة جديدة من صفحة الاشتراك.")
         else:

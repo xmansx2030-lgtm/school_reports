@@ -1,171 +1,59 @@
 {% extends "base.html" %}
 
 {% block title %}المبادرات | منصة توثيق{% endblock %}
-
-{% block head %}
-{% include "reports/_assignment_theme.html" %}
-<style nonce="{{ CSP_NONCE }}">
-  .ini-grid { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
-  @media (max-width: 900px) { .ini-grid { grid-template-columns: 1fr; } }
-  .ini-body { font-size: .84rem; line-height: 1.9; color: var(--asg-muted); margin-top: .35rem; white-space: pre-wrap; }
-  .ini-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .6rem; }
-  .ini-check { display: flex; gap: .55rem; align-items: flex-start; font-size: .86rem; font-weight: 700; }
-  .ini-check input { margin-top: .2rem; }
-</style>
-{% endblock %}
+{% block head %}{% include "reports/_plan_theme.html" %}{% endblock %}
 
 {% block content %}
-<div class="asg-page">
-
-  <header class="asg-hero">
-    <span class="asg-hero__eyebrow">
-      <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
-      المبادرات والممارسات
-    </span>
-    <h1 class="asg-hero__title">المبادرات</h1>
-    <p class="asg-hero__meta">
-      مبادرة المدير تصدر معتمدةً فورًا، ومقترح المنسوب يمر بمراجعة مدير
-      المدرسة. والممارسة الناجحة تُشارَك مع مدارس المجموعة بعد اعتمادها.
-    </p>
+<div class="twq-page plans-page" aria-labelledby="initiativesPageTitle">
+  <header class="twq-page-header plans-page-header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> المبادرات والممارسات</span>
+      <h1 class="twq-page-header__title" id="initiativesPageTitle">مبادرات {{ active_school.name }}</h1>
+      <p class="twq-page-header__lead">مسار مستقل عن الخطة: المقترح يُراجع داخل المدرسة، والممارسة المعتمدة فقط يمكن مشاركتها مع المجموعة.</p>
+    </div>
+    <div class="twq-page-header__aside"><div class="plans-page-header__actions"><a class="twq-btn twq-btn--ghost" href="{% url 'reports:plan_list' %}"><i class="fa-solid fa-list-check" aria-hidden="true"></i> الخطط</a></div></div>
   </header>
 
-  <div class="ini-grid">
-    <div>
-      <section class="asg-card u-mt-2xl">
-        <h2 class="asg-card__title">
-          {% if is_manager %}المبادرات ومتابعتها{% else %}مبادرات المدرسة{% endif %}
-        </h2>
+  <nav class="plans-track-nav" aria-label="مسارات التخطيط">
+    <a href="{% url 'reports:plan_list' %}"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>الخطط والأهداف</span></a>
+    <a href="{% url 'reports:initiative_list' %}" aria-current="page"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span>المبادرات والممارسات</span></a>
+  </nav>
 
+  {% if form.errors %}
+    <div class="twq-alert twq-alert--danger plan-error-summary" role="alert" tabindex="-1" data-plan-error-summary><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><div><strong>تعذّر تسجيل المبادرة</strong><ul>{% for field in form.visible_fields %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul></div></div>
+  {% endif %}
+
+  <div class="initiative-grid">
+    <section class="twq-section plan-section plan-section--flush" aria-labelledby="initiativeListTitle">
+      <header class="twq-section__header"><div class="plan-section__heading"><span class="twq-section__kicker">السجل</span><h2 class="twq-section__title" id="initiativeListTitle">{% if is_manager %}المبادرات ومتابعتها{% else %}مبادرات المدرسة{% endif %}</h2><p class="twq-section__description">الحالة والملاحظات وإجراء المراجعة التالي دون خلطها بدورة الخطط.</p></div>{% if rows %}<span class="plan-list-count"><bdi>{{ rows|length }}</bdi> مبادرة</span>{% endif %}</header>
+      {% if rows %}<div class="initiative-list">
         {% for row in rows %}
-          <article class="asg-item u-items-start">
-            <div class="asg-item__main">
-              <div class="asg-item__title">{{ row.initiative.title }}</div>
-              <div class="asg-item__sub">
-                {{ row.initiative.teacher_name|default:"—" }}
-                · {{ row.initiative.created_at|date:"Y-m-d" }}
-                {% if row.initiative.plan %} · خطة: {{ row.initiative.plan.title }}{% endif %}
-              </div>
-              {% if row.initiative.summary %}
-                <div class="ini-body">{{ row.initiative.summary|truncatechars:260 }}</div>
-              {% endif %}
-              {% if row.initiative.review_note %}
-                <div class="ini-body xs-initiative-list-1">
-                  <strong>ملاحظة:</strong> {{ row.initiative.review_note }}
-                </div>
-              {% endif %}
-
+          <article class="initiative-card">
+            <div class="initiative-card__main">
+              <h3 class="initiative-card__title">{{ row.initiative.title }}</h3>
+              <div class="initiative-card__meta"><bdi>{{ row.initiative.teacher_name|default:"—" }}</bdi> · <time datetime="{{ row.initiative.created_at|date:'c' }}"><bdi>{{ row.initiative.created_at|date:"Y-m-d" }}</bdi></time>{% if row.initiative.plan %} · خطة: {{ row.initiative.plan.title }}{% endif %}</div>
+              {% if row.initiative.summary %}<p class="initiative-card__body">{{ row.initiative.summary|truncatechars:260 }}</p>{% endif %}
+              {% if row.initiative.review_note %}<div class="plan-review-note"><span class="plan-review-note__label">آخر ملاحظة مراجعة</span>{{ row.initiative.review_note }}</div>{% endif %}
               {% if row.actions or row.can_share %}
-                <form method="post" action="{% url 'reports:initiative_action' row.initiative.pk %}" class="ini-actions">
-                  {% csrf_token %}
-                  <input type="hidden" name="initiative_action" class="ini-field" value="">
-                  {% if not row.mine %}
-                    <input type="text" name="note" placeholder="ملاحظتك…" class="xs-initiative-list-2">
-                  {% endif %}
-                  {% if 'submit' in row.actions %}
-                    <button type="submit" class="asg-btn asg-btn--primary asg-btn--sm" data-ini="submit">إرسال للاعتماد</button>
-                  {% endif %}
-                  {% if 'issue' in row.actions %}
-                    <button type="submit" class="asg-btn asg-btn--primary asg-btn--sm" data-ini="issue">
-                      <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                      إصدار واعتماد
-                    </button>
-                  {% endif %}
-                  {% if 'withdraw' in row.actions %}
-                    <button type="submit" class="asg-btn asg-btn--ghost asg-btn--sm" data-ini="withdraw">سحب</button>
-                  {% endif %}
-                  {% if 'return' in row.actions %}
-                    <button type="submit" class="asg-btn asg-btn--warn asg-btn--sm" data-ini="return">إعادة</button>
-                  {% endif %}
-                  {% if 'approve' in row.actions %}
-                    <button type="submit" class="asg-btn asg-btn--primary asg-btn--sm" data-ini="approve">اعتماد</button>
-                  {% endif %}
-                  {% if row.can_share %}
-                    <button type="submit" class="asg-btn asg-btn--violet asg-btn--sm" data-ini="share">
-                      <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-                      مشاركة مع المجموعة
-                    </button>
-                  {% endif %}
-                </form>
+                <form method="post" action="{% url 'reports:initiative_action' row.initiative.pk %}" class="initiative-actions">{% csrf_token %}<input type="hidden" name="initiative_action" value="" data-initiative-action-field>{% if not row.mine %}<label class="visually-hidden" for="initiativeNote{{ row.initiative.pk }}">ملاحظة المراجع</label><input type="text" id="initiativeNote{{ row.initiative.pk }}" name="note" placeholder="ملاحظة المراجع…">{% endif %}{% if 'submit' in row.actions %}<button type="submit" class="twq-btn twq-btn--primary plan-btn--sm" data-initiative-action="submit">إرسال للاعتماد</button>{% endif %}{% if 'issue' in row.actions %}<button type="submit" class="twq-btn twq-btn--primary plan-btn--sm" data-initiative-action="issue">إصدار واعتماد</button>{% endif %}{% if 'withdraw' in row.actions %}<button type="submit" class="twq-btn twq-btn--ghost plan-btn--sm" data-initiative-action="withdraw">سحب</button>{% endif %}{% if 'return' in row.actions %}<button type="submit" class="twq-btn plan-btn--warning plan-btn--sm" data-initiative-action="return">إعادة</button>{% endif %}{% if 'approve' in row.actions %}<button type="submit" class="twq-btn twq-btn--primary plan-btn--sm" data-initiative-action="approve">اعتماد</button>{% endif %}{% if row.can_share %}<button type="submit" class="twq-btn plan-btn--accent plan-btn--sm" data-initiative-action="share"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> مشاركة مع المجموعة</button>{% endif %}</form>
               {% endif %}
             </div>
-
-            <div class="asg-item__side u-self-start">
-              <span class="asg-tag {% if row.initiative.is_final %}asg-tag--done{% endif %}">
-                {{ row.initiative.get_approval_state_display }}
-              </span>
-              {% if row.initiative.is_shared %}
-                <span class="asg-tag asg-tag--done">مشاركة</span>
-              {% elif row.initiative.is_best_practice %}
-                <span class="asg-tag">ممارسة ناجحة</span>
-              {% endif %}
-            </div>
+            <div class="initiative-card__state"><span class="twq-status" data-status="{{ row.initiative.approval_state }}">{{ row.initiative.get_approval_state_display }}</span>{% if row.initiative.is_shared %}<span class="twq-status" data-status="approved">مشاركة</span>{% elif row.initiative.is_best_practice %}<span class="twq-status" data-status="info">ممارسة ناجحة</span>{% endif %}</div>
           </article>
-        {% empty %}
-          <div class="asg-empty">
-            <div class="asg-empty__icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></div>
-            <h2>لا مبادرات بعد</h2>
-            <p>أنشئ مبادرة أو اقترح ممارسة نجحت معك لتظهر في سجل المدرسة بعد اعتمادها.</p>
-          </div>
         {% endfor %}
-      </section>
-    </div>
+      </div>{% else %}<div class="twq-empty twq-empty--local"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-lightbulb"></i></span><h3 class="twq-empty__title">لا مبادرات بعد</h3><p class="twq-empty__message">اقترح ممارسة ذات أثر، ثم أرسلها للاعتماد عندما تكتمل.</p></div>{% endif %}
+    </section>
 
-    <div>
-      <section class="asg-card u-mt-2xl">
-        <h2 class="asg-card__title">{% if is_manager %}إنشاء مبادرة{% else %}اقتراح مبادرة{% endif %}</h2>
-        <p class="asg-card__hint">
-          {% if is_manager %}
-            تصدر معتمدةً فور تسجيلها، بلا انتظار اعتماد من أي جهة.
-          {% else %}
-            تُحفظ مسودةً، وترسلها لمدير المدرسة حين تكتمل.
-          {% endif %}
-        </p>
-
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <div class="asg-field">
-            <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-            {{ form.title }}
-            {% if form.title.errors %}<ul class="asg-errors">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-          </div>
-          <div class="asg-field">
-            <label for="{{ form.summary.id_for_label }}">{{ form.summary.label }}</label>
-            {{ form.summary }}
-            {% if form.summary.errors %}<ul class="asg-errors">{% for e in form.summary.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-          </div>
-          <div class="asg-field">
-            <label for="{{ form.plan.id_for_label }}">{{ form.plan.label }}</label>
-            {{ form.plan }}
-          </div>
-          <div class="asg-field">
-            <label class="ini-check">
-              {{ form.is_best_practice }}
-              <span>{{ form.is_best_practice.label }}</span>
-            </label>
-            <div class="asg-field__help">{{ form.is_best_practice.help_text }}</div>
-          </div>
-          <button type="submit" class="asg-btn asg-btn--primary">
-            <i class="fa-solid fa-plus" aria-hidden="true"></i>
-            {% if is_manager %}إصدار المبادرة{% else %}تسجيل المقترح{% endif %}
-          </button>
-        </form>
-      </section>
-    </div>
+    <section class="twq-section plan-section plan-section--flush" aria-labelledby="initiativeCreateTitle">
+      <header class="twq-section__header"><div class="plan-section__heading"><span class="twq-section__kicker">إضافة</span><h2 class="twq-section__title" id="initiativeCreateTitle">{% if is_manager %}إنشاء مبادرة{% else %}اقتراح مبادرة{% endif %}</h2><p class="twq-section__description">{% if is_manager %}مبادرة المدير تصدر وفق عقد الإصدار الحالي.{% else %}تُحفظ مسودة ويمكن إرسالها للمراجعة بعد اكتمال الفكرة والأثر.{% endif %}</p></div></header>
+      <form method="post" novalidate>{% csrf_token %}
+        <div class="twq-field{% if form.title.errors %} twq-field--error{% endif %}"><label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}{% if form.title.errors %}<div class="twq-field__message" id="{{ form.title.id_for_label }}-error">{% for error in form.title.errors %}{{ error }}{% endfor %}</div>{% endif %}</div>
+        <div class="twq-field{% if form.summary.errors %} twq-field--error{% endif %}"><label for="{{ form.summary.id_for_label }}">{{ form.summary.label }}</label>{{ form.summary }}{% if form.summary.errors %}<div class="twq-field__message" id="{{ form.summary.id_for_label }}-error">{% for error in form.summary.errors %}{{ error }}{% endfor %}</div>{% endif %}</div>
+        <div class="twq-field{% if form.plan.errors %} twq-field--error{% endif %}"><label for="{{ form.plan.id_for_label }}">{{ form.plan.label }}</label>{{ form.plan }}{% if form.plan.errors %}<div class="twq-field__message" id="{{ form.plan.id_for_label }}-error">{% for error in form.plan.errors %}{{ error }}{% endfor %}</div>{% endif %}</div>
+        <div class="twq-field"><label class="initiative-check">{{ form.is_best_practice }}<span>{{ form.is_best_practice.label }}</span></label><div class="twq-field__help">{{ form.is_best_practice.help_text }}</div></div>
+        <button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-plus" aria-hidden="true"></i> {% if is_manager %}إصدار المبادرة{% else %}تسجيل المقترح{% endif %}</button>
+      </form>
+    </section>
   </div>
 </div>
-
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  /* كل نموذج مبادرة يحمل حقلاً مخفياً واحداً، ويملؤه الزر المضغوط —
-     فلا يتكرر حقل الملاحظة لكل إجراء ولا يضيع ما كُتب فيه. */
-  (function () {
-    document.querySelectorAll('[data-ini]').forEach(function (button) {
-      button.addEventListener('click', function () {
-        var form = button.closest('form');
-        if (!form) return;
-        var field = form.querySelector('.ini-field');
-        if (field) field.value = button.getAttribute('data-ini');
-      });
-    });
-  })();
-</script>
 {% endblock %}

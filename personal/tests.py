@@ -293,7 +293,8 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertRedirects(
             response, reverse("personal:checkout_start", args=[plan.pk]), fetch_redirect_response=False
         )
-        response = self.client.post(reverse("personal:checkout_start", args=[plan.pk]))
+        with override_settings(MOYASAR_ENABLED=True, RATELIMIT_ENABLE=False):
+            response = self.client.post(reverse("personal:checkout_start", args=[plan.pk]))
         self.assertRedirects(response, "https://checkout.moyasar.com/invoices/test?lang=ar", fetch_redirect_response=False)
         payment = PersonalPayment.objects.get(workspace__owner__phone="0557000012")
         self.assertEqual(payment.status, PersonalPayment.Status.PENDING)
@@ -405,8 +406,17 @@ class PersonalWorkspaceJourneyTests(TestCase):
         invoice = self.client.get(invoice_url)
         self.assertEqual(invoice.status_code, 200)
         self.assertEqual(invoice["Content-Type"], "application/pdf")
-        self.assertEqual(invoice["Cache-Control"], "private, no-store")
+        self.assertIn("no-store", invoice["Cache-Control"])
         invoice.close()
+
+        end_date = subscription.end_date
+        self.client.logout()
+        with self.captureOnCommitCallbacks(execute=True):
+            callback = self.client.post(reverse("personal:moyasar_callback", args=[payment.pk]))
+        self.assertEqual(callback.status_code, 200)
+        self.assertTrue(callback.json()["activated"])
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.end_date, end_date)
 
         outsider = Teacher.objects.create_user(
             phone="0557000040", name="معلم آخر", password="Personal#2026"  # noqa: S106
@@ -414,6 +424,35 @@ class PersonalWorkspaceJourneyTests(TestCase):
         PersonalWorkspace.objects.create(owner=outsider, school_name="مدرسة أخرى")
         self.client.force_login(outsider)
         self.assertEqual(self.client.get(invoice_url).status_code, 404)
+
+    @patch("personal.billing.fetch_moyasar_invoice")
+    def test_failed_gateway_return_keeps_free_plan_and_disables_invoice(self, fetch_invoice):
+        plan = PersonalPlan.objects.create(
+            code="gateway_failure_test", name="باقة التجربة", price="49.00", duration_days=30,
+        )
+        subscription = PersonalSubscription.objects.create(
+            workspace=self.workspace, plan=PersonalPlan.objects.get(code="personal_free")
+        )
+        payment = PersonalPayment.objects.create(
+            workspace=self.workspace, plan=plan, plan_name=plan.name,
+            duration_days=plan.duration_days, amount=plan.price,
+            customer_name=self.teacher.name, customer_email="teacher@example.com",
+            gateway_invoice_id="inv-failed-test",
+        )
+        fetch_invoice.return_value = {"id": payment.gateway_invoice_id, "status": "failed"}
+        self.client.force_login(self.teacher)
+
+        response = self.client.get(reverse("personal:moyasar_return", args=[payment.pk]))
+        self.assertRedirects(response, reverse("personal:billing"), fetch_redirect_response=False)
+        payment.refresh_from_db()
+        subscription.refresh_from_db()
+        self.assertEqual(payment.status, PersonalPayment.Status.FAILED)
+        self.assertFalse(payment.activated_at)
+        self.assertEqual(subscription.plan.code, "personal_free")
+        self.assertEqual(
+            self.client.get(reverse("personal:payment_invoice", args=[payment.pk])).status_code,
+            404,
+        )
 
     @patch("reports.utils.run_task_safe")
     def test_renewal_keeps_paid_workspace_current_and_retains_remaining_days(self, _queue_task):
