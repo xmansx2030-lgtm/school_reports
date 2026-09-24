@@ -12,661 +12,115 @@
   <title>تم تجهيز مدرستك | منصة توثيق</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
   {% include "reports/partials/pwa_install_head.html" %}
-  {% comment %}الخط والأيقونات محلياً: لا طلب لطرف ثالث قبل أول حرف، ولا نطاق خارجي في سياسة المحتوى.{% endcomment %}
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-  <style nonce="{{ CSP_NONCE }}">
-    :root {
-      --forest: #071d15;
-      --forest-2: #0a3f2b;
-      --green: #0a6946;
-      --green-light: #e6f3ec;
-      --gold: #c5a365;
-      --gold-light: #ecd8ad;
-      --ink: #111a16;
-      --muted: #68736d;
-      --line: #dde4df;
-      --paper: #f8f7f3;
-      --white: #fff;
-      --shadow: 0 30px 90px rgba(4, 28, 19, .2);
-    }
-    *, *::before, *::after { box-sizing: border-box; }
-    body {
-      min-height: 100vh;
-      margin: 0;
-      padding: 28px;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at 10% 6%, rgba(197,163,101,.2), transparent 25%),
-        linear-gradient(135deg, #061912, #0b3022);
-      font-family: "Cairo", system-ui, sans-serif;
-      line-height: 1.7;
-    }
-    button, input { font: inherit; }
-    a { color: inherit; text-decoration: none; }
-    :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-    .visually-hidden {
-      position: absolute !important;
-      width: 1px !important;
-      height: 1px !important;
-      padding: 0 !important;
-      margin: -1px !important;
-      overflow: hidden !important;
-      clip: rect(0, 0, 0, 0) !important;
-      white-space: nowrap !important;
-      border: 0 !important;
-    }
-    .success-shell {
-      width: min(980px, 100%);
-      margin: 0 auto;
-      overflow: hidden;
-      background: var(--paper);
-      border: 1px solid rgba(255,255,255,.16);
-      border-radius: 26px;
-      box-shadow: var(--shadow);
-    }
-    .success-head {
-      position: relative;
-      overflow: hidden;
-      padding: 42px 48px 38px;
-      color: var(--white);
-      background: linear-gradient(130deg, #0b4b34, var(--forest));
-      text-align: center;
-    }
-    .success-head::before, .success-head::after {
-      position: absolute;
-      content: "";
-      border: 1px solid rgba(236,216,173,.17);
-      border-radius: 50%;
-    }
-    .success-head::before { width: 250px; height: 250px; inset: -155px -90px auto auto; }
-    .success-head::after { width: 180px; height: 180px; inset: auto auto -120px -70px; }
-    .success-mark {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      width: 68px;
-      height: 68px;
-      margin: 0 auto 17px;
-      color: var(--forest);
-      background: linear-gradient(145deg, #f3e3c0, var(--gold));
-      border: 5px solid rgba(255,255,255,.1);
-      border-radius: 22px;
-      font-size: 1.5rem;
-      place-items: center;
-    }
-    .success-head h1 {
-      position: relative;
-      z-index: 1;
-      margin: 0;
-      font-size: clamp(1.75rem, 4vw, 2.65rem);
-      font-weight: 900;
-      line-height: 1.35;
-      letter-spacing: -.035em;
-    }
-    .success-head p {
-      position: relative;
-      z-index: 1;
-      margin: 8px auto 0;
-      color: rgba(255,255,255,.65);
-      font-size: .85rem;
-    }
-    .success-body { padding: 34px 42px 42px; }
-    .receipt-intro {
-      display: flex;
-      margin-block-end: 18px;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 22px;
-    }
-    .receipt-intro h2 { margin: 0 0 4px; font-size: 1.18rem; }
-    .receipt-intro p { margin: 0; color: var(--muted); font-size: .8rem; }
-    .once-badge {
-      display: inline-flex;
-      min-height: 32px;
-      padding: 6px 11px;
-      flex: 0 0 auto;
-      align-items: center;
-      gap: 6px;
-      color: #8a6428;
-      background: #fff7e8;
-      border: 1px solid #f1dfbb;
-      border-radius: 99px;
-      font-size: .72rem;
-      font-weight: 900;
-    }
-    .launch-panel {
-      display: flex;
-      margin-block-end: 20px;
-      padding: 16px 18px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      background: linear-gradient(135deg, rgba(10,105,70,.09), rgba(197,163,101,.12));
-      border: 1px solid rgba(10,105,70,.18);
-      border-radius: 16px;
-    }
-    .launch-panel__copy { min-width: 0; }
-    .launch-panel__copy strong { display: block; margin-block-end: 2px; color: var(--forest); font-size: .95rem; }
-    .launch-panel__copy span { display: block; color: var(--muted); font-size: .78rem; }
-    .credentials {
-      display: grid;
-      padding: 20px;
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 17px;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    .credential {
-      min-width: 0;
-      padding: 15px;
-      background: #f7faf8;
-      border: 1px solid #e3eae6;
-      border-radius: 13px;
-    }
-    .credential-label {
-      display: flex;
-      margin-block-end: 8px;
-      align-items: center;
-      gap: 7px;
-      color: var(--muted);
-      font-size: .76rem;
-      font-weight: 800;
-    }
-    .credential-row { display: flex; align-items: center; gap: 8px; direction: ltr; }
-    .credential-row input {
-      width: 100%;
-      min-width: 0;
-      padding: 0;
-      color: var(--forest);
-      background: transparent;
-      border: 0;
-      outline: 0;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 1rem;
-      font-weight: 800;
-    }
-    .credential-print-value {
-      display: none;
-      width: 100%;
-      color: var(--forest);
-      direction: ltr;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 1rem;
-      font-weight: 800;
-      text-align: left;
-    }
-    .icon-button {
-      display: grid;
-      width: 44px;
-      height: 44px;
-      flex: 0 0 auto;
-      color: var(--green);
-      background: var(--green-light);
-      border: 0;
-      border-radius: 10px;
-      cursor: pointer;
-      place-items: center;
-    }
-    .icon-button:hover { background: #d7ebdf; }
-    .receipt-actions { display: flex; margin-block-start: 12px; justify-content: flex-end; gap: 8px; }
-    .login-address {
-      display: flex;
-      margin-block-start: 12px;
-      padding: 10px 13px;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      background: rgba(255,255,255,.55);
-      border-radius: 10px;
-      flex-wrap: wrap;
-      font-size: .74rem;
-    }
-    .login-address a {
-      display: inline-flex;
-      min-height: 44px;
-      padding-inline: 4px;
-      align-items: center;
-      color: var(--green);
-      font-weight: 900;
-      direction: ltr;
-    }
-    .quiet-button {
-      display: inline-flex;
-      min-height: 44px;
-      padding: 8px 13px;
-      align-items: center;
-      gap: 7px;
-      color: var(--green);
-      background: transparent;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: .76rem;
-      font-weight: 800;
-    }
-    .trial-summary {
-      display: grid;
-      margin-block-start: 24px;
-      overflow: hidden;
-      background: var(--forest);
-      border-radius: 17px;
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .trial-summary > div {
-      min-height: 88px;
-      display: flex;
-      padding: 16px;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: rgba(255,255,255,.68);
-      border-inline-start: 1px solid rgba(255,255,255,.1);
-      text-align: center;
-      font-size: .76rem;
-    }
-    .trial-summary > div:first-child { border-inline-start: 0; }
-    .trial-summary i { color: var(--gold-light); font-size: 1.08rem; }
-    .trial-summary strong, .trial-summary small { display: block; }
-    .trial-summary strong { color: var(--white); font-size: .86rem; }
-    .trial-summary small { color: rgba(255,255,255,.62); font-size: .7rem; }
-    .next-section { margin-block-start: 27px; }
-    .next-section h2 { margin: 0 0 3px; font-size: 1.08rem; }
-    .next-section > p { margin: 0 0 14px; color: var(--muted); font-size: .78rem; }
-    .next-steps {
-      display: grid;
-      margin: 0;
-      padding: 0;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 10px;
-      list-style: none;
-    }
-    .next-steps li {
-      min-height: 142px;
-      padding: 16px;
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 13px;
-      font-size: .78rem;
-    }
-    .next-steps span {
-      display: grid;
-      width: 32px;
-      height: 32px;
-      margin-block-end: 9px;
-      color: var(--green);
-      background: var(--green-light);
-      border-radius: 9px;
-      font-weight: 900;
-      place-items: center;
-    }
-    .next-steps strong { display: block; margin-block-end: 4px; color: var(--forest); font-size: .82rem; line-height: 1.55; }
-    .next-steps small { display: block; color: var(--muted); font-size: .7rem; line-height: 1.75; }
-    .primary-action {
-      display: flex;
-      min-height: 56px;
-      min-width: 255px;
-      margin: 0;
-      padding: 12px 22px;
-      flex: 0 0 auto;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: var(--white);
-      background: var(--green);
-      border-radius: 13px;
-      box-shadow: 0 14px 32px rgba(10,105,70,.2);
-      font-size: .9rem;
-      font-weight: 900;
-    }
-    .security-note {
-      display: flex;
-      margin: 14px 0 0;
-      align-items: flex-start;
-      justify-content: center;
-      gap: 7px;
-      color: var(--muted);
-      font-size: .72rem;
-      text-align: center;
-    }
-    .toast {
-      position: fixed;
-      z-index: 1000;
-      inset-block-start: max(24px, env(safe-area-inset-top));
-      inset-inline-start: max(24px, env(safe-area-inset-right));
-      width: min(340px, calc(100vw - 48px));
-      padding: 12px 15px;
-      color: var(--ink);
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-inline-start: 4px solid var(--green);
-      border-radius: 13px;
-      box-shadow: 0 18px 48px rgba(4, 28, 19, .16);
-      font-size: .85rem;
-      font-weight: 800;
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-8px);
-      transition: opacity .2s, transform .2s;
-    }
-    .toast.show { opacity: 1; transform: none; }
-    .leave-confirmation[hidden] { display: none; }
-    .leave-confirmation {
-      position: fixed;
-      z-index: 1100;
-      inset: 0;
-      display: grid;
-      padding: 20px;
-      place-items: center;
-      background: rgba(4, 28, 19, .58);
-    }
-    .leave-confirmation__card {
-      width: min(430px, 100%);
-      padding: 24px;
-      color: var(--ink);
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      box-shadow: 0 24px 70px rgba(4, 28, 19, .3);
-    }
-    .leave-confirmation__card h2 { margin: 0 0 8px; color: var(--forest); font-size: 1.05rem; }
-    .leave-confirmation__card p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.85; }
-    .leave-confirmation__actions { display: flex; margin-block-start: 20px; justify-content: flex-start; gap: 10px; }
-    .leave-confirmation__actions button { min-height: 44px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font: inherit; font-weight: 800; }
-    .leave-confirmation__actions [data-leave-confirm] { color: var(--white); background: var(--green); border-color: var(--green); }
-    @media (max-width: 900px) {
-      .next-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .next-steps li:last-child { grid-column: 1 / -1; min-height: auto; }
-    }
-    @media (max-width: 680px) {
-      body { padding: 0; background: var(--paper); }
-      .success-shell { min-height: 100vh; border: 0; border-radius: 0; }
-      .success-head { padding: 34px 20px 30px; }
-      .success-body { padding: 25px 14px 32px; }
-      .receipt-intro { align-items: flex-start; flex-direction: column; gap: 10px; }
-      .launch-panel { align-items: stretch; flex-direction: column; }
-      .primary-action { width: 100%; min-width: 0; }
-      .credentials, .next-steps { grid-template-columns: 1fr; }
-      .next-steps li, .next-steps li:last-child { min-height: auto; grid-column: auto; }
-      .trial-summary { grid-template-columns: 1fr; }
-      .trial-summary > div { min-height: 70px; justify-content: flex-start; border: 0; border-block-start: 1px solid rgba(255,255,255,.1); text-align: right; }
-      .trial-summary > div:first-child { border-block-start: 0; }
-      .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; }
-      .quiet-button { justify-content: center; }
-      .toast {
-        inset-block-start: max(14px, env(safe-area-inset-top));
-        inset-inline: 14px;
-        width: auto;
-      }
-    }
-    @media print {
-      body { padding: 0; color: #000; background: #fff; }
-      .success-shell { box-shadow: none; }
-      .launch-panel, .receipt-actions, .security-note, .toast, .leave-confirmation { display: none !important; }
-      .credential-row input, .credential-row .icon-button { display: none !important; }
-      .credential-print-value { display: block !important; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition: none !important; }
-    }
-  </style>
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260924.1">
   <link rel="stylesheet" href="{% static 'css/standalone-system.css' %}?v=20260912.2">
-  <style nonce="{{ CSP_NONCE }}">
-    html[data-theme="dark"] .launch-panel {
-      background: linear-gradient(135deg, rgba(111,211,172,.12), rgba(197,163,101,.11));
-      border-color: rgba(111,211,172,.24);
-    }
-    html[data-theme="dark"] .launch-panel__copy strong,
-    html[data-theme="dark"] .next-steps strong { color: #edf6f1; }
-    html[data-theme="dark"] .credentials {
-      background: #0a2119 !important;
-      border-color: rgba(205,225,216,.18) !important;
-    }
-    html[data-theme="dark"] .credential {
-      color: #edf6f1 !important;
-      background: #102920 !important;
-      border-color: rgba(205,225,216,.18) !important;
-    }
-    html[data-theme="dark"] .credential-row { background: transparent !important; }
-    html[data-theme="dark"] .credential-label,
-    html[data-theme="dark"] .login-address { color: #c8dbd1 !important; }
-    html[data-theme="dark"] .login-address {
-      background: rgba(205,225,216,.08) !important;
-      border: 1px solid rgba(205,225,216,.14);
-    }
-    html[data-theme="dark"] .login-address a { color: #7ce2b8 !important; }
-    html[data-theme="dark"] .toast {
-      color: #edf6f1 !important;
-      background: #102920 !important;
-      border-color: rgba(205,225,216,.2) !important;
-      border-inline-start-color: #6fd3ac !important;
-    }
-    html[data-theme="dark"] .icon-button:hover { background: rgba(111,211,172,.2); }
-    @media print {
-      html[data-theme="dark"] body,
-      html[data-theme="dark"] .success-shell,
-      html[data-theme="dark"] .success-body,
-      html[data-theme="dark"] .credentials,
-      html[data-theme="dark"] .credential,
-      html[data-theme="dark"] .credential-row,
-      html[data-theme="dark"] .next-steps li {
-        color: #000 !important;
-        background: #fff !important;
-        box-shadow: none !important;
-      }
-      html[data-theme="dark"] .credential-label,
-      html[data-theme="dark"] .credential-print-value { color: #000 !important; }
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'css/registration.css' %}?v=20260924.1">
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" defer></script>
+  <script src="{% static 'js/auth-password-toggle.js' %}?v=20260920.1" defer></script>
+  <script src="{% static 'js/registration.js' %}?v=20260924.1" defer></script>
 </head>
 <body class="registration-success-page">
   <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
-  <main class="success-shell" id="mainContent">
-    <header class="success-head">
-      <span class="success-mark"><i class="fa-solid fa-check"></i></span>
+
+  <main class="registration-success" id="mainContent">
+    <header class="registration-success__header">
+      <a class="registration-brand registration-success__brand" href="{% url 'reports:landing' %}" aria-label="منصة توثيق — الصفحة الرئيسية">
+        <img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44">
+        <span><strong>منصة توثيق</strong><small>تشغيل وتوثيق العمل المدرسي</small></span>
+      </a>
+      <span class="registration-success__mark" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+      <p class="registration-eyebrow">اكتمل التسجيل</p>
       <h1>تم إنشاء مدرسة «{{ receipt.school_name }}»</h1>
-      <p>مرحبًا {{ receipt.manager_name }}، حسابك جاهز والتجربة الكاملة مفعّلة الآن.</p>
+      <p>مرحبًا {{ receipt.manager_name }}، أُنشئ حساب إدارة المدرسة وفُعّلت التجربة بنجاح.</p>
     </header>
 
-    <section class="success-body">
-      <div class="receipt-intro">
+    <div class="registration-success__body">
+      <section class="registration-next" aria-labelledby="registrationNextTitle">
         <div>
-          <h2>بيانات الدخول إلى حساب إدارة المدرسة</h2>
-          <p>احتفظ بها في مكان آمن. أنت مسجّل الدخول حاليًا ويمكنك الانتقال مباشرة إلى لوحة المدرسة.</p>
+          <p class="registration-eyebrow">الخطوة التالية</p>
+          <h2 id="registrationNextTitle">احفظ بيانات الدخول، ثم انتقل إلى لوحة المدرسة</h2>
+          <p id="launchHint">أنت مسجّل الدخول الآن. بعد مغادرة هذه الصفحة لن تظهر كلمة المرور مرة أخرى.</p>
         </div>
-        <span class="once-badge"><i class="fa-solid fa-eye-slash"></i> تظهر في هذه الصفحة مرة واحدة</span>
-      </div>
-
-      <div class="launch-panel" aria-label="الانتقال إلى لوحة المدرسة">
-        <div class="launch-panel__copy">
-          <strong>بعد حفظ بيانات الدخول: ابدأ من لوحة المدرسة</strong>
-          <span id="launchHint">ستجد بيانات المدرسة والسنة الدراسية أولًا، ثم بقية خطوات الإعداد بالترتيب.</span>
-        </div>
-        <a class="primary-action" href="{% url 'reports:admin_dashboard' %}" id="launchDashboard" aria-describedby="launchHint">
+        <a class="twq-btn twq-btn--primary registration-next__action" href="{% url 'reports:admin_dashboard' %}" id="launchDashboard" aria-describedby="launchHint">
           دخول لوحة المدرسة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
         </a>
-      </div>
+      </section>
 
-      <div class="credentials" id="credentials">
-        <div class="credential">
-          <span class="credential-label"><i class="fa-solid fa-mobile-screen-button"></i> اسم المستخدم — رقم الجوال</span>
-          <div class="credential-row">
-            <input id="loginPhone" type="text" value="{{ receipt.phone }}" readonly aria-label="رقم الجوال المستخدم للدخول">
-            <span class="credential-print-value">{{ receipt.phone }}</span>
-            <button class="icon-button" type="button" data-copy-target="loginPhone" aria-label="نسخ رقم الجوال"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
-          </div>
+      <section class="registration-receipt" aria-labelledby="credentialsTitle">
+        <header class="registration-receipt__header">
+          <div><h2 id="credentialsTitle">بيانات الدخول</h2><p>احفظها في مكان آمن. تظهر في هذه الصفحة مرة واحدة فقط.</p></div>
+          <span class="twq-status twq-status--warning"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> عرض لمرة واحدة</span>
+        </header>
+
+        <div class="registration-credentials" id="credentials">
+          <article class="registration-credential">
+            <label for="loginPhone"><i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i> اسم المستخدم — رقم الجوال</label>
+            <div class="registration-credential__value">
+              <input id="loginPhone" type="text" value="{{ receipt.phone }}" readonly dir="ltr" autocomplete="username" aria-label="رقم الجوال المستخدم للدخول">
+              <span class="credential-print-value" dir="ltr">{{ receipt.phone }}</span>
+              <button class="registration-icon-button" type="button" data-copy-target="loginPhone" aria-label="نسخ رقم الجوال"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+            </div>
+          </article>
+
+          <article class="registration-credential">
+            <label for="loginPassword"><i class="fa-solid fa-key" aria-hidden="true"></i> كلمة المرور</label>
+            <div class="registration-credential__value">
+              <input id="loginPassword" type="password" value="{{ receipt.password }}" readonly dir="ltr" autocomplete="new-password" aria-describedby="passwordVisibilityHint">
+              <span class="credential-print-value" dir="ltr">{{ receipt.password }}</span>
+              <button class="registration-icon-button" type="button" id="passwordVisibility" data-password-toggle="loginPassword" aria-label="إظهار كلمة المرور" aria-pressed="false"><i class="fa-regular fa-eye-slash" aria-hidden="true"></i></button>
+              <button class="registration-icon-button" type="button" data-copy-target="loginPassword" aria-label="نسخ كلمة المرور"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+            </div>
+            <p class="twq-field__help" id="passwordVisibilityHint">أخفِ كلمة المرور قبل مغادرة الجهاز المشترك.</p>
+          </article>
         </div>
-        <div class="credential">
-          <span class="credential-label"><i class="fa-solid fa-key"></i> كلمة المرور</span>
-          <div class="credential-row">
-            <input id="loginPassword" type="password" value="{{ receipt.password }}" readonly aria-label="كلمة المرور، مخفية افتراضيًا" aria-describedby="passwordVisibilityHint">
-            <span class="credential-print-value">{{ receipt.password }}</span>
-            <button class="icon-button" type="button" id="passwordVisibility" aria-label="إظهار كلمة المرور" aria-controls="loginPassword"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
-            <button class="icon-button" type="button" data-copy-target="loginPassword" aria-label="نسخ كلمة المرور"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
-            <span class="visually-hidden" id="passwordVisibilityHint">استخدم زر إظهار كلمة المرور لمراجعتها، ثم أخفها قبل مغادرة الجهاز.</span>
-          </div>
+
+        <div class="registration-receipt__actions">
+          <button class="twq-btn twq-btn--secondary" type="button" id="copyCredentials" data-login-url="{% url 'reports:login' %}"><i class="fa-regular fa-copy" aria-hidden="true"></i> نسخ بيانات الدخول</button>
+          <button class="twq-btn twq-btn--ghost" type="button" id="printReceipt"><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة الإيصال</button>
         </div>
-      </div>
 
-      <div class="receipt-actions">
-        <button class="quiet-button" type="button" id="copyCredentials"><i class="fa-regular fa-copy"></i> نسخ بيانات الدخول</button>
-        <button class="quiet-button" type="button" id="printReceipt"><i class="fa-solid fa-print"></i> طباعة الصفحة</button>
-      </div>
-      <div class="login-address">
-        <i class="fa-solid fa-link"></i>
-        <span>للدخول لاحقًا استخدم:</span>
-        <a href="{% url 'reports:login' %}">{{ request.get_host }}{% url 'reports:login' %}</a>
-      </div>
-      <p class="security-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> كلمة المرور مخفية افتراضيًا، ولن نعرض بيانات هذا الإيصال مرة أخرى بعد مغادرة الصفحة.</p>
+        <p class="registration-login-address"><i class="fa-solid fa-link" aria-hidden="true"></i><span>للدخول لاحقًا:</span> <a href="{% url 'reports:login' %}">{{ request.get_host }}{% url 'reports:login' %}</a></p>
+        <p class="registration-security-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> لا يحتوي رابط هذه الصفحة على بيانات الدخول، ولا يمكن فتح الإيصال مجددًا بعد استهلاكه.</p>
+      </section>
 
-      <div class="trial-summary" aria-label="تفاصيل التجربة">
-        <div><i class="fa-regular fa-calendar-check"></i><span><strong>{{ receipt.trial_days }} يومًا كاملة</strong><small>تنتهي في {{ receipt.trial_end_date }}</small></span></div>
-        <div><i class="fa-solid fa-users"></i><span><strong>حتى {{ receipt.teacher_limit }} من أعضاء الكادر</strong><small>لتجربة العمل الجماعي</small></span></div>
-        <div><i class="fa-solid fa-box-archive"></i><span><strong>أرشيف {{ receipt.archive_storage_gb }}GB</strong><small>مفعّل طوال التجربة</small></span></div>
-      </div>
+      <section class="registration-trial" aria-labelledby="trialTitle">
+        <header><p class="registration-eyebrow">تم التجهيز تلقائيًا</p><h2 id="trialTitle">ملخص التجربة</h2></header>
+        <div class="registration-trial__grid">
+          <div><i class="fa-regular fa-calendar-check" aria-hidden="true"></i><span><strong>{{ receipt.trial_days }} يومًا</strong><small>تنتهي في {{ receipt.trial_end_date }}</small></span></div>
+          <div><i class="fa-solid fa-users" aria-hidden="true"></i><span><strong>حتى {{ receipt.teacher_limit }} من أعضاء الكادر</strong><small>وفق خطة التجربة الحالية</small></span></div>
+          <div><i class="fa-solid fa-box-archive" aria-hidden="true"></i><span><strong>أرشيف {{ receipt.archive_storage_gb }}GB</strong><small>مفعّل طوال التجربة</small></span></div>
+        </div>
+      </section>
 
-      <section class="next-section">
-        <h2>مسار الإعداد المقترح</h2>
-        <p>نفّذ الخطوات بهذا الترتيب حتى تصبح أدوات الفريق والتوثيق جاهزة للاستخدام.</p>
-        <ol class="next-steps">
-          <li><span aria-hidden="true">1</span><strong>بيانات المدرسة والسنة</strong><small>راجع بيانات المدرسة وحدد السنة الدراسية الحالية أولًا.</small></li>
-          <li><span aria-hidden="true">2</span><strong>فريق المدرسة</strong><small>أضف حسابًا أو حسابين من الكادر لبدء العمل.</small></li>
-          <li><span aria-hidden="true">3</span><strong>الأقسام ومسؤولوها</strong><small>أنشئ الأقسام، وعيّن مسؤولًا لكل قسم، ووزّع أعضاء الفريق عليها.</small></li>
-          <li><span aria-hidden="true">4</span><strong>أنواع التقارير</strong><small>حدد الأنواع التي سيستخدمها الفريق في التوثيق.</small></li>
-          <li><span aria-hidden="true">5</span><strong>أول تقرير</strong><small>أنشئ تقريرك الأول وراجع ملف PDF النهائي.</small></li>
+      <section class="registration-setup" aria-labelledby="setupTitle">
+        <h2 id="setupTitle">بعد الدخول إلى لوحة المدرسة</h2>
+        <ol>
+          <li><span aria-hidden="true">1</span><div><strong>راجع بيانات المدرسة والسنة</strong><small>ابدأ بالسنة الدراسية الحالية قبل إضافة المحتوى.</small></div></li>
+          <li><span aria-hidden="true">2</span><div><strong>أضف فريق المدرسة</strong><small>أنشئ حسابات الكادر ووزّع المسؤوليات.</small></div></li>
+          <li><span aria-hidden="true">3</span><div><strong>ابدأ أول مسار توثيق</strong><small>أنشئ تقريرًا أو مهمة وتحقق من المخرجات.</small></div></li>
         </ol>
       </section>
-    </section>
+    </div>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <section class="leave-confirmation" id="leaveConfirmation" role="alertdialog" aria-modal="true" aria-labelledby="leaveConfirmationTitle" aria-describedby="leaveConfirmationText" hidden>
-    <div class="leave-confirmation__card">
-      <h2 id="leaveConfirmationTitle">هل تحفظ بيانات الدخول أولًا؟</h2>
-      <p id="leaveConfirmationText">تظهر بيانات الدخول في هذه الصفحة مرة واحدة. انسخها أو اطبع الإيصال قبل الانتقال إلى لوحة المدرسة.</p>
-      <div class="leave-confirmation__actions">
-        <button type="button" data-leave-cancel>البقاء لنسخ البيانات</button>
-        <button type="button" data-leave-confirm>المتابعة إلى اللوحة</button>
+  <div class="registration-toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <section class="registration-leave" id="leaveConfirmation" role="alertdialog" aria-modal="true" aria-labelledby="leaveConfirmationTitle" aria-describedby="leaveConfirmationText" hidden>
+    <div class="registration-leave__card" tabindex="-1">
+      <h2 id="leaveConfirmationTitle">هل حفظت بيانات الدخول؟</h2>
+      <p id="leaveConfirmationText">لن تظهر كلمة المرور مجددًا بعد مغادرة هذا الإيصال. انسخ البيانات أو اطبعها أولًا.</p>
+      <div>
+        <button class="twq-btn twq-btn--secondary" type="button" data-leave-cancel>البقاء وحفظ البيانات</button>
+        <button class="twq-btn twq-btn--primary" type="button" data-leave-confirm>المتابعة إلى اللوحة</button>
       </div>
     </div>
   </section>
 
-  <script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-    (function () {
-      var toast = document.getElementById("toast");
-      var toastTimer;
-      var receiptPreserved = false;
-      var pendingDashboardUrl = "";
-      var leaveConfirmation = document.getElementById("leaveConfirmation");
-      var leaveCancel = leaveConfirmation.querySelector("[data-leave-cancel]");
-      var leaveConfirm = leaveConfirmation.querySelector("[data-leave-confirm]");
-      var copiedCredentialTargets = {
-        loginPhone: false,
-        loginPassword: false
-      };
-
-      function showToast(message) {
-        toast.textContent = message;
-        toast.classList.add("show");
-        window.clearTimeout(toastTimer);
-        toastTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 1800);
-      }
-
-      function legacyCopy(value) {
-        var copied = false;
-        var temporary = document.createElement("textarea");
-        temporary.value = value;
-        temporary.setAttribute("readonly", "");
-        temporary.setAttribute("aria-hidden", "true");
-        temporary.style.position = "fixed";
-        temporary.style.opacity = "0";
-        document.body.appendChild(temporary);
-        temporary.select();
-        try { copied = document.execCommand("copy"); } catch (error) { copied = false; }
-        temporary.remove();
-        return copied;
-      }
-
-      function copyText(value, message, onCopied) {
-        function copied() {
-          showToast(message);
-          if (onCopied) onCopied();
-        }
-        function failed() { showToast("تعذّر النسخ تلقائيًا؛ حدّد البيانات وانسخها يدويًا."); }
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(value).then(copied).catch(function () {
-            if (legacyCopy(value)) copied(); else failed();
-          });
-          return;
-        }
-        if (legacyCopy(value)) copied(); else failed();
-      }
-
-      document.querySelectorAll("[data-copy-target]").forEach(function (button) {
-        button.addEventListener("click", function () {
-          var targetId = button.getAttribute("data-copy-target");
-          var input = document.getElementById(targetId);
-          if (input) {
-            copyText(input.value, "تم النسخ", function () {
-              if (Object.prototype.hasOwnProperty.call(copiedCredentialTargets, targetId)) {
-                copiedCredentialTargets[targetId] = true;
-                receiptPreserved = copiedCredentialTargets.loginPhone && copiedCredentialTargets.loginPassword;
-              }
-            });
-          }
-        });
-      });
-
-      var copyAll = document.getElementById("copyCredentials");
-      copyAll.addEventListener("click", function () {
-        var phone = document.getElementById("loginPhone").value;
-        var password = document.getElementById("loginPassword").value;
-        var loginUrl = window.location.origin + "{% url 'reports:login' %}";
-        copyText(
-          "منصة توثيق\nرابط الدخول: " + loginUrl + "\nرقم الجوال: " + phone + "\nكلمة المرور: " + password,
-          "تم نسخ بيانات الدخول",
-          function () { receiptPreserved = true; }
-        );
-      });
-
-      document.getElementById("printReceipt").addEventListener("click", function () {
-        receiptPreserved = true;
-        window.print();
-      });
-
-      document.getElementById("launchDashboard").addEventListener("click", function (event) {
-        if (receiptPreserved) return;
-        event.preventDefault();
-        pendingDashboardUrl = event.currentTarget.href;
-        leaveConfirmation.hidden = false;
-        leaveCancel.focus();
-      });
-
-      leaveCancel.addEventListener("click", function () {
-        leaveConfirmation.hidden = true;
-        document.getElementById("launchDashboard").focus();
-      });
-      leaveConfirm.addEventListener("click", function () {
-        if (pendingDashboardUrl) window.location.assign(pendingDashboardUrl);
-      });
-
-      var visibility = document.getElementById("passwordVisibility");
-      visibility.addEventListener("click", function () {
-        var input = document.getElementById("loginPassword");
-        var show = input.type === "password";
-        input.type = show ? "text" : "password";
-        input.setAttribute("aria-label", show ? "كلمة المرور، ظاهرة الآن" : "كلمة المرور، مخفية الآن");
-        visibility.setAttribute("aria-label", show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-        visibility.querySelector("i").className = show ? "fa-regular fa-eye-slash" : "fa-regular fa-eye";
-      });
-    }());
-  </script>
   {% include "reports/partials/pwa_install.html" %}
 </body>
 </html>
