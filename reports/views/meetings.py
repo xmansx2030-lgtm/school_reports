@@ -19,7 +19,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, prefetch_related_objects
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -58,6 +58,7 @@ from ..services_approval import (
 )
 from ..services_meetings import (
     MeetingError,
+    assert_meeting_held,
     cancel_meeting,
     convert_decision_to_assignment,
     decision_followup_rows,
@@ -153,16 +154,23 @@ def _meeting_for(request, pk: int, school) -> Meeting:
     كممنوع، لئلا يُكشف انعقاد اجتماع لمن لا يحق له معرفة أنه انعقد.
     """
     meeting = get_object_or_404(
-        Meeting.objects.select_related("organizer", "department", "school", "group"),
+        Meeting.objects.select_related(
+            "organizer",
+            "department",
+            "school",
+            "group",
+            "minutes",
+            "minutes__recorder",
+        ),
         pk=pk,
+        scope=Meeting.Scope.SCHOOL,
+        school=school,
     )
     if meeting.organizer_id == request.user.pk:
         return meeting
     if meeting.attendees.filter(person=request.user).exists():
         return meeting
-    if meeting.school_id == getattr(school, "pk", None) and is_school_manager(
-        request.user, active_school=school
-    ):
+    if is_school_manager(request.user, active_school=school):
         return meeting
     raise Http404
 
@@ -178,6 +186,7 @@ def meeting_list(request):
     meetings = list(meetings_for_user(request.user, school=school)[:100])
     upcoming = [m for m in meetings if m.status == Meeting.Status.SCHEDULED]
     held = [m for m in meetings if m.status == Meeting.Status.HELD]
+    cancelled = [m for m in meetings if m.status == Meeting.Status.CANCELLED]
 
     # محاضر تنتظر كتابةً أو اعتماداً — أول ما يهمّ من يفتح الشاشة.
     pending_minutes = [
@@ -195,6 +204,7 @@ def meeting_list(request):
             "active_school": school,
             "upcoming": upcoming,
             "held": held,
+            "cancelled": cancelled,
             "pending_minutes_count": len(pending_minutes),
             "can_organize": _may_organize(request.user, school),
         },
@@ -246,6 +256,7 @@ def meeting_detail(request, pk: int):
         return redirect_response
 
     meeting = _meeting_for(request, pk, school)
+    prefetch_related_objects([meeting], "agenda_items", "attendees__person")
     is_organizer = meeting.organizer_id == request.user.pk
 
     minutes = getattr(meeting, "minutes", None)
@@ -561,6 +572,8 @@ def meeting_action(request, pk: int):
             form = AgendaItemForm(request.POST)
             if meeting.organizer_id != request.user.pk:
                 raise PermissionDenied("جدول الأعمال يعدّه منظّم الاجتماع.")
+            if meeting.status != Meeting.Status.SCHEDULED:
+                raise MeetingError("يُعدّل جدول الأعمال قبل انعقاد الاجتماع فقط.")
             if not form.is_valid():
                 messages.error(request, "اكتب عنوان البند.")
             else:
@@ -575,6 +588,8 @@ def meeting_action(request, pk: int):
         elif action == "remove_agenda":
             if meeting.organizer_id != request.user.pk:
                 raise PermissionDenied("جدول الأعمال يعدّه منظّم الاجتماع.")
+            if meeting.status != Meeting.Status.SCHEDULED:
+                raise MeetingError("يُعدّل جدول الأعمال قبل انعقاد الاجتماع فقط.")
             item = get_object_or_404(
                 MeetingAgendaItem, pk=request.POST.get("item_id"), meeting=meeting
             )
@@ -621,6 +636,7 @@ def meeting_action(request, pk: int):
         elif action == "add_decision":
             if meeting.organizer_id != request.user.pk:
                 raise PermissionDenied("تسجيل القرارات لمنظّم الاجتماع.")
+            assert_meeting_held(meeting)
             form = DecisionForm(request.POST, meeting=meeting)
             if not form.is_valid():
                 messages.error(request, "تعذّر تسجيل القرار — تحقّق من الحقول.")

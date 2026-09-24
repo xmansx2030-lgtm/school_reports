@@ -220,25 +220,41 @@ def _apply(obj, *, actor: Actor, action: str, to_state: str, note: str, **field_
     الاثنان معاً أو لا شيء: حالةٌ تغيّرت بلا واقعة تسجّلها تجعل السجل يكذب،
     وواقعةٌ بلا تغيّر حالة تجعله يبالغ.
     """
-    block_reason = getattr(obj, "approval_block_reason", "")
-    if block_reason:
-        raise ApprovalError(str(block_reason))
-
-    from_state = obj.approval_state
     updates = {"approval_state": to_state, "review_note": (note or "").strip(), **field_updates}
 
     with transaction.atomic():
+        # لا نكتب فوق قرار أحدث وصل بعد فتح الشاشة. القفل وحده لا يكفي إذا
+        # حفظنا الـ instance القديمة؛ لذلك نعيد قراءة الصف داخل المعاملة ثم
+        # نطابق حالته بالحالة التي تحقق منها الإجراء قبل الدخول هنا.
+        locked = (
+            type(obj)._default_manager.using(obj._state.db)
+            .select_for_update()
+            .get(pk=obj.pk)
+        )
+        if locked.approval_state != obj.approval_state:
+            raise ApprovalError("تغيّرت حالة العمل؛ حدّث الصفحة ثم أعد المحاولة.")
+
+        block_reason = getattr(locked, "approval_block_reason", "")
+        if block_reason:
+            raise ApprovalError(str(block_reason))
+
+        from_state = locked.approval_state
         for field, value in updates.items():
-            setattr(obj, field, value)
-        obj.save(update_fields=list(updates))
+            setattr(locked, field, value)
+        locked.save(update_fields=list(updates))
         _record(
-            obj,
+            locked,
             actor=actor,
             action=action,
             from_state=from_state,
             to_state=to_state,
             note=note,
         )
+
+        # تبقى دوال الخدمة متوافقة مع عقدها الحالي: الـ instance الممررة
+        # تعكس الانتقال مباشرةً دون حاجة المستدعي إلى refresh_from_db().
+        for field in updates:
+            setattr(obj, field, getattr(locked, field))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
