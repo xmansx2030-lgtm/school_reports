@@ -78,7 +78,7 @@ def send_personal_payment_receipt_task(self, payment_id: str) -> dict:
             "personal_subscription_activated.html",
             recipient_name=payment.customer_name,
             email_title="تم تفعيل باقتك الشخصية",
-            email_eyebrow="اشتراك المعلم الشخصي",
+            email_eyebrow=f"اشتراك {payment.workspace.owner.personal_teacher_label} الشخصي",
             email_preheader="تم تأكيد الدفع وتفعيل مساحتك الشخصية، والفاتورة مرفقة.",
             email_tone="success",
             plan_name=payment.plan_name,

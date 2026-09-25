@@ -367,6 +367,10 @@ class TeacherManager(BaseUserManager):
 
 
 class Teacher(AbstractBaseUser, PermissionsMixin):
+    class Gender(models.TextChoices):
+        MALE = "male", "ذكر"
+        FEMALE = "female", "أنثى"
+
     # Keep legacy imported identifiers intact during the SQLite → PostgreSQL
     # migration. New interactive entries remain constrained by the Saudi phone
     # validators in reports/forms.py.
@@ -374,6 +378,7 @@ class Teacher(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField("البريد الإلكتروني", blank=True, default="")
     national_id = models.CharField("الهوية الوطنية", max_length=20, blank=True, null=True, unique=True)
     name = models.CharField("الاسم", max_length=150, db_index=True)
+    gender = models.CharField("الجنس", max_length=6, choices=Gender.choices, blank=True, default="")
 
     # لاحقاً يمكن ربط المعلّم مباشرة بمدرسة افتراضية
     # school = models.ForeignKey(
@@ -403,6 +408,14 @@ class Teacher(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = "مستخدم (معلم)"
         verbose_name_plural = "المستخدمون"
+
+    @property
+    def personal_teacher_label(self) -> str:
+        if self.gender == self.Gender.FEMALE:
+            return "المعلمة"
+        if self.gender == self.Gender.MALE:
+            return "المعلم"
+        return "المعلم/المعلمة"
 
     @property
     def display_role_label(self) -> str:

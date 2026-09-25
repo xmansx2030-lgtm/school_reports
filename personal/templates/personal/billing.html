@@ -4,10 +4,10 @@
 <div class="personal-heading"><div><span class="personal-kicker">إدارة مساحتك</span><h1>الاشتراك والفواتير</h1><p>تفاصيل باقتك الشخصية وسجل عمليات الدفع والفواتير.</p></div><a href="{% url 'personal:dashboard' %}">العودة للمساحة</a></div>
 
 <section class="personal-card twq-card">
-  <div class="personal-card__head"><div><span class="personal-kicker">الباقة الحالية</span><h2>{{ subscription.plan.name }}</h2></div><span class="personal-pill">{% if subscription.is_current %}نشطة{% else %}منتهية{% endif %}</span></div>
-  <div class="personal-row"><span><strong>السعة</strong><small>{{ subscription.plan.max_reports }} تقرير · {{ subscription.plan.max_evidence }} شاهد · {{ subscription.plan.storage_limit_mb }} م.ب</small></span><span>{% if subscription.end_date %}تنتهي {{ subscription.end_date }}{% else %}مستمرة{% endif %}</span></div>
-  {% if plans %}<div class="personal-actions">{% for plan in plans %}{% if plan.price > 0 %}<a class="personal-button twq-btn twq-btn--primary twq-btn--secondary personal-button--outline" href="{% url 'personal:checkout_start' plan.pk %}">{% if subscription.is_current and subscription.plan_id == plan.pk %}جدد {{ plan.name }}{% else %}اشترك في {{ plan.name }}{% endif %} · {{ plan.price|floatformat:"-2" }} ريال</a>{% endif %}{% endfor %}</div>{% endif %}
-  {% if not moyasar_enabled %}<p class="personal-hint">الدفع الإلكتروني غير متاح حاليًا. لا تُنشأ عمليات دفع حتى تفعيل إعدادات ميسّر.</p>{% endif %}
+  <div class="personal-card__head"><div><span class="personal-kicker">الباقة الحالية</span><h2>{{ subscription.plan.name }}</h2></div><span class="personal-pill">{% if subscription.is_current %}نشطة{% elif not subscription.is_active %}بانتظار التفعيل{% else %}منتهية{% endif %}</span></div>
+  <div class="personal-row"><span><strong>السعة</strong><small>{{ subscription.plan.max_reports }} تقرير · {{ subscription.plan.max_evidence }} شاهد · {{ subscription.plan.storage_limit_mb }} م.ب</small></span><span>{% if not subscription.is_active %}غير مفعّلة{% elif subscription.end_date %}تنتهي {{ subscription.end_date }}{% else %}مستمرة{% endif %}</span></div>
+  {% if plans %}<div class="personal-actions">{% for plan in plans %}{% if plan.price > 0 %}<a class="personal-button twq-btn twq-btn--primary twq-btn--secondary personal-button--outline" href="{% url 'personal:checkout_start' plan.pk %}">{% if subscription.is_current and subscription.plan_id == plan.pk %}تجديد {{ plan.name }}{% else %}الاشتراك في {{ plan.name }}{% endif %} · {{ plan.price|floatformat:"-2" }} ريال</a>{% endif %}{% endfor %}</div>{% endif %}
+  {% if not moyasar_enabled %}<p class="personal-hint">الدفع الإلكتروني غير متاح حاليًا. لا تُنشأ عمليات دفع حتى تفعيل الخدمة.</p>{% endif %}
 </section>
 
 <section class="personal-card twq-card">
@@ -15,7 +15,7 @@
   {% for payment in payments %}
     <div class="personal-row">
       <span><strong>{{ payment.plan_name }}</strong><small>{{ payment.created_at|date:"Y-m-d H:i" }} · {{ payment.amount|floatformat:"-2" }} ريال · {{ payment.get_status_display }}</small></span>
-      {% if payment.status == "paid" and payment.activated_at %}<a href="{% url 'personal:payment_invoice' payment.pk %}">تنزيل الفاتورة PDF</a>{% elif payment.status == "pending" %}<span>بانتظار تأكيد ميسّر</span>{% endif %}
+      {% if payment.status == "paid" and payment.activated_at %}<a href="{% url 'personal:payment_invoice' payment.pk %}">تنزيل الفاتورة PDF</a>{% elif payment.status == "pending" %}<span>بانتظار تأكيد الدفع</span>{% endif %}
     </div>
   {% empty %}<p class="personal-empty">لا توجد عمليات دفع حتى الآن.</p>{% endfor %}
 </section>

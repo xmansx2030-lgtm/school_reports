@@ -56,6 +56,7 @@ def landing_personal_plan_cards():
             "description": plan.description,
             "price_display": f"{plan.price:,.2f}".rstrip("0").rstrip("."),
             "is_free": plan.price == 0,
+            "is_basic": plan.code == "personal_free",
             "duration_label": "مستمرة" if plan.duration_days == 0 else f"{plan.duration_days} يومًا",
             "max_reports": plan.max_reports,
             "max_evidence": plan.max_evidence,
@@ -73,7 +74,7 @@ def landing_personal_plan_cards():
 
 
 def ensure_personal_subscription(workspace):
-    """Give a workspace the perpetual free tier; never use a school plan."""
+    """Initialize personal billing without granting a paid or unavailable plan."""
     subscription = PersonalSubscription.objects.select_related("plan").filter(workspace=workspace).first()
     if subscription is not None:
         return subscription
@@ -89,6 +90,10 @@ def ensure_personal_subscription(workspace):
             },
         )
         subscription, _ = PersonalSubscription.objects.get_or_create(
-            workspace=workspace, defaults={"plan": plan}
+            workspace=workspace,
+            defaults={
+                "plan": plan,
+                "is_active": plan.is_active and plan.is_published and plan.price == 0,
+            },
         )
     return subscription

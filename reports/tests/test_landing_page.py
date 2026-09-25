@@ -155,7 +155,9 @@ class LandingPageTests(TestCase):
             self.assertContains(response, asset)
         for unsupported_label in ("أمريكان إكسبريس", "Apple Pay", "Google Pay", "Samsung Pay", "STC Pay"):
             self.assertNotContains(response, unsupported_label)
-        self.assertContains(response, "تظهر الوسائل المفعّلة والمتاحة عند إتمام الدفع")
+        self.assertContains(response, "تظهر وسائل الدفع المتاحة عند إتمام الدفع")
+        self.assertNotContains(response, "ميسر")
+        self.assertNotContains(response, "مُيسّر")
         self.assertGreater(html.index('class="footer-payments"'), html.index("<footer"))
         self.assertLess(html.index('class="footer-payments"'), html.index('class="footer-bottom"'))
 
@@ -164,7 +166,9 @@ class LandingPageTests(TestCase):
         """إعلان وسيلة دفع غير مدعومة يقود الزائر إلى خيار لن يجده عند الدفع."""
         response = self.client.get(reverse("reports:landing"))
 
-        self.assertContains(response, "عبر ميسر")
+        self.assertContains(response, "تظهر وسائل الدفع المتاحة عند إتمام الدفع")
+        self.assertNotContains(response, "ميسر")
+        self.assertNotContains(response, "مُيسّر")
         self.assertContains(response, "img/payment/mada.svg")
         self.assertNotContains(response, "tamara")
         self.assertNotContains(response, "تمارا")

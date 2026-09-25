@@ -33,7 +33,7 @@ def create_personal_checkout(*, request, workspace, plan) -> tuple[PersonalPayme
         raise PersonalPaymentError("الدفع الإلكتروني غير متاح حاليًا.")
     email = (workspace.owner.email or "").strip().lower()
     if not email:
-        raise PersonalPaymentError("أضف بريدك الإلكتروني قبل متابعة الدفع.")
+        raise PersonalPaymentError("يلزم إضافة البريد الإلكتروني قبل متابعة الدفع.")
     if plan.price <= 0 or plan.duration_days <= 0:
         raise PersonalPaymentError("هذه الباقة لا تتطلب دفعًا إلكترونيًا.")
 
@@ -58,7 +58,7 @@ def create_personal_checkout(*, request, workspace, plan) -> tuple[PersonalPayme
     try:
         invoice = create_moyasar_invoice(
             amount=payment.amount,
-            description=f"اشتراك مساحة المعلم الشخصية: {payment.plan_name}",
+            description=f"اشتراك مساحة {workspace.owner.personal_teacher_label} الشخصية: {payment.plan_name}",
             callback_url=callback_url,
             success_url=success_url,
             back_url=back_url,
@@ -230,7 +230,7 @@ def build_personal_invoice_context(payment: PersonalPayment) -> dict:
             "email": payment.customer_email,
         },
         "items": [{
-            "description": f"اشتراك المعلم الشخصي · {payment.plan_name} · {payment.duration_days} يومًا",
+            "description": f"اشتراك {payment.workspace.owner.personal_teacher_label} الشخصي · {payment.plan_name} · {payment.duration_days} يومًا",
             "quantity": 1,
             "unit_price": amount,
             "amount": amount,

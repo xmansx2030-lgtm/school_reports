@@ -33,6 +33,7 @@ from .billing import (
 from .forms import (
     PersonalEmailForm,
     PersonalEvidenceForm,
+    PersonalGenderForm,
     PersonalRegistrationForm,
     PersonalReportForm,
     PersonalWorkspaceForm,
@@ -82,6 +83,7 @@ def register(request):
                 teacher = Teacher.objects.create_user(
                     phone=form.cleaned_data["phone"],
                     name=form.cleaned_data["name"].strip(),
+                    gender=form.cleaned_data["gender"],
                     email=form.cleaned_data["email"],
                     password=form.cleaned_data["password"],
                 )
@@ -90,14 +92,18 @@ def register(request):
                     school_name=form.cleaned_data["school_name"].strip(),
                     principal_name=form.cleaned_data["principal_name"].strip(),
                 )
-                ensure_personal_subscription(workspace)
+                subscription = ensure_personal_subscription(workspace)
         except IntegrityError:
-            form.add_error("phone", "تعذر إنشاء الحساب بهذا الرقم. سجّل الدخول إذا كان لديك حساب.")
+            form.add_error("phone", "تعذر إنشاء حساب جديد بهذا الرقم. يمكن تسجيل الدخول إلى الحساب الموجود.")
         else:
             login(request, teacher)
-            messages.success(request, "أُنشئت مساحتك الشخصية. ابدأ بتوثيق أول عمل لك.")
             if selected_plan:
+                messages.success(request, "أُنشئ حسابك. تُفعّل الباقة المدفوعة بعد تأكيد نجاح الدفع.")
                 return redirect("personal:checkout_start", plan_id=selected_plan.pk)
+            if subscription.is_current:
+                messages.success(request, "أُنشئت مساحتك الشخصية وفُعّلت باقتك المجانية. يمكنك الآن توثيق أول عمل.")
+            else:
+                messages.info(request, "أُنشئت مساحتك الشخصية. يمكنك اختيار باقة متاحة لتفعيل الاشتراك وبدء التوثيق.")
             return redirect("personal:dashboard")
     return render(request, "personal/register.html", {"form": form, "selected_plan": selected_plan})
 
@@ -115,20 +121,28 @@ def setup(request):
     email_form = PersonalEmailForm(
         request.POST or None, teacher=request.user, require_email=bool(safe_next)
     )
-    if request.method == "POST" and form.is_valid() and email_form.is_valid():
+    gender_form = PersonalGenderForm(request.POST or None, teacher=request.user)
+    if request.method == "POST" and form.is_valid() and email_form.is_valid() and gender_form.is_valid():
         obj = form.save(commit=False)
         obj.owner = request.user
         obj.save()
+        user_update_fields = []
         if request.user.email != email_form.cleaned_data["email"]:
             request.user.email = email_form.cleaned_data["email"]
-            request.user.save(update_fields=["email"])
+            user_update_fields.append("email")
+        if request.user.gender != gender_form.cleaned_data["gender"]:
+            request.user.gender = gender_form.cleaned_data["gender"]
+            user_update_fields.append("gender")
+        if user_update_fields:
+            request.user.save(update_fields=user_update_fields)
         ensure_personal_subscription(obj)
         messages.success(request, "حُفظت بيانات مساحتك وبريد الفواتير والتنبيهات.")
         if safe_next:
             return redirect(safe_next)
         return redirect("personal:dashboard")
     return render(request, "personal/setup.html", {
-        "form": form, "email_form": email_form, "workspace": workspace, "next_url": safe_next,
+        "form": form, "email_form": email_form, "gender_form": gender_form,
+        "workspace": workspace, "next_url": safe_next,
     })
 
 
@@ -146,8 +160,8 @@ def checkout_start(request, plan_id):
     if school_membership is not None:
         messages.warning(
             request,
-            f"حسابك مضاف إلى مدرسة {school_membership.school.name} واشتراكها ساري. "
-            "استخدم حسابك المدرسي؛ لا تحتاج إلى اشتراك شخصي منفصل.",
+            f"هذا الحساب مرتبط بمدرسة {school_membership.school.name} واشتراكها ساري. "
+            "المساحة المدرسية متاحة لهذا الحساب، ولا يلزم اشتراك شخصي منفصل.",
         )
         return redirect("reports:home")
     workspace = PersonalWorkspace.objects.filter(owner=request.user).first()
@@ -201,7 +215,7 @@ def moyasar_return(request, payment_id):
         messages.info(request, "يجري التحقق من الدفع؛ لا تعِد الدفع الآن. ستظهر النتيجة في سجل اشتراكك.")
     else:
         if status == "paid" and payment.activated_at:
-            messages.success(request, "تأكد الدفع وفُعّلت باقتك الشخصية تلقائيًا. فاتورتك متاحة للتنزيل من سجل الاشتراك.")
+            messages.success(request, "تم تأكيد الدفع وتفعيل الباقة الشخصية تلقائيًا. الفاتورة متاحة للتنزيل من سجل الاشتراك.")
         elif status in {"failed", "canceled", "cancelled", "expired", "voided"}:
             messages.error(request, "لم تكتمل عملية الدفع. يمكنك بدء محاولة جديدة من صفحة الاشتراك.")
         else:
@@ -362,6 +376,7 @@ def report_print(request, pk):
     report = get_object_or_404(PersonalReport, pk=pk, workspace=request.personal_workspace)
     response = render(request, "personal/print.html", {
         "document_title": report.title, "report": report, "evidence": report.evidence.all(),
+        "workspace": request.personal_workspace,
     })
     response["Cache-Control"] = "no-store"
     return response
