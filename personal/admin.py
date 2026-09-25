@@ -8,6 +8,7 @@ class PersonalPlanAdmin(admin.ModelAdmin):
     list_display = (
         "name", "code", "price", "duration_days", "max_reports", "max_evidence",
         "storage_limit_mb", "is_active", "is_published", "display_order",
+        "report_ai_daily_limit", "voice_report_daily_limit",
     )
     list_filter = ("is_active", "is_published")
     search_fields = ("name", "code")

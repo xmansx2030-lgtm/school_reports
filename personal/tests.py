@@ -605,6 +605,8 @@ class PersonalPlanManagementTests(TestCase):
             "price": price, "duration_days": duration_days,
             "max_reports": self.plan.max_reports, "max_evidence": self.plan.max_evidence,
             "storage_limit_mb": self.plan.storage_limit_mb,
+            "report_ai_daily_limit": self.plan.report_ai_daily_limit,
+            "voice_report_daily_limit": self.plan.voice_report_daily_limit,
             "display_order": self.plan.display_order,
         }
         if active:
@@ -678,6 +680,34 @@ class PersonalPlanManagementTests(TestCase):
         self.assertNotEqual(response.status_code, 200)
         self.plan.refresh_from_db()
         self.assertNotEqual(self.plan.name, "غير مصرح")
+
+    def test_legacy_plan_edit_preserves_omitted_ai_limits_but_blank_resets_them(self):
+        paid = PersonalPlan.objects.create(
+            code="legacy_plan_edit_limits", name="باقة مدفوعة", price="49.00",
+            duration_days=30, report_ai_daily_limit=3, voice_report_daily_limit=3,
+        )
+        payload = {
+            "name": paid.name, "description": paid.description,
+            "price": "49.00", "duration_days": 30,
+            "max_reports": paid.max_reports, "max_evidence": paid.max_evidence,
+            "storage_limit_mb": paid.storage_limit_mb,
+            "display_order": paid.display_order,
+            "is_active": "on", "is_published": "on",
+        }
+        self.client.force_login(self.owner)
+        url = reverse("reports:platform_personal_plan_edit", args=[paid.pk])
+
+        old_client = self.client.post(url, payload)
+        self.assertRedirects(old_client, reverse("reports:platform_personal_plans"))
+        paid.refresh_from_db()
+        self.assertEqual((paid.report_ai_daily_limit, paid.voice_report_daily_limit), (3, 3))
+
+        cleared = self.client.post(url, {
+            **payload, "report_ai_daily_limit": "", "voice_report_daily_limit": "",
+        })
+        self.assertRedirects(cleared, reverse("reports:platform_personal_plans"))
+        paid.refresh_from_db()
+        self.assertEqual((paid.report_ai_daily_limit, paid.voice_report_daily_limit), (0, 0))
 
     def test_paid_base_waits_for_verified_gateway_payment(self):
         self._save_base_plan(price="49.00", duration_days=30)

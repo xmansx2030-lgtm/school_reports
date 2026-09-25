@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ._helpers import *
+from ..personal_routing import is_personal_only_workspace_user
 from ._helpers import (
     _is_staff, _safe_next_url, _filter_by_school,
     _set_active_school, _get_active_school, _user_manager_schools,
@@ -575,6 +576,11 @@ def home(request: HttpRequest) -> HttpResponse:
         teacher=request.user, is_active=True
     ).exists():
         return redirect("reports:executive_dashboard")
+
+    # The shared PWA starts at /home/. Route teachers whose only current
+    # workspace is personal to its dashboard, including stale school sessions.
+    if is_personal_only_workspace_user(request.user):
+        return redirect("personal:dashboard")
 
     stats = {"today_count": 0, "total_count": 0, "last_title": "—"}
     req_stats = {"open": 0, "in_progress": 0, "done": 0, "rejected": 0, "total": 0}

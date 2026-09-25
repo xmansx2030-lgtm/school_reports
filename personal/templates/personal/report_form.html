@@ -1,10 +1,20 @@
 {% extends "personal/base.html" %}
 {% load static %}
+
 {% block title %}{% if editing %}تعديل التقرير{% else %}إنشاء تقرير{% endif %}{% endblock %}
+
 {% block head %}
+<link rel="stylesheet" href="{% static 'css/report-details-limit.css' %}?v=20260825.1">
+{% if report_ai_enabled %}<link rel="stylesheet" href="{% static 'css/report-ai-improver.css' %}?v=20260813.2">{% endif %}
+{% if voice_report_enabled %}<link rel="stylesheet" href="{% static 'css/report-voice.css' %}?v=20260812.1">{% endif %}
+{% if personal_report_review_enabled %}<link rel="stylesheet" href="{% static 'css/report-review.css' %}?v=20260903.1">{% endif %}
+<link rel="stylesheet" href="{% static 'css/report-evidence.css' %}?v=20260903.6">
+<link rel="stylesheet" href="{% static 'css/report-rail.css' %}?v=20260903.1">
+<link rel="stylesheet" href="{% static 'css/report-mobile-actions.css' %}?v=20260912.1">
 <link rel="stylesheet" href="{% static 'css/report-authoring.css' %}?v=20260921.2">
-<link rel="stylesheet" href="{% static 'css/personal-report-platform.css' %}?v=20260925.2">
+<link rel="stylesheet" href="{% static 'css/personal-report-platform.css' %}?v=20260925.3">
 {% endblock %}
+
 {% block content %}
 <div class="twq-page report-authoring-page personal-authoring {% if editing %}report-authoring--edit{% else %}report-authoring--create{% endif %}">
   <div class="report-authoring-shell">
@@ -12,49 +22,142 @@
       <div class="twq-page-header__heading">
         <p class="twq-page-header__eyebrow report-authoring-eyebrow"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> مساحة إعداد التقرير</p>
         <h1 class="twq-page-header__title">{% if editing %}تعديل التقرير{% else %}إنشاء تقرير{% endif %}</h1>
-        <p class="twq-page-header__lead">أدخل بيانات التقرير، وحدد محتواه، وأرفق الشواهد المناسبة قبل الحفظ.</p>
-        <dl class="twq-page-header__context report-authoring-context" aria-label="سياق التقرير"><div><dt><i class="fa-solid fa-user" aria-hidden="true"></i> إعداد {{ request.user.personal_teacher_label }}</dt><dd>{{ request.user.name }}</dd></div>{% if editing %}<div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> السنة الدراسية</dt><dd><bdi dir="ltr">{{ report.academic_year }}</bdi></dd></div>{% endif %}</dl>
+        <p class="twq-page-header__lead">{% if editing %}راجع بيانات تقريرك وشواهده، ثم احفظ التعديلات.{% else %}أدخل بيانات التقرير، وحدد محتواه، وأرفق الشواهد المناسبة قبل الحفظ.{% endif %}</p>
+        <dl class="twq-page-header__context report-authoring-context" aria-label="سياق التقرير">
+          <div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> السنة الدراسية</dt><dd><bdi id="personalYearContext" dir="ltr">{{ form.academic_year.value|default:"—" }}</bdi></dd></div>
+          <div><dt><i class="fa-solid fa-user" aria-hidden="true"></i> المنفّذ</dt><dd>{{ request.user.name|default:"—" }}</dd></div>
+        </dl>
       </div>
-      <div class="twq-page-header__aside"><a href="{% url 'personal:reports' %}" class="twq-btn twq-btn--secondary report-authoring-back"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> تقاريري</a></div>
+      <div class="twq-page-header__aside">
+        <a href="{% url 'personal:reports' %}" class="twq-button twq-button--secondary report-authoring-back"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>تقاريري</span></a>
+      </div>
     </header>
-    <form id="personalReportForm" class="report-authoring-form personal-report-form" method="post" enctype="multipart/form-data" novalidate data-draft-key="personal-report-u{{ request.user.pk }}-{% if editing %}edit{{ report.pk }}{% else %}new{% endif %}">
-      {% csrf_token %}{{ form.selection_enabled }}{{ form.client_submission_id }}
-      <section class="report-legacy-draft" id="personalDraftBanner" role="status" hidden><div class="report-legacy-draft__message"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span><strong>عُثر على مسودة محفوظة في هذا المتصفح.</strong><small id="personalDraftTime">الحقول النصية فقط؛ أعد إرفاق الملفات عند الحاجة.</small></span></div><div class="report-legacy-draft__actions"><button type="button" class="twq-btn twq-btn--primary" id="personalDraftRestore">استعادة</button><button type="button" class="twq-btn twq-btn--secondary" id="personalDraftDiscard">تجاهل</button></div></section>
-      <p class="report-draft-saved" id="personalDraftSaved" role="status" aria-live="polite" hidden><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> حُفظت المسودة محليًا.</p>
+
+    <form id="report-form" class="report-authoring-form personal-report-form" method="post" enctype="multipart/form-data" novalidate
+          data-report-authoring-mode="{% if editing %}edit{% else %}create{% endif %}"
+          data-has-report-types="true"
+          data-existing-document-count="{{ existing_documents|length|default:0 }}"
+          data-pwa-draft-key="personal-report-{% if editing %}edit-{{ report.pk }}{% else %}add{% endif %}-u{{ request.user.pk }}-y{{ form.academic_year.value|default:'unset' }}"
+          data-legacy-personal-draft-key="personal-report-u{{ request.user.pk }}-{% if editing %}edit{{ report.pk }}{% else %}new{% endif %}"
+          data-success-url="{% if editing %}{% url 'personal:report_detail' report.pk %}{% else %}{% url 'personal:reports' %}{% endif %}">
+      {% csrf_token %}
+      {{ form.section_selection_enabled }}
+      {{ form.client_submission_id }}
+      {{ form.academic_year.as_hidden }}
+      {{ form.status }}
+
+      <section class="report-legacy-draft" id="draftBanner" role="status" hidden>
+        <div class="report-legacy-draft__message"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span><strong>عُثر على مسودة محفوظة في هذا المتصفح.</strong><small id="draftTime"></small></span></div>
+        <div class="report-legacy-draft__actions"><button type="button" class="twq-button twq-button--primary" id="draftRestore"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> استعادة</button><button type="button" class="twq-button twq-button--secondary" id="draftDiscard"><i class="fa-solid fa-xmark" aria-hidden="true"></i> تجاهل</button></div>
+      </section>
+      <p class="report-draft-saved" id="draftSaved" role="status" aria-live="polite" hidden><i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> حُفظت المسودة محليًا.</p>
+
       {% if form.errors or evidence_formset.non_form_errors or evidence_formset.errors %}
-      <section class="twq-alert twq-alert--danger report-server-errors" role="alert" tabindex="-1"><div><h2>تعذّر حفظ التقرير</h2><p>راجع الحقول والشواهد الموضحة أدناه ثم أعد المحاولة.</p></div><ul>{% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}{% for error in evidence_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul></section>
+        <section class="twq-alert twq-alert--danger report-server-errors" role="alert" tabindex="-1" data-server-error-summary>
+          <div><h2>تعذّر حفظ التقرير</h2><p>راجع الحقول الموضحة أدناه ثم أعد المحاولة.</p></div>
+          <ul>
+            {% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}
+            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for error in evidence_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for evidence_form in evidence_formset.forms %}{% for field in evidence_form.visible_fields %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">الشواهد — {{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}{% endfor %}
+          </ul>
+        </section>
       {% endif %}
+
+      <section id="validationAlert" class="twq-alert twq-alert--danger report-client-errors" role="alert" aria-live="assertive" hidden tabindex="-1">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <div><h2>أكمل البيانات المطلوبة</h2><p id="validationAlertText">راجع الحقول المشار إليها قبل حفظ التقرير.</p><ul id="validationAlertList"></ul></div>
+        <button type="button" id="validationAlertClose" class="report-client-errors__close" aria-label="إغلاق ملخص الأخطاء"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </section>
+
       <div class="report-authoring-layout">
         <div class="report-authoring-main">
-          <section class="twq-section report-authoring-section" aria-labelledby="personalReportContext">
-            <header class="twq-section__header"><div><p class="report-section-kicker">الخطوة 1</p><h2 id="personalReportContext">سياق التقرير</h2><p>اختر نوع التقرير، واكتب عنوانًا واضحًا وحدد تاريخ التنفيذ وسنته الدراسية.</p></div></header>
+          <section class="twq-section report-authoring-section" aria-labelledby="report-context-title">
+            <header class="twq-section__header"><div><p class="report-section-kicker">الخطوة 1</p><h2 id="report-context-title">سياق التقرير</h2><p>اختر نوع التقرير واكتب عنوانًا واضحًا وحدد تاريخ التنفيذ.</p></div></header>
             <p class="report-required-note"><span aria-hidden="true">*</span> الحقول المعلَّمة بنجمة مطلوبة.</p>
-            <div class="report-fields-grid report-fields-grid--two">{% include "personal/_field.html" with field=form.category %}{% include "personal/_field.html" with field=form.title %}<div>{% include "personal/_field.html" with field=form.report_date %}<div class="report-date-caption"><span id="personalReportDay" class="report-date-day"></span><span id="personalReportHijri" aria-live="polite"></span></div></div>{% include "personal/_field.html" with field=form.academic_year %}</div>
+            <div class="report-fields-grid report-fields-grid--two">
+              <div class="ar-field" data-group="category">
+                <label for="{{ form.category.id_for_label }}">نوع التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>
+                {{ form.category }}
+                <p class="report-field-help" id="category-help">اختر نوع العمل الذي يوثّقه تقريرك الشخصي.</p>
+                {% for error in form.category.errors %}<p class="ar-error-msg" id="category-error">{{ error }}</p>{% endfor %}
+              </div>
+              <div class="ar-field" data-group="title">
+                <label for="{{ form.title.id_for_label }}">عنوان التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>
+                {{ form.title }}
+                <p class="report-field-help">استخدم عنوانًا يصف العمل أو البرنامج باختصار.</p>
+                {% for error in form.title.errors %}<p class="ar-error-msg" id="title-error">{{ error }}</p>{% endfor %}
+              </div>
+              <div class="ar-field" data-group="report_date">
+                <label for="{{ form.report_date.id_for_label }}">تاريخ التقرير <span class="ar-required-mark" aria-hidden="true">*</span></label>
+                {{ form.report_date }}
+                <div class="report-date-caption"><span id="reportDayEcho" class="report-date-day"></span><span id="reportDateHijri" aria-live="polite"></span></div>
+                <div class="ar-visually-hidden" aria-hidden="true">{{ form.day_name }}</div>
+                {% for error in form.report_date.errors %}<p class="ar-error-msg" id="report-date-error">{{ error }}</p>{% endfor %}
+                <p class="ar-error-msg" id="futureDateErr" hidden>لا يمكن اختيار تاريخ مستقبلي.</p>
+              </div>
+              <div class="ar-field"><span class="report-field-label">المنفّذ</span><p class="ar-static-value"><i class="fa-solid fa-user-check" aria-hidden="true"></i>{{ request.user.name|default:"—" }}</p><p class="report-field-help">يثبّت النظام المنفّذ من الحساب الحالي ولا يقبل تغييره من النموذج.</p></div>
+            </div>
           </section>
-          <section class="twq-section report-authoring-section" aria-labelledby="personalReportContent">
-            <header class="twq-section__header report-section-builder-head"><div><p class="report-section-kicker">الخطوة 2</p><h2 id="personalReportContent">محتوى التقرير</h2><p>حدد محتوى تقريرك باختيار بند واحد على الأقل، ثم اكتب محتواه. لن يظهر في التقرير إلا ما تختاره.</p></div><span class="twq-status twq-status--warning">بند واحد على الأقل</span></header>
-            <fieldset class="report-section-picker"><legend class="ar-visually-hidden">اختر بنود محتوى التقرير</legend><div class="report-section-options" id="personalReportOptions">
-              <label class="report-section-option" data-section-option="show_goals">{{ form.show_goals }}<span class="report-option-icon"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><span class="report-option-copy"><strong>الأهداف</strong><small>الغاية المراد تحقيقها</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
-              <label class="report-section-option" data-section-option="show_details">{{ form.show_details }}<span class="report-option-icon"><i class="fa-solid fa-align-right" aria-hidden="true"></i></span><span class="report-option-copy"><strong>تفاصيل التقرير</strong><small>وصف ما تم تنفيذه</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
-              <label class="report-section-option" data-section-option="show_implementation">{{ form.show_implementation }}<span class="report-option-icon"><i class="fa-solid fa-gears" aria-hidden="true"></i></span><span class="report-option-copy"><strong>آلية التنفيذ</strong><small>الخطوات والإجراءات</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
-              <label class="report-section-option" data-section-option="show_results">{{ form.show_results }}<span class="report-option-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span><span class="report-option-copy"><strong>النتائج</strong><small>المخرجات المتحققة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
-              <label class="report-section-option" data-section-option="show_recommendations">{{ form.show_recommendations }}<span class="report-option-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><span class="report-option-copy"><strong>التوصيات</strong><small>التحسينات والخطوات القادمة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
-              <label class="report-section-option" data-section-option="show_beneficiaries">{{ form.show_beneficiaries }}<span class="report-option-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span><span class="report-option-copy"><strong>عدد المستفيدين</strong><small>حجم الفئة المستفيدة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+
+          <section class="twq-section report-authoring-section" aria-labelledby="sectionBuilderTitle">
+            <header class="twq-section__header report-section-builder-head"><div><p class="report-section-kicker">الخطوة 2</p><h2 id="sectionBuilderTitle">محتوى التقرير</h2><p>حدد محتوى تقريرك باختيار بند واحد على الأقل، ثم اكتب محتواه. لن يظهر في التقرير إلا ما تختاره.</p></div><span class="twq-status twq-status--warning">بند واحد على الأقل</span></header>
+            <fieldset class="report-section-picker"><legend class="ar-visually-hidden">اختر بنود محتوى التقرير</legend><div class="report-section-options" id="reportSectionOptions">
+              <label class="report-section-option" data-section-option="goal">{{ form.show_goal }}<span class="report-option-icon"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span><span class="report-option-copy"><strong>الهدف</strong><small>الغاية المراد تحقيقها</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="details">{{ form.show_details }}<span class="report-option-icon"><i class="fa-solid fa-align-right" aria-hidden="true"></i></span><span class="report-option-copy"><strong>تفاصيل التقرير</strong><small>ملخص ما تم تنفيذه</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="implementation">{{ form.show_implementation }}<span class="report-option-icon"><i class="fa-solid fa-gears" aria-hidden="true"></i></span><span class="report-option-copy"><strong>آلية التنفيذ</strong><small>الخطوات والإجراءات</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="results">{{ form.show_results }}<span class="report-option-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span><span class="report-option-copy"><strong>النتائج</strong><small>المخرجات المتحققة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="recommendations">{{ form.show_recommendations }}<span class="report-option-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><span class="report-option-copy"><strong>التوصيات</strong><small>التحسينات والخطوات القادمة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="beneficiaries">{{ form.show_beneficiaries }}<span class="report-option-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span><span class="report-option-copy"><strong>عدد المستفيدين</strong><small>حجم الفئة المستفيدة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
             </div></fieldset>
-            <div class="report-selected-fields"><div class="report-section-field" data-personal-section="show_goals">{% include "personal/_field.html" with field=form.goals %}</div><div class="report-section-field" data-personal-section="show_details">{% include "personal/_field.html" with field=form.description %}</div><div class="report-section-field" data-personal-section="show_implementation">{% include "personal/_field.html" with field=form.implementation %}</div><div class="report-section-field" data-personal-section="show_results">{% include "personal/_field.html" with field=form.results %}</div><div class="report-section-field" data-personal-section="show_recommendations">{% include "personal/_field.html" with field=form.recommendations %}</div><div class="report-section-field" data-personal-section="show_beneficiaries">{% include "personal/_field.html" with field=form.beneficiaries_count %}</div></div>
-            <div class="personal-report-status">{% include "personal/_field.html" with field=form.status %}</div>
+            <div class="report-selected-fields">
+              <div class="report-section-field" data-section-field="goal"><div class="ar-field" data-group="goal"><label for="{{ form.goal.id_for_label }}"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> الهدف</label>{{ form.goal }}{% for error in form.goal.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field report-editor-field" data-section-field="details"><div class="ar-field" data-group="idea"><label for="{{ form.idea.id_for_label }}"><i class="fa-solid fa-align-right" aria-hidden="true"></i> تفاصيل التقرير</label>{{ form.idea }}{% if legacy_long_description %}<div class="twq-alert twq-alert--info personal-legacy-details" role="note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>النص القديم الأطول من 600 حرف محفوظ كما هو. يمكنك حفظ بقية التعديلات دون تغييره؛ إذا عدّلته فاختصره إلى 600 حرف أو أقل.</span></div>{% endif %}{% include "reports/partials/report_details_limit.html" with target_id=form.idea.id_for_label %}{% for error in form.idea.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}{% if voice_report_enabled %}{% url 'personal:transcribe_report_voice' as voice_endpoint %}{% include "reports/partials/report_voice_input.html" with target_id=form.idea.id_for_label assistant_endpoint=voice_endpoint %}{% endif %}{% if report_ai_enabled %}{% url 'personal:improve_report_text' as ai_endpoint %}{% include "reports/partials/report_ai_improver.html" with target_id=form.idea.id_for_label assistant_endpoint=ai_endpoint %}{% endif %}</div></div>
+              <div class="report-section-field" data-section-field="implementation"><div class="ar-field" data-group="implementation_method"><label for="{{ form.implementation_method.id_for_label }}"><i class="fa-solid fa-gears" aria-hidden="true"></i> آلية التنفيذ</label>{{ form.implementation_method }}{% for error in form.implementation_method.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="results"><div class="ar-field" data-group="results"><label for="{{ form.results.id_for_label }}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> النتائج</label>{{ form.results }}{% for error in form.results.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="recommendations"><div class="ar-field" data-group="recommendations"><label for="{{ form.recommendations.id_for_label }}"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> التوصيات</label>{{ form.recommendations }}{% for error in form.recommendations.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="beneficiaries"><div class="ar-field" data-group="beneficiaries_count"><label for="{{ form.beneficiaries_count.id_for_label }}"><i class="fa-solid fa-users" aria-hidden="true"></i> عدد المستفيدين</label>{{ form.beneficiaries_count }}{% for error in form.beneficiaries_count.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+            </div>
           </section>
-          <section class="twq-section report-authoring-section report-authoring-evidence" aria-labelledby="personalReportEvidence">
-            <header class="twq-section__header"><div><p class="report-section-kicker">الخطوة 3</p><h2 id="personalReportEvidence">الشواهد والمرفقات</h2><p>أضف صورًا أو ملفات PDF أو روابط داعمة. الحد الأعلى 8 شواهد للتقرير بحسب سعة باقتك، ويمكنك الإضافة من المكتبة بعد الحفظ.</p></div><span class="twq-status twq-status--draft">اختياري</span></header>
-            {% if existing_evidence %}<div class="personal-existing-evidence"><h3>الشواهد المحفوظة</h3><div class="personal-evidence-tiles">{% for item in existing_evidence %}<article class="personal-evidence-tile">{% if item.is_image %}<img src="{% url 'personal:evidence_preview' item.pk %}" alt="" loading="lazy">{% else %}<i class="fa-solid {% if item.file %}fa-file-pdf{% else %}fa-link{% endif %}" aria-hidden="true"></i>{% endif %}<strong>{{ item.title }}</strong>{% if item.file %}<a href="{% url 'personal:evidence_download' item.pk %}">تنزيل</a>{% elif item.source_url %}<a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح</a>{% endif %}<a href="{% url 'personal:evidence_edit' item.pk %}">تعديل العرض</a></article>{% endfor %}</div></div>{% endif %}
-            {% if evidence_formset %}{{ evidence_formset.management_form }}<div class="personal-evidence-rows" id="personalEvidenceRows">{% for evidence_form in evidence_formset %}<fieldset class="personal-evidence-row"><legend>شاهد {{ forloop.counter }}</legend>{% if evidence_form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ evidence_form.non_field_errors }}</div>{% endif %}<div class="report-fields-grid report-fields-grid--two">{% for field in evidence_form %}{% if field.is_hidden %}{{ field }}{% else %}{% include "personal/_field.html" with field=field %}{% endif %}{% endfor %}</div></fieldset>{% endfor %}</div><template id="personalEvidenceTemplate"><fieldset class="personal-evidence-row"><legend>شاهد إضافي</legend><div class="report-fields-grid report-fields-grid--two">{% for field in evidence_formset.empty_form %}{% if field.is_hidden %}{{ field }}{% else %}{% include "personal/_field.html" with field=field %}{% endif %}{% endfor %}</div></fieldset></template><button class="twq-btn twq-btn--secondary" type="button" id="personalEvidenceAdd"><i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة شاهد آخر</button>{% endif %}
+
+          <section class="twq-section report-authoring-section report-authoring-evidence" aria-labelledby="report-evidence-title">
+            <header class="twq-section__header"><div><p class="report-section-kicker">الخطوة 3</p><h2 id="report-evidence-title">الشواهد والمرفقات</h2><p>{% if editing %}رتّب الصور الحالية أو استبدلها أو أزلها، وأضف ما يلزم.{% else %}أضف الصور الداعمة عند الحاجة، ورتّبها كما تريد أن تظهر في التقرير.{% endif %}</p></div><span class="twq-status twq-status--draft">حتى 8 شواهد</span></header>
+            {% include "reports/partials/report_evidence_formset.html" with personal_evidence=True %}
+            {% if existing_documents %}<div class="personal-existing-evidence"><h3>ملفات PDF والروابط المحفوظة</h3><p>تبقى مرتبطة بالتقرير؛ يمكنك تعديلها أو ترتيبها من صفحة الشواهد.</p><div class="personal-evidence-tiles">{% for item in existing_documents %}<article class="personal-evidence-tile"><i class="fa-solid {% if item.file %}fa-file-pdf{% else %}fa-link{% endif %}" aria-hidden="true"></i><strong>{{ item.title }}</strong><a href="{% url 'personal:evidence_edit' item.pk %}">تعديل الشاهد</a></article>{% endfor %}</div></div>{% endif %}
+            <p class="report-field-help personal-extra-evidence">لإضافة ملف PDF أو رابط، احفظ التقرير ثم استخدم <a href="{% url 'personal:evidence_create' %}{% if editing %}?report={{ report.pk }}{% endif %}">مكتبة الشواهد</a> واربطه بهذا التقرير.</p>
           </section>
         </div>
-        <aside class="report-authoring-side" aria-label="مراجعة التقرير وإجراءات الحفظ"><div class="twq-section report-authoring-rail"><div class="personal-report-summary"><span class="twq-section__kicker">مراجعة سريعة</span><h2>ملخص التقرير</h2><dl><div><dt>العنوان</dt><dd id="personalSummaryTitle">—</dd></div><div><dt>النوع</dt><dd id="personalSummaryCategory">—</dd></div><div><dt>السنة الدراسية</dt><dd id="personalSummaryYear">—</dd></div><div><dt>البنود المحددة</dt><dd id="personalSummarySections">0</dd></div></dl></div><div class="report-save-context"><h2>عند الحفظ</h2><p>سيُحفظ التقرير وشواهده ضمن أعمالك الشخصية، ويمكنك الرجوع إليه وتعديله من صفحة تقاريري.</p></div><button type="submit" class="ar-submit-btn"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ التقرير والشواهد</button><a class="twq-btn twq-btn--secondary report-edit-cancel" href="{% if editing %}{% url 'personal:report_detail' report.pk %}{% else %}{% url 'personal:reports' %}{% endif %}">إلغاء</a></div></aside>
+
+        <aside class="report-authoring-side" aria-label="مراجعة التقرير وإجراءات الحفظ"><div class="twq-section report-authoring-rail">
+          {% include "reports/partials/report_summary_rail.html" %}
+          {% if personal_report_review_enabled %}
+            {% url 'personal:review_report_readiness' as personal_review_url %}
+            {% include "reports/partials/report_review_panel.html" with personal_review=True report_review_endpoint=personal_review_url report_review_semantic_enabled=False report_review_daily_limit=0 report_review_daily_remaining=0 %}
+          {% endif %}
+          <div class="report-save-context"><h2>عند الحفظ</h2><p>{% if editing %}ستُحفظ التعديلات والشواهد في مساحتك الشخصية دون تغيير حالة التقرير.{% else %}سيُحفظ التقرير وشواهده ضمن أعمالك الشخصية، دون مسار اعتماد مدرسي.{% endif %}</p></div>
+          <button type="submit" id="submitBtn" class="ar-submit-btn"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i><span>{% if editing %}حفظ التعديلات{% else %}حفظ التقرير{% endif %}</span></button>
+          {% if editing %}<a class="twq-button twq-button--secondary report-edit-cancel" href="{% url 'personal:report_detail' report.pk %}">إلغاء والعودة</a>{% endif %}
+        </div></aside>
       </div>
-      <div class="personal-report-mobile-actions"><button type="submit" class="ar-submit-btn"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ التقرير والشواهد</button></div>
+      {% include "reports/partials/report_mobile_actions.html" with submit_label=editing|yesno:"حفظ التعديلات,حفظ التقرير" report_review_enabled=personal_report_review_enabled has_report_types=True %}
     </form>
+  </div>
+
+  <div class="report-upload-overlay" id="uploadOverlay" role="dialog" aria-modal="true" aria-labelledby="uploadTitle" aria-describedby="uploadDescription" aria-hidden="true" hidden>
+    <div class="report-upload-dialog" tabindex="-1"><i class="fa-solid fa-cloud-arrow-up report-upload-icon" aria-hidden="true"></i><h2 id="uploadTitle">جاري حفظ التقرير</h2><p id="uploadDescription">يتم رفع البيانات والشواهد بأمان. لا تغلق الصفحة الآن.</p><progress id="uploadProgress" max="100" value="0">0%</progress><div class="report-upload-labels"><span id="upLabel">جاري التحضير</span><span id="upPct" dir="ltr">0%</span></div></div>
   </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" defer></script><script src="{% static 'js/personal-report.js' %}?v=20260925.2" nonce="{{ CSP_NONCE }}" defer></script>{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/hijri-date.js' %}?v=20260903.1" nonce="{{ CSP_NONCE }}" data-cfasync="false"></script>
+<script src="{% static 'js/report-details-limit.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+{% if report_ai_enabled %}<script src="{% static 'js/report-ai-improver.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
+{% if voice_report_enabled %}<script src="{% static 'js/report-voice.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
+{% if personal_report_review_enabled %}<script src="{% static 'js/report-review.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
+<script src="{% static 'js/pwa-form-draft.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-authoring.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-evidence-editor.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-summary-rail.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/personal-report.js' %}?v=20260925.3" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+{% endblock %}

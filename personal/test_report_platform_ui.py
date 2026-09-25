@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from reports.models import Report, Teacher
 
-from .models import PersonalAcademicYear, PersonalReport, PersonalWorkspace
+from .models import PersonalAcademicYear, PersonalEvidence, PersonalReport, PersonalWorkspace
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
@@ -16,15 +16,60 @@ class PersonalTeacherReportInterfaceTests(TestCase):
         self.workspace = PersonalWorkspace.objects.create(owner=self.teacher)
         self.client.force_login(self.teacher)
 
+    def test_personal_print_uses_school_image_layout_with_mixed_documents(self):
+        report = PersonalReport.objects.create(
+            workspace=self.workspace, title="تقرير بشواهد مختلطة", report_date=timezone.localdate(),
+            academic_year="1447-1448", teacher_name=self.teacher.name, school_name="",
+            status=PersonalReport.Status.COMPLETE,
+        )
+
+        def add_evidence(title, order, *, file="", source_url="", show_in_print=True):
+            return PersonalEvidence.objects.create(
+                workspace=self.workspace, report=report, academic_year=report.academic_year,
+                title=title, order=order, file=file, source_url=source_url,
+                show_in_print=show_in_print,
+            )
+
+        pdf = add_evidence("وثيقة PDF", 1, file="personal/evidence/document.pdf")
+        first = add_evidence("الصورة الأولى", 2, file="personal/evidence/first.jpg")
+        add_evidence("الصورة الثانية", 3, file="personal/evidence/second.png")
+        add_evidence("الصورة الثالثة", 4, file="personal/evidence/third.webp")
+        link = add_evidence("رابط المصدر", 5, source_url="https://example.org/source")
+        add_evidence("صورة مخفية", 6, file="personal/evidence/hidden.jpg", show_in_print=False)
+
+        printed = self.client.get(reverse("personal:report_print", args=[report.pk]))
+        self.assertEqual(printed.status_code, 200)
+        self.assertContains(printed, "page--dense-evidence")
+        self.assertContains(printed, "evidence-section--layout-3")
+        self.assertContains(printed, 'class="images-grid images-grid--3 images-grid--mixed"')
+        self.assertContains(printed, reverse("personal:evidence_preview", args=[first.pk]))
+        self.assertContains(printed, reverse("personal:evidence_download", args=[pdf.pk]))
+        self.assertContains(printed, "https://example.org/source")
+        self.assertNotContains(printed, "صورة مخفية")
+        html = printed.content.decode()
+        self.assertLess(html.index("وثيقة PDF"), html.index("الصورة الأولى"))
+        self.assertLess(html.index("الصورة الثالثة"), html.index("رابط المصدر"))
+
+        add_evidence("الصورة الرابعة", 7, file="personal/evidence/fourth.jpeg")
+        four_images = self.client.get(reverse("personal:report_print", args=[report.pk]))
+        self.assertContains(four_images, "evidence-section--layout-4")
+        self.assertContains(four_images, 'class="images-grid images-grid--4 images-grid--mixed"')
+
+        pdf.delete()
+        link.delete()
+        images_only = self.client.get(reverse("personal:report_print", args=[report.pk]))
+        self.assertContains(images_only, 'class="images-grid images-grid--4"')
+        self.assertNotContains(images_only, 'class="images-grid images-grid--4 images-grid--mixed"')
+
     def test_school_report_components_serve_personal_report_journey_without_school_record(self):
         form = self.client.get(reverse("personal:report_create"))
         self.assertEqual(form.status_code, 200)
         self.assertContains(form, "css/report-authoring.css")
         self.assertContains(form, 'class="report-authoring-layout"')
-        self.assertContains(form, 'id="personalEvidenceRows"')
+        self.assertContains(form, 'data-report-evidence-editor')
         self.assertContains(form, 'name="show_details"')
         self.assertContains(form, "js/hijri-date.js")
-        self.assertContains(form, 'id="personalDraftBanner"')
+        self.assertContains(form, 'id="draftBanner"')
         self.assertNotContains(form, reverse("reports:add_report"))
 
         saved = self.client.post(reverse("personal:report_create"), {

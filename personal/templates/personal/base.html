@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  {% include "reports/partials/pwa_install_head.html" with personal_pwa_only=True %}
   <meta name="theme-color" content="#006c35">
   <meta name="color-scheme" content="light dark">
   {% include "reports/partials/theme_bootstrap.html" %}
@@ -96,6 +97,7 @@
       {% endif %}
     </nav>
     {% endwith %}
+    {% if PWA_INSTALL_ENABLED %}<div class="drawer-app-actions" aria-label="تطبيق الجوال"><button class="drawer-app-action" type="button" data-pwa-install-trigger><i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i><span>تثبيت التطبيق</span></button></div>{% endif %}
     {% if request.user.is_authenticated %}<div class="drawer-footer"><a class="personal-logout-link" href="{% url 'reports:logout' %}"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> تسجيل الخروج</a></div>{% endif %}
   </aside>
 
@@ -129,6 +131,7 @@
     <span>مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية في توثيق</span>
     <span>أعمالك المهنية محفوظة في حسابك الشخصي دون اعتماد مدرسي.</span>
   </footer>
+  {% include "reports/partials/pwa_install.html" with personal_pwa_only=True %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

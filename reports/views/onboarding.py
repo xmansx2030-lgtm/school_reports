@@ -32,6 +32,7 @@ from ..marketing_attribution import (
     school_marketing_fields,
 )
 from ..permissions import role_required
+from ..personal_routing import is_personal_only_workspace_user
 from ..models import (
     School,
     SchoolArchiveAddon,
@@ -393,6 +394,8 @@ def registration_success(request):
 @require_GET
 def role_guidance_center(request):
     """A single, data-backed starting point tailored to the user's active role."""
+    if is_personal_only_workspace_user(request.user):
+        return redirect("personal:dashboard")
     active_school = _get_active_school(request)
     journey = role_guidance(request.user, active_school)
     return render(

@@ -143,8 +143,10 @@
   function announceSaved(form) {
     var tag = document.getElementById("draftSaved");
     if (tag) {
+      tag.hidden = false;
       tag.style.display = "flex";
-      window.setTimeout(function () { tag.style.display = "none"; }, 1800);
+      window.clearTimeout(tag._draftSavedTimer);
+      tag._draftSavedTimer = window.setTimeout(function () { tag.hidden = true; tag.style.display = "none"; }, 1800);
     } else {
       tag = document.createElement("div");
       tag.className = "pwa-draft-saved-indicator";

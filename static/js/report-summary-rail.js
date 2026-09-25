@@ -53,7 +53,8 @@
   }
 
   function evidenceCount() {
-    var total = 0;
+    var savedDocuments = parseInt(form && form.dataset.existingDocumentCount, 10);
+    var total = Number.isFinite(savedDocuments) && savedDocuments > 0 ? savedDocuments : 0;
     Array.prototype.forEach.call(document.querySelectorAll("[data-evidence-card]"), function (card) {
       var remove = card.querySelector('[data-evidence-delete] input[type="checkbox"]');
       if (remove && remove.checked) return;

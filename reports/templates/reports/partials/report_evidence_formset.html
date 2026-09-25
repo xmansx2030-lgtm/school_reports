@@ -1,19 +1,19 @@
 <section
   class="report-evidence-editor"
   data-report-evidence-editor
-  data-max-forms="{{ evidence_formset.max_num|default:8 }}"
+  data-max-forms="{{ evidence_formset.max_num|default_if_none:8 }}"
   data-prefix="{{ evidence_formset.prefix }}"
 >
   {{ evidence_formset.management_form }}
   <div class="ree-heading">
     <div>
       <h3><i class="fa-solid fa-images" aria-hidden="true"></i> الشواهد المصورة</h3>
-      <p>صورة واحدة تختصر نقاشًا كاملًا مع المراجع. <span class="ree-optional">اختيارية</span></p>
+      <p>{% if personal_evidence %}أضف صورًا توثّق عملك وتدعم محتوى التقرير.{% else %}صورة واحدة تختصر نقاشًا كاملًا مع المراجع.{% endif %} <span class="ree-optional">اختيارية</span></p>
     </div>
     <div class="ree-page-mode">
       {{ form.evidence_page_mode }}
       <span class="ree-page-mode__label"><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i> صفحة واحدة متناسقة</span>
-      <small>تُرتّب الشواهد تلقائياً مع إبقاء التواقيع أسفل الصفحة.</small>
+      <small>{% if personal_evidence %}تُرتّب الشواهد تلقائيًا في النسخة المطبوعة.{% else %}تُرتّب الشواهد تلقائياً مع إبقاء التواقيع أسفل الصفحة.{% endif %}</small>
     </div>
   </div>
 

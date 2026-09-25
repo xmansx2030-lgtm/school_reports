@@ -39,6 +39,7 @@ from ..middleware import (
     clear_force_password_change_flag,
     is_force_password_change_required,
 )
+from ..personal_routing import is_personal_only_workspace_user
 from ..marketing_attribution import capture_marketing_attribution
 from ..models import DepartmentMembership, SchoolMembership, TeacherTotpDevice, WebAuthnCredential
 from ..forms import AccountPasswordResetForm, AccountSetPasswordForm
@@ -1447,8 +1448,15 @@ def my_profile(request: HttpRequest) -> HttpResponse:
     - يسمح بتغيير رقم الجوال + تغيير كلمة المرور، ويطلب البريد الإلكتروني عند الدخول الأول.
     """
 
-    active_school = _get_active_school(request)
     force_password_change = is_force_password_change_required(request)
+    if (
+        request.method == "GET"
+        and not force_password_change
+        and is_personal_only_workspace_user(request.user)
+    ):
+        return redirect("personal:account")
+
+    active_school = _get_active_school(request)
 
     memberships = list(
         SchoolMembership.objects.filter(teacher=request.user, is_active=True)

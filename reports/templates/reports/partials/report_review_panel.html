@@ -8,9 +8,10 @@
 <section
   class="report-review"
   data-report-review
-  data-endpoint="{% url 'reports:review_report_readiness' %}"
-  data-daily-limit="{{ report_review_daily_limit|default:5 }}"
-  data-remaining="{{ report_review_daily_remaining|default:5 }}"
+  data-personal-review="{% if personal_review %}1{% else %}0{% endif %}"
+  data-endpoint="{% if report_review_endpoint %}{{ report_review_endpoint }}{% else %}{% url 'reports:review_report_readiness' %}{% endif %}"
+  data-daily-limit="{{ report_review_daily_limit|default_if_none:5 }}"
+  data-remaining="{{ report_review_daily_remaining|default_if_none:5 }}"
   data-semantic-enabled="{% if report_review_semantic_enabled %}1{% else %}0{% endif %}"
   aria-labelledby="report-review-title"
 >
@@ -18,7 +19,7 @@
     <span class="rrv-head-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
     <div class="rrv-head-copy">
       <h3 id="report-review-title">فحص الجاهزية</h3>
-      <p>اعرف ما قد يُعيد التقرير قبل أن ترسله.</p>
+      <p>{% if personal_review %}راجع اكتمال تقريرك قبل حفظه.{% else %}اعرف ما قد يُعيد التقرير قبل أن ترسله.{% endif %}</p>
     </div>
   </header>
 
@@ -59,7 +60,7 @@
 
     <p class="rrv-clean" data-rrv-clean hidden>
       <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-      لم أجد ما يستوقف المراجع. أرسله وأنت مطمئن.
+      {% if personal_review %}بنود التقرير مكتملة. يمكنك حفظ عملك.{% else %}لم أجد ما يستوقف المراجع. أرسله وأنت مطمئن.{% endif %}
     </p>
 
     <p class="rrv-degraded" data-rrv-degraded hidden>
@@ -76,7 +77,7 @@
   <p class="rrv-status" data-rrv-status role="status" aria-live="polite"></p>
 
   <p class="rrv-quota" data-rrv-quota{% if not report_review_semantic_enabled %} hidden{% endif %}>
-    الفحص الذكي: <b data-rrv-remaining>{{ report_review_daily_remaining|default:5 }}</b>
-    من {{ report_review_daily_limit|default:5 }} اليوم · إعادة فحص نصٍّ لم يتغيّر لا تُحتسب
+    الفحص الذكي: <b data-rrv-remaining>{{ report_review_daily_remaining|default_if_none:5 }}</b>
+    من {{ report_review_daily_limit|default_if_none:5 }} اليوم · إعادة فحص نصٍّ لم يتغيّر لا تُحتسب
   </p>
 </section>

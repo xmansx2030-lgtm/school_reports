@@ -163,7 +163,7 @@ class PersonalEvidencePresentationTests(TestCase):
             academic_year=self.report.academic_year, file="personal/document.pdf", order=3,
         )
         printed = self.client.get(reverse("personal:report_print", args=[self.report.pk]))
-        html = printed.content.decode("utf-8").split('class="images-grid">', 1)[1]
+        html = printed.content.decode("utf-8").split('class="images-grid', 1)[1]
         self.assertLess(html.index(self.second.title), html.index(image.title))
         self.assertLess(html.index(image.title), html.index(pdf.title))
         self.assertLess(html.index(pdf.title), html.index(self.first.title))
