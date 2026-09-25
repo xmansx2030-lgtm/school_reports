@@ -149,7 +149,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
 
     workspace = PersonalWorkspace.objects.filter(owner=user).first()
     if workspace is None:
-        return {"active": False, "reports": [], "evidence": [], "years": [], "initiatives": [], "notices": [], "payments": []}
+        return {"active": False, "reports": [], "evidence": [], "years": [], "initiatives": [], "notices": [], "payments": [], "shares": []}
     return {
         "active": True,
         "subscription": {
@@ -164,8 +164,27 @@ def _personal_workspace_section(user) -> dict[str, Any]:
         "specialization": workspace.specialization,
         "current_academic_year": workspace.current_academic_year,
         "years": [
-            {"value": row.value, "archived_at": _iso(row.archived_at)}
+            {
+                "value": row.value, "archived_at": _iso(row.archived_at),
+                "qualifications": row.qualifications,
+                "professional_experience": row.professional_experience,
+                "specialization": row.specialization,
+                "teaching_load": row.teaching_load,
+                "subjects_taught": row.subjects_taught,
+                "contact_info": row.contact_info,
+            }
             for row in workspace.academic_years.all()
+        ],
+        "portfolio_sections": [
+            {
+                "academic_year": row.academic_year,
+                "code": row.code,
+                "title": row.get_code_display(),
+                "teacher_notes": row.teacher_notes,
+                "report_ids": list(row.linked_reports.values_list("report_id", flat=True)),
+                "evidence_ids": list(row.linked_evidence.values_list("evidence_id", flat=True)),
+            }
+            for row in workspace.portfolio_sections.prefetch_related("linked_reports", "linked_evidence")
         ],
         "reports": [
             {
@@ -181,6 +200,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "recommendations": row.recommendations,
                 "show_goals": row.show_goals,
                 "show_implementation": row.show_implementation,
+                "show_details": row.show_details,
                 "show_results": row.show_results,
                 "show_recommendations": row.show_recommendations,
                 "show_beneficiaries": row.show_beneficiaries,
@@ -189,7 +209,8 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "teacher_name": row.teacher_name,
                 "school_name": row.school_name,
                 "principal_name": row.principal_name,
-                "url": reverse("personal:report_detail", args=[row.pk]),
+                "trashed_at": _iso(row.trashed_at),
+                "url": reverse("personal:report_trash") if row.trashed_at else reverse("personal:report_detail", args=[row.pk]),
             }
             for row in workspace.reports.all()
         ],
@@ -202,6 +223,10 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "report_id": row.report_id,
                 "initiative_id": row.initiative_id,
                 "source_url": row.source_url,
+                "order": row.order,
+                "display_size": row.display_size,
+                "fit_mode": row.fit_mode,
+                "show_in_print": row.show_in_print,
                 "file": _file_reference(row.file),
                 "url": reverse("personal:evidence_download", args=[row.pk]) if row.file else None,
             }
@@ -211,6 +236,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
             {
                 "id": row.pk, "title": row.title, "academic_year": row.academic_year,
                 "summary": row.summary, "impact": row.impact, "status": row.get_status_display(),
+                "is_best_practice": row.is_best_practice,
             }
             for row in workspace.initiatives.all()
         ],
@@ -220,6 +246,19 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "created_at": _iso(row.notice.created_at), "read_at": _iso(row.read_at),
             }
             for row in workspace.notices.select_related("notice").all()
+        ],
+        "shares": [
+            {
+                "kind": row.kind,
+                "report_id": row.report_id,
+                "academic_year": row.academic_year,
+                "is_active": row.is_active,
+                "expires_at": _iso(row.expires_at),
+                "access_count": row.access_count,
+                "last_accessed_at": _iso(row.last_accessed_at),
+                "created_at": _iso(row.created_at),
+            }
+            for row in workspace.share_links.all()
         ],
         "payments": [
             {

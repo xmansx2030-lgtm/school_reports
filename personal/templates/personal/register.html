@@ -1,31 +1,27 @@
 {% extends "personal/base.html" %}
-{% block title %}إنشاء مساحة شخصية{% endblock %}
+{% load static %}
+{% block title %}إنشاء مساحة المعلم الشخصية{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-self-service.css' %}">{% endblock %}
 {% block content %}
-<div class="personal-onboarding">
-  <section class="personal-onboarding__story" aria-labelledby="personalJoinTitle">
-    <span class="personal-kicker">مساحة مهنية لك، حتى قبل اشتراك المدرسة</span>
-    <h1 id="personalJoinTitle">أعمالك تستحق ملفًا يبقى باسمك.</h1>
-    <p>تتيح لك المنصة توثيق الأعمال، وحفظ الشواهد، وجمع إنجازات كل سنة في مساحة مهنية خاصة.</p>
-    <ul>
-      <li><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تقارير منظمة قابلة للطباعة والحفظ PDF</li>
-      <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> مكتبة شواهد مرتبطة بأعمالك</li>
-      <li><i class="fa-solid fa-book-open" aria-hidden="true"></i> ملف إنجاز سنوي يُبنى تلقائيًا من محتواك</li>
-    </ul>
-    <p class="personal-onboarding__note">اسم المدرسة والمدير للتعريف داخل مستنداتك الشخصية؛ لا يمنحان اعتمادًا أو صلاحية مدرسية.</p>
-    <a class="personal-button twq-btn twq-btn--primary personal-onboarding__jump" href="#personalRegisterHeading">متابعة التسجيل <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
-  </section>
-  <section class="personal-card twq-card personal-onboarding__form" aria-labelledby="personalRegisterHeading">
-    <span class="personal-kicker">التسجيل الشخصي</span>
-    <h2 id="personalRegisterHeading">إنشاء حسابك الشخصي</h2>
-    {% if selected_plan %}<p class="personal-hint">بعد إنشاء الحساب، ستظهر صفحة الدفع الآمنة لاشتراك {{ selected_plan.name }} بقيمة {{ selected_plan.price|floatformat:"-2" }} ريال.</p>{% else %}<p class="personal-muted">يرجى التأكد من البريد الإلكتروني؛ ستُرسل إليه فواتير الاشتراك وتنبيهات التفعيل.</p>{% endif %}
-    <p class="personal-muted">لديك حساب في توثيق؟ <a href="{% url 'reports:login' %}{% if selected_plan %}?next={% url 'personal:checkout_start' selected_plan.pk %}{% endif %}">الانتقال إلى تسجيل الدخول</a>.</p>
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% if form.non_field_errors %}<div class="personal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-      <div class="personal-form-grid">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
-      <p class="personal-muted personal-policy">بإنشاء الحساب توافق على <a href="{% url 'reports:terms_conditions' %}">الشروط</a> و<a href="{% url 'reports:privacy_policy' %}">سياسة الخصوصية</a>.</p>
-      <button class="personal-button twq-btn twq-btn--primary" type="submit">إنشاء المساحة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>
-    </form>
-  </section>
+<div class="twq-page personal-registration" dir="rtl">
+  <header class="twq-page-header" aria-labelledby="personalJoinTitle">
+    <div class="twq-page-header__heading"><p class="twq-page-header__eyebrow"><i class="fa-solid fa-user-pen" aria-hidden="true"></i> حساب المعلم الفردي</p><h1 class="twq-page-header__title" id="personalJoinTitle">أنشئ مساحتك المهنية في توثيق</h1><p class="twq-page-header__lead">وثّق تقاريرك وشواهدك ومبادراتك، وابنِ ملف إنجاز وأرشيفًا يمتد معك بين السنوات الدراسية.</p></div>
+    <div class="twq-page-header__aside"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:landing' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> صفحة الباقات</a></div>
+  </header>
+
+  <div class="personal-registration__grid">
+    <section class="twq-section" aria-labelledby="personalRegisterHeading">
+      <div class="twq-section__header"><div><span class="twq-section__kicker">التسجيل الشخصي</span><h2 class="twq-section__title" id="personalRegisterHeading">بيانات حسابك</h2><p class="twq-section__description">لديك حساب توثيق؟ <a href="{% url 'reports:login' %}{% if selected_plan %}?next={% url 'personal:checkout_start' selected_plan.pk %}{% endif %}">سجّل الدخول بحسابك الحالي</a>.</p></div></div>
+      {% if selected_plan %}<div class="twq-alert twq-alert--info" role="status"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>اخترت {{ selected_plan.name }} بقيمة {{ selected_plan.price|floatformat:"-2" }} ريال. ستنتقل إلى تأكيد الاشتراك بعد إنشاء الحساب.</span></div>{% endif %}
+      <form method="post" class="personal-registration__form" novalidate>{% csrf_token %}
+        {% if form.errors %}<div class="twq-alert twq-alert--danger" role="alert"><div><strong>راجع بيانات التسجيل</strong><ul>{% for field in form %}{% if field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ field.errors.0 }}</a></li>{% endif %}{% endfor %}{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul></div></div>{% endif %}
+        <div class="personal-registration__fields">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
+        <p class="twq-section__description">راجع <a href="{% url 'reports:terms_conditions' %}">الشروط</a> و<a href="{% url 'reports:privacy_policy' %}">سياسة الخصوصية</a> قبل إنشاء الحساب.</p>
+        <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> إنشاء المساحة الشخصية</button>
+      </form>
+    </section>
+
+    <aside class="twq-section personal-registration__features" aria-labelledby="personalBenefitsTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">أدواتك المهنية</span><h2 class="twq-section__title" id="personalBenefitsTitle">مساحة عملك المستقلة</h2></div></div><ul><li><i class="fa-solid fa-file-lines" aria-hidden="true"></i><span><strong>تقارير مع الشواهد</strong><small>أنشئ تقاريرك واحتفظ بملفاتها وروابطها.</small></span></li><li><i class="fa-solid fa-book-open" aria-hidden="true"></i><span><strong>ملف الإنجاز</strong><small>رتّب أعمالك في محاور ملف الإنجاز لكل سنة.</small></span></li><li><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span><strong>المبادرات والأرشيف</strong><small>وثّق مبادراتك وارجع إلى أعمال السنوات السابقة.</small></span></li><li><i class="fa-solid fa-bell" aria-hidden="true"></i><span><strong>إشعارات المنصة</strong><small>استقبل الرسائل الموجهة إلى حسابك الشخصي.</small></span></li></ul><div class="twq-alert twq-alert--info" role="note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>اسم المدرسة والمدير بيانات تعريفية داخل مستنداتك الشخصية؛ لا تُنشئ عضوية مدرسية أو اعتمادًا رسميًا.</span></div></aside>
+  </div>
 </div>
 {% endblock %}

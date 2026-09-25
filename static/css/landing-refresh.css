@@ -77,11 +77,24 @@
 .personal-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-block-end: 15px; color: #e5f7ec; font-size: .76rem; }
 .personal-preview-heading span { color: #a8d5ba; }
 .personal-preview-heading strong { font-size: .87rem; }
-.personal-preview-shot { display: block; padding: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .28); border-radius: 12px; background: #fff; box-shadow: 0 14px 30px rgba(0, 0, 0, .22); cursor: zoom-in; }
-.personal-preview-shot img { width: 100%; height: auto; }
-.personal-preview-shot--main { width: 94%; margin-inline-start: 0; }
-.personal-preview-shot--secondary { position: absolute; inset-inline-end: 16px; inset-block-end: 47px; width: 42%; transform: rotate(-2deg); }
-.personal-preview-shot:hover { border-color: #8eddb6; }
+.personal-preview-ui { width: 100%; overflow: hidden; border: 1px solid #d8e6dd; border-radius: 16px; background: #f7faf8; color: #193e2b; box-shadow: 0 16px 34px rgba(0, 0, 0, .18); }
+.personal-preview-ui__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 19px; border-bottom: 1px solid #dce9df; background: #fff; font-size: .68rem; font-weight: 800; }
+.personal-preview-ui__top span:first-child { display: inline-flex; align-items: center; gap: 7px; color: #075d39; font-size: .78rem; }
+.personal-preview-ui__top i { font-size: 1.1rem; }
+.personal-preview-ui__hero { display: grid; gap: 8px; margin: 18px; padding: 20px; border: 1px solid #cfe4d7; border-radius: 14px; background: linear-gradient(115deg, #e9f5ed, #fff); }
+.personal-preview-ui__hero small { color: #096543; font-size: .68rem; font-weight: 800; }
+.personal-preview-ui__hero strong { font-size: clamp(1rem, 1.7vw, 1.35rem); }
+.personal-preview-ui__hero span { color: #506b5b; font-size: .7rem; }
+.personal-preview-ui__hero b { width: fit-content; padding: 5px 9px; border: 1px solid #c9e3d3; border-radius: 999px; background: #fff; color: #13613e; font-size: .62rem; }
+.personal-preview-ui__metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 18px 12px; }
+.personal-preview-ui__metrics span { display: grid; gap: 8px; padding: 13px; border: 1px solid #dce9df; border-radius: 11px; background: #fff; font-size: .7rem; }
+.personal-preview-ui__metrics i { color: #087142; font-size: 1rem; }
+.personal-preview-ui__axis { display: grid; gap: 7px; margin: 0 18px 20px; padding: 15px; border: 1px solid #dce9df; border-radius: 11px; background: #fff; }
+.personal-preview-ui__axis span { color: #327754; font-size: .64rem; font-weight: 800; }
+.personal-preview-ui__axis strong { font-size: .77rem; }
+.personal-preview-ui__axis div { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; margin-block-start: 5px; }
+.personal-preview-ui__axis i { height: 7px; border-radius: 999px; background: #d7e5db; }
+.personal-preview-ui__axis i:nth-child(-n+4) { background: #169459; }
 .personal-offer__preview > p { position: absolute; inset-inline-start: 23px; inset-block-end: 4px; margin: 0; color: #c5e3d0; font-size: .7rem; }
 .showcase-secondary .showcase-copy { padding-block-end: 18px; }
 .showcase-secondary .showcase-image { margin-block-end: 18px; }
@@ -104,6 +117,19 @@ html[data-theme="dark"] .audience-path__plans { color: #b9edcc; }
 html[data-theme="dark"] .personal-plan-catalog { border-color: #3c5644; }
 html[data-theme="dark"] .personal-offer-section { background: linear-gradient(155deg, #172a20, #20372a); }
 html[data-theme="dark"] .personal-offer__clarity { color: #bed2c4; }
+html[data-theme="dark"] .personal-preview-ui { border-color: #3c5b48; background: #1b3024; color: #edf5ee; }
+html[data-theme="dark"] .personal-preview-ui__top,
+html[data-theme="dark"] .personal-preview-ui__metrics span,
+html[data-theme="dark"] .personal-preview-ui__axis { border-color: #3c5b48; background: #25402f; }
+html[data-theme="dark"] .personal-preview-ui__top span:first-child,
+html[data-theme="dark"] .personal-preview-ui__axis span { color: #9fdfb7; }
+html[data-theme="dark"] .personal-preview-ui__hero { border-color: #3c5b48; background: linear-gradient(115deg, #294b36, #1f382a); }
+html[data-theme="dark"] .personal-preview-ui__hero small { color: #a8e3bc; }
+html[data-theme="dark"] .personal-preview-ui__hero span { color: #c3d9c9; }
+html[data-theme="dark"] .personal-preview-ui__hero b { border-color: #4d7459; background: #2e5039; color: #ddf3e2; }
+html[data-theme="dark"] .personal-preview-ui__metrics i { color: #8fd8a7; }
+html[data-theme="dark"] .personal-preview-ui__axis i { background: #456450; }
+html[data-theme="dark"] .personal-preview-ui__axis i:nth-child(-n+4) { background: #58c883; }
 
 @media (max-width: 1080px) {
   .hero-refresh .hero-stage { grid-template-columns: 1fr; }
@@ -132,15 +158,16 @@ html[data-theme="dark"] .personal-offer__clarity { color: #bed2c4; }
   .hero-product > button img { height: 100%; width: auto; }
   .personal-offer__preview { min-height: 0; padding: 16px; }
   .personal-preview-heading { display: grid; gap: 2px; }
-  .personal-preview-shot--main { width: 100%; }
-  .personal-preview-shot--secondary { position: relative; width: 66%; margin-block-start: -12px; margin-inline-start: auto; inset: auto; }
+  .personal-preview-ui__top { padding: 10px 12px; }
+  .personal-preview-ui__top span:last-child { display: none; }
+  .personal-preview-ui__hero { margin: 11px; padding: 14px; }
+  .personal-preview-ui__metrics { gap: 6px; margin-inline: 11px; }
+  .personal-preview-ui__metrics span { padding: 9px; font-size: .7rem; }
+  .personal-preview-ui__axis { margin-inline: 11px; margin-block-end: 11px; }
   .personal-offer__preview > p { position: static; margin-block-start: 10px; font-size: .65rem; }
   .mobile-sticky { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 62px; }
   .mobile-sticky .button, .mobile-sticky .mobile-login { min-height: 46px; padding-inline: 4px; font-size: .76rem; }
   .mobile-sticky .mobile-login:last-child { flex-direction: column; gap: 0; font-size: .62rem; }
-}
-@media (max-width: 400px) {
-  .personal-preview-shot--secondary { width: 66%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-product > button:hover img { transform: none; }

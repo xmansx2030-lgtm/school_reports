@@ -45,7 +45,7 @@
   {% endif %}
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
-  <link rel="stylesheet" href="{% static 'css/landing-refresh.css' %}?v=20260925.2">
+  <link rel="stylesheet" href="{% static 'css/landing-refresh.css' %}?v=20260925.3">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <noscript><style nonce="{{ CSP_NONCE }}">.reveal{opacity:1!important;transform:none!important}</style></noscript>
   <script type="application/ld+json" nonce="{{ CSP_NONCE }}" data-cfasync="false">
@@ -301,14 +301,14 @@
           <p class="personal-offer__clarity"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> المستندات الشخصية من إعداد المعلم أو المعلمة، ولا تمثل اعتمادًا من المدرسة. الاعتماد المدرسي ضمن اشتراك المدرسة.</p>
         </div>
         <div class="personal-offer__preview">
-          <div class="personal-preview-heading"><span>من مساحة المعلمة الشخصية</span><strong>كل ما وثّقته في مكان واحد</strong></div>
-          <button class="personal-preview-shot personal-preview-shot--main" type="button" data-product-image="{% static 'img/landing/teacher-dashboard.png' %}?v=20260925" data-product-caption="الرئيسية في مساحة المعلمة الشخصية: التقارير والشواهد والمبادرات وإشعارات المنصة. البيانات تجريبية." aria-label="عرض لقطة مساحة المعلمة الشخصية بالحجم الكامل">
-            <img src="{% static 'img/landing/teacher-dashboard.png' %}?v=20260925" alt="لقطة من الرئيسية الشخصية تعرض التقارير والشواهد وروابط المبادرات والإشعارات والسنوات، ببيانات تجريبية" width="1425" height="891" loading="lazy" decoding="async">
-          </button>
-          <button class="personal-preview-shot personal-preview-shot--secondary" type="button" data-product-image="{% static 'img/landing/teacher-portfolio.png' %}?v=20260925" data-product-caption="ملف إنجاز المعلمة الشخصي في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة ملف إنجاز المعلمة بالحجم الكامل">
-            <img src="{% static 'img/landing/teacher-portfolio.png' %}?v=20260925" alt="لقطة فعلية من ملف الإنجاز السنوي للمعلمة تعرض تقاريرها وشواهدها ببيانات تجريبية" width="1425" height="891" loading="lazy" decoding="async">
-          </button>
-          <p>لقطتان فعليتان من المنصة · بيانات عرض تجريبية</p>
+          <div class="personal-preview-heading"><span>مساحة المعلم الفردي</span><strong>بنفس لغة تصميم منصة توثيق</strong></div>
+          <div class="personal-preview-ui" aria-label="تصور توضيحي لمساحة المعلم الفردي">
+            <div class="personal-preview-ui__top"><span><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i> منصة توثيق</span><span>الرئيسية &nbsp; التقارير &nbsp; ملف الإنجاز</span></div>
+            <div class="personal-preview-ui__hero"><small>مساحة المعلمة المهنية</small><strong>أعمالك المهنية في مكان واحد</strong><span>تقارير، شواهد، ومبادرات مرتبطة بسنتك الدراسية.</span><b>مساحة شخصية مستقلة</b></div>
+            <div class="personal-preview-ui__metrics"><span><i class="fa-solid fa-file-lines" aria-hidden="true"></i><strong>التقارير</strong></span><span><i class="fa-solid fa-paperclip" aria-hidden="true"></i><strong>الشواهد</strong></span><span><i class="fa-solid fa-briefcase" aria-hidden="true"></i><strong>ملف الإنجاز</strong></span></div>
+            <div class="personal-preview-ui__axis"><span>ملف الإنجاز السنوي</span><strong>11 محورًا لتوثيق الممارسة والشواهد</strong><div aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          </div>
+          <p>عرض توضيحي للمساحة الشخصية · حساب مستقل عن اشتراك المدرسة</p>
         </div>
       </div>
       {% if personal_plan_cards %}

@@ -2,13 +2,15 @@ from functools import wraps
 from io import BytesIO
 import logging
 from pathlib import Path
+import uuid
 
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Max, Prefetch, Q, Sum
 from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -38,6 +40,7 @@ from .forms import (
     PersonalRegistrationForm,
     PersonalReportForm,
     PersonalWorkspaceForm,
+    personal_inline_evidence_formset,
 )
 from .models import PersonalAcademicYear, PersonalEvidence, PersonalPayment, PersonalPlan, PersonalReport, PersonalWorkspace
 from .services import current_school_membership_for, ensure_personal_subscription, ensure_writable_personal_year
@@ -230,12 +233,16 @@ def moyasar_return(request, payment_id):
 @never_cache
 @require_GET
 def billing(request):
-    payments = PersonalPayment.objects.filter(workspace=request.personal_workspace).select_related("plan")[:50]
+    workspace = request.personal_workspace
+    payments = PersonalPayment.objects.filter(workspace=workspace).select_related("plan")[:50]
     return render(request, "personal/billing.html", {
-        "workspace": request.personal_workspace,
+        "workspace": workspace,
         "subscription": request.personal_subscription,
         "payments": payments,
+        "report_count": workspace.reports.count(),
+        "evidence_count": workspace.evidence.count(),
         "plans": PersonalPlan.objects.filter(is_active=True, is_published=True).order_by("display_order", "price", "id"),
+        "paid_plans": PersonalPlan.objects.filter(is_active=True, is_published=True, price__gt=0).order_by("display_order", "price", "id"),
         "moyasar_enabled": moyasar_is_enabled(),
     })
 
@@ -268,11 +275,14 @@ def payment_invoice(request, payment_id):
 @require_GET
 def dashboard(request):
     ws = request.personal_workspace
-    recent_reports = ws.reports.all()[:5]
-    recent_evidence = ws.evidence.all()[:5]
+    active_reports = ws.reports.filter(trashed_at__isnull=True)
+    recent_reports = active_reports[:5]
+    recent_evidence = ws.evidence.filter(
+        Q(report__isnull=True) | Q(report__trashed_at__isnull=True)
+    )[:5]
     stats = {
-        "reports": ws.reports.count(),
-        "complete": ws.reports.filter(status=PersonalReport.Status.COMPLETE).count(),
+        "reports": active_reports.count(),
+        "complete": active_reports.filter(status=PersonalReport.Status.COMPLETE).count(),
         "evidence": ws.evidence.count(),
         "years": ws.academic_years.count(),
         "initiatives": ws.initiatives.count(),
@@ -288,7 +298,9 @@ def dashboard(request):
 @workspace_required
 @require_GET
 def report_list(request):
-    qs = request.personal_workspace.reports.all()
+    qs = request.personal_workspace.reports.filter(trashed_at__isnull=True).prefetch_related(Prefetch(
+        "evidence", queryset=PersonalEvidence.objects.order_by("order", "id"),
+    ))
     query = (request.GET.get("q") or "").strip()[:100]
     year = (request.GET.get("year") or "").strip()[:20]
     status = (request.GET.get("status") or "").strip()
@@ -298,18 +310,25 @@ def report_list(request):
         qs = qs.filter(academic_year=year)
     if status in PersonalReport.Status.values:
         qs = qs.filter(status=status)
-    years = request.personal_workspace.reports.order_by("-academic_year").values_list("academic_year", flat=True).distinct()
+    years = request.personal_workspace.reports.filter(trashed_at__isnull=True).order_by(
+        "-academic_year"
+    ).values_list("academic_year", flat=True).distinct()
     page = Paginator(qs, 20).get_page(request.GET.get("page"))
     return render(request, "personal/report_list.html", {
         "reports": page, "query": query, "year": year, "status": status,
         "years": years, "statuses": PersonalReport.Status.choices,
+        "subscription_active": request.personal_subscription.is_current,
+        "archived_years": set(request.personal_workspace.academic_years.filter(
+            archived_at__isnull=False
+        ).values_list("value", flat=True)),
     })
 
 
-def _save_report(form, workspace, owner):
+def _save_report(form, workspace, owner, *, submission_id=None):
     report = form.save(commit=False)
     report.workspace = workspace
     if not report.pk:
+        report.client_submission_id = submission_id
         report.teacher_name = owner.name
         report.school_name = workspace.school_name
         report.principal_name = workspace.principal_name
@@ -317,10 +336,13 @@ def _save_report(form, workspace, owner):
     return report
 
 
-def _inline_evidence_forms(request):
+def _inline_evidence_forms(request, report=None):
     if request.method == "POST" and "evidence-TOTAL_FORMS" not in request.POST:
         return None  # Existing clients may still post only the report fields.
-    return PersonalInlineEvidenceFormSet(
+    formset_class = PersonalInlineEvidenceFormSet if report is None else personal_inline_evidence_formset(
+        max(0, 8 - report.evidence.count())
+    )
+    return formset_class(
         request.POST or None, request.FILES or None, prefix="evidence"
     )
 
@@ -328,21 +350,30 @@ def _inline_evidence_forms(request):
 def _save_inline_evidence(formset, workspace, report):
     if formset is None:
         return
+    next_order = report.evidence.aggregate(max_order=Max("order"))["max_order"] or 0
     for row in formset.cleaned_data:
         if not row or not (row.get("file") or row.get("source_url")):
             continue
         uploaded = row.get("file")
+        next_order += 1
         PersonalEvidence.objects.create(
             workspace=workspace, report=report, title=row["title"],
             academic_year=report.academic_year, file=uploaded,
             source_url=row.get("source_url") or "", file_size=uploaded.size if uploaded else 0,
+            order=next_order,
+            display_size=row.get("display_size") or PersonalEvidence.DisplaySize.AUTO,
+            fit_mode=row.get("fit_mode") or PersonalEvidence.FitMode.CONTAIN,
+            show_in_print=row.get("show_in_print", False) if row.get("presentation_enabled") else True,
         )
 
 
-def _inline_evidence_capacity_error(workspace, subscription, formset):
+def _inline_evidence_capacity_error(workspace, subscription, formset, report=None):
     if formset is None:
         return ""
     new_rows = [row for row in formset.cleaned_data if row and (row.get("file") or row.get("source_url"))]
+    existing_count = report.evidence.count() if report else 0
+    if existing_count + len(new_rows) > 8:
+        return "الحد الأعلى لكل تقرير 8 شواهد. أزل شاهدًا قبل إضافة المزيد."
     if workspace.evidence.count() + len(new_rows) > subscription.plan.max_evidence:
         return "وصلت إلى الحد الحالي للشواهد الشخصية."
     used = workspace.evidence.aggregate(total=Sum("file_size"))["total"] or 0
@@ -366,24 +397,41 @@ def report_create(request):
         return redirect("personal:reports")
     form = PersonalReportForm(request.POST or None, initial={
         "report_date": timezone.localdate(), "academic_year": ws.current_academic_year,
+        "show_details": True,
         "show_goals": False, "show_implementation": False,
         "show_results": False, "show_recommendations": False,
+        "client_submission_id": uuid.uuid4(),
     })
     evidence_formset = _inline_evidence_forms(request)
     if request.method == "POST" and form.is_valid() and (evidence_formset is None or evidence_formset.is_valid()):
+        submission_id = form.cleaned_data.get("client_submission_id")
         try:
             with transaction.atomic():
                 locked = PersonalWorkspace.objects.select_for_update().get(pk=ws.pk)
+                existing = locked.reports.filter(client_submission_id=submission_id).first() if submission_id else None
+                if existing:
+                    messages.info(request, "حُفظ هذا التقرير مسبقًا.")
+                    return redirect("personal:report_trash") if existing.trashed_at else redirect(
+                        "personal:report_detail", pk=existing.pk,
+                    )
                 if locked.reports.count() >= subscription.plan.max_reports:
                     raise ValidationError("وصلت إلى الحد الحالي للتقارير الشخصية.")
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
                 capacity_error = _inline_evidence_capacity_error(locked, subscription, evidence_formset)
                 if capacity_error:
                     raise ValidationError(capacity_error)
-                report = _save_report(form, locked, request.user)
+                report = _save_report(form, locked, request.user, submission_id=submission_id)
                 _save_inline_evidence(evidence_formset, locked, report)
         except ValidationError as exc:
             form.add_error(None, exc)
+        except IntegrityError:
+            existing = ws.reports.filter(client_submission_id=submission_id).first() if submission_id else None
+            if existing:
+                messages.info(request, "حُفظ هذا التقرير مسبقًا.")
+                return redirect("personal:report_trash") if existing.trashed_at else redirect(
+                    "personal:report_detail", pk=existing.pk,
+                )
+            raise
         else:
             messages.success(request, "حُفظ التقرير وشواهده في مساحتك الشخصية.")
             return redirect("personal:report_detail", pk=report.pk)
@@ -393,23 +441,28 @@ def report_create(request):
 @workspace_required
 @require_http_methods(["GET", "POST"])
 def report_edit(request, pk):
-    report = get_object_or_404(PersonalReport, pk=pk, workspace=request.personal_workspace)
-    if request.method == "POST" and PersonalAcademicYear.objects.filter(
+    report = get_object_or_404(
+        PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
+    )
+    if PersonalAcademicYear.objects.filter(
         workspace=request.personal_workspace, value=report.academic_year, archived_at__isnull=False
     ).exists():
         messages.error(request, "السنة الأصلية مؤرشفة. أعد فتحها قبل تعديل التقرير.")
         return redirect("personal:report_detail", pk=pk)
-    if request.method == "POST" and not request.personal_subscription.is_current:
+    if not request.personal_subscription.is_current:
         messages.error(request, "اشتراك المساحة الشخصية غير نشط حاليًا.")
         return redirect("personal:report_detail", pk=pk)
     form = PersonalReportForm(request.POST or None, instance=report)
-    evidence_formset = _inline_evidence_forms(request)
+    evidence_formset = _inline_evidence_forms(request, report)
     if request.method == "POST" and form.is_valid() and (evidence_formset is None or evidence_formset.is_valid()):
         try:
             with transaction.atomic():
                 locked = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
+                get_object_or_404(PersonalReport, pk=report.pk, workspace=locked, trashed_at__isnull=True)
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
-                capacity_error = _inline_evidence_capacity_error(locked, request.personal_subscription, evidence_formset)
+                capacity_error = _inline_evidence_capacity_error(
+                    locked, request.personal_subscription, evidence_formset, report=report,
+                )
                 if capacity_error:
                     raise ValidationError(capacity_error)
                 report = _save_report(form, locked, request.user)
@@ -421,37 +474,84 @@ def report_edit(request, pk):
             return redirect("personal:report_detail", pk=report.pk)
     return render(request, "personal/report_form.html", {
         "form": form, "evidence_formset": evidence_formset, "editing": True, "report": report,
-        "existing_evidence": report.evidence.all(),
+        "existing_evidence": report.evidence.order_by("order", "id"),
     })
 
 
 @workspace_required
 @require_GET
 def report_detail(request, pk):
-    report = get_object_or_404(PersonalReport, pk=pk, workspace=request.personal_workspace)
-    return render(request, "personal/report_detail.html", {"report": report, "evidence": report.evidence.all()})
+    report = get_object_or_404(
+        PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
+    )
+    can_modify = request.personal_subscription.is_current and not PersonalAcademicYear.objects.filter(
+        workspace=request.personal_workspace, value=report.academic_year, archived_at__isnull=False
+    ).exists()
+    return render(request, "personal/report_detail.html", {
+        "report": report, "evidence": report.evidence.order_by("order", "id"), "can_modify": can_modify,
+    })
 
 
 @workspace_required
 @require_POST
 def report_delete(request, pk):
-    report = get_object_or_404(PersonalReport, pk=pk, workspace=request.personal_workspace)
-    if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
-        workspace=request.personal_workspace, value=report.academic_year, archived_at__isnull=False
-    ).exists():
-        messages.error(request, "لا يمكن حذف عمل من سنة مؤرشفة أو اشتراك غير نشط.")
-        return redirect("personal:report_detail", pk=pk)
-    report.delete()
-    messages.success(request, "حُذف التقرير. بقيت الشواهد في مكتبتك الشخصية.")
+    with transaction.atomic():
+        locked = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
+        report = get_object_or_404(PersonalReport, pk=pk, workspace=locked, trashed_at__isnull=True)
+        if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+            workspace=locked, value=report.academic_year, archived_at__isnull=False
+        ).exists():
+            messages.error(request, "لا يمكن نقل تقرير من سنة مؤرشفة أو اشتراك غير نشط.")
+            return redirect("personal:report_detail", pk=pk)
+        report.move_to_trash(by=request.user)
+    messages.success(request, "نُقل التقرير إلى السلة. بقيت شواهده وروابط ملف الإنجاز محفوظة للاستعادة.")
     return redirect("personal:reports")
 
 
 @workspace_required
 @require_GET
+def report_trash(request):
+    reports = request.personal_workspace.reports.filter(trashed_at__isnull=False).select_related(
+        "trashed_by"
+    ).order_by("-trashed_at", "-id")
+    page = Paginator(reports, 20).get_page(request.GET.get("page"))
+    archived_years = set(request.personal_workspace.academic_years.filter(
+        archived_at__isnull=False
+    ).values_list("value", flat=True))
+    return render(request, "personal/report_trash.html", {
+        "reports": page, "subscription_active": request.personal_subscription.is_current,
+        "archived_years": archived_years,
+    })
+
+
+@workspace_required
+@require_POST
+def report_restore(request, pk):
+    with transaction.atomic():
+        locked = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
+        report = get_object_or_404(PersonalReport, pk=pk, workspace=locked, trashed_at__isnull=False)
+        if not request.personal_subscription.is_current:
+            messages.error(request, "يلزم اشتراك نشط لاستعادة التقرير.")
+            return redirect("personal:report_trash")
+        if PersonalAcademicYear.objects.filter(
+            workspace=locked, value=report.academic_year, archived_at__isnull=False,
+        ).exists():
+            messages.error(request, "السنة الدراسية مؤرشفة. أعد فتحها قبل استعادة التقرير.")
+            return redirect("personal:report_trash")
+        report.restore_from_trash()
+    messages.success(request, "استُعيد التقرير وشواهده وروابط ملف الإنجاز.")
+    return redirect("personal:report_detail", pk=pk)
+
+
+@workspace_required
+@require_GET
 def report_print(request, pk):
-    report = get_object_or_404(PersonalReport, pk=pk, workspace=request.personal_workspace)
-    response = render(request, "personal/print.html", {
-        "document_title": report.title, "report": report, "evidence": report.evidence.all(),
+    report = get_object_or_404(
+        PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
+    )
+    response = render(request, "personal/report_print.html", {
+        "document_title": report.title, "report": report,
+        "evidence": report.evidence.filter(show_in_print=True).order_by("order", "id"),
         "workspace": request.personal_workspace,
     })
     response["Cache-Control"] = "no-store"
@@ -467,7 +567,13 @@ def evidence_list(request):
         qs = qs.filter(academic_year=year)
     years = request.personal_workspace.evidence.order_by("-academic_year").values_list("academic_year", flat=True).distinct()
     page = Paginator(qs, 20).get_page(request.GET.get("page"))
-    return render(request, "personal/evidence_list.html", {"evidence": page, "year": year, "years": years})
+    return render(request, "personal/evidence_list.html", {
+        "evidence": page, "year": year, "years": years,
+        "subscription_active": request.personal_subscription.is_current,
+        "archived_years": set(request.personal_workspace.academic_years.filter(
+            archived_at__isnull=False
+        ).values_list("value", flat=True)),
+    })
 
 
 @workspace_required
@@ -486,7 +592,7 @@ def evidence_create(request):
     report_id = request.GET.get("report")
     initiative_id = request.GET.get("initiative")
     if report_id:
-        report = PersonalReport.objects.filter(pk=report_id, workspace=ws).first()
+        report = PersonalReport.objects.filter(pk=report_id, workspace=ws, trashed_at__isnull=True).first()
         if report:
             initial = {"report": report, "academic_year": report.academic_year}
     elif initiative_id:
@@ -512,16 +618,112 @@ def evidence_create(request):
                 pass
             elif locked.evidence.count() >= subscription.plan.max_evidence:
                 form.add_error(None, "وصلت إلى الحد الحالي للشواهد الشخصية.")
+            elif form.cleaned_data.get("report") and locked.evidence.filter(
+                report=form.cleaned_data["report"]
+            ).count() >= 8:
+                form.add_error("report", "الحد الأعلى للتقرير 8 شواهد.")
             elif used + new_size > subscription.plan.storage_limit_mb * 1024 * 1024:
                 form.add_error("file", f"تجاوزت الملفات سعة باقتك الحالية ({subscription.plan.storage_limit_mb} ميجابايت).")
             else:
                 obj = form.save(commit=False)
                 obj.workspace = locked
                 obj.file_size = new_size
+                if obj.report_id:
+                    obj.order = (locked.evidence.filter(report_id=obj.report_id).aggregate(
+                        max_order=Max("order")
+                    )["max_order"] or 0) + 1
                 obj.save()
                 messages.success(request, "أُضيف الشاهد إلى مكتبتك الشخصية.")
                 return redirect("personal:evidence")
     return render(request, "personal/evidence_form.html", {"form": form})
+
+
+@workspace_required
+@ratelimit(key="user", rate="30/h", method="POST", block=True)
+@require_http_methods(["GET", "POST"])
+def evidence_edit(request, pk):
+    ws = request.personal_workspace
+    evidence = get_object_or_404(PersonalEvidence, pk=pk, workspace=ws)
+    if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+        workspace=ws, value=evidence.academic_year, archived_at__isnull=False
+    ).exists():
+        messages.error(request, "لا يمكن تعديل شاهد من سنة مؤرشفة أو اشتراك غير نشط.")
+        return redirect("personal:evidence")
+    form = PersonalEvidenceForm(
+        request.POST or None, request.FILES or None, workspace=ws, instance=evidence
+    )
+    if request.method == "POST" and form.is_valid():
+        uploaded = form.cleaned_data.get("file")
+        new_size = (
+            uploaded.size if isinstance(uploaded, UploadedFile)
+            else evidence.file_size if uploaded else 0
+        )
+        with transaction.atomic():
+            locked = PersonalWorkspace.objects.select_for_update().get(pk=ws.pk)
+            current = get_object_or_404(PersonalEvidence.objects.select_for_update(), pk=pk, workspace=locked)
+            try:
+                ensure_writable_personal_year(locked, current.academic_year)
+                ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
+            except ValidationError as exc:
+                form.add_error("academic_year", exc)
+            if not form.errors and current.academic_year != form.cleaned_data["academic_year"]:
+                if current.portfolio_links.exists():
+                    form.add_error("academic_year", "لا يمكن تغيير سنة شاهد مرتبط بمحور ملف الإنجاز.")
+            used = locked.evidence.aggregate(total=Sum("file_size"))["total"] or 0
+            if not form.errors and used - current.file_size + new_size > request.personal_subscription.plan.storage_limit_mb * 1024 * 1024:
+                form.add_error("file", "تجاوزت الملفات سعة باقتك الحالية.")
+            target_report = form.cleaned_data.get("report")
+            if not form.errors and target_report and locked.evidence.filter(
+                report=target_report
+            ).exclude(pk=current.pk).count() >= 8:
+                form.add_error("report", "الحد الأعلى للتقرير 8 شواهد.")
+            if not form.errors:
+                obj = form.save(commit=False)
+                obj.workspace = locked
+                obj.file_size = new_size
+                if obj.report_id != current.report_id:
+                    obj.order = (locked.evidence.filter(report_id=obj.report_id).aggregate(
+                        max_order=Max("order")
+                    )["max_order"] or 0) + 1 if obj.report_id else 1
+                obj.save()
+                messages.success(request, "حُفظت تعديلات الشاهد.")
+                if obj.report_id and not obj.report.trashed_at:
+                    return redirect("personal:report_detail", pk=obj.report_id)
+                return redirect("personal:evidence")
+    return render(request, "personal/evidence_form.html", {
+        "form": form, "editing": True, "evidence_item": evidence,
+    })
+
+
+@workspace_required
+@require_POST
+def report_evidence_move(request, pk):
+    report = get_object_or_404(
+        PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
+    )
+    if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+        workspace=request.personal_workspace, value=report.academic_year, archived_at__isnull=False
+    ).exists():
+        messages.error(request, "لا يمكن ترتيب شواهد سنة مؤرشفة أو اشتراك غير نشط.")
+        return redirect("personal:report_detail", pk=pk)
+    direction = request.POST.get("direction")
+    if direction not in {"up", "down"}:
+        raise Http404
+    with transaction.atomic():
+        rows = list(PersonalEvidence.objects.select_for_update().filter(
+            workspace=request.personal_workspace, report=report
+        ).order_by("order", "id"))
+        try:
+            position = next(index for index, item in enumerate(rows) if item.pk == int(request.POST.get("evidence_id", "")))
+        except (ValueError, StopIteration):
+            raise Http404 from None
+        target = position - 1 if direction == "up" else position + 1
+        if 0 <= target < len(rows):
+            rows[position], rows[target] = rows[target], rows[position]
+            for index, item in enumerate(rows, start=1):
+                item.order = index
+            PersonalEvidence.objects.bulk_update(rows, ["order"])
+    return redirect("personal:report_detail", pk=pk)
 
 
 @workspace_required
@@ -572,47 +774,3 @@ def evidence_delete(request, pk):
     evidence.delete()
     messages.success(request, "حُذف الشاهد.")
     return redirect("personal:evidence")
-
-
-@workspace_required
-@require_GET
-def portfolio(request):
-    ws = request.personal_workspace
-    years = sorted(set(ws.reports.values_list("academic_year", flat=True)) |
-                   set(ws.evidence.values_list("academic_year", flat=True)) |
-                   set(ws.initiatives.values_list("academic_year", flat=True)) |
-                   set(ws.academic_years.values_list("value", flat=True)), reverse=True)
-    year = (request.GET.get("year") or "").strip()[:20]
-    if year not in years:
-        year = years[0] if years else ""
-    reports = ws.reports.filter(academic_year=year) if year else ws.reports.none()
-    evidence = ws.evidence.filter(academic_year=year) if year else ws.evidence.none()
-    initiatives = ws.initiatives.filter(academic_year=year) if year else ws.initiatives.none()
-    categories = reports.values("category").annotate(total=Count("id")).order_by("-total", "category")
-    school_names = list(reports.order_by("school_name").values_list("school_name", flat=True).distinct()) if year else []
-    principal_names = list(reports.exclude(principal_name="").order_by("principal_name").values_list("principal_name", flat=True).distinct()) if year else []
-    return render(request, "personal/portfolio.html", {
-        "workspace": ws, "years": years, "year": year,
-        "reports": reports, "evidence": evidence, "initiatives": initiatives, "categories": categories,
-        "school_names": school_names or [ws.school_name],
-        "principal_names": principal_names or ([ws.principal_name] if ws.principal_name else []),
-    })
-
-
-@workspace_required
-@require_GET
-def portfolio_print(request):
-    ws = request.personal_workspace
-    year = (request.GET.get("year") or "").strip()[:20]
-    if not year or not (ws.reports.filter(academic_year=year).exists() or ws.evidence.filter(academic_year=year).exists() or ws.initiatives.filter(academic_year=year).exists()):
-        raise Http404
-    response = render(request, "personal/print.html", {
-        "document_title": f"ملف الإنجاز {year}", "workspace": ws, "year": year,
-        "reports": ws.reports.filter(academic_year=year),
-        "evidence": ws.evidence.filter(academic_year=year),
-        "initiatives": ws.initiatives.filter(academic_year=year),
-        "school_names": list(ws.reports.filter(academic_year=year).order_by("school_name").values_list("school_name", flat=True).distinct()) or [ws.school_name],
-        "principal_names": list(ws.reports.filter(academic_year=year).exclude(principal_name="").order_by("principal_name").values_list("principal_name", flat=True).distinct()) or ([ws.principal_name] if ws.principal_name else []),
-    })
-    response["Cache-Control"] = "no-store"
-    return response

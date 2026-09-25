@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, workspace_views
+from . import portfolio_views, share_views, views, workspace_views
 
 app_name = "personal"
 
@@ -15,17 +15,26 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("reports/", views.report_list, name="reports"),
     path("reports/new/", views.report_create, name="report_create"),
+    path("reports/trash/", views.report_trash, name="report_trash"),
+    path("reports/trash/<int:pk>/restore/", views.report_restore, name="report_restore"),
     path("reports/<int:pk>/", views.report_detail, name="report_detail"),
     path("reports/<int:pk>/edit/", views.report_edit, name="report_edit"),
     path("reports/<int:pk>/delete/", views.report_delete, name="report_delete"),
     path("reports/<int:pk>/print/", views.report_print, name="report_print"),
+    path("reports/<int:pk>/share/", share_views.report_share_manage, name="report_share_manage"),
+    path("reports/<int:pk>/evidence/move/", views.report_evidence_move, name="report_evidence_move"),
     path("evidence/", views.evidence_list, name="evidence"),
     path("evidence/new/", views.evidence_create, name="evidence_create"),
+    path("evidence/<int:pk>/edit/", views.evidence_edit, name="evidence_edit"),
     path("evidence/<int:pk>/download/", views.evidence_download, name="evidence_download"),
     path("evidence/<int:pk>/preview/", views.evidence_preview, name="evidence_preview"),
     path("evidence/<int:pk>/delete/", views.evidence_delete, name="evidence_delete"),
-    path("portfolio/", views.portfolio, name="portfolio"),
-    path("portfolio/print/", views.portfolio_print, name="portfolio_print"),
+    path("portfolio/", portfolio_views.portfolio, name="portfolio"),
+    path("portfolio/print/", portfolio_views.portfolio_print, name="portfolio_print"),
+    path("portfolio/share/", share_views.portfolio_share_manage, name="portfolio_share_manage"),
+    path("share/report/<str:token>/", share_views.public_report, name="share_public_report"),
+    path("share/portfolio/<str:token>/", share_views.public_portfolio, name="share_public_portfolio"),
+    path("share/<str:token>/evidence/<int:evidence_id>/<str:mode>/", share_views.public_evidence, name="share_evidence"),
     path("years/", workspace_views.years, name="years"),
     path("years/<str:value>/export/", workspace_views.year_export, name="year_export"),
     path("initiatives/", workspace_views.initiatives, name="initiatives"),

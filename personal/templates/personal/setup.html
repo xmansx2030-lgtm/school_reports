@@ -1,19 +1,17 @@
 {% extends "personal/base.html" %}
-{% block title %}بيانات المساحة{% endblock %}
+{% load static %}
+{% block title %}بيانات المساحة الشخصية{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260923.1"><link rel="stylesheet" href="{% static 'css/personal-self-service.css' %}">{% endblock %}
 {% block content %}
-<div class="personal-heading"><div><span class="personal-kicker">هويتك المهنية</span><h1>{% if workspace %}بيانات المساحة{% else %}إكمال المساحة الشخصية{% endif %}</h1><p>تُستخدم هذه البيانات في المستندات الجديدة. تحتفظ المستندات المحفوظة ببياناتها وقت الإنشاء.</p></div></div>
-<section class="personal-card twq-card personal-card--form">
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
-    {% if form.non_field_errors %}<div class="personal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-    <div class="personal-form-grid">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
-    {% if email_form.non_field_errors %}<div class="personal-alert" role="alert">{{ email_form.non_field_errors }}</div>{% endif %}
-    <div class="personal-form-grid">{% for field in email_form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
-    {% if gender_form.non_field_errors %}<div class="personal-alert" role="alert">{{ gender_form.non_field_errors }}</div>{% endif %}
-    <div class="personal-form-grid">{% for field in gender_form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
-    <p class="personal-hint"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> اسم المدير معلومة تعريفية تُدخلها أنت، ولا تعني موافقته أو اعتماده.</p>
-    <button class="personal-button twq-btn twq-btn--primary" type="submit">حفظ البيانات</button>
-  </form>
-</section>
+<div class="profile-scope twq-page" dir="rtl"><div class="profile-container">
+  <header class="profile-header twq-page-header" aria-labelledby="setupTitle"><div class="profile-header-content"><p class="profile-eyebrow">هويتك المهنية</p><h1 class="profile-title" id="setupTitle"><i class="fa-solid fa-briefcase" aria-hidden="true"></i><span>{% if workspace %}بيانات المساحة{% else %}إكمال المساحة الشخصية{% endif %}</span></h1><p class="profile-subtitle">تُستخدم البيانات التعريفية في المستندات الجديدة. تحتفظ المستندات السابقة ببياناتها وقت الإنشاء.</p></div><div class="profile-header-status"><a class="twq-btn twq-btn--secondary" href="{% url 'personal:account' %}">حسابي</a></div></header>
+  <section class="profile-card twq-section personal-setup" aria-labelledby="setupDetailsTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">إعدادات المستندات الشخصية</span><h2 class="profile-card-title twq-section__title" id="setupDetailsTitle"><i class="fa-solid fa-file-signature" aria-hidden="true"></i> بيانات التعريف والتواصل</h2></div></div>
+    <form method="post" class="profile-form" novalidate>{% csrf_token %}{% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+      {% if form.non_field_errors or email_form.non_field_errors or gender_form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ form.non_field_errors }}{{ email_form.non_field_errors }}{{ gender_form.non_field_errors }}</div>{% endif %}
+      <div class="personal-registration__fields">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}{% for field in email_form %}{% include "personal/_field.html" with field=field %}{% endfor %}{% for field in gender_form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>
+      <div class="twq-alert twq-alert--info" role="note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>اسم المدرسة والمدير معلومات تعريفية أدخلتها أنت؛ لا تدل على اعتماد المدرسة لهذا المستند.</span></div>
+      <div class="personal-setup__actions"><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ البيانات</button>{% if workspace %}<a class="twq-btn twq-btn--secondary" href="{% url 'personal:dashboard' %}">العودة إلى مساحتي</a>{% endif %}</div>
+    </form>
+  </section>
+</div></div>
 {% endblock %}

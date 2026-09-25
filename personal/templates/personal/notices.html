@@ -1,6 +1,75 @@
 {% extends "personal/base.html" %}
+{% load static %}
 {% block title %}إشعارات المنصة{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/notifications-user.css' %}">{% endblock %}
 {% block content %}
-<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">الرسائل الواردة</p><h1>إشعارات المنصة</h1><p class="twq-page-header__lead">رسائل موجّهة إلى مساحتك الشخصية من إدارة المنصة.</p></div></header>
-<section class="twq-section" aria-label="الإشعارات">{% for receipt in notices %}<a class="personal-record personal-record--link" href="{% url 'personal:notice_detail' receipt.pk %}"><div><p class="personal-record__meta">{{ receipt.notice.created_at|date:"Y-m-d H:i" }} · {% if receipt.read_at %}مقروء{% else %}جديد{% endif %}</p><h2>{{ receipt.notice.title }}</h2><p>{{ receipt.notice.message|truncatechars:180 }}</p></div><span aria-hidden="true">←</span></a>{% empty %}<div class="twq-empty twq-empty--local"><h2>لا توجد إشعارات</h2><p>ستظهر رسائل إدارة المنصة هنا عند إرسالها.</p></div>{% endfor %}</section>
+<div class="twq-page notifications-page" dir="rtl" aria-labelledby="notificationsTitle" data-notifications-page="inbox">
+  <header class="twq-page-header notifications-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-bell" aria-hidden="true"></i> صندوق التواصل الوارد</p>
+      <h1 class="twq-page-header__title" id="notificationsTitle">إشعارات المنصة</h1>
+      <p class="twq-page-header__lead">رسائلك الشخصية من إدارة منصة توثيق. يمكنك مراجعة الجديد والعودة إلى الرسائل السابقة هنا.</p>
+      <dl class="twq-page-header__context notifications-header__context" aria-label="سياق الإشعارات">
+        <div><dt>المساحة</dt><dd>أعمالي الشخصية</dd></div>
+        <div><dt>غير المقروء</dt><dd>{{ unread_count }} إشعار</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="twq-section notifications-workspace" aria-labelledby="notificationsListTitle">
+    <div class="twq-section__header notifications-section-header">
+      <div>
+        <span class="twq-section__kicker">الوارد الشخصي</span>
+        <h2 class="twq-section__title" id="notificationsListTitle">الرسائل الأحدث</h2>
+        <p class="twq-section__description">تُسجّل قراءة الإشعار عند فتحه أو عند اختيار «تمت القراءة».</p>
+      </div>
+      <span class="notifications-results-count">{{ page_obj.paginator.count }} رسالة</span>
+    </div>
+
+    {% if page_obj.object_list %}
+      <div class="notifications-filter-panel" aria-label="تصفية الصفحة الحالية">
+        <div class="notifications-local-search twq-field">
+          <label class="twq-label" for="notificationSearch">بحث في الصفحة الحالية</label>
+          <div class="twq-toolbar__control">
+            <i class="twq-toolbar__icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input class="twq-control" id="notificationSearch" type="search" placeholder="العنوان أو نص الرسالة" autocomplete="off" data-notification-search>
+          </div>
+        </div>
+        <label class="notifications-unread-filter" for="onlyUnread">
+          <input id="onlyUnread" type="checkbox" data-only-unread>
+          <span><strong>غير المقروء فقط</strong><small>ضمن هذه الصفحة</small></span>
+        </label>
+      </div>
+      <ul class="notifications-list" id="notificationList" role="list">
+        {% for receipt in page_obj %}
+          <li class="notification-item{% if not receipt.read_at %} notification-item--unread{% endif %}" data-notification-item data-read="{% if receipt.read_at %}1{% else %}0{% endif %}">
+            <article class="notification-card" aria-labelledby="notificationTitle{{ receipt.pk }}">
+              <div class="notification-card__state" aria-hidden="true"><i class="{% if receipt.read_at %}fa-regular fa-envelope-open{% else %}fa-solid fa-envelope{% endif %}"></i></div>
+              <div class="notification-card__content">
+                <div class="notification-card__head">
+                  <div class="notification-card__identity">
+                    <div class="notification-card__labels"><span class="notification-type"><i class="fa-regular fa-bell" aria-hidden="true"></i> إشعار من المنصة</span><span class="twq-status" data-status="{% if receipt.read_at %}completed{% else %}pending{% endif %}">{% if receipt.read_at %}مقروء{% else %}غير مقروء{% endif %}</span></div>
+                    <h3 class="notification-card__title" id="notificationTitle{{ receipt.pk }}">{{ receipt.notice.title }}</h3>
+                  </div>
+                  <time class="notification-card__time" datetime="{{ receipt.notice.created_at|date:'c' }}">{{ receipt.notice.created_at|date:"Y-m-d" }}<span>{{ receipt.notice.created_at|time:"H:i" }}</span></time>
+                </div>
+                <p class="notification-card__excerpt">{{ receipt.notice.message|striptags|truncatechars:180 }}</p>
+                <dl class="notification-card__meta"><div><dt>المرسل</dt><dd>إدارة المنصة</dd></div>{% if receipt.read_at %}<div><dt>قُرئت في</dt><dd><time datetime="{{ receipt.read_at|date:'c' }}">{{ receipt.read_at|date:"Y-m-d H:i" }}</time></dd></div>{% endif %}</dl>
+              </div>
+              <div class="notification-card__actions">
+                <a class="twq-btn twq-btn--secondary" href="{% url 'personal:notice_detail' receipt.pk %}" aria-label="فتح تفاصيل {{ receipt.notice.title }}">فتح التفاصيل <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+                {% if not receipt.read_at %}<form method="post" action="{% url 'personal:notice_mark_read' receipt.pk %}">{% csrf_token %}<button class="twq-btn twq-btn--ghost" type="submit" data-mark-one-button><i class="fa-solid fa-check" aria-hidden="true"></i> تمت القراءة</button></form>{% endif %}
+              </div>
+            </article>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="twq-empty twq-empty--local notifications-filter-empty" data-filter-empty role="status" hidden><span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-bell-slash"></i></span><div><h3 class="twq-empty__title">لا توجد رسائل مطابقة في هذه الصفحة</h3><p class="twq-empty__message">غيّر عبارة البحث أو ألغِ فلتر غير المقروء.</p></div></div>
+      {% if page_obj.paginator.num_pages > 1 %}<nav class="twq-pagination notifications-pagination" aria-label="صفحات الإشعارات">{% if page_obj.has_previous %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}<span class="twq-pagination__meta">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary twq-pagination__link" href="?page={{ page_obj.next_page_number }}">التالي</a>{% endif %}</nav>{% endif %}
+    {% else %}
+      <div class="twq-empty twq-empty--page notifications-empty" role="status"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-regular fa-bell"></i></span><h2 class="twq-empty__title">لا توجد إشعارات حتى الآن</h2><p class="twq-empty__message">ستظهر هنا رسائل إدارة المنصة الموجهة إلى مساحتك الشخصية.</p></div>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}
+{% block scripts %}<script src="{% static 'js/notifications-user.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endblock %}

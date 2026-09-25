@@ -1,0 +1,51 @@
+{% load static %}
+{% load hijri_tags %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>{{ report.title }} | توثيق</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app-components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+  <link rel="stylesheet" href="{% static 'css/personal-report-platform.css' %}">
+  <style nonce="{{ CSP_NONCE }}">
+    body { margin: 0; font-family: Cairo, Tahoma, sans-serif; }
+    .personal-public-shell { max-width: 1120px; margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
+    .personal-public-brand { display: flex; align-items: center; gap: .75rem; margin-block-end: 1.25rem; color: var(--color-text, #153b2b); }
+    .personal-public-brand img { width: 44px; height: 44px; }
+    .personal-public-brand strong { font-size: 1.15rem; }
+    .personal-public-brand small { display: block; font-size: .8rem; }
+    .personal-public-work { white-space: pre-line; overflow-wrap: anywhere; }
+    .personal-public-evidence-image { display: block; inline-size: 100%; max-block-size: 260px; object-fit: contain; margin-block-end: .5rem; }
+    .personal-public-evidence-list { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+    .personal-public-evidence-list li { min-inline-size: 0; }
+    .personal-public-evidence-list a { overflow-wrap: anywhere; }
+    .personal-public-footer { margin-block-start: 1rem; font-size: .85rem; line-height: 1.8; }
+    @media (max-width: 40rem) { .personal-public-shell { padding: 1rem; } }
+    @media print { .personal-public-shell { max-width: none; padding: 0; } .personal-public-brand { margin-block-end: .5rem; } .personal-public-print { display: none !important; } .personal-public-evidence-list article { break-inside: avoid; } }
+  </style>
+</head>
+<body class="page personal-page personal-public-page">
+  <a class="skip-link" href="#personalPublicContent">تخطي إلى التقرير</a>
+  <main class="personal-public-shell twq-page personal-report-detail" id="personalPublicContent">
+    <div class="personal-public-brand"><img src="{% static 'img/brand-mark.svg' %}" alt=""><div><strong>منصة توثيق</strong><small>نسخة مشاركة من المساحة الشخصية</small></div></div>
+    <header class="twq-page-header" aria-labelledby="publicReportTitle">
+      <div class="twq-page-header__heading"><p class="twq-page-header__eyebrow"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تقرير مهني شخصي · {{ report.category|default:"عمل موثق" }}</p><h1 class="twq-page-header__title" id="publicReportTitle">{{ report.title }}</h1><p class="twq-page-header__lead">إعداد {{ report.teacher_name }}</p><div class="personal-report-meta"><span class="twq-status" data-status="{% if report.status == 'complete' %}completed{% else %}draft{% endif %}">{{ report.get_status_display }}</span><span><i class="fa-regular fa-calendar" aria-hidden="true"></i> <time datetime="{{ report.report_date|date:'Y-m-d' }}">{{ report.report_date|hijri }} هـ</time></span><span><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> <bdi dir="ltr">{{ report.academic_year }}</bdi></span></div></div>
+      <div class="twq-page-header__aside"><button class="twq-btn twq-btn--secondary personal-public-print" type="button" data-personal-share-print><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة أو حفظ PDF</button><div class="twq-page-header__mark" aria-hidden="true"><img src="{% static 'img/brand-mark.svg' %}" alt=""></div></div>
+    </header>
+    <div class="personal-report-detail-layout">
+      <article class="twq-section personal-report-document" aria-labelledby="publicReportContentTitle"><header class="twq-section__header"><div><span class="twq-section__kicker">المحتوى</span><h2 id="publicReportContentTitle">تفاصيل التقرير</h2></div></header>{% if report.show_details and report.description %}<section><h3>وصف العمل</h3><p class="personal-public-work">{{ report.description }}</p></section>{% endif %}{% if report.show_goals and report.goals %}<section><h3>الأهداف</h3><p class="personal-public-work">{{ report.goals }}</p></section>{% endif %}{% if report.show_implementation and report.implementation %}<section><h3>آلية التنفيذ</h3><p class="personal-public-work">{{ report.implementation }}</p></section>{% endif %}{% if report.show_results and report.results %}<section><h3>النتائج</h3><p class="personal-public-work">{{ report.results }}</p></section>{% endif %}{% if report.show_recommendations and report.recommendations %}<section><h3>التوصيات</h3><p class="personal-public-work">{{ report.recommendations }}</p></section>{% endif %}{% if report.show_beneficiaries and report.beneficiaries_count != None %}<section><h3>عدد المستفيدين</h3><p>{{ report.beneficiaries_count }}</p></section>{% endif %}</article>
+      <aside class="personal-report-detail-side"><section class="twq-section" aria-labelledby="publicReportEvidenceTitle"><header class="twq-section__header"><div><span class="twq-section__kicker">التوثيق</span><h2 id="publicReportEvidenceTitle">الشواهد</h2><p>{{ evidence|length }} شاهد مرتبط بالتقرير.</p></div></header><ul class="personal-public-evidence-list">{% for item in evidence %}<li><article class="twq-document-item"><div class="twq-document-item__icon" aria-hidden="true"><i class="fa-solid {% if item.is_image %}fa-image{% elif item.file %}fa-file-pdf{% else %}fa-link{% endif %}"></i></div><div class="twq-document-item__content"><h3>{{ item.title }}</h3>{% if item.description %}<p>{{ item.description }}</p>{% endif %}{% if item.is_image %}<a href="{% url 'personal:share_evidence' token item.pk 'preview' %}" target="_blank" rel="noopener noreferrer"><img class="personal-public-evidence-image" src="{% url 'personal:share_evidence' token item.pk 'preview' %}" alt="{{ item.title }}"></a>{% endif %}</div><div class="twq-document-item__actions">{% if item.file %}<a class="twq-btn twq-btn--ghost" href="{% url 'personal:share_evidence' token item.pk 'download' %}">تنزيل الملف</a>{% elif item.source_url %}<a class="twq-btn twq-btn--ghost" href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</div></article></li>{% empty %}<li class="twq-empty twq-empty--local">لا توجد شواهد مرتبطة.</li>{% endfor %}</ul></section><div class="twq-alert twq-alert--info" role="note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>أُعد هذا التقرير في المساحة الشخصية لصاحبه، ولا يمثل اعتمادًا أو توقيعًا من المدرسة.</span></div></aside>
+    </div>
+    <footer class="personal-public-footer">منصة توثيق · تقرير شخصي <bdi>PER-{{ report.pk }}</bdi></footer>
+  </main>
+  <script src="{% static 'js/personal-share.js' %}" nonce="{{ CSP_NONCE }}" defer></script>
+</body>
+</html>

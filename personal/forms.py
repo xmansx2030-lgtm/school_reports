@@ -195,6 +195,7 @@ def clean_academic_year(value):
 
 class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
     selection_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
+    client_submission_id = forms.UUIDField(required=False, widget=forms.HiddenInput)
     academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
 
     def __init__(self, *args, **kwargs):
@@ -202,6 +203,7 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
         if bound is not None and "selection_enabled" not in bound:
             data = bound.copy()
             for flag, field in (
+                ("show_details", "description"),
                 ("show_goals", "goals"), ("show_implementation", "implementation"),
                 ("show_results", "results"), ("show_recommendations", "recommendations"),
             ):
@@ -214,11 +216,12 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
             else:
                 kwargs["data"] = data
         super().__init__(*args, **kwargs)
+        self.fields["description"].required = False
 
     class Meta:
         model = PersonalReport
         fields = [
-            "title", "category", "report_date", "academic_year", "description",
+            "title", "category", "report_date", "academic_year", "show_details", "description",
             "show_goals", "goals", "show_implementation", "implementation",
             "show_results", "results", "show_recommendations", "recommendations",
             "show_beneficiaries", "beneficiaries_count", "status",
@@ -237,6 +240,13 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        if not any(data.get(flag) for flag in (
+            "show_details", "show_goals", "show_implementation", "show_results",
+            "show_recommendations", "show_beneficiaries",
+        )):
+            self.add_error(None, "اختر بندًا واحدًا على الأقل من محتوى التقرير.")
+        if data.get("show_details") and not (data.get("description") or "").strip():
+            self.add_error("description", "أدخل وصف العمل أو ألغِ اختيار هذا البند.")
         for flag, field, label in (
             ("show_goals", "goals", "الأهداف"),
             ("show_implementation", "implementation", "آلية التنفيذ"),
@@ -250,36 +260,62 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
         if self.instance.pk and data.get("academic_year") != self.instance.academic_year:
             if self.instance.evidence.exists():
                 self.add_error("academic_year", "لا يمكن تغيير سنة التقرير وهو مرتبط بشواهد.")
+            elif self.instance.portfolio_links.exists():
+                self.add_error("academic_year", "لا يمكن تغيير سنة التقرير وهو مرتبط بمحور ملف الإنجاز.")
         return data
 
 
 class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
     academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+    presentation_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
 
     class Meta:
         model = PersonalEvidence
-        fields = ["title", "description", "academic_year", "report", "initiative", "file", "source_url"]
+        fields = [
+            "title", "description", "academic_year", "report", "initiative",
+            "file", "source_url", "display_size", "fit_mode", "show_in_print",
+        ]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)
         self.workspace = workspace
-        self.fields["report"].queryset = PersonalReport.objects.filter(workspace=workspace)
+        self.fields["report"].queryset = PersonalReport.objects.filter(
+            workspace=workspace, trashed_at__isnull=True,
+        )
         self.fields["report"].label = "التقرير المرتبط"
         self.fields["report"].required = False
         self.fields["initiative"].queryset = PersonalInitiative.objects.filter(workspace=workspace)
         self.fields["initiative"].required = False
+        self.fields["display_size"].required = False
+        self.fields["fit_mode"].required = False
 
     def clean_academic_year(self):
         return clean_academic_year(self.cleaned_data["academic_year"])
 
     def clean(self):
         data = super().clean()
+        data["display_size"] = data.get("display_size") or (
+            self.instance.display_size if self.instance.pk else PersonalEvidence.DisplaySize.AUTO
+        )
+        data["fit_mode"] = data.get("fit_mode") or (
+            self.instance.fit_mode if self.instance.pk else PersonalEvidence.FitMode.CONTAIN
+        )
+        if self.is_bound and "presentation_enabled" not in self.data:
+            data["show_in_print"] = self.instance.show_in_print if self.instance.pk else True
+        if self.instance.pk and self.instance.report_id and not data.get("report"):
+            if self.instance.report.trashed_at:
+                data["report"] = self.instance.report
         if not data.get("file") and not data.get("source_url"):
             raise ValidationError("أرفق ملفًا أو رابطًا للشاهد.")
+        if self.instance.pk and data.get("academic_year") != self.instance.academic_year:
+            if self.instance.portfolio_links.exists():
+                self.add_error("academic_year", "لا يمكن تغيير سنة شاهد مرتبط بمحور ملف الإنجاز.")
         report = data.get("report")
         if report and data.get("academic_year") and report.academic_year != data["academic_year"]:
             self.add_error("report", "سنة التقرير يجب أن تطابق سنة الشاهد.")
+        if report and report.evidence.exclude(pk=self.instance.pk).count() >= 8:
+            self.add_error("report", "الحد الأعلى للتقرير 8 شواهد؛ اختر تقريرًا آخر أو أزل شاهدًا منه.")
         initiative = data.get("initiative")
         if initiative and data.get("academic_year") and initiative.academic_year != data["academic_year"]:
             self.add_error("initiative", "سنة المبادرة يجب أن تطابق سنة الشاهد.")
@@ -303,7 +339,7 @@ class PersonalInitiativeForm(PersonalFormStyleMixin, forms.ModelForm):
 
     class Meta:
         model = PersonalInitiative
-        fields = ["title", "academic_year", "summary", "impact", "status"]
+        fields = ["title", "academic_year", "summary", "impact", "is_best_practice", "status"]
         widgets = {"summary": forms.Textarea(attrs={"rows": 5}), "impact": forms.Textarea(attrs={"rows": 3})}
 
     def clean_academic_year(self):
@@ -335,12 +371,22 @@ class PersonalNoticeForm(PersonalFormStyleMixin, forms.ModelForm):
 
 
 class PersonalInlineEvidenceForm(PersonalFormStyleMixin, forms.Form):
+    presentation_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
     title = forms.CharField(label="وصف الشاهد", max_length=200, required=False)
     file = forms.FileField(
         label="صورة أو PDF", required=False,
         validators=[validate_circular_attachment_file, FileExtensionValidator(["pdf", "jpg", "jpeg", "png"])],
     )
     source_url = forms.URLField(label="رابط الشاهد", required=False)
+    display_size = forms.ChoiceField(
+        label="حجم العرض", choices=PersonalEvidence.DisplaySize.choices,
+        initial=PersonalEvidence.DisplaySize.AUTO, required=False,
+    )
+    fit_mode = forms.ChoiceField(
+        label="طريقة الملاءمة", choices=PersonalEvidence.FitMode.choices,
+        initial=PersonalEvidence.FitMode.CONTAIN, required=False,
+    )
+    show_in_print = forms.BooleanField(label="إظهار في الطباعة", initial=True, required=False)
 
     def clean(self):
         data = super().clean()
@@ -352,4 +398,10 @@ class PersonalInlineEvidenceForm(PersonalFormStyleMixin, forms.Form):
         return data
 
 
-PersonalInlineEvidenceFormSet = forms.formset_factory(PersonalInlineEvidenceForm, extra=3, max_num=5, validate_max=True)
+def personal_inline_evidence_formset(max_new=8):
+    return forms.formset_factory(
+        PersonalInlineEvidenceForm, extra=min(3, max_new), max_num=max_new, validate_max=True,
+    )
+
+
+PersonalInlineEvidenceFormSet = personal_inline_evidence_formset()

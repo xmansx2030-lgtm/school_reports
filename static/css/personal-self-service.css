@@ -1,0 +1,194 @@
+/* Small layout adapters for personal billing; visual components come from the
+   school subscription page and the shared Tawtheeq design system. */
+.personal-billing__summary {
+  color: var(--id-hero-ink);
+}
+
+.personal-billing__summary > i {
+  color: var(--id-gold-300);
+  font-size: 2rem;
+}
+
+.personal-billing__summary > strong {
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1.4;
+}
+
+.personal-billing__summary > small {
+  color: var(--id-hero-ink-soft);
+}
+
+.personal-billing__plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: var(--twq-space-4);
+}
+
+.personal-billing__plan {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--twq-space-5);
+}
+
+.personal-billing__plan h3 {
+  margin: var(--twq-space-3) 0 var(--twq-space-1);
+}
+
+.personal-billing__plan p {
+  color: var(--twq-text-secondary);
+  line-height: 1.7;
+}
+
+.personal-billing__price {
+  display: block;
+  color: var(--twq-primary);
+  font-size: 1.35rem;
+}
+
+.personal-billing__plan .twq-btn {
+  align-self: flex-start;
+}
+
+.personal-billing .twq-alert {
+  margin-block-start: var(--twq-space-4);
+}
+
+.personal-checkout__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-5);
+}
+
+.personal-checkout__grid > * {
+  min-inline-size: 0;
+}
+
+.personal-checkout__facts {
+  display: grid;
+  gap: var(--twq-space-3);
+  margin: 0;
+}
+
+.personal-checkout__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--twq-space-2);
+  padding-block-end: var(--twq-space-3);
+  border-block-end: 1px solid var(--twq-border);
+}
+
+.personal-checkout__facts dt {
+  color: var(--twq-text-secondary);
+}
+
+.personal-checkout__facts dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.personal-payment-brands {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--twq-space-3);
+  margin-block: var(--twq-space-5);
+}
+
+.personal-payment-brand {
+  display: grid;
+  place-items: center;
+  min-inline-size: 4.5rem;
+  min-block-size: 3rem;
+  padding: var(--twq-space-2);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface);
+}
+
+@media (max-width: 760px) {
+  .personal-checkout__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.personal-registration__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(17rem, .85fr);
+  align-items: start;
+  gap: var(--twq-space-5);
+  margin-block-start: var(--twq-space-6);
+}
+
+.personal-registration__grid > * {
+  min-inline-size: 0;
+}
+
+.personal-registration__form {
+  display: grid;
+  gap: var(--twq-space-5);
+}
+
+.personal-registration__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--twq-space-4);
+}
+
+.personal-registration__features ul {
+  display: grid;
+  gap: var(--twq-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.personal-registration__features li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--twq-space-3);
+}
+
+.personal-registration__features li > i {
+  display: grid;
+  flex: 0 0 2.5rem;
+  place-items: center;
+  block-size: 2.5rem;
+  border-radius: var(--twq-radius-md);
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.personal-registration__features li span {
+  display: grid;
+  gap: var(--twq-space-1);
+}
+
+.personal-registration__features li small {
+  color: var(--twq-text-secondary);
+  line-height: 1.6;
+}
+
+.personal-setup {
+  max-inline-size: 64rem;
+}
+
+.personal-setup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twq-space-3);
+}
+
+@media (max-width: 900px) {
+  .personal-registration__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .personal-registration__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

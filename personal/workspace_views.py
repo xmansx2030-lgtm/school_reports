@@ -10,7 +10,9 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -79,8 +81,24 @@ def years(request):
                     year.save(update_fields=["archived_at"])
                     messages.success(request, "أُعيد فتح السنة الدراسية.")
             return redirect("personal:years")
+    years_list = list(ws.academic_years.all())
+    counters = {
+        "reports": ws.reports.values("academic_year").annotate(total=Count("id")),
+        "evidence": ws.evidence.values("academic_year").annotate(total=Count("id")),
+        "initiatives": ws.initiatives.values("academic_year").annotate(total=Count("id")),
+        "portfolio": ws.portfolio_sections.filter(
+            Q(linked_reports__isnull=False) | Q(linked_evidence__isnull=False) | ~Q(teacher_notes="")
+        ).values("academic_year").annotate(total=Count("id", distinct=True)),
+    }
+    counts = {kind: {row["academic_year"]: row["total"] for row in rows} for kind, rows in counters.items()}
+    for year in years_list:
+        year.report_count = counts["reports"].get(year.value, 0)
+        year.evidence_count = counts["evidence"].get(year.value, 0)
+        year.initiative_count = counts["initiatives"].get(year.value, 0)
+        year.portfolio_count = counts["portfolio"].get(year.value, 0)
     return render(request, "personal/years.html", {
-        "form": form, "years": ws.academic_years.all(), "current_year": ws.current_academic_year,
+        "form": form, "years": years_list, "current_year": ws.current_academic_year,
+        "can_edit": request.personal_subscription.is_current,
     })
 
 
@@ -89,31 +107,51 @@ def years(request):
 @require_GET
 def year_export(request, value):
     ws = request.personal_workspace
-    get_object_or_404(PersonalAcademicYear, workspace=ws, value=value)
+    year_record = get_object_or_404(PersonalAcademicYear, workspace=ws, value=value)
     reports = list(ws.reports.filter(academic_year=value).order_by("id"))
     initiatives = list(ws.initiatives.filter(academic_year=value).order_by("id"))
     evidence = list(ws.evidence.filter(academic_year=value).order_by("id"))
+    sections = list(ws.portfolio_sections.filter(academic_year=value).prefetch_related(
+        "linked_reports", "linked_evidence"
+    ))
     manifest = {
         "academic_year": value,
         "owner": ws.owner.name,
+        "portfolio_profile": {
+            "qualifications": year_record.qualifications,
+            "professional_experience": year_record.professional_experience,
+            "specialization": year_record.specialization,
+            "teaching_load": year_record.teaching_load,
+            "subjects_taught": year_record.subjects_taught,
+            "contact_info": year_record.contact_info,
+        },
         "reports": [{
             "id": row.pk, "title": row.title, "category": row.category,
             "date": row.report_date.isoformat(), "description": row.description,
             "goals": row.goals, "implementation": row.implementation,
             "results": row.results, "recommendations": row.recommendations,
             "show_goals": row.show_goals, "show_implementation": row.show_implementation,
+            "show_details": row.show_details,
             "show_results": row.show_results, "show_recommendations": row.show_recommendations,
             "show_beneficiaries": row.show_beneficiaries,
             "beneficiaries_count": row.beneficiaries_count,
             "teacher_name": row.teacher_name, "school_name": row.school_name,
             "principal_name": row.principal_name,
             "status": row.status,
+            "trashed_at": row.trashed_at.isoformat() if row.trashed_at else None,
         } for row in reports],
         "initiatives": [{
             "id": row.pk, "title": row.title, "summary": row.summary,
             "impact": row.impact, "status": row.status,
+            "is_best_practice": row.is_best_practice,
         } for row in initiatives],
         "evidence": [],
+        "portfolio_sections": [{
+            "code": section.code, "title": section.get_code_display(),
+            "teacher_notes": section.teacher_notes,
+            "report_ids": [link.report_id for link in section.linked_reports.all()],
+            "evidence_ids": [link.evidence_id for link in section.linked_evidence.all()],
+        } for section in sections],
     }
     archive = SpooledTemporaryFile(max_size=8 * 1024 * 1024)
     with ZipFile(archive, "w", compression=ZIP_DEFLATED) as bundle:
@@ -122,6 +160,8 @@ def year_export(request, value):
                 "id": item.pk, "title": item.title, "description": item.description,
                 "report_id": item.report_id, "initiative_id": item.initiative_id,
                 "source_url": item.source_url,
+                "order": item.order, "display_size": item.display_size,
+                "fit_mode": item.fit_mode, "show_in_print": item.show_in_print,
             }
             if item.file:
                 suffix = item.file.name.rsplit(".", 1)[-1].lower()
@@ -179,9 +219,22 @@ def initiatives(request, pk=None):
     year = (request.GET.get("year") or "").strip()[:20]
     if year:
         query = query.filter(academic_year=year)
+    initiatives_list = list(query)
+    archived_years = set(ws.academic_years.filter(archived_at__isnull=False).values_list("value", flat=True))
+    for item in initiatives_list:
+        item.can_edit_personal = request.personal_subscription.is_current and item.academic_year not in archived_years
+        item.status_tone = {
+            PersonalInitiative.Status.COMPLETE: "completed",
+            PersonalInitiative.Status.ARCHIVED: "info",
+        }.get(item.status, "draft")
     return render(request, "personal/initiatives.html", {
-        "form": form, "initiative": initiative, "initiatives": query,
+        "form": form, "initiative": initiative, "initiatives": initiatives_list,
         "years": ws.academic_years.all(), "year": year,
+        "can_edit": request.personal_subscription.is_current and not (
+            initiative and PersonalAcademicYear.objects.filter(
+                workspace=ws, value=initiative.academic_year, archived_at__isnull=False
+            ).exists()
+        ),
     })
 
 
@@ -190,7 +243,11 @@ def initiatives(request, pk=None):
 @require_GET
 def notice_list(request):
     items = request.personal_workspace.notices.select_related("notice").order_by("-notice__created_at", "-id")
-    return render(request, "personal/notices.html", {"notices": items[:100]})
+    page_obj = Paginator(items, 12).get_page(request.GET.get("page"))
+    return render(request, "personal/notices.html", {
+        "page_obj": page_obj,
+        "unread_count": request.personal_workspace.notices.filter(read_at__isnull=True).count(),
+    })
 
 
 @workspace_required
@@ -200,6 +257,9 @@ def notice_detail(request, pk):
     receipt = get_object_or_404(
         PersonalNoticeRecipient.objects.select_related("notice"), pk=pk, workspace=request.personal_workspace
     )
+    if receipt.read_at is None:
+        receipt.read_at = timezone.now()
+        receipt.save(update_fields=["read_at"])
     return render(request, "personal/notice_detail.html", {"receipt": receipt})
 
 
