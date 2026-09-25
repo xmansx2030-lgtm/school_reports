@@ -1,0 +1,18 @@
+{% extends "personal/base.html" %}
+{% block title %}السنوات والأرشيف{% endblock %}
+{% block content %}
+<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">مساحتك الشخصية</p><h1>السنوات والأرشيف</h1><p class="twq-page-header__lead">اختر سنة العمل الحالية، واحتفظ بأعمال السنوات السابقة للقراءة والتصدير.</p></div></header>
+<section class="twq-section" aria-labelledby="addYearTitle"><header class="twq-section__header"><h2 id="addYearTitle">إضافة سنة دراسية</h2></header>
+  <form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="add">
+    {% if form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    {% include "personal/_field.html" with field=form.value %}
+    <label class="personal-check"><input type="checkbox" name="make_current" checked> جعلها السنة الحالية</label>
+    <button class="twq-btn twq-btn--primary" type="submit">حفظ السنة</button>
+  </form>
+</section>
+<section class="twq-section" aria-labelledby="yearsTitle"><header class="twq-section__header"><h2 id="yearsTitle">سنوات أعمالك</h2></header>
+  {% for year in years %}<article class="personal-record"><div><h3><bdi dir="ltr">{{ year.value }}</bdi></h3><p>{% if year.value == current_year %}السنة الحالية{% elif year.archived_at %}مؤرشفة · متاحة للقراءة{% else %}مفتوحة{% endif %}</p></div><div class="personal-record__actions"><a class="twq-btn twq-btn--secondary" href="{% url 'personal:portfolio' %}?year={{ year.value|urlencode }}">ملف الإنجاز</a><a class="twq-btn twq-btn--secondary" href="{% url 'personal:year_export' year.value %}">تنزيل نسخة ZIP</a>
+  {% if year.archived_at %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="reopen"><input type="hidden" name="year" value="{{ year.value }}"><button class="twq-btn twq-btn--secondary" type="submit">إعادة فتح</button></form>{% elif year.value != current_year %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="select"><input type="hidden" name="year" value="{{ year.value }}"><button class="twq-btn twq-btn--secondary" type="submit">جعلها الحالية</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="archive"><input type="hidden" name="year" value="{{ year.value }}"><input type="hidden" name="confirm_year" value="{{ year.value }}"><button class="twq-btn twq-btn--secondary" type="submit">أرشفة</button></form>{% endif %}</div></article>
+  {% empty %}<div class="twq-empty twq-empty--local"><h3>لم تُضف سنة بعد</h3><p>ابدأ بإضافة السنة التي تعمل فيها الآن.</p></div>{% endfor %}
+</section>
+{% endblock %}

@@ -4,6 +4,7 @@
 {% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20260924.1">{% endblock %}
 {% block content %}
 <div class="twq-page teacher-plans">
+  <p><a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_notice_compose' %}">إشعارات المشتركين الفرديين</a></p>
   <header class="twq-page-header teacher-plans__header">
     <div class="twq-page-header__content">
       <p class="twq-page-header__eyebrow">مالك المنصة · الاشتراكات الشخصية</p>
@@ -11,8 +12,8 @@
       <p class="twq-page-header__description">حدّد السعر والمدة والسعة وحالة النشر لكل باقة، بما فيها الباقة الأساسية. الباقات المنشورة والنشطة تظهر في قسم المعلم بصفحة الهبوط، بمعزل عن تسعير المدارس.</p>
     </div>
     <div class="twq-page-header__actions">
-      <a class="twq-button twq-button--secondary" href="{% url 'reports:platform_plans_list' %}">باقات المدارس</a>
-      <a class="twq-button twq-button--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة شخصية</a>
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_plans_list' %}">باقات المدارس</a>
+      <a class="twq-btn twq-btn--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة شخصية</a>
     </div>
   </header>
 
@@ -42,10 +43,10 @@
             <div><dt>التخزين</dt><dd>{{ plan.storage_limit_mb }} م.ب</dd></div>
             <div><dt>مشتركون</dt><dd>{{ plan.subscriber_count }}</dd></div>
           </dl>
-          <a class="twq-button twq-button--secondary teacher-plans__edit" href="{% url 'reports:platform_personal_plan_edit' plan.pk %}">تعديل الباقة</a>
+          <a class="twq-btn twq-btn--secondary teacher-plans__edit" href="{% url 'reports:platform_personal_plan_edit' plan.pk %}">تعديل الباقة</a>
         </article>
       {% empty %}
-        <div class="teacher-plans__empty"><h3>لا توجد باقات شخصية</h3><p>أضف الباقة الأولى لتظهر للمعلمين والمعلمات في صفحة الهبوط.</p><a class="twq-button twq-button--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة</a></div>
+        <div class="teacher-plans__empty"><h3>لا توجد باقات شخصية</h3><p>أضف الباقة الأولى لتظهر للمعلمين والمعلمات في صفحة الهبوط.</p><a class="twq-btn twq-btn--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة</a></div>
       {% endfor %}
     </div>
   </section>

@@ -1,0 +1,8 @@
+{% extends "personal/base.html" %}
+{% block title %}إدارة حسابي{% endblock %}
+{% block content %}
+<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">أمان الحساب وبياناته</p><h1>إدارة حسابي</h1><p class="twq-page-header__lead">تُستخدم بيانات الدخول نفسها إذا انضممت إلى مدرسة مشتركة لاحقًا.</p></div></header>
+<div class="personal-work-grid"><section class="twq-section"><h2>البيانات الأساسية</h2><form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="profile">{% for field in profile_form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--primary" type="submit">حفظ البيانات</button></form><p><a href="{% url 'personal:setup' %}">تعديل بيانات المدرسة التعريفية والتخصص</a></p></section>
+<section class="twq-section"><h2>رقم الجوال للدخول</h2><form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="phone">{% for field in phone_form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--secondary" type="submit">تغيير الجوال</button></form></section>
+<section class="twq-section"><h2>كلمة المرور</h2>{% if force_password_change %}<p>يلزم تغيير كلمة المرور قبل تعديل رقم الجوال.</p>{% endif %}<form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="password">{% for field in password_form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--secondary" type="submit">تغيير كلمة المرور</button></form></section></div>
+{% endblock %}

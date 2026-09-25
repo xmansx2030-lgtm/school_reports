@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
   {% include "reports/_identity.html" %}
   <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1">
-  <link rel="stylesheet" href="{% static 'css/personal.css' %}?v=20260925.2">
+  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20260925.1">
   <script src="{% static 'js/theme-manager.js' %}" defer></script>
 </head>
 <body class="personal-page id-root">
@@ -32,8 +32,11 @@
           <a class="{% if request.resolver_match.url_name == 'reports' or request.resolver_match.url_name == 'report_create' or request.resolver_match.url_name == 'report_detail' or request.resolver_match.url_name == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}">التقارير</a>
           <a class="{% if request.resolver_match.url_name == 'evidence' or request.resolver_match.url_name == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}">الشواهد</a>
           <a class="{% if request.resolver_match.url_name == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}">ملف الإنجاز</a>
+          <a class="{% if request.resolver_match.url_name == 'initiatives' or request.resolver_match.url_name == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}">المبادرات</a>
+          <a class="{% if request.resolver_match.url_name == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}">السنوات والأرشيف</a>
+          <a class="{% if request.resolver_match.url_name == 'notices' or request.resolver_match.url_name == 'notice_detail' %}is-active{% endif %}" href="{% url 'personal:notices' %}">الإشعارات</a>
           <a class="{% if request.resolver_match.url_name == 'billing' or request.resolver_match.url_name == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}">الاشتراك والفواتير</a>
-          <a class="{% if request.resolver_match.url_name == 'setup' %}is-active{% endif %}" href="{% url 'personal:setup' %}">البيانات</a>
+          <a class="{% if request.resolver_match.url_name == 'account' or request.resolver_match.url_name == 'setup' %}is-active{% endif %}" href="{% url 'personal:account' %}">حسابي</a>
           {% if request.user.school_memberships.exists %}<a href="{% url 'reports:home' %}">مساحة المدرسة</a>{% endif %}
           <a href="{% url 'reports:logout' %}">خروج</a>
         {% else %}

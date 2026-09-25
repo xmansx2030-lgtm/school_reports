@@ -6,6 +6,7 @@ import re
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from personal.models import PersonalPlan
 from reports.models import SubscriptionPlan
 
 
@@ -27,7 +28,7 @@ class LandingPageTests(TestCase):
         self.assertContains(response, "الأرشيف")
         self.assertContains(response, "ابدأ بمدرستك 30 يومًا مجانًا")
         self.assertNotContains(response, "ابدأ بمدرستك 14 يومًا مجانًا")
-        self.assertContains(response, "أدخل عدد المعلمين واعرف السعر فورًا")
+        self.assertContains(response, "أدخل عدد معلمي المدرسة واعرف السعر فورًا")
         self.assertContains(response, reverse("reports:register_school"))
         self.assertContains(response, "img/landing/dashboard-system.png")
         self.assertContains(response, "img/landing/report-system.png")
@@ -45,10 +46,41 @@ class LandingPageTests(TestCase):
 
         header = html[html.index("<header"): html.index("</header>")]
         mobile_menu = html[html.index('id="mobileMenu"'): html.index("<main")]
-        self.assertIn('href="#pricing">الأسعار</a>', header)
-        self.assertIn('href="#pricing">الأسعار</a>', mobile_menu)
-        self.assertNotIn('href="#pricing">الباقات</a>', html)
+        self.assertIn('href="#pricing">باقات المدارس</a>', header)
+        self.assertIn('href="#pricing">باقات المدارس</a>', mobile_menu)
+        self.assertIn('href="#teacher-plans">باقات المعلمين</a>', header)
+        self.assertIn('href="#teacher-plans">باقات المعلمين</a>', mobile_menu)
         self.assertContains(response, "سعر مدرستك")
+
+    def test_landing_separates_school_and_individual_teacher_paths(self):
+        response = self.client.get(reverse("reports:landing"))
+        html = response.content.decode("utf-8")
+
+        school_path = html.split('class="audience-path audience-path--school"', 1)[1].split("</article>", 1)[0]
+        teacher_path = html.split('class="audience-path audience-path--teacher"', 1)[1].split("</article>", 1)[0]
+        school_pricing = html.split('class="section pricing-section"', 1)[1].split("</section>", 1)[0]
+
+        self.assertIn('href="' + reverse("reports:register_school") + '"', school_path)
+        self.assertIn('href="#pricing"', school_path)
+        self.assertNotIn('href="' + reverse("personal:register") + '"', school_path)
+        self.assertIn('href="' + reverse("personal:register") + '"', teacher_path)
+        self.assertIn('href="#teacher-plans"', teacher_path)
+        self.assertNotIn('href="' + reverse("reports:register_school") + '"', teacher_path)
+        self.assertIn("حتى لو لم تشترك مدرستك", teacher_path)
+        self.assertIn('id="teacher-plans"', html)
+        self.assertIn("باقات المعلمين والمعلمات", html)
+        self.assertIn("اشتراك المدرسة وفريقها", school_pricing)
+        self.assertIn("عدد معلمي المدرسة", school_pricing)
+
+    @override_settings(LANDING_PRICING_CACHE_TTL_SECONDS=0)
+    def test_unpublished_teacher_plans_do_not_leave_a_dead_pricing_link(self):
+        PersonalPlan.objects.update(is_published=False)
+
+        html = self.client.get(reverse("reports:landing")).content.decode("utf-8")
+
+        self.assertNotIn('id="teacher-plans"', html)
+        self.assertIn('href="#teacher-personal">للمعلم الفردي</a>', html)
+        self.assertIn('href="#teacher-personal">تعرف على مساحة المعلم</a>', html)
 
     def test_landing_uses_a_short_decision_focused_information_architecture(self):
         response = self.client.get(reverse("reports:landing"))

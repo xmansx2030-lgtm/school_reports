@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, workspace_views
 
 app_name = "personal"
 
@@ -22,7 +22,17 @@ urlpatterns = [
     path("evidence/", views.evidence_list, name="evidence"),
     path("evidence/new/", views.evidence_create, name="evidence_create"),
     path("evidence/<int:pk>/download/", views.evidence_download, name="evidence_download"),
+    path("evidence/<int:pk>/preview/", views.evidence_preview, name="evidence_preview"),
     path("evidence/<int:pk>/delete/", views.evidence_delete, name="evidence_delete"),
     path("portfolio/", views.portfolio, name="portfolio"),
     path("portfolio/print/", views.portfolio_print, name="portfolio_print"),
+    path("years/", workspace_views.years, name="years"),
+    path("years/<str:value>/export/", workspace_views.year_export, name="year_export"),
+    path("initiatives/", workspace_views.initiatives, name="initiatives"),
+    path("initiatives/<int:pk>/edit/", workspace_views.initiatives, name="initiative_edit"),
+    path("notices/", workspace_views.notice_list, name="notices"),
+    path("notices/<int:pk>/", workspace_views.notice_detail, name="notice_detail"),
+    path("notices/<int:pk>/read/", workspace_views.notice_mark_read, name="notice_mark_read"),
+    path("platform/notices/new/", workspace_views.platform_notice_compose, name="platform_notice_compose"),
+    path("account/", workspace_views.account, name="account"),
 ]

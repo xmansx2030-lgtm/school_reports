@@ -1,13 +1,16 @@
 import re
+import uuid
 
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 
 from reports.model_parts.schools import normalize_sa_mobile_identity
 from reports.models import Teacher
+from reports.validators import validate_circular_attachment_file
 
-from .models import PersonalEvidence, PersonalPlan, PersonalReport, PersonalWorkspace
+from .models import PersonalEvidence, PersonalInitiative, PersonalNotice, PersonalPlan, PersonalReport, PersonalWorkspace
 from .services import current_school_membership_for
 
 
@@ -23,7 +26,7 @@ class PersonalFormStyleMixin:
             field.widget.attrs["class"] = " ".join(classes)
             described_by = field.widget.attrs.get("aria-describedby", "").split()
             if field.help_text:
-                described_by.append(f"id_{name}_help")
+                described_by.append(f"id_{self.add_prefix(name)}_help")
             if described_by:
                 field.widget.attrs["aria-describedby"] = " ".join(dict.fromkeys(described_by))
 
@@ -33,7 +36,7 @@ class PersonalFormStyleMixin:
             if name in self.errors:
                 field.widget.attrs["aria-invalid"] = "true"
                 described_by = field.widget.attrs.get("aria-describedby", "").split()
-                described_by.append(f"id_{name}_errors")
+                described_by.append(f"id_{self.add_prefix(name)}_errors")
                 field.widget.attrs["aria-describedby"] = " ".join(dict.fromkeys(described_by))
 
 
@@ -141,6 +144,18 @@ class PersonalWorkspaceForm(PersonalFormStyleMixin, forms.ModelForm):
         fields = ["school_name", "principal_name", "school_stage", "specialization"]
 
 
+class PersonalAccountForm(PersonalFormStyleMixin, forms.ModelForm):
+    class Meta:
+        model = Teacher
+        fields = ["name", "email", "gender"]
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        if email and Teacher.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise ValidationError("هذا البريد مرتبط بحساب آخر.")
+        return email
+
+
 class PersonalEmailForm(PersonalFormStyleMixin, forms.Form):
     email = forms.EmailField(
         label="البريد الإلكتروني للفواتير والتنبيهات",
@@ -179,13 +194,34 @@ def clean_academic_year(value):
 
 
 class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
+    selection_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
     academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+
+    def __init__(self, *args, **kwargs):
+        bound = args[0] if args else kwargs.get("data")
+        if bound is not None and "selection_enabled" not in bound:
+            data = bound.copy()
+            for flag, field in (
+                ("show_goals", "goals"), ("show_implementation", "implementation"),
+                ("show_results", "results"), ("show_recommendations", "recommendations"),
+            ):
+                if (data.get(field) or "").strip():
+                    data[flag] = "on"
+            if (data.get("beneficiaries_count") or "").strip():
+                data["show_beneficiaries"] = "on"
+            if args:
+                args = (data, *args[1:])
+            else:
+                kwargs["data"] = data
+        super().__init__(*args, **kwargs)
 
     class Meta:
         model = PersonalReport
         fields = [
             "title", "category", "report_date", "academic_year", "description",
-            "goals", "implementation", "results", "recommendations", "status",
+            "show_goals", "goals", "show_implementation", "implementation",
+            "show_results", "results", "show_recommendations", "recommendations",
+            "show_beneficiaries", "beneficiaries_count", "status",
         ]
         widgets = {
             "report_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -201,9 +237,19 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        for flag, field, label in (
+            ("show_goals", "goals", "الأهداف"),
+            ("show_implementation", "implementation", "آلية التنفيذ"),
+            ("show_results", "results", "النتائج"),
+            ("show_recommendations", "recommendations", "التوصيات"),
+        ):
+            if data.get(flag) and not (data.get(field) or "").strip():
+                self.add_error(field, f"أدخل محتوى {label} أو ألغِ اختيار هذا البند.")
+        if data.get("show_beneficiaries") and data.get("beneficiaries_count") is None:
+            self.add_error("beneficiaries_count", "أدخل عدد المستفيدين أو ألغِ اختيار هذا البند.")
         if self.instance.pk and data.get("academic_year") != self.instance.academic_year:
             if self.instance.evidence.exists():
-                self.add_error("academic_year", "انقل الشواهد المرتبطة أولًا قبل تغيير سنة التقرير.")
+                self.add_error("academic_year", "لا يمكن تغيير سنة التقرير وهو مرتبط بشواهد.")
         return data
 
 
@@ -212,7 +258,7 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
 
     class Meta:
         model = PersonalEvidence
-        fields = ["title", "description", "academic_year", "report", "file", "source_url"]
+        fields = ["title", "description", "academic_year", "report", "initiative", "file", "source_url"]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
     def __init__(self, *args, workspace, **kwargs):
@@ -221,6 +267,8 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
         self.fields["report"].queryset = PersonalReport.objects.filter(workspace=workspace)
         self.fields["report"].label = "التقرير المرتبط"
         self.fields["report"].required = False
+        self.fields["initiative"].queryset = PersonalInitiative.objects.filter(workspace=workspace)
+        self.fields["initiative"].required = False
 
     def clean_academic_year(self):
         return clean_academic_year(self.cleaned_data["academic_year"])
@@ -232,4 +280,76 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
         report = data.get("report")
         if report and data.get("academic_year") and report.academic_year != data["academic_year"]:
             self.add_error("report", "سنة التقرير يجب أن تطابق سنة الشاهد.")
+        initiative = data.get("initiative")
+        if initiative and data.get("academic_year") and initiative.academic_year != data["academic_year"]:
+            self.add_error("initiative", "سنة المبادرة يجب أن تطابق سنة الشاهد.")
         return data
+
+
+class PersonalYearForm(PersonalFormStyleMixin, forms.Form):
+    value = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year], max_length=20)
+
+    def clean_value(self):
+        return clean_academic_year(self.cleaned_data["value"])
+
+
+class PersonalInitiativeForm(PersonalFormStyleMixin, forms.ModelForm):
+    academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        self.original_academic_year = instance.academic_year if instance and instance.pk else None
+        super().__init__(*args, **kwargs)
+
+    class Meta:
+        model = PersonalInitiative
+        fields = ["title", "academic_year", "summary", "impact", "status"]
+        widgets = {"summary": forms.Textarea(attrs={"rows": 5}), "impact": forms.Textarea(attrs={"rows": 3})}
+
+    def clean_academic_year(self):
+        return clean_academic_year(self.cleaned_data["academic_year"])
+
+    def clean(self):
+        data = super().clean()
+        if self.original_academic_year and data.get("academic_year") != self.original_academic_year:
+            if self.instance.evidence.exists():
+                self.add_error("academic_year", "لا يمكن تغيير سنة المبادرة وهي مرتبطة بشواهد.")
+        return data
+
+
+class PersonalNoticeForm(PersonalFormStyleMixin, forms.ModelForm):
+    submission_key = forms.UUIDField(widget=forms.HiddenInput, initial=uuid.uuid4)
+    audience = forms.ChoiceField(label="المستلمون", choices=(("", "اختر المستلمين"), ("all", "جميع أصحاب المساحات الشخصية"), ("one", "مشترك محدد")))
+    recipient_phone = forms.CharField(label="جوال المشترك", required=False, max_length=20)
+
+    class Meta:
+        model = PersonalNotice
+        fields = ["title", "message"]
+        widgets = {"message": forms.Textarea(attrs={"rows": 6})}
+
+    def clean(self):
+        data = super().clean()
+        if data.get("audience") == "one" and not (data.get("recipient_phone") or "").strip():
+            self.add_error("recipient_phone", "أدخل جوال المشترك المستهدف.")
+        return data
+
+
+class PersonalInlineEvidenceForm(PersonalFormStyleMixin, forms.Form):
+    title = forms.CharField(label="وصف الشاهد", max_length=200, required=False)
+    file = forms.FileField(
+        label="صورة أو PDF", required=False,
+        validators=[validate_circular_attachment_file, FileExtensionValidator(["pdf", "jpg", "jpeg", "png"])],
+    )
+    source_url = forms.URLField(label="رابط الشاهد", required=False)
+
+    def clean(self):
+        data = super().clean()
+        if any(data.get(key) for key in ("title", "file", "source_url")):
+            if not data.get("title"):
+                self.add_error("title", "صف الشاهد قبل حفظه.")
+            if not data.get("file") and not data.get("source_url"):
+                raise ValidationError("أرفق ملفًا أو رابطًا للشاهد.")
+        return data
+
+
+PersonalInlineEvidenceFormSet = forms.formset_factory(PersonalInlineEvidenceForm, extra=3, max_num=5, validate_max=True)

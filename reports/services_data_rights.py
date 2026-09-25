@@ -149,7 +149,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
 
     workspace = PersonalWorkspace.objects.filter(owner=user).first()
     if workspace is None:
-        return {"active": False, "reports": [], "evidence": []}
+        return {"active": False, "reports": [], "evidence": [], "years": [], "initiatives": [], "notices": [], "payments": []}
     return {
         "active": True,
         "subscription": {
@@ -162,6 +162,11 @@ def _personal_workspace_section(user) -> dict[str, Any]:
         "principal_name": workspace.principal_name,
         "school_stage": workspace.school_stage,
         "specialization": workspace.specialization,
+        "current_academic_year": workspace.current_academic_year,
+        "years": [
+            {"value": row.value, "archived_at": _iso(row.archived_at)}
+            for row in workspace.academic_years.all()
+        ],
         "reports": [
             {
                 "id": row.pk,
@@ -174,6 +179,12 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "implementation": row.implementation,
                 "results": row.results,
                 "recommendations": row.recommendations,
+                "show_goals": row.show_goals,
+                "show_implementation": row.show_implementation,
+                "show_results": row.show_results,
+                "show_recommendations": row.show_recommendations,
+                "show_beneficiaries": row.show_beneficiaries,
+                "beneficiaries_count": row.beneficiaries_count,
                 "status": row.get_status_display(),
                 "teacher_name": row.teacher_name,
                 "school_name": row.school_name,
@@ -189,11 +200,34 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "description": row.description,
                 "academic_year": row.academic_year,
                 "report_id": row.report_id,
+                "initiative_id": row.initiative_id,
                 "source_url": row.source_url,
                 "file": _file_reference(row.file),
                 "url": reverse("personal:evidence_download", args=[row.pk]) if row.file else None,
             }
             for row in workspace.evidence.all()
+        ],
+        "initiatives": [
+            {
+                "id": row.pk, "title": row.title, "academic_year": row.academic_year,
+                "summary": row.summary, "impact": row.impact, "status": row.get_status_display(),
+            }
+            for row in workspace.initiatives.all()
+        ],
+        "notices": [
+            {
+                "title": row.notice.title, "message": row.notice.message,
+                "created_at": _iso(row.notice.created_at), "read_at": _iso(row.read_at),
+            }
+            for row in workspace.notices.select_related("notice").all()
+        ],
+        "payments": [
+            {
+                "plan": row.plan_name, "amount": str(row.amount),
+                "status": row.get_status_display(), "created_at": _iso(row.created_at),
+                "paid_at": _iso(row.paid_at),
+            }
+            for row in workspace.payments.all()
         ],
     }
 

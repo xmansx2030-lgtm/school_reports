@@ -17,6 +17,7 @@ body{font-family:Cairo,Tahoma,sans-serif;color:var(--twq-text);background:var(--
 .print-entry{padding:8px 0;border-block-end:1px solid var(--twq-divider);break-inside:avoid}
 .print-entry h3{font-size:.95rem;margin:0}
 .print-entry p{font-size:.83rem}
+.print-evidence-image{display:block;max-width:100%;max-height:95mm;object-fit:contain;margin-block:.5rem;break-inside:avoid}
 .print-sheet footer{margin-block-start:30px;padding-block-start:12px;border-block-start:1px solid var(--twq-border);color:var(--twq-text-secondary);font-size:.7rem;break-inside:avoid}
 @media print{body{background:var(--twq-surface)}
 .print-toolbar{display:none}
