@@ -116,6 +116,37 @@ class OperationsApi {
     await _request(() => _dio.get<Map<String, dynamic>>('/projects/$id/')),
   );
 
+  Future<ProviderOverview> providerOverview(int serverId) async =>
+      ProviderOverview.fromJson(
+        await _request(
+          () => _dio.get<Map<String, dynamic>>('/servers/$serverId/provider/'),
+        ),
+      );
+
+  Future<ProviderActionInfo> providerAction(
+    int serverId,
+    String action,
+    String confirmation,
+  ) async => ProviderActionInfo.fromJson(
+    await _request(
+      () => _dio.post<Map<String, dynamic>>(
+        '/servers/$serverId/provider/actions/',
+        data: {'action': action, 'confirmation': confirmation},
+      ),
+    ),
+  );
+
+  Future<ProviderActionInfo> providerActionStatus(
+    int serverId,
+    int actionId,
+  ) async => ProviderActionInfo.fromJson(
+    await _request(
+      () => _dio.get<Map<String, dynamic>>(
+        '/servers/$serverId/provider/actions/$actionId/',
+      ),
+    ),
+  );
+
   Future<DeploymentOverview> deploymentStatus() async =>
       DeploymentOverview.fromJson(
         await _request(
@@ -138,23 +169,38 @@ class OperationsApi {
     );
   }
 
-  Future<void> runAction(
+  Future<OperationActionInfo> runAction(
     int projectId,
     String action, {
     int? serviceId,
     String? confirmation,
+    int? sinceMinutes,
+    int? tail,
   }) async {
-    await _request(
-      () => _dio.post<Map<String, dynamic>>(
-        '/projects/$projectId/actions/',
-        data: {
-          'action': action,
-          'service_id': ?serviceId,
-          'confirmation': ?confirmation,
-        },
+    return OperationActionInfo.fromJson(
+      await _request(
+        () => _dio.post<Map<String, dynamic>>(
+          '/projects/$projectId/actions/',
+          data: {
+            'action': action,
+            'service_id': ?serviceId,
+            'confirmation': ?confirmation,
+            'since_minutes': ?sinceMinutes,
+            'tail': ?tail,
+          },
+        ),
       ),
     );
   }
+
+  Future<OperationActionInfo> actionDetail(int projectId, int actionId) async =>
+      OperationActionInfo.fromJson(
+        await _request(
+          () => _dio.get<Map<String, dynamic>>(
+            '/projects/$projectId/actions/$actionId/',
+          ),
+        ),
+      );
 
   Future<PaymentLinksData> paymentLinks() async => PaymentLinksData.fromJson(
     await _request(() => _dio.get<Map<String, dynamic>>('/payment-links/')),
@@ -339,5 +385,85 @@ class OperationsApi {
       return 'تعذر الاتصال. تحقق من الإنترنت وحالة الخادم.';
     }
     return 'تعذر إكمال الطلب الآن.';
+  }
+}
+
+class EmergencyApi {
+  EmergencyApi()
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: AppConfig.emergencyUrl,
+          connectTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+
+  static const _storage = FlutterSecureStorage(aOptions: AndroidOptions());
+  static const _key = 'operations_emergency_access_token';
+  final Dio _dio;
+
+  Future<bool> hasToken() async =>
+      (await _storage.read(key: _key))?.isNotEmpty == true;
+
+  Future<void> saveToken(String token) async {
+    final value = token.trim();
+    if (value.length < 32) {
+      throw const ApiException('مفتاح الطوارئ قصير أو غير صالح.');
+    }
+    await _storage.write(key: _key, value: value);
+  }
+
+  Future<void> clearToken() => _storage.delete(key: _key);
+
+  Future<Map<String, dynamic>> status() =>
+      _request(() => _dio.get<Map<String, dynamic>>('/v1/server'));
+
+  Future<Map<String, dynamic>> overviewData() =>
+      _request(() => _dio.get<Map<String, dynamic>>('/v1/overview'));
+
+  Future<ProviderOverview> overview() async => ProviderOverview.fromJson({
+    'configured': true,
+    'can_control': false,
+    'server': await _request(
+      () => _dio.get<Map<String, dynamic>>('/v1/overview'),
+    ),
+  });
+
+  Future<Map<String, dynamic>> action(String action, String confirmation) =>
+      _request(
+        () => _dio.post<Map<String, dynamic>>(
+          '/v1/actions/$action',
+          data: {'confirmation': confirmation},
+        ),
+      );
+
+  Future<Map<String, dynamic>> actionStatus(int providerActionId) => _request(
+    () => _dio.get<Map<String, dynamic>>('/v1/actions/$providerActionId'),
+  );
+
+  Future<Map<String, dynamic>> _request(
+    Future<Response<Map<String, dynamic>>> Function() call,
+  ) async {
+    if (!AppConfig.emergencyUrl.startsWith('https://')) {
+      throw const ApiException('مسار الطوارئ المستقل غير مهيأ.');
+    }
+    final token = await _storage.read(key: _key);
+    if (token == null || token.isEmpty) {
+      throw const ApiException('أدخل مفتاح الطوارئ أولًا.');
+    }
+    _dio.options.headers['Authorization'] = 'Bearer $token';
+    try {
+      final result = await call();
+      return result.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      final raw = error.response?.data;
+      final detail = raw is Map ? raw['detail']?.toString() : null;
+      throw ApiException(
+        detail?.isNotEmpty == true
+            ? detail!
+            : 'تعذر الوصول إلى خدمة الطوارئ أو Hetzner.',
+        statusCode: error.response?.statusCode,
+      );
+    }
   }
 }

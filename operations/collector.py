@@ -152,7 +152,12 @@ def _sync_services(project: ManagedProject, containers: list[dict], *, captured_
                 "kind": _service_kind(service_key),
                 "status": status,
                 "last_checked_at": captured_at,
-                "restart_allowed": False,
+                "restart_allowed": (
+                    canonical_project(project.compose_project) is not None
+                    and _service_kind(service_key) in {ManagedService.Kind.WEB, ManagedService.Kind.WORKER}
+                    and "beat" not in service_key
+                    and "migrate" not in service_key
+                ),
                 "is_active": True,
             },
         )

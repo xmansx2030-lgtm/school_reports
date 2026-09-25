@@ -1,0 +1,12 @@
+{
+  "name": "school-reports-emergency-control",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "4.140.0"
+  }
+}

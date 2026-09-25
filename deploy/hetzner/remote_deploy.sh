@@ -187,8 +187,17 @@ if command -v crontab >/dev/null 2>&1; then
     printf '%s\n' "$COLLECTOR_CRON"
   } | crontab -
   log "installed five-minute operations inventory collector"
+  AGENT_MARKER="# tawtheeq-operations-host-agent"
+  AGENT_CRON="* * * * * DEPLOY_PATH=$DEPLOY_PATH /usr/bin/env python3 $DEPLOY_PATH/deploy/hetzner/operations_host_agent.py >> $DEPLOY_PATH/deploy/hetzner/operations-agent.log 2>&1 $AGENT_MARKER"
+  {
+    crontab -l 2>/dev/null | grep -vF "$AGENT_MARKER" || true
+    printf '%s\n' "$AGENT_CRON"
+  } | crontab -
+  log "installed one-minute host operations agent"
+  log "verifying host operations agent heartbeat"
+  DEPLOY_PATH="$DEPLOY_PATH" python3 "$DEPLOY_PATH/deploy/hetzner/operations_host_agent.py" --heartbeat-only
 else
-  log "warning: crontab is unavailable; inventory was collected once but automatic refresh was not installed"
+  log "warning: crontab is unavailable; inventory and host-agent refresh were not installed"
 fi
 
 docker image prune --force --filter "until=168h" >/dev/null 2>&1 || true

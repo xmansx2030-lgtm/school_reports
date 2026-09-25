@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import server_views, views
 
 app_name = "operations"
 
@@ -11,6 +11,9 @@ urlpatterns = [
     path("accounts/", views.accounts, name="accounts"),
     path("accounts/<int:user_id>/", views.account_detail, name="account-detail"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("servers/<int:server_id>/provider/", server_views.provider_overview, name="provider-overview"),
+    path("servers/<int:server_id>/provider/actions/", server_views.provider_action, name="provider-action"),
+    path("servers/<int:server_id>/provider/actions/<int:action_id>/", server_views.provider_action_status, name="provider-action-status"),
     path("payment-links/", views.payment_links, name="payment-links"),
     path(
         "payment-links/<uuid:public_id>/sync/",
@@ -31,6 +34,7 @@ urlpatterns = [
     path("deployment/deploy/", views.trigger_deployment, name="trigger-deployment"),
     path("projects/<int:project_id>/", views.project_detail, name="project-detail"),
     path("projects/<int:project_id>/actions/", views.create_action, name="create-action"),
+    path("projects/<int:project_id>/actions/<int:action_id>/", views.action_detail, name="action-detail"),
     path("devices/", views.device_registration, name="device-registration"),
     path("incidents/<int:incident_id>/acknowledge/", views.acknowledge_incident, name="acknowledge-incident"),
 ]

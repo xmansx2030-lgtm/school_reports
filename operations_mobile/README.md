@@ -2,6 +2,8 @@
 
 تطبيق Android مخصص لمشرف النظام لمتابعة `school-reports-prod` والمشاريع المستضافة عليه.
 
+تفاصيل إدارة Hetzner وقراءة السجلات وتجهيز مسار الطوارئ في [دليل إدارة الخادم](../docs/OPERATIONS_SERVER_MANAGEMENT_AR.md).
+
 ## التشغيل المحلي
 
 ```powershell

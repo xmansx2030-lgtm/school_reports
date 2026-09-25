@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -30,6 +31,7 @@ from .authentication import OperationsTokenAuthentication, has_operations_access
 from .deployments import DeploymentIntegrationError, GitHubDeploymentClient, all_deployment_states
 from .models import (
     Incident,
+    HostAgentHeartbeat,
     ManagedProject,
     ManagedServer,
     MobileAccessToken,
@@ -69,6 +71,7 @@ ROLE_CAPABILITIES = {
         "view",
         "run_checks",
         "run_actions",
+        "view_logs",
         "acknowledge_incidents",
         "manage_team",
         "view_payment_links",
@@ -78,6 +81,7 @@ ROLE_CAPABILITIES = {
         "view",
         "run_checks",
         "run_actions",
+        "view_logs",
         "acknowledge_incidents",
         "manage_team",
         "view_payment_links",
@@ -97,6 +101,12 @@ def _operations_profile(user) -> tuple[str, str, tuple[str, ...]]:
 
 def _has_capability(user, capability: str) -> bool:
     return capability in _operations_profile(user)[2]
+
+
+def _agent_ready() -> bool:
+    return HostAgentHeartbeat.objects.filter(
+        name="primary", last_seen_at__gte=timezone.now() - timedelta(minutes=3)
+    ).exists()
 
 
 def _account_payload(user) -> dict:
@@ -278,8 +288,8 @@ def dashboard(request):
         },
         "current_user": _account_payload(request.user),
         "agent": {
-            "ready": bool(getattr(settings, "OPERATIONS_AGENT_ENABLED", False)),
-            "label": "متصل" if getattr(settings, "OPERATIONS_AGENT_ENABLED", False) else "غير مفعّل",
+            "ready": _agent_ready(),
+            "label": "متصل" if _agent_ready() else "غير متصل",
         },
         "servers": ManagedServerSerializer(servers, many=True).data,
         "incidents": IncidentSerializer(incidents, many=True).data,
@@ -526,10 +536,13 @@ def create_action(request, project_id: int):
     allowed = {choice for choice, _ in OperationAction.Action.choices}
     if action_name not in allowed:
         return Response({"detail": "الإجراء غير مسموح."}, status=400)
-    capability = "run_checks" if action_name == OperationAction.Action.CHECK_NOW else "run_actions"
+    capability = {
+        OperationAction.Action.CHECK_NOW: "run_checks",
+        OperationAction.Action.READ_LOGS: "view_logs",
+    }.get(action_name, "run_actions")
     if not _has_capability(request.user, capability):
         return Response({"detail": "لا تملك صلاحية تنفيذ هذا الإجراء."}, status=status.HTTP_403_FORBIDDEN)
-    destructive = action_name != OperationAction.Action.CHECK_NOW
+    destructive = action_name not in {OperationAction.Action.CHECK_NOW, OperationAction.Action.READ_LOGS}
     if destructive and str(request.data.get("confirmation") or "") != project.slug:
         return Response({"detail": f"اكتب {project.slug} لتأكيد الإجراء.", "confirmation_required": project.slug}, status=409)
 
@@ -540,8 +553,30 @@ def create_action(request, project_id: int):
             return Response({"detail": "الخدمة غير موجودة ضمن المشروع."}, status=400)
         if action_name == OperationAction.Action.RESTART_SERVICE and not service.restart_allowed:
             return Response({"detail": "إعادة تشغيل هذه الخدمة غير مفعلة."}, status=403)
+    if action_name in {OperationAction.Action.RESTART_SERVICE, OperationAction.Action.READ_LOGS} and service is None:
+        return Response({"detail": "حدد خدمة من المشروع."}, status=400)
+    if action_name == OperationAction.Action.CREATE_BACKUP and project.slug != "tawtheeq":
+        return Response({"detail": "نسخة بيانات هذا المشروع لم تعتمد بعد؛ استخدم نسخ Hetzner للخادم."}, status=403)
+    if action_name == OperationAction.Action.RELOAD_PROXY and project.slug != "tawtheeq":
+        return Response({"detail": "إعادة تحميل الوكيل غير مفعلة لهذا المشروع."}, status=403)
+    if action_name == OperationAction.Action.RELOAD_PROXY and not _has_capability(request.user, "manage_team"):
+        return Response({"detail": "إعادة تحميل الوكيل المشترك متاحة لمدير العمليات فقط."}, status=403)
+    if action_name != OperationAction.Action.CHECK_NOW and not _agent_ready():
+        return Response({"detail": "وكيل الخادم غير متصل؛ لم يُرسل الإجراء.", "error_code": "agent_offline"}, status=503)
 
-    action = OperationAction.objects.create(project=project, service=service, action=action_name, requested_by=request.user)
+    parameters = {}
+    if action_name == OperationAction.Action.READ_LOGS:
+        try:
+            parameters = {
+                "since_minutes": max(5, min(int(request.data.get("since_minutes") or 30), 180)),
+                "tail": max(50, min(int(request.data.get("tail") or 200), 250)),
+            }
+        except (TypeError, ValueError):
+            return Response({"detail": "مدة السجلات أو عدد الأسطر غير صالح."}, status=400)
+    action = OperationAction.objects.create(
+        project=project, service=service, action=action_name,
+        requested_by=request.user, parameters=parameters,
+    )
     if action_name == OperationAction.Action.CHECK_NOW:
         action.status = OperationAction.Status.RUNNING
         action.started_at = timezone.now()
@@ -551,17 +586,27 @@ def create_action(request, project_id: int):
         action.result_summary = "اكتمل الفحص بنجاح." if check.ok else f"فشل الفحص: {check.error_code or check.status_code}."
         action.finished_at = timezone.now()
         action.save(update_fields=("status", "result_summary", "finished_at"))
-    elif not bool(getattr(settings, "OPERATIONS_AGENT_ENABLED", False)):
-        action.status = OperationAction.Status.REJECTED
-        action.error_code = "agent_not_configured"
-        action.result_summary = "يلزم تفعيل وكيل العمليات الآمن على الخادم قبل تنفيذ هذا الإجراء."
-        action.finished_at = timezone.now()
-        action.save(update_fields=("status", "error_code", "result_summary", "finished_at"))
     else:
-        action.status = OperationAction.Status.QUEUED
-        action.result_summary = "تم إرسال الإجراء إلى وكيل العمليات."
-        action.save(update_fields=("status", "result_summary"))
-    return Response(OperationActionSerializer(action).data, status=201)
+        action.result_summary = "بانتظار تنفيذ وكيل الخادم."
+        action.save(update_fields=("result_summary",))
+    return Response(OperationActionSerializer(action).data, status=201 if action_name == OperationAction.Action.CHECK_NOW else 202)
+
+
+@api_view(["GET"])
+@authentication_classes([OperationsTokenAuthentication])
+def action_detail(request, project_id: int, action_id: int):
+    action = OperationAction.objects.select_related("service").filter(
+        pk=action_id, project_id=project_id, project__is_active=True
+    ).first()
+    if action is None:
+        return Response({"detail": "الإجراء غير موجود."}, status=404)
+    payload = OperationActionSerializer(action).data
+    if action.action == OperationAction.Action.READ_LOGS:
+        if not _has_capability(request.user, "view_logs"):
+            return Response({"detail": "لا تملك صلاحية قراءة السجلات."}, status=403)
+        payload["log_content"] = action.log_content
+        payload["log_analysis"] = action.log_analysis
+    return Response(payload)
 
 
 @api_view(["POST", "DELETE"])

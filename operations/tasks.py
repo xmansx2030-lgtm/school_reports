@@ -150,9 +150,14 @@ def cleanup_operations_history_task() -> dict[str, int]:
     metrics, _ = ServerMetricSnapshot.objects.filter(captured_at__lt=cutoff).delete()
     project_metrics, _ = ProjectMetricSnapshot.objects.filter(captured_at__lt=cutoff).delete()
     actions, _ = OperationAction.objects.filter(requested_at__lt=cutoff).delete()
+    redacted_logs = OperationAction.objects.filter(
+        action=OperationAction.Action.READ_LOGS,
+        requested_at__lt=timezone.now() - timedelta(hours=24),
+    ).exclude(log_content="").update(log_content="", log_analysis={})
     return {
         "health_checks": checks,
         "server_metrics": metrics,
         "project_metrics": project_metrics,
         "actions": actions,
+        "redacted_logs": redacted_logs,
     }

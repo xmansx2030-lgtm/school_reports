@@ -8,6 +8,7 @@ import '../design_system.dart';
 import '../models.dart';
 import '../state.dart';
 import '../widgets/status_widgets.dart';
+import 'project_logs_screen.dart';
 
 class ProjectScreen extends ConsumerWidget {
   const ProjectScreen({
@@ -21,6 +22,10 @@ class ProjectScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final details = ref.watch(projectProvider(projectId));
+    final dashboard = ref.watch(dashboardProvider).asData?.value;
+    final agentReady = dashboard?.agentReady == true;
+    final canRunActions = dashboard?.currentUser.can('run_actions') == true;
+    final canViewLogs = dashboard?.currentUser.can('view_logs') == true;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -68,6 +73,7 @@ class ProjectScreen extends ConsumerWidget {
                     const SizedBox(height: 14),
                     _ServicesPanel(
                       project: data.project,
+                      canRestart: agentReady && canRunActions,
                       onRestart: (service) => _confirmAction(
                         context,
                         ref,
@@ -79,43 +85,126 @@ class ProjectScreen extends ConsumerWidget {
                     const SizedBox(height: 14),
                     _ChecksPanel(checks: data.checks),
                     const SizedBox(height: 14),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'نسخة احتياطية فورية',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
+                    if (canViewLogs)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'سجلات الخدمات',
+                                style: TextStyle(fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'قراءة محددة للخدمة والوقت، مع تصنيف الأخطاء والتحذيرات.',
+                              ),
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: agentReady
+                                    ? () => Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ProjectLogsScreen(
+                                            project: data.project,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                                icon: const Icon(Icons.receipt_long_outlined),
+                                label: const Text('قراءة وتحليل السجلات'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (!agentReady)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'وكيل الخادم غير متصل؛ إجراءات الخدمات والسجلات معطلة.',
+                        ),
+                      ),
+                    if (data.project.slug == 'tawtheeq')
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'نسخة احتياطية فورية',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'ينشئ نسخة مدققة من بيانات المشروع عبر وكيل العمليات.',
-                                    style: TextStyle(color: context.ops.slate),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'ينشئ نسخة مدققة من بيانات المشروع عبر وكيل العمليات.',
+                                      style: TextStyle(
+                                        color: context.ops.slate,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () => _confirmAction(
-                                context,
-                                ref,
-                                data.project,
-                                'create_backup',
+                              OutlinedButton.icon(
+                                onPressed: agentReady && canRunActions
+                                    ? () => _confirmAction(
+                                        context,
+                                        ref,
+                                        data.project,
+                                        'create_backup',
+                                      )
+                                    : null,
+                                icon: const Icon(Icons.backup_outlined),
+                                label: const Text('إنشاء نسخة'),
                               ),
-                              icon: const Icon(Icons.backup_outlined),
-                              label: const Text('إنشاء نسخة'),
-                            ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (data.project.slug == 'tawtheeq' &&
+                        dashboard?.currentUser.can('manage_team') == true)
+                      Card(
+                        child: ListTile(
+                          title: const Text('إعادة تحميل Caddy'),
+                          subtitle: const Text(
+                            'يتحقق من إعداد الوكيل المشترك ثم يعيد تحميله؛ قد يؤثر في كل مشاريع الخادم.',
+                          ),
+                          trailing: OutlinedButton(
+                            onPressed: agentReady
+                                ? () => _confirmAction(
+                                    context,
+                                    ref,
+                                    data.project,
+                                    'reload_proxy',
+                                  )
+                                : null,
+                            child: const Text('إعادة تحميل'),
+                          ),
+                        ),
+                      ),
+                    if (data.actions.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Card(
+                        child: Column(
+                          children: [
+                            const ListTile(title: Text('الإجراءات الأخيرة')),
+                            for (final action in data.actions.take(8))
+                              ListTile(
+                                dense: true,
+                                title: Text(action.actionLabel),
+                                subtitle: Text(action.resultSummary),
+                                trailing: Text(action.status),
+                              ),
                           ],
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -163,14 +252,18 @@ class ProjectScreen extends ConsumerWidget {
         title: Text(
           action == 'create_backup'
               ? 'إنشاء نسخة احتياطية'
+              : action == 'reload_proxy'
+              ? 'إعادة تحميل الوكيل المشترك'
               : 'إعادة تشغيل ${service?.name ?? ''}',
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'سيُسجل هذا الإجراء باسم حسابك. اكتب معرف المشروع للتأكيد:',
+            Text(
+              action == 'reload_proxy'
+                  ? 'هذا الوكيل يخدم كل المشاريع على الخادم. سيُسجل الإجراء باسم حسابك. اكتب معرف المشروع للتأكيد:'
+                  : 'سيُسجل هذا الإجراء باسم حسابك. اكتب معرف المشروع للتأكيد:',
             ),
             const SizedBox(height: 10),
             SelectableText(
@@ -201,7 +294,7 @@ class ProjectScreen extends ConsumerWidget {
     controller.dispose();
     if (confirmed != true || !context.mounted) return;
     try {
-      await ref
+      final result = await ref
           .read(apiProvider)
           .runAction(
             project.id,
@@ -212,7 +305,9 @@ class ProjectScreen extends ConsumerWidget {
       ref.invalidate(projectProvider(project.id));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إرسال الإجراء إلى مركز العمليات.')),
+          SnackBar(
+            content: Text('الإجراء #${result.id}: ${result.resultSummary}'),
+          ),
         );
       }
     } on ApiException catch (error) {
@@ -465,9 +560,14 @@ class _Legend extends StatelessWidget {
 }
 
 class _ServicesPanel extends StatelessWidget {
-  const _ServicesPanel({required this.project, required this.onRestart});
+  const _ServicesPanel({
+    required this.project,
+    required this.onRestart,
+    required this.canRestart,
+  });
   final ProjectInfo project;
   final ValueChanged<ServiceInfo> onRestart;
+  final bool canRestart;
   @override
   Widget build(BuildContext context) => Card(
     child: Column(
@@ -496,7 +596,7 @@ class _ServicesPanel extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               subtitle: Text(service.kindLabel),
-              trailing: service.restartAllowed
+              trailing: service.restartAllowed && canRestart
                   ? IconButton(
                       tooltip: 'إعادة تشغيل الخدمة',
                       onPressed: () => onRestart(service),
