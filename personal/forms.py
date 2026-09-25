@@ -58,7 +58,16 @@ class PersonalPlanForm(forms.ModelForm):
 
 
 class PersonalRegistrationForm(PersonalFormStyleMixin, forms.Form):
-    name = forms.CharField(label="اسم المعلم", max_length=150)
+    name = forms.CharField(label="الاسم الكامل", max_length=150)
+    gender = forms.ChoiceField(
+        label="صيغة المخاطبة",
+        choices=(
+            ("", "يرجى تحديد صيغة المخاطبة"),
+            (Teacher.Gender.MALE, "المعلم"),
+            (Teacher.Gender.FEMALE, "المعلمة"),
+        ),
+        help_text="تُستخدم هذه الصيغة في اسم المساحة والنصوص الموجّهة داخلها.",
+    )
     phone = forms.CharField(label="رقم الجوال", max_length=16)
     email = forms.EmailField(label="البريد الإلكتروني للفواتير والتنبيهات")
     school_name = forms.CharField(label="اسم المدرسة", max_length=200)
@@ -70,16 +79,16 @@ class PersonalRegistrationForm(PersonalFormStyleMixin, forms.Form):
     def clean_phone(self):
         phone = normalize_sa_mobile_identity(self.cleaned_data["phone"])
         if not re.fullmatch(r"05\d{8}", phone):
-            raise ValidationError("أدخل رقم جوال سعوديًا صحيحًا يبدأ بـ 05.")
+            raise ValidationError("يرجى إدخال رقم جوال سعودي صحيح يبدأ بـ 05.")
         existing_teacher = Teacher.objects.filter(phone=phone).first()
         if existing_teacher:
             membership = current_school_membership_for(existing_teacher)
             if membership:
                 raise ValidationError(
-                    "حسابك مضاف إلى مدرسة اشتراكها ساري. سجّل الدخول بحسابك المدرسي؛ "
-                    "لا تحتاج إلى إنشاء حساب أو اشتراك شخصي منفصل."
+                    "هذا الرقم مرتبط بحساب مدرسي اشتراكه ساري. الدخول بالحساب المدرسي يتيح استخدام "
+                    "المساحة دون إنشاء حساب أو اشتراك شخصي منفصل."
                 )
-            raise ValidationError("هذا الرقم مرتبط بحساب. سجّل الدخول واستخدم المساحة الشخصية من حسابك.")
+            raise ValidationError("هذا الرقم مرتبط بحساب. يمكن تسجيل الدخول واستخدام المساحة الشخصية منه.")
         return phone
 
     def clean_email(self):
@@ -90,10 +99,10 @@ class PersonalRegistrationForm(PersonalFormStyleMixin, forms.Form):
                 membership = current_school_membership_for(existing_teacher)
                 if membership:
                     raise ValidationError(
-                        "هذا البريد مرتبط بحساب مضاف إلى مدرسة اشتراكها ساري. "
-                        "سجّل الدخول بحسابك المدرسي بدل إنشاء اشتراك شخصي منفصل."
+                        "هذا البريد مرتبط بحساب مدرسي اشتراكه ساري. الدخول بالحساب المدرسي يتيح استخدام "
+                        "المساحة دون إنشاء اشتراك شخصي منفصل."
                     )
-                raise ValidationError("هذا البريد مرتبط بحساب. سجّل الدخول أولًا.")
+                raise ValidationError("هذا البريد مرتبط بحساب. يمكن تسجيل الدخول بالحساب الموجود.")
         return email
 
     def clean_password(self):
@@ -108,6 +117,24 @@ class PersonalRegistrationForm(PersonalFormStyleMixin, forms.Form):
         return data
 
 
+class PersonalGenderForm(PersonalFormStyleMixin, forms.Form):
+    gender = forms.ChoiceField(
+        label="صيغة المخاطبة",
+        choices=(
+            ("", "غير محددة"),
+            (Teacher.Gender.MALE, "المعلم"),
+            (Teacher.Gender.FEMALE, "المعلمة"),
+        ),
+        required=False,
+        help_text="تُستخدم هذه الصيغة في اسم المساحة والنصوص الموجّهة داخلها.",
+    )
+
+    def __init__(self, *args, teacher=None, **kwargs):
+        kwargs.setdefault("initial", {})
+        kwargs["initial"].setdefault("gender", getattr(teacher, "gender", ""))
+        super().__init__(*args, **kwargs)
+
+
 class PersonalWorkspaceForm(PersonalFormStyleMixin, forms.ModelForm):
     class Meta:
         model = PersonalWorkspace
@@ -119,7 +146,7 @@ class PersonalEmailForm(PersonalFormStyleMixin, forms.Form):
         label="البريد الإلكتروني للفواتير والتنبيهات",
         max_length=254,
         required=False,
-        help_text="سنرسل إلى هذا العنوان تأكيد الدفع والفاتورة الإلكترونية.",
+        help_text="ستُرسل إلى هذا العنوان رسالة تأكيد الدفع والفاتورة الإلكترونية.",
     )
 
     def __init__(self, *args, teacher=None, require_email=False, **kwargs):
@@ -137,14 +164,14 @@ class PersonalEmailForm(PersonalFormStyleMixin, forms.Form):
         if self.teacher and self.teacher.pk:
             duplicates = duplicates.exclude(pk=self.teacher.pk)
         if duplicates.exists():
-            raise ValidationError("هذا البريد مرتبط بحساب آخر. استخدم بريدًا تملكه لهذا الحساب.")
+            raise ValidationError("هذا البريد مرتبط بحساب آخر. يلزم تخصيص بريد مستقل لهذا الحساب.")
         return email
 
 
 def clean_academic_year(value):
     value = (value or "").strip().replace("/", "-")
     if not re.fullmatch(r"\d{4}-\d{4}", value):
-        raise ValidationError("اكتب السنة بصيغة 1447-1448 أو 2025-2026.")
+        raise ValidationError("الصيغة المطلوبة للسنة: 1447-1448 أو 2025-2026.")
     first, second = map(int, value.split("-"))
     if second != first + 1:
         raise ValidationError("يجب أن تنتهي السنة الدراسية في العام التالي.")

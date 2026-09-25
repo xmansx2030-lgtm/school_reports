@@ -321,7 +321,7 @@
           <div class="personal-plan-catalog__grid">
             {% for plan in personal_plan_cards %}
               <article class="personal-plan-card">
-                <div class="personal-plan-card__top"><span>{% if plan.is_free %}الباقة الأساسية{% else %}باقة شخصية{% endif %}</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></div>
+                <div class="personal-plan-card__top"><span>{% if plan.is_basic %}الباقة الأساسية{% else %}باقة شخصية{% endif %}</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></div>
                 <h4>{{ plan.name }}</h4>
                 {% if plan.description %}<p class="personal-plan-card__description">{{ plan.description }}</p>{% endif %}
                 <p class="personal-plan-card__price">{% if plan.is_free %}<strong>مجانية</strong>{% else %}<strong dir="ltr">{{ plan.price_display }}</strong><span> ريال</span>{% endif %}<small> · {{ plan.duration_label }}</small></p>
@@ -342,7 +342,7 @@
               </article>
             {% endfor %}
           </div>
-          {% if has_paid_personal_plans %}<p class="personal-plan-catalog__note">{% if moyasar_enabled %}بعد إتمام الدفع وتأكيده من ميسّر، تُفعّل الباقة تلقائيًا وتصل الفاتورة إلى بريدك الإلكتروني.{% else %}الدفع الإلكتروني غير متاح حاليًا؛ تواصل مع الدعم لطلب تفعيل الباقة.{% endif %}</p>{% endif %}
+          {% if has_paid_personal_plans %}<p class="personal-plan-catalog__note">{% if moyasar_enabled %}بعد إتمام الدفع وتأكيد العملية، تُفعّل الباقة تلقائيًا وتصل الفاتورة إلى بريدك الإلكتروني.{% else %}الدفع الإلكتروني غير متاح حاليًا؛ تواصل مع الدعم لطلب تفعيل الباقة.{% endif %}</p>{% endif %}
         </div>
       {% endif %}
     </section>
@@ -571,7 +571,7 @@
       <section class="footer-payments" aria-label="وسائل الدفع المدعومة">
         <div class="footer-payments-copy">
           <strong><i class="fa-solid fa-lock" aria-hidden="true"></i> دفع آمن وموثوق</strong>
-          <small>{% if active_payment_gateway_names %}عبر {{ active_payment_gateway_names }} · {% endif %}تظهر الوسائل المفعّلة والمتاحة عند إتمام الدفع</small>
+          <small>تظهر وسائل الدفع المتاحة عند إتمام الدفع</small>
         </div>
         <div class="payment-marks" role="list" aria-label="قنوات الدفع الإلكتروني المدعومة">
           {% if moyasar_enabled %}

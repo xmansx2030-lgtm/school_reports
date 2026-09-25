@@ -7,7 +7,7 @@
   <meta name="color-scheme" content="light dark">
   {% include "reports/partials/theme_bootstrap.html" %}
   <meta name="robots" content="noindex,nofollow">
-  <title>{% block title %}مساحة المعلم الشخصية{% endblock %} | توثيق</title>
+  <title>{% block title %}{% if request.user.is_authenticated %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% else %}مساحة شخصية للمعلمين والمعلمات{% endif %}{% endblock %} | توثيق</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
@@ -24,7 +24,7 @@
     <div class="personal-container personal-header__inner">
       <a class="personal-brand" href="{% if request.user.is_authenticated %}{% url 'personal:dashboard' %}{% else %}{% url 'reports:landing' %}{% endif %}">
         <img src="{% static 'img/brand-mark.svg' %}" alt="" width="42" height="42">
-        <span><strong>منصة توثيق</strong><small>مساحة المعلم الشخصية</small></span>
+        <span><strong>منصة توثيق</strong><small>{% if request.user.is_authenticated %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% else %}مساحة شخصية للمعلمين والمعلمات{% endif %}</small></span>
       </a>
       <nav class="personal-nav" aria-label="التنقل الشخصي">
         {% if request.user.is_authenticated %}
@@ -49,7 +49,7 @@
   </main>
   <footer class="personal-footer personal-container">
     <span>مساحتك الشخصية في توثيق</span>
-    <span>المستندات الشخصية من إعداد المعلم ولا تمثل اعتمادًا من المدرسة.</span>
+    <span>{% if request.user.is_authenticated %}المستندات الشخصية من إعداد {{ request.user.personal_teacher_label }} ولا تمثل اعتمادًا من المدرسة.{% else %}المستندات الشخصية من إعداد صاحب الحساب ولا تمثل اعتمادًا من المدرسة.{% endif %}</span>
   </footer>
 </body>
 </html>

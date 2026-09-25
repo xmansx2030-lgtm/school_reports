@@ -45,7 +45,7 @@ class PersonalPlan(models.Model):
     )
     duration_days = models.PositiveIntegerField(
         "مدة الاشتراك بالأيام", default=0,
-        help_text="صفر للباقة المجانية المستمرة؛ الباقات المدفوعة تتطلب مدة محددة.",
+        help_text="صفر للباقة المستمرة؛ الباقات المدفوعة تتطلب مدة محددة.",
     )
     max_reports = models.PositiveIntegerField("الحد الأعلى للتقارير", default=500, validators=[MinValueValidator(1)])
     max_evidence = models.PositiveIntegerField("الحد الأعلى للشواهد", default=250, validators=[MinValueValidator(1)])
@@ -64,11 +64,9 @@ class PersonalPlan(models.Model):
     def clean(self):
         super().clean()
         if self.code != "personal_free" and self.price == 0:
-            raise ValidationError({"price": "الباقة المجانية الأساسية موجودة؛ حدد سعرًا للباقة الجديدة."})
+            raise ValidationError({"price": "الباقات الإضافية تتطلب سعرًا؛ الباقة الأساسية وحدها يمكن أن تكون مجانية."})
         if self.price and not self.duration_days:
             raise ValidationError({"duration_days": "حدد مدة للباقة المدفوعة."})
-        if self.code == "personal_free" and (self.price != 0 or not self.is_active or self.duration_days):
-            raise ValidationError("الباقة الشخصية الأساسية مجانية ومستمرة ونشطة دائمًا.")
         if self.pk and PersonalPlan.objects.filter(pk=self.pk, code="personal_free").exists():
             if self.code != "personal_free":
                 raise ValidationError({"code": "لا يمكن تغيير رمز الباقة الأساسية."})
@@ -98,7 +96,7 @@ class PersonalSubscription(models.Model):
         if self._state.adding or previous_plan_id != self.plan_id:
             self.start_date = timezone.localdate()
             days = self.plan.duration_days
-            self.end_date = self.start_date + timedelta(days=days - 1) if days else None
+            self.end_date = self.start_date + timedelta(days=days - 1) if days and self.is_active else None
         return super().save(*args, **kwargs)
 
     @property

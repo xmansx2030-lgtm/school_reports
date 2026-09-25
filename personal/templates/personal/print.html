@@ -23,11 +23,11 @@
   </div>
   <main class="print-sheet">
     <header class="print-header">
-      <div class="print-mark"><img src="{% static 'img/brand-mark.svg' %}" alt=""><span>منصة توثيق <small>ملف المعلم الشخصي</small></span></div>
+      <div class="print-mark"><img src="{% static 'img/brand-mark.svg' %}" alt=""><span>منصة توثيق <small>ملف {{ workspace.owner.personal_teacher_label }} الشخصي</small></span></div>
       <span>مستند شخصي</span>
     </header>
     <div class="print-intro">
-      <p>إعداد المعلم: <strong>{% if report %}{{ report.teacher_name }}{% else %}{{ workspace.owner.name }}{% endif %}</strong></p>
+      <p>إعداد {{ workspace.owner.personal_teacher_label }}: <strong>{% if report %}{{ report.teacher_name }}{% else %}{{ workspace.owner.name }}{% endif %}</strong></p>
       <p>المدرسة: <strong>{% if report %}{{ report.school_name }}{% else %}{{ school_names|join:"، " }}{% endif %}</strong></p>
       {% if report %}
         {% if report.principal_name %}<p>مدير المدرسة: <strong>{{ report.principal_name }}</strong></p>{% endif %}
@@ -78,7 +78,7 @@
         <p>لا توجد شواهد مرتبطة.</p>
       {% endfor %}
     </section>
-    <footer>أُعد هذا المستند في مساحة المعلم الشخصية. أسماء المدرسة والمدير معلومات تعريفية أدخلها المعلم؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</footer>
+    <footer>أُعد هذا المستند في المساحة الشخصية. أسماء المدرسة والمدير معلومات تعريفية أدخلها {{ workspace.owner.personal_teacher_label }}؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</footer>
   </main>
 </body>
 </html>

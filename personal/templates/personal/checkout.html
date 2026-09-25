@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}اشتراك {{ plan.name }}{% endblock %}
 {% block content %}
-<div class="personal-heading"><div><span class="personal-kicker">دفع آمن · اشتراك شخصي</span><h1>تأكيد الاشتراك</h1><p>راجع بيانات الباقة قبل الانتقال إلى صفحة الدفع المستضافة لدى ميسّر.</p></div><a href="{% url 'personal:billing' %}">العودة إلى الاشتراك</a></div>
+<div class="personal-heading"><div><span class="personal-kicker">دفع آمن · اشتراك شخصي</span><h1>تأكيد الاشتراك</h1><p>بيانات الباقة قبل الانتقال إلى صفحة الدفع الآمنة.</p></div><a href="{% url 'personal:billing' %}">العودة إلى الاشتراك</a></div>
 <section class="personal-card twq-card personal-card--form">
   <div class="personal-row"><span><strong>{{ plan.name }}</strong><small>{{ plan.duration_days }} يومًا · حتى {{ plan.max_reports }} تقرير · {{ plan.max_evidence }} شاهد · {{ plan.storage_limit_mb }} م.ب</small></span><strong>{{ plan.price|floatformat:"-2" }} ريال</strong></div>
   <div class="personal-row"><span><strong>صاحب الفاتورة</strong><small>{{ request.user.name }} · {{ request.user.email }}</small></span><a href="{% url 'personal:setup' %}?next={{ request.path|urlencode }}">تعديل البريد</a></div>
@@ -13,11 +13,11 @@
       <span class="personal-payment-brand" role="listitem" aria-label="ماستركارد"><img src="{% static 'img/payment/mastercard.svg' %}" alt="" width="38" height="23"></span>
     </div>
   {% endif %}
-  <p class="personal-hint">تُرسل الفاتورة الإلكترونية إلى بريد الحساب بعد تأكيد الدفع. لا تُفعّل الباقة بمجرد العودة من بوابة الدفع؛ نتحقق من الفاتورة مباشرةً لدى ميسّر.</p>
+  <p class="personal-hint">تُرسل الفاتورة الإلكترونية إلى بريد الحساب بعد تأكيد الدفع. لا تُفعّل الباقة بمجرد العودة من صفحة الدفع؛ تتحقق المنصة من تأكيد العملية قبل تفعيلها.</p>
   {% if moyasar_enabled %}
     <form method="post">
       {% csrf_token %}
-      <button class="personal-button twq-btn twq-btn--primary" type="submit">ادفع {{ plan.price|floatformat:"-2" }} ريال عبر ميسّر <i class="fa-solid fa-lock" aria-hidden="true"></i></button>
+      <button class="personal-button twq-btn twq-btn--primary" type="submit">متابعة دفع {{ plan.price|floatformat:"-2" }} ريال بأمان <i class="fa-solid fa-lock" aria-hidden="true"></i></button>
     </form>
   {% else %}
     <p class="personal-alert" role="status">الدفع الإلكتروني غير متاح في هذه البيئة. لم يتم إنشاء طلب دفع.</p>

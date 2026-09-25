@@ -11,6 +11,7 @@ from reports.models import Report, School, SchoolMembership, SchoolSubscription,
 from reports.services_data_rights import build_personal_data_export
 
 from .models import PersonalEvidence, PersonalPayment, PersonalPlan, PersonalReport, PersonalSubscription, PersonalWorkspace
+from .services import ensure_personal_subscription
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
@@ -34,20 +35,55 @@ class PersonalWorkspaceJourneyTests(TestCase):
         data.update(changes)
         return data
 
-    def test_registration_creates_personal_account_without_school_or_subscription(self):
+    def test_valid_registration_activates_free_personal_subscription_without_school(self):
         response = self.client.post(reverse("personal:register"), {
             "name": "معلمة جديدة", "phone": "+966 55 700 0002",
+            "gender": Teacher.Gender.FEMALE,
             "email": "new@example.com", "school_name": "مدرسة أخرى",
             "principal_name": "مديرة المدرسة", "password": "Personal#2026",
             "password_confirm": "Personal#2026", "accept_policies": "on",
         })
         self.assertRedirects(response, reverse("personal:dashboard"), fetch_redirect_response=False)
         new_user = Teacher.objects.get(phone="0557000002")
+        self.assertEqual(new_user.gender, Teacher.Gender.FEMALE)
         self.assertEqual(new_user.personal_workspace.school_name, "مدرسة أخرى")
-        self.assertEqual(PersonalSubscription.objects.get(workspace__owner=new_user).plan.price, 0)
+        self.assertContains(self.client.get(reverse("personal:dashboard")), "مساحة المعلمة المهنية")
+        self.assertContains(self.client.get(reverse("personal:dashboard")), "مرحبًا بكِ")
+        subscription = PersonalSubscription.objects.get(workspace__owner=new_user)
+        self.assertEqual(subscription.plan.price, 0)
+        self.assertTrue(subscription.is_active)
+        self.assertTrue(subscription.is_current)
         self.assertFalse(SchoolMembership.objects.filter(teacher=new_user).exists())
         self.assertEqual(School.objects.count(), 0)
         self.assertEqual(SchoolSubscription.objects.count(), 0)
+
+    def test_registration_requires_gender(self):
+        response = self.client.post(reverse("personal:register"), {
+            "name": "حساب بلا تحديد", "phone": "0557000004", "email": "gender@example.com",
+            "school_name": "مدرسة مستقلة", "principal_name": "", "password": "Personal#2026",
+            "password_confirm": "Personal#2026", "accept_policies": "on",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("gender", response.context["form"].errors)
+        self.assertFalse(Teacher.objects.filter(phone="0557000004").exists())
+
+    def test_teacher_can_change_personal_gender_from_workspace_setup(self):
+        self.client.force_login(self.teacher)
+
+        response = self.client.post(reverse("personal:setup"), {
+            "school_name": self.workspace.school_name,
+            "principal_name": self.workspace.principal_name,
+            "school_stage": self.workspace.school_stage,
+            "specialization": self.workspace.specialization,
+            "email": self.teacher.email,
+            "gender": Teacher.Gender.FEMALE,
+        })
+
+        self.assertRedirects(response, reverse("personal:dashboard"), fetch_redirect_response=False)
+        self.teacher.refresh_from_db()
+        self.assertEqual(self.teacher.gender, Teacher.Gender.FEMALE)
+        self.assertContains(self.client.get(reverse("personal:dashboard")), "مساحة المعلمة المهنية")
 
     def test_registration_explains_existing_account_for_current_school_member(self):
         school = School.objects.create(name="مدرسة الانطلاق", code="school-member-test", stage="primary", gender="boys")
@@ -60,13 +96,14 @@ class PersonalWorkspaceJourneyTests(TestCase):
 
         response = self.client.post(reverse("personal:register"), {
             "name": self.teacher.name, "phone": self.teacher.phone,
+            "gender": Teacher.Gender.MALE,
             "email": "new-address@example.com", "school_name": school.name,
             "principal_name": "مدير المدرسة", "password": "Personal#2026",
             "password_confirm": "Personal#2026", "accept_policies": "on",
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "حسابك مضاف إلى مدرسة اشتراكها ساري")
+        self.assertContains(response, "هذا الرقم مرتبط بحساب مدرسي اشتراكه ساري")
         self.assertContains(response, reverse("reports:login"))
         self.assertFalse(PersonalWorkspace.objects.filter(owner__email="new-address@example.com").exists())
 
@@ -135,6 +172,10 @@ class PersonalWorkspaceJourneyTests(TestCase):
         response = self.client.get(reverse("personal:checkout_start", args=[plan.pk]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "ميسر")
+        self.assertNotContains(response, "مُيسّر")
+        self.assertContains(response, "صفحة الدفع الآمنة")
+        self.assertContains(response, "متابعة دفع 49 ريال بأمان")
         for asset in (
             "img/payment/mada.svg",
             "img/payment/visa.svg",
@@ -146,6 +187,8 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertNotContains(response, "samsung-pay.svg")
 
     def test_personal_report_and_portfolio_do_not_enter_school_reporting(self):
+        self.teacher.gender = Teacher.Gender.FEMALE
+        self.teacher.save(update_fields=["gender"])
         self.client.force_login(self.teacher)
         response = self.client.post(reverse("personal:report_create"), self.report_payload())
         report = PersonalReport.objects.get(workspace=self.workspace)
@@ -162,10 +205,13 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertRedirects(evidence_response, reverse("personal:evidence"), fetch_redirect_response=False)
         self.assertContains(self.client.get(reverse("personal:portfolio")), "برنامج القراءة")
         annual_print = self.client.get(reverse("personal:portfolio_print") + "?year=1447-1448")
+        self.assertContains(annual_print, "ملف المعلمة الشخصي")
         self.assertContains(annual_print, "مدير الأفق")
         self.assertContains(annual_print, "ورش أسبوعية")
         self.assertContains(annual_print, "المتابعة")
-        self.assertContains(self.client.get(reverse("personal:report_print", args=[report.pk])), "لا يمثل المستند اعتمادًا")
+        report_print = self.client.get(reverse("personal:report_print", args=[report.pk]))
+        self.assertContains(report_print, "إعداد المعلمة")
+        self.assertContains(report_print, "لا يمثل المستند اعتمادًا")
         exported = build_personal_data_export(self.teacher)["sections"]["personal_workspace"]
         self.assertEqual(exported["reports"][0]["title"], "برنامج القراءة")
         self.assertEqual(exported["evidence"][0]["title"], "نتيجة البرنامج")
@@ -290,7 +336,7 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertRedirects(checkout, register_url, fetch_redirect_response=False)
         registration = self.client.get(register_url)
         self.assertContains(registration, plan.name)
-        self.assertContains(registration, "بعد إنشاء حسابك")
+        self.assertContains(registration, "بعد إنشاء الحساب")
         self.assertContains(
             registration,
             reverse("reports:login") + f"?next={checkout_url}",
@@ -309,7 +355,8 @@ class PersonalWorkspaceJourneyTests(TestCase):
             response = self.client.post(
                 reverse("personal:register") + f"?plan={plan.pk}",
                 {
-                    "name": "معلم جديد", "phone": "0557000012", "email": "paid@example.com",
+                    "name": "معلم جديد", "phone": "0557000012", "gender": Teacher.Gender.MALE,
+                    "email": "paid@example.com",
                     "school_name": "مدرسة مستقلة", "principal_name": "مدير المدرسة",
                     "password": "Tawtheeq!River_8042", "password_confirm": "Tawtheeq!River_8042",
                     "accept_policies": "on",
@@ -322,6 +369,7 @@ class PersonalWorkspaceJourneyTests(TestCase):
             response = self.client.post(reverse("personal:checkout_start", args=[plan.pk]))
         self.assertRedirects(response, "https://checkout.moyasar.com/invoices/test?lang=ar", fetch_redirect_response=False)
         payment = PersonalPayment.objects.get(workspace__owner__phone="0557000012")
+        self.assertEqual(payment.workspace.owner.gender, Teacher.Gender.MALE)
         self.assertEqual(payment.status, PersonalPayment.Status.PENDING)
         self.assertEqual(payment.gateway_invoice_id, "inv-personal-test")
         self.assertEqual(PersonalSubscription.objects.get(workspace=payment.workspace).plan.price, 0)
@@ -529,3 +577,157 @@ class PersonalWorkspaceJourneyTests(TestCase):
                 subscription.end_date,
                 old_end + timedelta(days=first_plan.duration_days + (next_plan.duration_days if index == 2 else 0)),
             )
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
+class PersonalPlanManagementTests(TestCase):
+    def setUp(self):
+        self.owner = Teacher.objects.create_superuser(
+            phone="0557000090", name="مالك المنصة", password="Personal#2026"  # noqa: S106
+        )
+        self.teacher = Teacher.objects.create_user(
+            phone="0557000091", name="معلمة", password="Personal#2026"  # noqa: S106
+        )
+        self.plan = PersonalPlan.objects.get(code="personal_free")
+
+    def _save_base_plan(self, *, price, duration_days, active=True, published=True):
+        payload = {
+            "name": self.plan.name, "description": self.plan.description,
+            "price": price, "duration_days": duration_days,
+            "max_reports": self.plan.max_reports, "max_evidence": self.plan.max_evidence,
+            "storage_limit_mb": self.plan.storage_limit_mb,
+            "display_order": self.plan.display_order,
+        }
+        if active:
+            payload["is_active"] = "on"
+        if published:
+            payload["is_published"] = "on"
+        self.client.force_login(self.owner)
+        return self.client.post(
+            reverse("reports:platform_personal_plan_edit", args=[self.plan.pk]), payload
+        )
+
+    def test_owner_can_price_base_plan_without_granting_it_to_new_accounts(self):
+        old_workspace = PersonalWorkspace.objects.create(
+            owner=self.teacher, school_name="مدرسة سابقة"
+        )
+        old_subscription = ensure_personal_subscription(old_workspace)
+        self.assertTrue(old_subscription.is_current)
+
+        response = self._save_base_plan(price="49.00", duration_days=30)
+        self.assertRedirects(response, reverse("reports:platform_personal_plans"))
+        self.plan.refresh_from_db()
+        self.assertEqual(self.plan.price, 49)
+        self.assertEqual(self.plan.duration_days, 30)
+        old_subscription.refresh_from_db()
+        self.assertTrue(old_subscription.is_current)
+        self.assertIsNone(old_subscription.end_date)
+
+        newcomer = Teacher.objects.create_user(
+            phone="0557000092", name="معلم جديد", password="Personal#2026"  # noqa: S106
+        )
+        workspace = PersonalWorkspace.objects.create(owner=newcomer, school_name="مدرسة جديدة")
+        subscription = ensure_personal_subscription(workspace)
+        self.assertFalse(subscription.is_current)
+        self.assertIsNone(subscription.end_date)
+
+        self.client.force_login(newcomer)
+        self.assertContains(self.client.get(reverse("personal:billing")), "بانتظار التفعيل")
+        self.assertRedirects(
+            self.client.get(reverse("personal:report_create")),
+            reverse("personal:dashboard"), fetch_redirect_response=False,
+        )
+        self.client.logout()
+        with override_settings(MOYASAR_ENABLED=True, LANDING_PRICING_CACHE_TTL_SECONDS=0):
+            landing = self.client.get(reverse("reports:landing"))
+        self.assertContains(landing, "الباقة الأساسية")
+        self.assertContains(landing, reverse("personal:checkout_start", args=[self.plan.pk]))
+
+    def test_owner_can_limit_or_unpublish_free_base_plan(self):
+        response = self._save_base_plan(price="0.00", duration_days=30, active=False, published=False)
+        self.assertRedirects(response, reverse("reports:platform_personal_plans"))
+        self.plan.refresh_from_db()
+        self.assertFalse(self.plan.is_active)
+        self.assertFalse(self.plan.is_published)
+        self.assertEqual(self.plan.duration_days, 30)
+
+        workspace = PersonalWorkspace.objects.create(owner=self.teacher, school_name="مدرسة المعلمة")
+        subscription = ensure_personal_subscription(workspace)
+        self.assertFalse(subscription.is_current)
+        self.assertIsNone(subscription.end_date)
+        self.client.logout()
+        with override_settings(LANDING_PRICING_CACHE_TTL_SECONDS=0):
+            landing = self.client.get(reverse("reports:landing"))
+        self.assertNotContains(landing, self.plan.name)
+
+    def test_teacher_cannot_edit_teacher_plans(self):
+        self.client.force_login(self.teacher)
+        response = self.client.post(
+            reverse("reports:platform_personal_plan_edit", args=[self.plan.pk]),
+            {"name": "غير مصرح"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+        self.plan.refresh_from_db()
+        self.assertNotEqual(self.plan.name, "غير مصرح")
+
+    def test_paid_base_waits_for_verified_gateway_payment(self):
+        self._save_base_plan(price="49.00", duration_days=30)
+        self.plan.refresh_from_db()
+        self.client.logout()
+        register_url = reverse("personal:register") + f"?plan={self.plan.pk}"
+        checkout_url = reverse("personal:checkout_start", args=[self.plan.pk])
+        response = self.client.post(register_url, {
+            "name": "معلمة جديدة", "phone": "0557000093", "email": "new-paid@example.com",
+            "gender": Teacher.Gender.FEMALE,
+            "school_name": "مدرسة جديدة", "principal_name": "مديرة المدرسة",
+            "password": "Personal#2026", "password_confirm": "Personal#2026",  # noqa: S106
+            "accept_policies": "on",
+        })
+        self.assertRedirects(response, checkout_url, fetch_redirect_response=False)
+        subscription = PersonalSubscription.objects.get(workspace__owner__phone="0557000093")
+        self.assertFalse(subscription.is_current)
+        self.assertFalse(subscription.is_active)
+
+        with override_settings(MOYASAR_ENABLED=True), patch(
+            "personal.billing.create_moyasar_invoice"
+        ) as create_invoice, patch("personal.billing.fetch_moyasar_invoice") as fetch_invoice, patch(
+            "reports.utils.run_task_safe"
+        ):
+            create_invoice.return_value = {
+                "id": "inv-paid-base", "url": "https://checkout.moyasar.com/invoices/paid-base",
+                "status": "initiated",
+            }
+            response = self.client.post(checkout_url)
+            self.assertEqual(response.status_code, 302)
+            payment = PersonalPayment.objects.get(workspace=subscription.workspace)
+            self.assertEqual(payment.status, PersonalPayment.Status.PENDING)
+            subscription.refresh_from_db()
+            self.assertFalse(subscription.is_current)
+
+            callback_url = reverse("personal:moyasar_callback", args=[payment.pk])
+            fetch_invoice.return_value = {"status": "pending"}
+            response = self.client.post(callback_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(response.json()["activated"])
+            subscription.refresh_from_db()
+            self.assertFalse(subscription.is_current)
+
+            fetch_invoice.return_value = {
+                "id": payment.gateway_invoice_id, "status": "paid", "currency": "SAR",
+                "amount": 4900,
+                "metadata": {
+                    "personal_payment_ref": str(payment.pk),
+                    "personal_workspace_id": str(subscription.workspace_id),
+                },
+            }
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(callback_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()["activated"])
+
+        subscription.refresh_from_db()
+        payment.refresh_from_db()
+        self.assertTrue(subscription.is_current)
+        self.assertEqual(subscription.plan_id, self.plan.pk)
+        self.assertEqual((subscription.end_date - subscription.start_date).days, 29)
+        self.assertEqual(payment.status, PersonalPayment.Status.PAID)
