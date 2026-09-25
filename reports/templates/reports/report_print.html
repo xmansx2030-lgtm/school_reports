@@ -381,8 +381,8 @@
   <main class="page{% if EVIDENCE_COUNT >= 3 %} page--dense-evidence{% endif %}{% if EVIDENCE_COUNT == 1 %} page--single-evidence{% elif EVIDENCE_COUNT == 2 %} page--paired-evidence{% endif %}{% if EVIDENCE_COUNT or r.show_goal and r.goal|length > 700 or r.show_details and r.idea|length > 700 or r.show_implementation and r.implementation_method|length > 700 or r.show_results and r.results|length > 700 or r.show_recommendations and r.recommendations|length > 700 %} page--natural-print-flow{% endif %}">
     <header class="header">
       {% if personal_mode %}
-      <div class="hdr-block hdr-right"><div>منصة توثيق</div><div>تقرير مهني شخصي</div><div>إعداد {{ workspace.owner.personal_teacher_label }}</div></div>
-      <div class="hdr-center"><img src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق" class="logo"></div>
+      <div class="hdr-block hdr-right"><div>المملكة العربية السعودية</div><div>وزارة التعليم</div><div>تقرير مهني شخصي</div></div>
+      <div class="hdr-center"><img src="{% static 'img/UntiTtled-1.png' %}" alt="شعار وزارة التعليم" class="logo"></div>
       <div class="hdr-block hdr-left"><div class="hdr-academic-label">السنة الدراسية</div><div class="hdr-academic-year"><bdi dir="ltr">{{ r.academic_year }}</bdi></div></div>
       {% else %}
       <div class="hdr-block hdr-right">
@@ -549,7 +549,7 @@
 
     <div class="report-footer">
       <div>تم الإصدار إلكترونيًا: {% now "Y/m/d H:i" %}</div>
-      <div class="footer-brand">منصة توثيق</div>
+      <div class="footer-brand">{% if personal_mode %}تقرير مهني شخصي{% else %}منصة توثيق{% endif %}</div>
     </div>
 
     {% if EVIDENCE_ITEMS and EVIDENCE_SEPARATE_PAGE %}
