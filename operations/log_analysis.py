@@ -8,10 +8,13 @@ from collections import Counter
 MAX_LINES = 250
 MAX_CHARS = 60000
 
+_SENSITIVE_KEY = r"(?:password|passwd|secret|client[_-]?secret|api[_-]?key|access[_-]?token|refresh[_-]?token|cookie|set-cookie|private[_-]?key)"
+_SENSITIVE_VALUE = r'''(?:"[^"]*"|'[^']*'|[^\s,;&}\]]+)'''
 _REDACTIONS = (
-    (re.compile(r"(?i)(authorization\s*[:=]\s*(?:bearer|basic|ops-token)\s+)\S+"), r"\1[REDACTED]"),
-    (re.compile(r"(?i)((?:password|passwd|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|cookie|set-cookie)\s*[:=]\s*)[^\s,;&]+"), r"\1[REDACTED]"),
-    (re.compile(r"(?i)([?&](?:token|key|secret|signature|code)=)[^&\s]+"), r"\1[REDACTED]"),
+    (re.compile(r'''(?i)((?:["']?authorization["']?)\s*[:=]\s*["']?(?:bearer|basic|ops-token)\s+)[^\s,"'}]+'''), r"\1[REDACTED]"),
+    (re.compile(rf'''(?i)((?:["']?{_SENSITIVE_KEY}["']?)\s*[:=]\s*){_SENSITIVE_VALUE}'''), r"\1[REDACTED]"),
+    (re.compile(r"(?i)([?&](?:token|key|secret|password|signature|code)=)[^&\s]+"), r"\1[REDACTED]"),
+    (re.compile(r"(?i)\b((?:postgres(?:ql)?|redis(?:s)?|amqp(?:s)?|mysql)://[^:\s/@]+:)[^@\s/]+@"), r"\1[REDACTED]@"),
     (re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"), "[REDACTED_JWT]"),
 )
 
@@ -41,8 +44,17 @@ def sanitize_and_analyze(raw: str) -> tuple[str, dict]:
     cleaned = []
     levels: Counter[str] = Counter()
     categories: Counter[str] = Counter()
+    in_private_key = False
     for line in lines:
         safe = line[:500]
+        if re.search(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", safe):
+            in_private_key = True
+            cleaned.append("[REDACTED_PRIVATE_KEY]")
+            continue
+        if in_private_key:
+            if re.search(r"-----END [A-Z ]*PRIVATE KEY-----", safe):
+                in_private_key = False
+            continue
         for pattern, replacement in _REDACTIONS:
             safe = pattern.sub(replacement, safe)
         cleaned.append(safe)
