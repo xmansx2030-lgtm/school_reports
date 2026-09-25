@@ -4,6 +4,7 @@
   var drawer = document.getElementById('mobileDrawer');
   var overlay = document.getElementById('drawerOverlay');
   var trigger = document.getElementById('hamburger');
+  var tabbarMore = document.querySelector('[data-mobile-tabbar-more]');
   var closeButton = document.getElementById('drawerClose');
   var header = document.getElementById('siteHeader');
   if (!drawer || !overlay || !trigger || !closeButton) return;
@@ -19,12 +20,17 @@
     overlay.setAttribute('aria-hidden', 'true');
     trigger.setAttribute('aria-expanded', 'false');
     trigger.classList.remove('active');
+    if (tabbarMore) {
+      tabbarMore.setAttribute('aria-expanded', 'false');
+    }
     document.body.classList.remove('personal-drawer-open');
-    if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+    var focusTarget = previousFocus && previousFocus.isConnected && previousFocus.getClientRects().length
+      ? previousFocus : header && header.querySelector('.hdr-brand');
+    if (focusTarget) focusTarget.focus();
   }
 
-  function openDrawer() {
-    previousFocus = document.activeElement;
+  function openDrawer(source) {
+    previousFocus = source || document.activeElement;
     drawer.removeAttribute('inert');
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
@@ -32,14 +38,23 @@
     overlay.setAttribute('aria-hidden', 'false');
     trigger.setAttribute('aria-expanded', 'true');
     trigger.classList.add('active');
+    if (tabbarMore) {
+      tabbarMore.setAttribute('aria-expanded', 'true');
+    }
     document.body.classList.add('personal-drawer-open');
     closeButton.focus();
   }
 
   trigger.addEventListener('click', function () {
     if (drawer.classList.contains('open')) closeDrawer();
-    else openDrawer();
+    else openDrawer(trigger);
   });
+  if (tabbarMore) {
+    tabbarMore.addEventListener('click', function () {
+      if (drawer.classList.contains('open')) closeDrawer();
+      else openDrawer(tabbarMore);
+    });
+  }
   closeButton.addEventListener('click', closeDrawer);
   overlay.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', function (event) {
@@ -63,7 +78,7 @@
     }
   });
   window.addEventListener('resize', function () {
-    if (window.innerWidth >= 1280) closeDrawer();
+    if (window.innerWidth >= 1280 || (previousFocus === tabbarMore && window.innerWidth > 768)) closeDrawer();
   }, { passive: true });
   window.addEventListener('scroll', function () {
     if (header) header.classList.toggle('scrolled', window.scrollY > 4);

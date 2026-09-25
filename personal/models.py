@@ -5,7 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from reports.validators import validate_circular_attachment_file
@@ -189,6 +189,11 @@ class PersonalReport(models.Model):
     teacher_name = models.CharField("اسم المعلم وقت الحفظ", max_length=150)
     school_name = models.CharField("اسم المدرسة وقت الحفظ", max_length=200)
     principal_name = models.CharField("اسم المدير وقت الحفظ", max_length=150, blank=True)
+    trashed_at = models.DateTimeField("نُقل إلى سلة المحذوفات في", null=True, blank=True, db_index=True)
+    trashed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="trashed_personal_reports", verbose_name="نُقل إلى السلة بواسطة",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -201,8 +206,47 @@ class PersonalReport(models.Model):
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        year_is_written = update_fields is None or "academic_year" in update_fields
+        previous_year = (
+            PersonalReport.objects.filter(pk=self.pk).values_list("academic_year", flat=True).first()
+            if self.pk and year_is_written else None
+        )
+        if previous_year is not None and previous_year != self.academic_year:
+            with transaction.atomic():
+                result = super().save(*args, **kwargs)
+                self.share_links.filter(is_active=True).update(is_active=False)
+                return result
+        return super().save(*args, **kwargs)
+
+    def move_to_trash(self, *, by=None):
+        with transaction.atomic():
+            if self.trashed_at is None:
+                self.trashed_at = timezone.now()
+                self.trashed_by = by
+                self.save(update_fields=["trashed_at", "trashed_by"])
+            # Restoring the report must never reactivate a link issued before trashing.
+            self.share_links.filter(is_active=True).update(is_active=False)
+
+    def restore_from_trash(self):
+        if self.trashed_at is not None:
+            self.trashed_at = None
+            self.trashed_by = None
+            self.save(update_fields=["trashed_at", "trashed_by"])
+
 
 class PersonalEvidence(models.Model):
+    class DisplaySize(models.TextChoices):
+        AUTO = "auto", "تلقائي"
+        LARGE = "large", "كبير"
+        MEDIUM = "medium", "متوسط"
+        SMALL = "small", "صغير"
+
+    class FitMode(models.TextChoices):
+        CONTAIN = "contain", "احتواء الصورة كاملة"
+        COVER = "cover", "ملء الإطار"
+
     workspace = models.ForeignKey(
         PersonalWorkspace, on_delete=models.CASCADE, related_name="evidence"
     )
@@ -220,6 +264,14 @@ class PersonalEvidence(models.Model):
         validators=[validate_circular_attachment_file, FileExtensionValidator(["pdf", "jpg", "jpeg", "png"])],
     )
     source_url = models.URLField("رابط الشاهد", blank=True)
+    order = models.PositiveSmallIntegerField("الترتيب", default=1, db_index=True)
+    display_size = models.CharField(
+        "حجم العرض", max_length=10, choices=DisplaySize.choices, default=DisplaySize.AUTO
+    )
+    fit_mode = models.CharField(
+        "طريقة الملاءمة", max_length=10, choices=FitMode.choices, default=FitMode.CONTAIN
+    )
+    show_in_print = models.BooleanField("إظهار في الطباعة", default=True)
     file_size = models.PositiveIntegerField(default=0, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -354,6 +406,58 @@ class PersonalPortfolioEvidence(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class PersonalShareLink(models.Model):
+    class Kind(models.TextChoices):
+        REPORT = "report", "تقرير"
+        PORTFOLIO = "portfolio", "ملف إنجاز"
+
+    workspace = models.ForeignKey(
+        PersonalWorkspace, on_delete=models.CASCADE, related_name="share_links",
+    )
+    kind = models.CharField(max_length=12, choices=Kind.choices, db_index=True)
+    report = models.ForeignKey(
+        PersonalReport, on_delete=models.CASCADE, null=True, blank=True, related_name="share_links",
+    )
+    academic_year = models.CharField(max_length=20)
+    token = models.CharField(max_length=64, unique=True)
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(db_index=True)
+    access_count = models.PositiveIntegerField(default=0)
+    last_accessed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["workspace", "kind", "is_active"])]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(kind="report", report__isnull=False)
+                    | models.Q(kind="portfolio", report__isnull=True)
+                ),
+                name="personal_share_target_matches_kind",
+            ),
+            models.UniqueConstraint(
+                fields=["workspace", "report"],
+                condition=models.Q(kind="report", is_active=True),
+                name="unique_active_personal_report_share",
+            ),
+            models.UniqueConstraint(
+                fields=["workspace", "academic_year"],
+                condition=models.Q(kind="portfolio", is_active=True),
+                name="unique_active_personal_portfolio_share",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.report_id and (
+            self.report.workspace_id != self.workspace_id
+            or self.report.academic_year != self.academic_year
+        ):
+            raise ValidationError("رابط المشاركة يجب أن يخص التقرير والمساحة والسنة نفسها.")
 
 
 class PersonalNotice(models.Model):

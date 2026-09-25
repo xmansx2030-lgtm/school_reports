@@ -1,0 +1,48 @@
+{% extends "personal/base.html" %}
+{% load static %}
+{% block title %}مشاركة {{ subject_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/achievement.css' %}?v=20260923.1">{% endblock %}
+{% block content %}
+<div class="twq-page achievement-page achievement-share-page" aria-labelledby="personalShareTitle">
+  <header class="twq-page-header achievement-page-header">
+    <div class="twq-page-header__heading">
+      <a class="twq-page-header__eyebrow" href="{{ return_url }}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى {% if kind == 'report' %}التقرير{% else %}ملف الإنجاز{% endif %}</a>
+      <h1 class="twq-page-header__title" id="personalShareTitle">مشاركة {{ subject_title }}</h1>
+      <p class="twq-page-header__lead">تحكم في رابط عام مؤقت لعملك في مساحتك الشخصية.</p>
+      <dl class="twq-page-header__context" aria-label="سياق المشاركة">
+        <div><dt>العمل</dt><dd>{{ subject_title }}</dd></div>
+        <div><dt>السنة الدراسية</dt><dd><bdi dir="ltr">{{ year }}</bdi></dd></div>
+        <div><dt>الحالة</dt><dd>{% if active_link %}رابط فعال{% else %}المشاركة متوقفة{% endif %}</dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside"><div class="twq-page-header__mark" aria-hidden="true"><img src="{% static 'img/brand-mark.svg' %}" alt=""></div></div>
+  </header>
+
+  <section class="twq-section achievement-share-card" aria-labelledby="personalShareStateTitle">
+    <div class="achievement-share-state">
+      <span class="achievement-share-state__icon" aria-hidden="true"><i class="fa-solid {% if active_link %}fa-link{% else %}fa-lock{% endif %}"></i></span>
+      <div><span class="twq-status" data-status="{% if active_link %}active{% else %}draft{% endif %}">{% if active_link %}رابط فعال{% else %}المشاركة متوقفة{% endif %}</span><h2 id="personalShareStateTitle">{% if active_link %}الرابط جاهز للمشاركة{% else %}أنشئ رابط مشاركة مؤقتًا{% endif %}</h2><p>يمكنك إيقاف الرابط في أي وقت. تنتهي صلاحيته تلقائيًا في الموعد المحدد.</p></div>
+    </div>
+
+    {% if active_link %}
+      <dl class="twq-metrics achievement-share-metrics">
+        <div><dt><i class="fa-solid fa-eye" aria-hidden="true"></i> مرات الفتح</dt><dd><bdi>{{ active_link.access_count }}</bdi></dd></div>
+        <div><dt><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> آخر فتح</dt><dd>{% if active_link.last_accessed_at %}<time datetime="{{ active_link.last_accessed_at|date:'c' }}">{{ active_link.last_accessed_at|date:'Y/m/d H:i' }}</time>{% else %}لم يُفتح{% endif %}</dd></div>
+        <div><dt><i class="fa-regular fa-calendar-xmark" aria-hidden="true"></i> ينتهي في</dt><dd><time datetime="{{ active_link.expires_at|date:'c' }}">{{ active_link.expires_at|date:'Y/m/d H:i' }}</time></dd></div>
+      </dl>
+      <div class="achievement-share-link">
+        <label class="twq-label" for="personalShareUrl">الرابط العام</label>
+        <div class="achievement-share-link__control"><input class="twq-control" id="personalShareUrl" type="text" value="{{ public_url }}" readonly dir="ltr" autocomplete="off"><button class="twq-btn twq-btn--secondary" type="button" data-personal-share-copy aria-describedby="personalShareCopyStatus"><i class="fa-regular fa-copy" aria-hidden="true"></i> نسخ الرابط</button></div>
+        <p class="twq-field__help" id="personalShareCopyStatus" role="status" aria-live="polite">يمكنك تحديد الرابط ونسخه يدويًا أيضًا.</p>
+      </div>
+      <div class="achievement-share-actions"><a class="twq-btn twq-btn--secondary" href="{{ public_url }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> معاينة الرابط العام</a><form method="post">{% csrf_token %}<input type="hidden" name="action" value="disable">{% if kind == 'portfolio' %}<input type="hidden" name="year" value="{{ year }}">{% endif %}<button class="twq-btn twq-btn--danger" type="submit"><i class="fa-solid fa-link-slash" aria-hidden="true"></i> إيقاف المشاركة</button></form></div>
+    {% else %}
+      {% if can_create %}<form class="achievement-form achievement-share-enable" method="post">{% csrf_token %}<input type="hidden" name="action" value="enable">{% if kind == 'portfolio' %}<input type="hidden" name="year" value="{{ year }}">{% endif %}<div class="twq-field"><label class="twq-label" for="personalShareExpiry">مدة صلاحية الرابط</label><select class="twq-control" id="personalShareExpiry" name="expiry_days">{% for days in expiry_choices %}<option value="{{ days }}" {% if days == 7 %}selected{% endif %}>{{ days }} {% if days == 1 %}يوم{% else %}أيام{% endif %}</option>{% endfor %}</select><p class="twq-field__help">تبدأ المدة من وقت إنشاء الرابط.</p></div><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-link" aria-hidden="true"></i> إنشاء رابط المشاركة</button></form>
+      {% else %}<div class="twq-alert twq-alert--warning" role="status"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><div><strong>الاشتراك الشخصي غير نشط</strong><p>يمكنك مراجعة أعمالك وإيقاف رابط قائم. يتطلب إنشاء رابط جديد اشتراكًا نشطًا.</p><a href="{% url 'personal:billing' %}">إدارة الاشتراك</a></div></div>{% endif %}
+    {% endif %}
+
+    <div class="twq-alert twq-alert--info achievement-public-boundary" role="note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div><strong>محتوى النسخة العامة</strong><p>{% if kind == 'report' %}تعرض التقرير وشواهده المرتبطة به والمفعّلة للظهور في الطباعة فقط.{% else %}تعرض المحاور وتقارير السنة المرتبطة بها صراحة وشواهدها المفعّلة للطباعة، إضافة إلى الشواهد المرتبطة بالمحاور. لا تعرض بيانات التواصل أو التقارير والمبادرات غير المختارة أو بقية مكتبة الشواهد.{% endif %} لا تتضمن النسخة العامة أدوات التحرير أو اعتمادًا مدرسيًا.</p></div></div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/personal-share.js' %}" nonce="{{ CSP_NONCE }}" defer></script>{% endblock %}

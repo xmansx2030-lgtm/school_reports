@@ -1,0 +1,57 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>ملف إنجاز {{ workspace.owner.name }} | توثيق</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app-components.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+  <link rel="stylesheet" href="{% static 'css/achievement.css' %}">
+  <style nonce="{{ CSP_NONCE }}">
+    body { margin: 0; font-family: Cairo, Tahoma, sans-serif; }
+    .personal-public-shell { max-width: 1120px; margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
+    .personal-public-brand { display: flex; align-items: center; gap: .75rem; margin-block-end: 1.25rem; }
+    .personal-public-brand img { width: 44px; height: 44px; }
+    .personal-public-brand strong { font-size: 1.15rem; }
+    .personal-public-brand small { display: block; font-size: .8rem; }
+    .personal-public-sections { display: grid; gap: 1rem; }
+    .personal-public-entries { display: grid; gap: .75rem; }
+    .personal-public-entries article { min-inline-size: 0; }
+    .personal-public-entries p { white-space: pre-line; overflow-wrap: anywhere; }
+    .personal-public-evidence { display: grid; gap: .5rem; margin: .5rem 0 0; padding: 0; list-style: none; }
+    .personal-public-evidence a { overflow-wrap: anywhere; }
+    .personal-public-evidence img { display: block; max-inline-size: 100%; max-block-size: 220px; object-fit: contain; margin-block: .5rem; }
+    .personal-public-profile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; margin: 0; }
+    .personal-public-profile div { min-inline-size: 0; }
+    .personal-public-profile dt { font-weight: 700; }
+    .personal-public-profile dd { margin: .2rem 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+    .personal-public-footer { margin-block-start: 1rem; font-size: .85rem; line-height: 1.8; }
+    @media (max-width: 40rem) { .personal-public-shell { padding: 1rem; } .personal-public-profile { grid-template-columns: 1fr; } }
+    @media print { .personal-public-shell { max-width: none; padding: 0; } .personal-public-print { display: none !important; } .personal-public-entries article, .achievement-axis { break-inside: avoid; } .achievement-axis { display: block; } }
+  </style>
+</head>
+<body class="page personal-page personal-public-page">
+  <a class="skip-link" href="#personalPublicContent">تخطي إلى ملف الإنجاز</a>
+  <main class="personal-public-shell twq-page achievement-page" id="personalPublicContent">
+    <div class="personal-public-brand"><img src="{% static 'img/brand-mark.svg' %}" alt=""><div><strong>منصة توثيق</strong><small>نسخة مشاركة من المساحة الشخصية</small></div></div>
+    <header class="twq-page-header achievement-page-header" aria-labelledby="publicPortfolioTitle"><div class="twq-page-header__heading"><p class="twq-page-header__eyebrow"><i class="fa-solid fa-briefcase" aria-hidden="true"></i> السجل المهني السنوي</p><h1 class="twq-page-header__title" id="publicPortfolioTitle">ملف إنجاز {{ workspace.owner.name }}</h1><p class="twq-page-header__lead">أعمال وشواهد {{ workspace.owner.personal_teacher_label }} في السنة الدراسية <bdi dir="ltr">{{ year }}</bdi>.</p><dl class="twq-page-header__context"><div><dt>السنة</dt><dd><bdi dir="ltr">{{ year }}</bdi></dd></div><div><dt>المحاور الموثقة</dt><dd>{{ documented_count }} من 11</dd></div><div><dt>التقارير</dt><dd>{{ report_entries|length }}</dd></div><div><dt>الشواهد المعروضة</dt><dd>{{ visible_evidence_count }}</dd></div></dl></div><div class="twq-page-header__aside"><div class="twq-page-header__mark" aria-hidden="true"><img src="{% static 'img/brand-mark.svg' %}" alt=""></div></div></header>
+
+    <div class="personal-public-print"><button class="twq-btn twq-btn--secondary" type="button" data-personal-share-print><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة أو حفظ PDF</button></div>
+    <section class="twq-section" aria-labelledby="publicProfileTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">الملف المهني</span><h2 class="twq-section__title" id="publicProfileTitle">البيانات المهنية العامة</h2></div></div><dl class="personal-public-profile"><div><dt>المؤهلات</dt><dd>{{ year_record.qualifications|default:"لم تسجل" }}</dd></div><div><dt>الخبرات المهنية</dt><dd>{{ year_record.professional_experience|default:"لم تسجل" }}</dd></div><div><dt>التخصص</dt><dd>{{ year_record.specialization|default:"لم يسجل" }}</dd></div><div><dt>نصاب الحصص</dt><dd>{{ year_record.teaching_load|default:"لم يسجل" }}</dd></div><div><dt>مواد التدريس</dt><dd>{{ year_record.subjects_taught|default:"لم تسجل" }}</dd></div></dl></section>
+
+    <section class="twq-section" aria-labelledby="publicAxesTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">التوثيق التفصيلي</span><h2 class="twq-section__title" id="publicAxesTitle">المحاور والشواهد</h2></div><span class="twq-section__meta">11 محورًا</span></div><div class="personal-public-sections">{% for section in sections %}<article class="achievement-axis"><header class="achievement-axis__summary"><span class="achievement-axis__number" aria-hidden="true">{{ section.code }}</span><span class="achievement-axis__title"><small>المحور {{ section.code }}</small><strong>{{ section.title }}</strong></span><span class="twq-status" data-status="{% if section.documented %}completed{% else %}draft{% endif %}">{% if section.documented %}موثق{% else %}غير موثق{% endif %}</span></header><div class="achievement-axis__body">{% if section.notes %}<p>{{ section.notes|linebreaksbr }}</p>{% endif %}{% for link in section.reports %}<p><i class="fa-regular fa-file-lines" aria-hidden="true"></i> تقرير مرتبط: {{ link.report.title }}</p>{% endfor %}{% if section.evidence %}<ul class="personal-public-evidence">{% for link in section.evidence %}{% with item=link.evidence %}<li><strong>{{ item.title }}</strong>{% if item.description %}<span> · {{ item.description }}</span>{% endif %}{% if item.is_image %}<a href="{% url 'personal:share_evidence' token item.pk 'preview' %}" target="_blank" rel="noopener noreferrer"><img src="{% url 'personal:share_evidence' token item.pk 'preview' %}" alt="{{ item.title }}"></a>{% endif %}{% if item.file %}<a href="{% url 'personal:share_evidence' token item.pk 'download' %}">تنزيل الملف</a>{% elif item.source_url %}<a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</li>{% endwith %}{% endfor %}</ul>{% endif %}{% if not section.documented %}<p>لم يوثق هذا المحور بعد.</p>{% endif %}</div></article>{% endfor %}</div></section>
+
+    {% if report_entries %}<section class="twq-section" aria-labelledby="publicReportsTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">أعمال السنة</span><h2 class="twq-section__title" id="publicReportsTitle">التقارير وشواهدها</h2></div></div><div class="personal-public-entries">{% for entry in report_entries %}<article class="twq-document-item"><div class="twq-document-item__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></div><div class="twq-document-item__content"><h3>{{ entry.report.title }}</h3><p>{{ entry.report.report_date }} · {{ entry.report.category|default:"عمل موثق" }} · {{ entry.report.get_status_display }}</p>{% if entry.report.show_details and entry.report.description %}<p>{{ entry.report.description }}</p>{% endif %}{% if entry.report.show_goals and entry.report.goals %}<p><strong>الأهداف:</strong> {{ entry.report.goals }}</p>{% endif %}{% if entry.report.show_implementation and entry.report.implementation %}<p><strong>آلية التنفيذ:</strong> {{ entry.report.implementation }}</p>{% endif %}{% if entry.report.show_results and entry.report.results %}<p><strong>النتائج:</strong> {{ entry.report.results }}</p>{% endif %}{% if entry.report.show_recommendations and entry.report.recommendations %}<p><strong>التوصيات:</strong> {{ entry.report.recommendations }}</p>{% endif %}{% if entry.evidence %}<h4>شواهد التقرير</h4><ul class="personal-public-evidence">{% for item in entry.evidence %}<li><strong>{{ item.title }}</strong>{% if item.is_image %}<a href="{% url 'personal:share_evidence' token item.pk 'preview' %}" target="_blank" rel="noopener noreferrer"><img src="{% url 'personal:share_evidence' token item.pk 'preview' %}" alt="{{ item.title }}"></a>{% endif %}{% if item.file %}<a href="{% url 'personal:share_evidence' token item.pk 'download' %}">تنزيل الملف</a>{% elif item.source_url %}<a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</li>{% endfor %}</ul>{% endif %}</div></article>{% endfor %}</div></section>{% endif %}
+    <div class="twq-alert twq-alert--info" role="note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>أُعد هذا الملف في المساحة الشخصية لصاحبه. لا يمثل اعتمادًا أو توقيعًا من المدرسة.</span></div>
+    <footer class="personal-public-footer">منصة توثيق · ملف إنجاز شخصي <bdi dir="ltr">{{ year }}</bdi></footer>
+  </main>
+  <script src="{% static 'js/personal-share.js' %}" nonce="{{ CSP_NONCE }}" defer></script>
+</body>
+</html>

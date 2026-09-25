@@ -17,7 +17,7 @@
     </div>
     <div class="twq-page-header__aside achievement-header-aside">
       <div class="twq-page-header__mark" aria-hidden="true"><img src="{% static 'img/brand-mark.svg' %}" alt=""></div>
-      {% if year %}<a class="twq-btn twq-btn--secondary" href="{% url 'personal:portfolio_print' %}?year={{ year|urlencode }}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i><span>طباعة / حفظ PDF</span></a>{% endif %}
+      {% if year %}<a class="twq-btn twq-btn--secondary" href="{% url 'personal:portfolio_share_manage' %}?year={{ year|urlencode }}"><i class="fa-solid fa-link" aria-hidden="true"></i><span>إدارة المشاركة</span></a><a class="twq-btn twq-btn--secondary" href="{% url 'personal:portfolio_print' %}?year={{ year|urlencode }}" target="_blank" rel="noopener"><i class="fa-solid fa-print" aria-hidden="true"></i><span>طباعة / حفظ PDF</span></a>{% endif %}
     </div>
   </header>
 

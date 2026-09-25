@@ -149,7 +149,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
 
     workspace = PersonalWorkspace.objects.filter(owner=user).first()
     if workspace is None:
-        return {"active": False, "reports": [], "evidence": [], "years": [], "initiatives": [], "notices": [], "payments": []}
+        return {"active": False, "reports": [], "evidence": [], "years": [], "initiatives": [], "notices": [], "payments": [], "shares": []}
     return {
         "active": True,
         "subscription": {
@@ -209,7 +209,8 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "teacher_name": row.teacher_name,
                 "school_name": row.school_name,
                 "principal_name": row.principal_name,
-                "url": reverse("personal:report_detail", args=[row.pk]),
+                "trashed_at": _iso(row.trashed_at),
+                "url": reverse("personal:report_trash") if row.trashed_at else reverse("personal:report_detail", args=[row.pk]),
             }
             for row in workspace.reports.all()
         ],
@@ -222,6 +223,10 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "report_id": row.report_id,
                 "initiative_id": row.initiative_id,
                 "source_url": row.source_url,
+                "order": row.order,
+                "display_size": row.display_size,
+                "fit_mode": row.fit_mode,
+                "show_in_print": row.show_in_print,
                 "file": _file_reference(row.file),
                 "url": reverse("personal:evidence_download", args=[row.pk]) if row.file else None,
             }
@@ -241,6 +246,19 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "created_at": _iso(row.notice.created_at), "read_at": _iso(row.read_at),
             }
             for row in workspace.notices.select_related("notice").all()
+        ],
+        "shares": [
+            {
+                "kind": row.kind,
+                "report_id": row.report_id,
+                "academic_year": row.academic_year,
+                "is_active": row.is_active,
+                "expires_at": _iso(row.expires_at),
+                "access_count": row.access_count,
+                "last_accessed_at": _iso(row.last_accessed_at),
+                "created_at": _iso(row.created_at),
+            }
+            for row in workspace.share_links.all()
         ],
         "payments": [
             {

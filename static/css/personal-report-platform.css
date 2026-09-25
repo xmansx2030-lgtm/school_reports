@@ -68,11 +68,30 @@
 .personal-evidence-tile > i { display: grid; place-items: center; block-size: 6rem; border-radius: var(--twq-radius-sm); background: var(--twq-primary-soft); color: var(--twq-primary); font-size: 2rem; }
 .personal-evidence-tile strong { overflow-wrap: anywhere; font-size: var(--twq-font-size-sm); }
 .personal-evidence-tile a { font-size: var(--twq-font-size-xs); }
+.personal-evidence-print-state { display: inline-flex; width: fit-content; padding: .15rem .5rem; border-radius: var(--twq-radius-pill); background: var(--twq-warning-soft); color: var(--twq-warning); font-size: var(--twq-font-size-xs); font-weight: 700; }
+.personal-evidence-order { display: flex; gap: var(--twq-space-2); }
+.personal-evidence-order form { margin: 0; }
+.personal-evidence-order button { min-inline-size: 2.5rem; min-block-size: 2.5rem; border: 1px solid var(--twq-border); border-radius: var(--twq-radius-md); background: var(--twq-surface-secondary); color: var(--twq-primary); font: inherit; cursor: pointer; }
+.personal-evidence-order button:disabled { opacity: .4; cursor: default; }
+.personal-evidence-presentation { grid-column: 1 / -1; margin-block-start: var(--twq-space-5); padding-block-start: var(--twq-space-4); border-block-start: 1px solid var(--twq-divider); }
+.personal-evidence-presentation h3 { margin: 0; font-size: var(--twq-font-size-md); }
+.personal-evidence-presentation p { margin: var(--twq-space-1) 0 var(--twq-space-4); color: var(--twq-text-secondary); font-size: var(--twq-font-size-sm); }
+.personal-evidence-print-toggle { display: inline-flex; align-items: center; gap: var(--twq-space-2); min-block-size: var(--twq-tap-target); font-weight: 700; cursor: pointer; }
+.personal-evidence-print-toggle input { inline-size: 1.2rem; block-size: 1.2rem; accent-color: var(--twq-primary); }
 .personal-report-add-evidence { margin-block-start: var(--twq-space-4); }
 .personal-report-notice { display: flex; gap: var(--twq-space-2); }
 .personal-report-delete { justify-self: start; color: var(--twq-danger); }
 .personal-report-delete summary, .personal-evidence-delete summary { cursor: pointer; font-weight: 700; }
 .personal-report-delete p { color: var(--twq-text-secondary); }
+.personal-report-trash { display: grid; gap: var(--twq-space-5); }
+.personal-report-trash__section { padding: var(--twq-space-5); }
+.personal-report-trash__list { display: grid; gap: var(--twq-space-3); }
+.personal-report-trash__item { min-inline-size: 0; }
+.personal-report-trash__item h3 { margin: 0; font-size: var(--twq-font-size-md); overflow-wrap: anywhere; }
+.personal-report-trash__item p { margin: var(--twq-space-1) 0 0; color: var(--twq-text-secondary); font-size: var(--twq-font-size-sm); }
+.personal-report-trash__item form { margin: 0; }
+.personal-report-trash__item .twq-document-item__actions { flex-wrap: wrap; }
+.personal-report-trash__list > .twq-empty { padding: var(--twq-space-8) var(--twq-space-4); }
 .personal-evidence-filter .twq-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--twq-space-3); }
 .personal-evidence-filter .twq-field { min-inline-size: min(100%, 18rem); }
 .personal-evidence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: var(--twq-space-4); }
@@ -97,4 +116,4 @@
 .personal-evidence-create__side p { color: var(--twq-text-secondary); }
 @media (max-width: 70rem) { .personal-reports-page .my-reports-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); } .personal-reports-page .my-reports-filter__field--search, .personal-reports-page .my-reports-filter__actions { grid-column: 1 / -1; } }
 @media (max-width: 63.99rem) { .personal-report-mobile-actions { display: block; margin-block-start: var(--twq-space-4); } .personal-report-detail-layout, .personal-evidence-create__layout { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 40rem) { .personal-reports-page .my-reports-filter, .personal-evidence-create__fields { grid-template-columns: minmax(0, 1fr); } .personal-reports-page .my-reports-filter__field--search, .personal-reports-page .my-reports-filter__actions, .personal-evidence-create__wide { grid-column: auto; } .personal-report-detail-actions, .personal-evidence-actions { inline-size: 100%; } .personal-authoring .personal-evidence-row .personal-field:nth-child(3) { grid-column: auto; } }
+@media (max-width: 40rem) { .personal-reports-page .my-reports-filter, .personal-evidence-create__fields { grid-template-columns: minmax(0, 1fr); } .personal-reports-page .my-reports-filter__field--search, .personal-reports-page .my-reports-filter__actions, .personal-evidence-create__wide { grid-column: auto; } .personal-report-detail-actions, .personal-evidence-actions { inline-size: 100%; } .personal-report-trash__item { grid-template-columns: auto minmax(0, 1fr); } .personal-report-trash__item .twq-document-item__actions { grid-column: 1 / -1; } .personal-report-trash__item .twq-document-item__actions form, .personal-report-trash__item .twq-document-item__actions button { inline-size: 100%; } .personal-authoring .personal-evidence-row .personal-field:nth-child(3) { grid-column: auto; } }

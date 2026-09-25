@@ -138,6 +138,7 @@ def year_export(request, value):
             "teacher_name": row.teacher_name, "school_name": row.school_name,
             "principal_name": row.principal_name,
             "status": row.status,
+            "trashed_at": row.trashed_at.isoformat() if row.trashed_at else None,
         } for row in reports],
         "initiatives": [{
             "id": row.pk, "title": row.title, "summary": row.summary,
@@ -159,6 +160,8 @@ def year_export(request, value):
                 "id": item.pk, "title": item.title, "description": item.description,
                 "report_id": item.report_id, "initiative_id": item.initiative_id,
                 "source_url": item.source_url,
+                "order": item.order, "display_size": item.display_size,
+                "fit_mode": item.fit_mode, "show_in_print": item.show_in_print,
             }
             if item.file:
                 suffix = item.file.name.rsplit(".", 1)[-1].lower()

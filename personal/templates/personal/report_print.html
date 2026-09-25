@@ -20,7 +20,7 @@
     .hdr-left { text-align: left; }
     .page::before { content: ""; }
     .meta-table { width: 100%; }
-    .personal-print-evidence-link { margin-block: 2mm; padding: 2mm 3mm; border: 1px solid #d6e0da; border-radius: 2mm; font-size: 9pt; }
+    .personal-print-evidence-link { grid-column: 1 / -1; margin-block: 2mm; padding: 2mm 3mm; border: 1px solid #d6e0da; border-radius: 2mm; font-size: 9pt; }
     .personal-print-evidence-link a { color: #006c35; overflow-wrap: anywhere; }
     .personal-print-note { margin-block-start: auto; padding-block-start: 4mm; color: #64736c; font-size: 8pt; line-height: 1.7; }
     @page { size: A4; margin: 8mm 12mm 12mm; }
@@ -31,6 +31,7 @@
       .personal-print-evidence-link { break-inside: avoid; }
     }
     {% include "reports/partials/report_print_official_styles.html" %}
+    @media screen { .img-box img.img-fit--cover { object-fit: cover; } }
     @media print { .page { display: block; min-height: 0; } }
   </style>
   <script src="{% static 'js/personal-print.js' %}" nonce="{{ CSP_NONCE }}" defer></script>
@@ -50,7 +51,7 @@
     {% if report.show_implementation and report.implementation %}<section class="section print-section"><h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>آلية التنفيذ</span></h2><div class="section-body">{{ report.implementation }}</div></section>{% endif %}
     {% if report.show_results and report.results %}<section class="section print-section"><h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>النتائج</span></h2><div class="section-body">{{ report.results }}</div></section>{% endif %}
     {% if report.show_recommendations and report.recommendations %}<section class="section print-section"><h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>التوصيات</span></h2><div class="section-body">{{ report.recommendations }}</div></section>{% endif %}
-    {% if evidence %}<section class="section evidence-section"><h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>الشواهد والمرفقات</span></h2><div class="images-grid">{% for item in evidence %}{% if item.is_image %}<figure class="img-box"><img src="{% url 'personal:evidence_preview' item.pk %}" alt="{{ item.title }}"><figcaption class="img-cap">{{ item.title }}</figcaption></figure>{% endif %}{% endfor %}</div>{% for item in evidence %}{% if not item.is_image %}<div class="personal-print-evidence-link"><strong>{{ item.title }}</strong> · {% if item.file %}<a href="{% url 'personal:evidence_download' item.pk %}">تنزيل الملف المرفق</a>{% elif item.source_url %}<a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</div>{% endif %}{% endfor %}</section>{% endif %}
+    {% if evidence %}<section class="section evidence-section"><h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>الشواهد والمرفقات</span></h2><div class="images-grid">{% for item in evidence %}{% if item.is_image %}<figure class="img-box img-box--{{ item.display_size }}"><img class="img-fit--{{ item.fit_mode }}" src="{% url 'personal:evidence_preview' item.pk %}" alt="{{ item.title }}"><figcaption class="img-cap">{{ item.title }}</figcaption></figure>{% else %}<div class="personal-print-evidence-link"><strong>{{ item.title }}</strong> · {% if item.file %}<a href="{% url 'personal:evidence_download' item.pk %}">تنزيل الملف المرفق</a>{% elif item.source_url %}<a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</div>{% endif %}{% endfor %}</div></section>{% endif %}
     <p class="personal-print-note">أُعد هذا المستند في المساحة الشخصية. أسماء جهة العمل ومديرها، إن وُجدت، معلومات تعريفية أدخلها {{ workspace.owner.personal_teacher_label }}؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</p>
     <footer class="report-footer"><div>تم الإصدار إلكترونيًا: {% now "Y/m/d H:i" %}</div><div class="footer-brand">منصة توثيق</div><div class="footer-ref">PER-{{ report.pk }}</div></footer>
   </main>

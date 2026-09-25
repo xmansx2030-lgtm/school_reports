@@ -108,6 +108,26 @@ class PersonalPortfolioTests(TestCase):
         ).status_code, 302)
         self.assertEqual(PersonalEvidence.objects.count(), 1)
 
+    def test_report_year_cannot_change_while_linked_to_portfolio_axis_without_evidence(self):
+        report = PersonalReport.objects.create(
+            workspace=self.workspace, title="تقرير بلا شواهد", academic_year=self.YEAR,
+            report_date=date(2026, 9, 24), description="عمل موثق",
+            teacher_name=self.teacher.name, school_name=self.workspace.school_name,
+        )
+        self.assertFalse(report.evidence.exists())
+        self.assertEqual(self.post_axis("link_report", report_id=report.pk).status_code, 302)
+        link = PersonalPortfolioReport.objects.get(report=report)
+        edited = self.client.post(reverse("personal:report_edit", args=[report.pk]), {
+            "title": report.title, "category": "نشاط", "report_date": "2026-09-24",
+            "academic_year": "1448-1449", "description": report.description,
+            "show_details": "on", "selection_enabled": "on", "status": "complete",
+        })
+        self.assertEqual(edited.status_code, 200)
+        self.assertContains(edited, "لا يمكن تغيير سنة التقرير وهو مرتبط بمحور ملف الإنجاز")
+        report.refresh_from_db()
+        self.assertEqual(report.academic_year, self.YEAR)
+        self.assertTrue(PersonalPortfolioReport.objects.filter(pk=link.pk, report=report).exists())
+
     def test_archive_counts_only_documented_axes(self):
         section = PersonalPortfolioSection.objects.create(
             workspace=self.workspace, academic_year=self.YEAR, code=1

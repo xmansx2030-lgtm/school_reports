@@ -1,0 +1,40 @@
+{% extends "personal/base.html" %}
+{% load static hijri_tags %}
+{% block title %}سلة التقارير{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-report-platform.css' %}?v=20260925.2">{% endblock %}
+{% block content %}
+<div class="twq-page personal-report-trash">
+  <header class="twq-page-header" aria-labelledby="personalTrashTitle">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-trash-arrow-up" aria-hidden="true"></i> تقاريري · محفوظة للاستعادة</p>
+      <h1 class="twq-page-header__title" id="personalTrashTitle">سلة التقارير</h1>
+      <p class="twq-page-header__lead">تقاريرك المنقولة إلى السلة محفوظة مع شواهدها وروابط ملف الإنجاز. الاستعادة تعيدها إلى مساحتك.</p>
+    </div>
+    <div class="twq-page-header__aside"><a class="twq-btn twq-btn--secondary" href="{% url 'personal:reports' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> تقاريري</a></div>
+  </header>
+  {% if not subscription_active %}<div class="twq-alert twq-alert--info" role="note">يمكنك مراجعة السلة أثناء توقف الاشتراك؛ يلزم اشتراك نشط للاستعادة.</div>{% endif %}
+  <section class="twq-section personal-report-trash__section" aria-labelledby="personalTrashListTitle">
+    <header class="twq-section__header"><div><span class="twq-section__kicker">الأعمال المحفوظة</span><h2 id="personalTrashListTitle">التقارير المنقولة إلى السلة</h2><p>تظل محسوبة ضمن سعة باقتك، وتبقى ضمن تصدير السنة الدراسية.</p></div><span class="twq-section__meta">{{ reports.paginator.count }} تقرير</span></header>
+    <div class="personal-report-trash__list">
+      {% for report in reports %}
+        <article class="twq-document-item personal-report-trash__item">
+          <div class="twq-document-item__icon" aria-hidden="true"><i class="fa-regular fa-file-lines"></i></div>
+          <div class="twq-document-item__content">
+            <h3>{{ report.title }}</h3>
+            <p><bdi dir="ltr">{{ report.academic_year }}</bdi> · {{ report.report_date|hijri }} هـ · نُقل إلى السلة <time datetime="{{ report.trashed_at|date:'c' }}">{{ report.trashed_at|date:"Y-m-d H:i" }}</time></p>
+            {% if report.academic_year in archived_years %}<span class="twq-status twq-status--draft">السنة مؤرشفة؛ أعد فتحها قبل الاستعادة</span>{% endif %}
+          </div>
+          <div class="twq-document-item__actions">
+            {% if subscription_active and report.academic_year not in archived_years %}
+              <form method="post" action="{% url 'personal:report_restore' report.pk %}">{% csrf_token %}<button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> استعادة التقرير</button></form>
+            {% endif %}
+          </div>
+        </article>
+      {% empty %}
+        <div class="twq-empty twq-empty--local"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-trash-can"></i></span><h3 class="twq-empty__title">سلة التقارير فارغة</h3><p class="twq-empty__message">ستظهر هنا التقارير التي تنقلها إلى السلة.</p><a class="twq-btn twq-btn--secondary" href="{% url 'personal:reports' %}">العودة إلى تقاريري</a></div>
+      {% endfor %}
+    </div>
+    {% if reports.paginator.num_pages > 1 %}<nav class="personal-pagination" aria-label="صفحات سلة التقارير">{% if reports.has_previous %}<a class="twq-btn twq-btn--secondary" href="?page={{ reports.previous_page_number }}">السابق</a>{% endif %}<span>صفحة {{ reports.number }} من {{ reports.paginator.num_pages }}</span>{% if reports.has_next %}<a class="twq-btn twq-btn--secondary" href="?page={{ reports.next_page_number }}">التالي</a>{% endif %}</nav>{% endif %}
+  </section>
+</div>
+{% endblock %}

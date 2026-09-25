@@ -1,4 +1,4 @@
-{% load static %}
+{% load static personal_notices %}
 <!doctype html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
@@ -29,9 +29,10 @@
   <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20260925.2">
   {% block head %}{% endblock %}
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
-  <script src="{% static 'js/personal-workspace-shell.js' %}?v=20260925.1" defer></script>
+  <script src="{% static 'js/personal-workspace-shell.js' %}?v=20260925.2" defer></script>
 </head>
 <body class="page personal-page not-home"{% if request.user.is_authenticated %} data-pwa-user-id="{{ request.user.id }}"{% endif %}>
+  {% personal_unread_notices as personal_unread_count %}
   <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
   <header class="site-header" id="siteHeader">
     <div class="container hdr">
@@ -49,8 +50,8 @@
       <nav class="hdr-nav" aria-label="التنقل في مساحة المعلم الشخصية">
         {% if request.user.is_authenticated %}
           <a class="tab {% if active == 'dashboard' %}is-active{% endif %}" href="{% url 'personal:dashboard' %}"{% if active == 'dashboard' %} aria-current="page"{% endif %}>الرئيسية</a>
-          <a class="tab {% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}"{% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %} aria-current="page"{% endif %}>التقارير</a>
-          <a class="tab {% if active == 'evidence' or active == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' %} aria-current="page"{% endif %}>الشواهد</a>
+          <a class="tab {% if active == 'reports' or active == 'report_trash' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}"{% if active == 'reports' or active == 'report_trash' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %} aria-current="page"{% endif %}>التقارير</a>
+          <a class="tab {% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %} aria-current="page"{% endif %}>الشواهد</a>
           <a class="tab {% if active == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}>ملف الإنجاز</a>
           <a class="tab {% if active == 'initiatives' or active == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}"{% if active == 'initiatives' or active == 'initiative_edit' %} aria-current="page"{% endif %}>المبادرات</a>
           <a class="tab {% if active == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}"{% if active == 'years' %} aria-current="page"{% endif %}>الأرشيف</a>
@@ -62,7 +63,7 @@
       </nav>
       {% endwith %}
       <div class="hdr-actions">
-        {% if request.user.is_authenticated %}<a class="icon-btn" href="{% url 'personal:notices' %}" aria-label="إشعارات المنصة" title="إشعارات المنصة"><i class="fa-solid fa-bell" aria-hidden="true"></i></a>{% endif %}
+        {% if request.user.is_authenticated %}<a class="icon-btn" href="{% url 'personal:notices' %}" aria-label="إشعارات المنصة{% if personal_unread_count %}، {{ personal_unread_count }} غير مقروء{% endif %}" title="إشعارات المنصة"><i class="fa-solid fa-bell" aria-hidden="true"></i>{% if personal_unread_count %}<span class="dot" aria-hidden="true">{% if personal_unread_count > 99 %}99+{% else %}{{ personal_unread_count }}{% endif %}</span>{% endif %}</a>{% endif %}
         <button class="icon-btn theme-toggle" type="button" aria-label="تفعيل الوضع الليلي" title="تفعيل الوضع الليلي"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
         {% if request.user.is_authenticated %}<a class="avatar personal-account-avatar" href="{% url 'personal:account' %}" aria-label="حسابي" title="حسابي">{{ request.user.name|default:'ح'|slice:':1' }}</a>{% endif %}
       </div>
@@ -80,8 +81,8 @@
     <nav class="drawer-nav" aria-label="القائمة الجانبية لمساحة المعلم">
       {% if request.user.is_authenticated %}
         <a class="{% if active == 'dashboard' %}is-active{% endif %}" href="{% url 'personal:dashboard' %}"{% if active == 'dashboard' %} aria-current="page"{% endif %}><span>الرئيسية</span><i class="fa-solid fa-house" aria-hidden="true"></i></a>
-        <a class="{% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}"{% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %} aria-current="page"{% endif %}><span>التقارير</span><i class="fa-solid fa-file-lines" aria-hidden="true"></i></a>
-        <a class="{% if active == 'evidence' or active == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' %} aria-current="page"{% endif %}><span>الشواهد</span><i class="fa-solid fa-paperclip" aria-hidden="true"></i></a>
+        <a class="{% if active == 'reports' or active == 'report_trash' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}"{% if active == 'reports' or active == 'report_trash' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %} aria-current="page"{% endif %}><span>التقارير</span><i class="fa-solid fa-file-lines" aria-hidden="true"></i></a>
+        <a class="{% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %} aria-current="page"{% endif %}><span>الشواهد</span><i class="fa-solid fa-paperclip" aria-hidden="true"></i></a>
         <a class="{% if active == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}><span>ملف الإنجاز</span><i class="fa-solid fa-briefcase" aria-hidden="true"></i></a>
         <a class="{% if active == 'initiatives' or active == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}"{% if active == 'initiatives' or active == 'initiative_edit' %} aria-current="page"{% endif %}><span>المبادرات</span><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></a>
         <a class="{% if active == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}"{% if active == 'years' %} aria-current="page"{% endif %}><span>السنوات والأرشيف</span><i class="fa-solid fa-box-archive" aria-hidden="true"></i></a>
@@ -97,6 +98,28 @@
     {% endwith %}
     {% if request.user.is_authenticated %}<div class="drawer-footer"><a class="personal-logout-link" href="{% url 'reports:logout' %}"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> تسجيل الخروج</a></div>{% endif %}
   </aside>
+
+  {% if request.user.is_authenticated %}
+    {% with active=request.resolver_match.url_name %}
+    <nav class="mobile-tabbar" aria-label="التنقل السريع في المساحة الشخصية">
+      <a href="{% url 'personal:dashboard' %}" class="{% if active == 'dashboard' %}is-active{% endif %}"{% if active == 'dashboard' %} aria-current="page"{% endif %}>
+        <i class="fa-solid fa-house" aria-hidden="true"></i><span>الرئيسية</span>
+      </a>
+      <a href="{% url 'personal:portfolio' %}" class="{% if active == 'portfolio' %}is-active{% endif %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}>
+        <i class="fa-solid fa-briefcase" aria-hidden="true"></i><span>ملف الإنجاز</span>
+      </a>
+      <a href="{% url 'personal:report_create' %}" class="mobile-tabbar__primary {% if active == 'report_create' %}is-active{% endif %}"{% if active == 'report_create' %} aria-current="page"{% endif %}>
+        <i class="fa-solid fa-plus" aria-hidden="true"></i><span>تقرير جديد</span>
+      </a>
+      <a href="{% url 'personal:notices' %}" class="{% if active == 'notices' or active == 'notice_detail' %}is-active{% endif %}"{% if active == 'notices' or active == 'notice_detail' %} aria-current="page"{% endif %} aria-label="الإشعارات{% if personal_unread_count %}، {{ personal_unread_count }} غير مقروء{% endif %}">
+        <span class="mobile-tabbar__icon"><i class="fa-solid fa-bell" aria-hidden="true"></i>{% if personal_unread_count %}<b aria-hidden="true">{% if personal_unread_count > 99 %}99+{% else %}{{ personal_unread_count }}{% endif %}</b>{% endif %}</span><span>الإشعارات</span>
+      </a>
+      <button type="button" data-mobile-tabbar-more aria-controls="mobileDrawer" aria-expanded="false"{% if active == 'reports' or active == 'report_trash' or active == 'report_detail' or active == 'report_edit' or active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' or active == 'initiatives' or active == 'initiative_edit' or active == 'years' or active == 'billing' or active == 'checkout_start' or active == 'account' or active == 'setup' %} class="is-active"{% endif %}>
+        <i class="fa-solid fa-bars" aria-hidden="true"></i><span>المزيد</span>
+      </button>
+    </nav>
+    {% endwith %}
+  {% endif %}
 
   <main class="container page-main personal-main" id="mainContent">
     {% if messages %}<div class="personal-messages" aria-live="polite">{% for message in messages %}<p class="personal-message personal-message--{{ message.tags|default:'info' }}">{{ message }}</p>{% endfor %}</div>{% endif %}

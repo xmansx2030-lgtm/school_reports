@@ -3,7 +3,7 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Max, Prefetch, Sum
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
@@ -47,7 +47,12 @@ def _sections(workspace, year):
     """Show all school portfolio axes without writing rows on a GET."""
     rows = PersonalPortfolioSection.objects.filter(
         workspace=workspace, academic_year=year
-    ).prefetch_related("linked_reports__report", "linked_evidence__evidence")
+    ).prefetch_related(
+        Prefetch("linked_reports", queryset=PersonalPortfolioReport.objects.filter(
+            report__trashed_at__isnull=True,
+        ).select_related("report")),
+        "linked_evidence__evidence",
+    )
     by_code = {row.code: row for row in rows}
     sections = []
     for code, title in AchievementSection.Code.choices:
@@ -71,7 +76,7 @@ def _context(workspace, year):
         "year_record": year_record, "general_form": PersonalPortfolioProfileForm(instance=year_record),
         "sections": sections, "documented_count": documented,
         "progress_percent": round(documented * 100 / len(AchievementSection.Code.choices)),
-        "reports": workspace.reports.filter(academic_year=year) if year else workspace.reports.none(),
+        "reports": workspace.reports.filter(academic_year=year, trashed_at__isnull=True) if year else workspace.reports.none(),
         "evidence": workspace.evidence.filter(academic_year=year) if year else workspace.evidence.none(),
         "initiatives": workspace.initiatives.filter(academic_year=year) if year else workspace.initiatives.none(),
         "is_archived": bool(year_record and year_record.archived_at),
@@ -148,7 +153,10 @@ def portfolio(request):
                     section.save(update_fields=["teacher_notes", "updated_at"])
                     messages.success(request, "حُفظ وصف المحور.")
             elif action == "link_report":
-                report = get_object_or_404(PersonalReport, pk=_posted_id(request, "report_id"), workspace=locked, academic_year=year)
+                report = get_object_or_404(
+                    PersonalReport, pk=_posted_id(request, "report_id"), workspace=locked,
+                    academic_year=year, trashed_at__isnull=True,
+                )
                 _, created = PersonalPortfolioReport.objects.get_or_create(section=section, report=report)
                 messages.success(request, "رُبط التقرير بالمحور." if created else "التقرير مرتبط بهذا المحور بالفعل.")
             elif action == "unlink_report":
@@ -178,12 +186,20 @@ def portfolio(request):
                 if section.linked_evidence.count() >= 8 or locked.evidence.count() >= plan.max_evidence:
                     messages.error(request, "بلغت الحد الأعلى للشواهد في المحور أو الباقة.")
                     return target
+                report = form.cleaned_data.get("report")
+                if report and locked.evidence.filter(report=report).count() >= 8:
+                    messages.error(request, "الحد الأعلى للتقرير المرتبط 8 شواهد.")
+                    return target
                 if used + file_size > plan.storage_limit_mb * 1024 * 1024:
                     messages.error(request, "تجاوز الملف سعة باقتك الحالية.")
                     return target
                 evidence = form.save(commit=False)
                 evidence.workspace = locked
                 evidence.file_size = file_size
+                if evidence.report_id:
+                    evidence.order = (locked.evidence.filter(report_id=evidence.report_id).aggregate(
+                        max_order=Max("order")
+                    )["max_order"] or 0) + 1
                 evidence.save()
                 PersonalPortfolioEvidence.objects.create(section=section, evidence=evidence)
                 messages.success(request, "أُضيف الشاهد إلى المحور ومكتبتك الشخصية.")
@@ -203,6 +219,11 @@ def portfolio_print(request):
     if year not in _portfolio_years(workspace):
         raise Http404
     context = _context(workspace, year)
+    context["evidence"] = context["evidence"].filter(show_in_print=True).order_by("report_id", "order", "id")
+    for section in context["sections"]:
+        section["evidence"] = [link for link in section["evidence"] if link.evidence.show_in_print]
+        section["documented"] = bool(section["notes"].strip() or section["reports"] or section["evidence"])
+    context["documented_count"] = sum(section["documented"] for section in context["sections"])
     context["document_title"] = f"ملف الإنجاز {year}"
     context["school_names"] = list(context["reports"].order_by("school_name").values_list("school_name", flat=True).distinct()) or [workspace.school_name]
     context["principal_names"] = list(context["reports"].exclude(principal_name="").order_by("principal_name").values_list("principal_name", flat=True).distinct()) or ([workspace.principal_name] if workspace.principal_name else [])
