@@ -234,6 +234,7 @@ class OperationAction(models.Model):
         RESTART_SERVICE = "restart_service", "إعادة تشغيل خدمة"
         RELOAD_PROXY = "reload_proxy", "إعادة تحميل الوكيل"
         CREATE_BACKUP = "create_backup", "إنشاء نسخة احتياطية"
+        READ_LOGS = "read_logs", "قراءة السجلات"
 
     class Status(models.TextChoices):
         QUEUED = "queued", "في الانتظار"
@@ -250,9 +251,33 @@ class OperationAction(models.Model):
     request_id = models.CharField(max_length=64, unique=True, default=_action_request_id, editable=False)
     result_summary = models.CharField(max_length=500, blank=True, default="")
     error_code = models.CharField(max_length=80, blank=True, default="")
+    log_content = models.TextField(blank=True, default="")
+    log_analysis = models.JSONField(default=dict, blank=True)
+    parameters = models.JSONField(default=dict, blank=True)
     requested_at = models.DateTimeField(default=timezone.now)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-requested_at", "-id")
+
+
+class HostAgentHeartbeat(models.Model):
+    """The host runner updates this; a setting alone cannot claim it is online."""
+
+    name = models.CharField(max_length=40, unique=True, default="primary")
+    last_seen_at = models.DateTimeField(default=timezone.now)
+
+
+class ProviderAction(models.Model):
+    server = models.ForeignKey(ManagedServer, on_delete=models.PROTECT, related_name="provider_actions")
+    action = models.CharField(max_length=32)
+    provider_action_id = models.BigIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=20, default="requested")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    requested_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    error_code = models.CharField(max_length=80, blank=True, default="")
 
     class Meta:
         ordering = ("-requested_at", "-id")

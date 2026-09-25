@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client.dart';
+import '../config.dart';
 import '../design_system.dart';
 import '../state.dart';
+import 'emergency_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.notice});
@@ -196,7 +198,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   hintText: 'الرمز المرسل إلى جوالك',
                                   prefixIcon: Icon(Icons.pin_outlined),
                                 ),
-                                validator: (value) => _needsOtp &&
+                                validator: (value) =>
+                                    _needsOtp &&
                                         (value == null || value.trim().isEmpty)
                                     ? 'أدخل رمز التحقق'
                                     : null,
@@ -221,6 +224,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ),
+                    if (AppConfig.emergencyUrl.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const EmergencyScreen(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.power_settings_new),
+                        label: const Text('طوارئ الخادم عند تعذر الاتصال'),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     const Text(
                       'اتصال آمن ببيئة الإنتاج · tawtheeq-ksa.com',

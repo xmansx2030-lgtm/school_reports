@@ -99,6 +99,7 @@ class ServerInfo {
   const ServerInfo({
     required this.id,
     required this.name,
+    required this.slug,
     required this.provider,
     required this.status,
     required this.projects,
@@ -111,6 +112,7 @@ class ServerInfo {
   });
   final int id;
   final String name;
+  final String slug;
   final String provider;
   final String? publicIp;
   final String? serverType;
@@ -124,6 +126,7 @@ class ServerInfo {
   factory ServerInfo.fromJson(Map<String, dynamic> json) => ServerInfo(
     id: json['id'] as int,
     name: '${json['name'] ?? ''}',
+    slug: '${json['slug'] ?? ''}',
     provider: '${json['provider'] ?? ''}',
     publicIp: json['public_ip']?.toString(),
     serverType: json['server_type']?.toString(),
@@ -139,6 +142,115 @@ class ServerInfo {
         )
         .toList(),
   );
+}
+
+class ProviderOverview {
+  const ProviderOverview({
+    required this.configured,
+    required this.canControl,
+    required this.detail,
+    this.server,
+  });
+  final bool configured;
+  final bool canControl;
+  final String detail;
+  final ProviderServerInfo? server;
+
+  factory ProviderOverview.fromJson(Map<String, dynamic> json) =>
+      ProviderOverview(
+        configured: json['configured'] == true,
+        canControl: json['can_control'] == true,
+        detail: '${json['detail'] ?? ''}',
+        server: json['server'] is Map
+            ? ProviderServerInfo.fromJson(
+                Map<String, dynamic>.from(json['server'] as Map),
+              )
+            : null,
+      );
+}
+
+class ProviderServerInfo {
+  const ProviderServerInfo({
+    required this.name,
+    required this.status,
+    required this.serverType,
+    required this.location,
+    required this.backupWindow,
+    required this.deleteProtected,
+    required this.backups,
+    required this.recentActions,
+    required this.metrics,
+    required this.partialErrors,
+    this.fetchedAt,
+  });
+  final String name;
+  final String status;
+  final String serverType;
+  final String location;
+  final String backupWindow;
+  final bool deleteProtected;
+  final List<Map<String, dynamic>> backups;
+  final List<Map<String, dynamic>> recentActions;
+  final Map<String, dynamic> metrics;
+  final List<String> partialErrors;
+  final DateTime? fetchedAt;
+
+  factory ProviderServerInfo.fromJson(Map<String, dynamic> json) {
+    final protection = Map<String, dynamic>.from(
+      json['protection'] as Map? ?? const {},
+    );
+    return ProviderServerInfo(
+      name: '${json['name'] ?? ''}',
+      status: '${json['status'] ?? 'unknown'}',
+      serverType: '${json['server_type'] ?? ''}',
+      location: '${json['location'] ?? ''}',
+      backupWindow: '${json['backup_window'] ?? ''}',
+      deleteProtected: protection['delete'] == true,
+      backups: (json['backups'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
+      recentActions: (json['recent_actions'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
+      metrics: Map<String, dynamic>.from(json['metrics'] as Map? ?? const {}),
+      partialErrors: (json['partial_errors'] as List? ?? const [])
+          .map((item) => '$item')
+          .toList(),
+      fetchedAt: _date(json['fetched_at']),
+    );
+  }
+
+  double? latestMetric(String key) {
+    final series = Map<String, dynamic>.from(
+      metrics['time_series'] as Map? ?? const {},
+    );
+    final points = (series[key] as Map?)?['values'] as List?;
+    if (points == null || points.isEmpty) return null;
+    final last = points.last;
+    if (last is! List || last.length < 2) return null;
+    return _double(last[1]);
+  }
+}
+
+class ProviderActionInfo {
+  const ProviderActionInfo({
+    required this.id,
+    required this.action,
+    required this.status,
+    required this.errorCode,
+  });
+  final int id;
+  final String action;
+  final String status;
+  final String errorCode;
+  bool get finished => status == 'success' || status == 'error';
+  factory ProviderActionInfo.fromJson(Map<String, dynamic> json) =>
+      ProviderActionInfo(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        action: '${json['action'] ?? ''}',
+        status: '${json['status'] ?? ''}',
+        errorCode: '${json['error_code'] ?? ''}',
+      );
 }
 
 class IncidentInfo {
@@ -448,6 +560,8 @@ class OperationActionInfo {
     required this.errorCode,
     this.requestedAt,
     this.finishedAt,
+    this.logContent = '',
+    this.logAnalysis = const {},
   });
   final int id;
   final String requestId;
@@ -458,6 +572,8 @@ class OperationActionInfo {
   final String errorCode;
   final DateTime? requestedAt;
   final DateTime? finishedAt;
+  final String logContent;
+  final Map<String, dynamic> logAnalysis;
 
   factory OperationActionInfo.fromJson(Map<String, dynamic> json) =>
       OperationActionInfo(
@@ -470,6 +586,10 @@ class OperationActionInfo {
         errorCode: '${json['error_code'] ?? ''}',
         requestedAt: _date(json['requested_at']),
         finishedAt: _date(json['finished_at']),
+        logContent: '${json['log_content'] ?? ''}',
+        logAnalysis: Map<String, dynamic>.from(
+          json['log_analysis'] as Map? ?? const {},
+        ),
       );
 }
 
