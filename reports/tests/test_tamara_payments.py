@@ -98,6 +98,7 @@ class TamaraPaymentTests(TestCase):
         self.assertContains(response, 'id="tamaraSubmit"')
         self.assertContains(response, 'id="tamaraInstallmentAmount"')
         self.assertContains(response, 'data-payment-choice="tamara"')
+        self.assertContains(response, "img/payment/tamara-wordmark-ar.png")
         self.assertContains(response, "إضافة عنوان فوترة")
         self.assertContains(response, "بيئة اختبار")
 

@@ -68,6 +68,7 @@ class MoyasarPaymentTests(TestCase):
         MOYASAR_ENABLED=True,
         MOYASAR_ENVIRONMENT="test",
         MOYASAR_SECRET_KEY="sk_test_example",
+        TAMARA_ENABLED=False,
     )
     def test_moyasar_option_is_marked_as_a_test_environment(self):
         response = self.client.get(reverse("reports:my_subscription"))
@@ -75,10 +76,13 @@ class MoyasarPaymentTests(TestCase):
         self.assertContains(response, 'id="moyasarSubmit"')
         self.assertContains(response, 'data-payment-choice="moyasar"')
         self.assertContains(response, "الدفع الإلكتروني")
-        self.assertContains(response, "Apple Pay")
-        self.assertContains(response, "Samsung Pay")
+        self.assertNotContains(response, "Apple Pay")
+        self.assertNotContains(response, "Samsung Pay")
         self.assertNotContains(response, "الدفع عبر ميّسر")
         self.assertContains(response, "بيئة اختبار")
+        for asset in ("img/payment/mada.svg", "img/payment/visa.svg", "img/payment/mastercard.svg"):
+            self.assertContains(response, asset)
+        self.assertNotContains(response, "img/payment/tamara-wordmark-ar.png")
 
     @override_settings(
         MOYASAR_ENABLED=True,
@@ -120,10 +124,10 @@ class MoyasarPaymentTests(TestCase):
             "img/payment/mada.svg",
             "img/payment/visa.svg",
             "img/payment/mastercard.svg",
-            "img/payment/apple-pay.svg",
-            "img/payment/samsung-pay.svg",
         ):
             self.assertContains(response, asset)
+        self.assertNotContains(response, "img/payment/apple-pay.svg")
+        self.assertNotContains(response, "img/payment/samsung-pay.svg")
 
     @override_settings(
         MOYASAR_ENABLED=True,

@@ -1104,10 +1104,10 @@
     justify-content: center;
     gap: 5px;
     min-width: 46px;
-    min-height: 28px;
-    padding: 4px 8px;
+    min-height: 38px;
+    padding: 7px 10px;
     border: 1px solid color-mix(in srgb, var(--id-ink) 12%, transparent);
-    border-radius: var(--id-r1);
+    border-radius: var(--id-r2);
     background: var(--id-surface);
     color: var(--id-ink);
     font-size: .68rem;
@@ -1119,17 +1119,13 @@
   .payment-brand-logo--mada { width: 54px; height: 18px; }
   .payment-brand-logo--visa { width: 42px; height: 16px; }
   .payment-brand-logo--mastercard { width: 38px; height: 23px; }
-  .payment-brand-logo--apple { width: 47px; height: 19px; }
-  .payment-brand-logo--samsung { width: 39px; height: 25px; }
   .payment-method-gateway-logo { display: block; width: 64px; height: auto; }
   .deferred-payment-brand {
     display: inline-flex;
     align-items: center;
-    color: var(--id-ink-soft);
-    font-size: .92rem;
-    font-weight: 950;
-    letter-spacing: -.03em;
   }
+  .payment-method-tamara-logo { display: block; width: 82px; height: auto; max-height: 27px; object-fit: contain; }
+  .checkout-logo-frame--tamara { min-width: 110px; }
   .payment-method-bank-brand { color: var(--id-tone-approved); font-size: .62rem; }
   .payment-method-hint {
     display: flex;

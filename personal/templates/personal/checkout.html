@@ -1,10 +1,18 @@
 {% extends "personal/base.html" %}
+{% load static %}
 {% block title %}اشتراك {{ plan.name }}{% endblock %}
 {% block content %}
 <div class="personal-heading"><div><span class="personal-kicker">دفع آمن · اشتراك شخصي</span><h1>تأكيد الاشتراك</h1><p>راجع بيانات الباقة قبل الانتقال إلى صفحة الدفع المستضافة لدى ميسّر.</p></div><a href="{% url 'personal:billing' %}">العودة إلى الاشتراك</a></div>
 <section class="personal-card twq-card personal-card--form">
   <div class="personal-row"><span><strong>{{ plan.name }}</strong><small>{{ plan.duration_days }} يومًا · حتى {{ plan.max_reports }} تقرير · {{ plan.max_evidence }} شاهد · {{ plan.storage_limit_mb }} م.ب</small></span><strong>{{ plan.price|floatformat:"-2" }} ريال</strong></div>
   <div class="personal-row"><span><strong>صاحب الفاتورة</strong><small>{{ request.user.name }} · {{ request.user.email }}</small></span><a href="{% url 'personal:setup' %}?next={{ request.path|urlencode }}">تعديل البريد</a></div>
+  {% if moyasar_enabled %}
+    <div class="personal-payment-brands" role="list" aria-label="وسائل الدفع الإلكتروني المدعومة">
+      <span class="personal-payment-brand" role="listitem" aria-label="مدى"><img src="{% static 'img/payment/mada.svg' %}" alt="" width="54" height="18"></span>
+      <span class="personal-payment-brand" role="listitem" aria-label="فيزا"><img src="{% static 'img/payment/visa.svg' %}" alt="" width="42" height="16"></span>
+      <span class="personal-payment-brand" role="listitem" aria-label="ماستركارد"><img src="{% static 'img/payment/mastercard.svg' %}" alt="" width="38" height="23"></span>
+    </div>
+  {% endif %}
   <p class="personal-hint">تُرسل الفاتورة الإلكترونية إلى بريد الحساب بعد تأكيد الدفع. لا تُفعّل الباقة بمجرد العودة من بوابة الدفع؛ نتحقق من الفاتورة مباشرةً لدى ميسّر.</p>
   {% if moyasar_enabled %}
     <form method="post">

@@ -38,7 +38,7 @@
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=20260924.2">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=20260925.1">
   <link rel="stylesheet" href="{% static 'css/flexible-pricing.css' %}?v=20260813.2">
   {% if AI_MANSOUR_PUBLIC_ENABLED %}
     <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260801.2">
@@ -317,7 +317,6 @@
         <div class="shell personal-plan-catalog" aria-labelledby="personalPlanCatalogTitle">
           <div class="personal-plan-catalog__heading">
             <div><span class="section-kicker">خطتك تبدأ من هنا</span><h3 id="personalPlanCatalogTitle">باقات المساحة الشخصية</h3></div>
-            <p>للمعلم والمعلمة بصفة فردية؛ السعات والأسعار المعروضة تُدار من المنصة وتختلف عن اشتراك المدرسة.</p>
           </div>
           <div class="personal-plan-catalog__grid">
             {% for plan in personal_plan_cards %}
@@ -568,23 +567,26 @@
         <div class="footer-links"><strong>السياسات</strong><a href="{% url 'reports:terms_conditions' %}">الشروط والأحكام</a><a href="{% url 'reports:privacy_policy' %}">سياسة الخصوصية</a><a href="{% url 'reports:refund_policy' %}">الإلغاء والاسترجاع</a><a href="{% url 'reports:service_delivery_policy' %}">تقديم الخدمة</a><a href="{% url 'reports:complaints_policy' %}">الشكاوى والمقترحات</a></div>
       </div>
       {% include "reports/partials/business_disclosure.html" with disclosure_variant="footer" %}
+      {% if moyasar_enabled or tamara_enabled %}
       <section class="footer-payments" aria-label="وسائل الدفع المدعومة">
         <div class="footer-payments-copy">
           <strong><i class="fa-solid fa-lock" aria-hidden="true"></i> دفع آمن وموثوق</strong>
           <small>{% if active_payment_gateway_names %}عبر {{ active_payment_gateway_names }} · {% endif %}تظهر الوسائل المفعّلة والمتاحة عند إتمام الدفع</small>
         </div>
-        <div class="payment-marks" role="list" aria-label="شبكات البطاقات والمحافظ الرقمية">
-          <span class="payment-mark payment-mark--mada" role="listitem" aria-label="مدى"><b>مدى</b><small>mada</small></span>
-          <span class="payment-mark payment-mark--visa" role="listitem" aria-label="فيزا">VISA</span>
-          <span class="payment-mark payment-mark--mastercard" role="listitem" aria-label="ماستركارد"><i aria-hidden="true"></i><small>mastercard</small></span>
-          <span class="payment-mark payment-mark--amex" role="listitem" aria-label="أمريكان إكسبريس">AMERICAN<br>EXPRESS</span>
-          <span class="payment-mark payment-mark--apple" role="listitem" aria-label="Apple Pay"><i class="fa-brands fa-apple" aria-hidden="true"></i> Pay</span>
-          <span class="payment-mark payment-mark--google" role="listitem" aria-label="Google Pay"><b>G</b> Pay</span>
-          <span class="payment-mark payment-mark--samsung" role="listitem" aria-label="Samsung Pay">SAMSUNG Pay</span>
-          <span class="payment-mark payment-mark--stc" role="listitem" aria-label="STC Pay">stc pay</span>
-          {% if tamara_enabled %}<span class="payment-mark" role="listitem" aria-label="تمارا">تمارا · 4 دفعات</span>{% endif %}
+        <div class="payment-marks" role="list" aria-label="قنوات الدفع الإلكتروني المدعومة">
+          {% if moyasar_enabled %}
+          <span class="payment-mark" role="listitem" aria-label="مدى"><img src="{% static 'img/payment/mada.svg' %}" alt="" width="54" height="18"></span>
+          <span class="payment-mark" role="listitem" aria-label="فيزا"><img src="{% static 'img/payment/visa.svg' %}" alt="" width="42" height="16"></span>
+          <span class="payment-mark" role="listitem" aria-label="ماستركارد"><img src="{% static 'img/payment/mastercard.svg' %}" alt="" width="38" height="23"></span>
+          {% endif %}
+          {% if tamara_enabled %}
+          <span class="payment-mark payment-mark--tamara" role="listitem" aria-label="تمارا">
+            <img src="{% static 'img/payment/tamara-wordmark-ar.png' %}" alt="" width="92" height="30" loading="lazy" decoding="async">
+          </span>
+          {% endif %}
         </div>
       </section>
+      {% endif %}
       <div class="footer-bottom">
         <span>© {% now "Y" %} منصة توثيق. جميع الحقوق محفوظة.</span>
         <div class="footer-verification" aria-label="توثيق المتجر الرسمي">

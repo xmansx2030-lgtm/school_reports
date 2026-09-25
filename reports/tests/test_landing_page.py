@@ -133,7 +133,8 @@ class LandingPageTests(TestCase):
             "no-store",
         )
 
-    def test_landing_shows_compact_payment_methods_in_the_footer(self):
+    @override_settings(MOYASAR_ENABLED=True, TAMARA_ENABLED=True)
+    def test_landing_shows_only_supported_payment_brands_in_the_footer(self):
         response = self.client.get(reverse("reports:landing"))
         html = response.content.decode("utf-8")
 
@@ -145,17 +146,15 @@ class LandingPageTests(TestCase):
         self.assertNotContains(response, "img/moyasar-icon-official.png")
         self.assertNotContains(response, 'aria-label="يونيون باي"')
         self.assertNotContains(response, "UnionPay")
-        for payment_label in (
-            "مدى",
-            "فيزا",
-            "ماستركارد",
-            "أمريكان إكسبريس",
-            "Apple Pay",
-            "Google Pay",
-            "Samsung Pay",
-            "STC Pay",
+        for asset in (
+            "img/payment/mada.svg",
+            "img/payment/visa.svg",
+            "img/payment/mastercard.svg",
+            "img/payment/tamara-wordmark-ar.png",
         ):
-            self.assertContains(response, f'aria-label="{payment_label}"')
+            self.assertContains(response, asset)
+        for unsupported_label in ("أمريكان إكسبريس", "Apple Pay", "Google Pay", "Samsung Pay", "STC Pay"):
+            self.assertNotContains(response, unsupported_label)
         self.assertContains(response, "تظهر الوسائل المفعّلة والمتاحة عند إتمام الدفع")
         self.assertGreater(html.index('class="footer-payments"'), html.index("<footer"))
         self.assertLess(html.index('class="footer-payments"'), html.index('class="footer-bottom"'))
@@ -166,8 +165,21 @@ class LandingPageTests(TestCase):
         response = self.client.get(reverse("reports:landing"))
 
         self.assertContains(response, "عبر ميسر")
+        self.assertContains(response, "img/payment/mada.svg")
         self.assertNotContains(response, "tamara")
         self.assertNotContains(response, "تمارا")
+
+    @override_settings(MOYASAR_ENABLED=False, TAMARA_ENABLED=True)
+    def test_tamara_only_displays_its_logo_without_card_networks(self):
+        response = self.client.get(reverse("reports:landing"))
+
+        self.assertContains(response, "img/payment/tamara-wordmark-ar.png")
+        for asset in ("img/payment/mada.svg", "img/payment/visa.svg", "img/payment/mastercard.svg"):
+            self.assertNotContains(response, asset)
+
+    @override_settings(MOYASAR_ENABLED=False, TAMARA_ENABLED=False)
+    def test_payment_footer_is_hidden_when_no_online_gateway_is_active(self):
+        self.assertNotContains(self.client.get(reverse("reports:landing")), 'class="footer-payments"')
 
     def test_landing_exposes_complete_canonical_and_social_metadata(self):
         response = self.client.get(reverse("reports:landing"))
