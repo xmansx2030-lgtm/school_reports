@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import portfolio_views, share_views, views, workspace_views
+from . import assistant_views, portfolio_views, share_views, views, workspace_views
 
 app_name = "personal"
 
@@ -15,10 +15,14 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("reports/", views.report_list, name="reports"),
     path("reports/new/", views.report_create, name="report_create"),
+    path("reports/ai/improve/", assistant_views.improve_report_text, name="improve_report_text"),
+    path("reports/ai/voice/", assistant_views.transcribe_report_voice, name="transcribe_report_voice"),
+    path("reports/review/", views.review_report_readiness, name="review_report_readiness"),
     path("reports/trash/", views.report_trash, name="report_trash"),
     path("reports/trash/<int:pk>/restore/", views.report_restore, name="report_restore"),
     path("reports/<int:pk>/", views.report_detail, name="report_detail"),
     path("reports/<int:pk>/edit/", views.report_edit, name="report_edit"),
+    path("reports/<int:pk>/complete/", views.report_mark_complete, name="report_mark_complete"),
     path("reports/<int:pk>/delete/", views.report_delete, name="report_delete"),
     path("reports/<int:pk>/print/", views.report_print, name="report_print"),
     path("reports/<int:pk>/share/", share_views.report_share_manage, name="report_share_manage"),

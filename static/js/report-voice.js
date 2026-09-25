@@ -66,7 +66,8 @@
       "جارٍ التسجيل… تحدّث بوضوح عن تفاصيل التقرير.";
     if (!target || !endpoint) return;
 
-    var dailyLimit = parseInt(root.getAttribute("data-daily-limit"), 10) || 3;
+    var dailyLimit = parseInt(root.getAttribute("data-daily-limit"), 10);
+    if (!Number.isFinite(dailyLimit) || dailyLimit < 0) dailyLimit = 3;
     var remaining = parseInt(root.getAttribute("data-remaining"), 10);
     var maxSeconds = parseInt(root.getAttribute("data-max-seconds"), 10) || 180;
     var maxBytes = parseInt(root.getAttribute("data-max-bytes"), 10) || 10485760;

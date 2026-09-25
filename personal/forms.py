@@ -5,10 +5,15 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
+from django.forms.models import BaseInlineFormSet
+from django.utils import timezone
 
+from reports.forms import _compress_image_upload
+from reports.hijri_utils import current_academic_year
 from reports.model_parts.schools import normalize_sa_mobile_identity
 from reports.models import Teacher
-from reports.validators import validate_circular_attachment_file
+from reports.report_limits import REPORT_DETAILS_MAX_LENGTH, REPORT_DETAILS_RECOMMENDED_LENGTH, report_details_length_error
+from reports.validators import validate_circular_attachment_file, validate_image_file
 
 from .models import PersonalEvidence, PersonalInitiative, PersonalNotice, PersonalPlan, PersonalReport, PersonalWorkspace
 from .services import current_school_membership_for
@@ -46,11 +51,16 @@ class PersonalPlanForm(forms.ModelForm):
         fields = [
             "name", "description", "price", "duration_days", "max_reports",
             "max_evidence", "storage_limit_mb", "display_order", "is_active", "is_published",
+            "report_ai_daily_limit", "voice_report_daily_limit",
         ]
         widgets = {"description": forms.Textarea(attrs={"rows": 2})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Existing plan clients submit the original capacity fields only.
+        # Keep their saved AI entitlements when those new inputs are absent.
+        for name in ("report_ai_daily_limit", "voice_report_daily_limit"):
+            self.fields[name].required = False
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs["class"] = "teacher-plan-form__checkbox"
@@ -58,6 +68,16 @@ class PersonalPlanForm(forms.ModelForm):
                 field.widget.attrs["class"] = "twq-control"
             if field.help_text:
                 field.widget.attrs["aria-describedby"] = f"id_{name}_help"
+
+    def clean(self):
+        cleaned = super().clean()
+        for name in ("report_ai_daily_limit", "voice_report_daily_limit"):
+            if cleaned.get(name) is None:
+                cleaned[name] = (
+                    getattr(self.instance, name, 0)
+                    if self.instance.pk and name not in self.data else 0
+                )
+        return cleaned
 
 
 class PersonalRegistrationForm(PersonalFormStyleMixin, forms.Form):
@@ -263,6 +283,287 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
             elif self.instance.portfolio_links.exists():
                 self.add_error("academic_year", "لا يمكن تغيير سنة التقرير وهو مرتبط بمحور ملف الإنجاز.")
         return data
+
+
+PERSONAL_REPORT_CATEGORY_CHOICES = (
+    ("نشاط", "نشاط"),
+    ("برنامج", "برنامج"),
+    ("مبادرة", "مبادرة"),
+    ("تطوير مهني", "تطوير مهني"),
+    ("مهني", "عمل مهني"),
+    ("تطوع", "عمل تطوعي"),
+    ("إنجاز", "إنجاز"),
+    ("أخرى", "أخرى"),
+)
+
+
+class PersonalSchoolParityReportForm(PersonalFormStyleMixin, forms.ModelForm):
+    """The school report editor contract, saved into an owned personal report."""
+
+    section_selection_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
+    client_submission_id = forms.UUIDField(required=False, widget=forms.HiddenInput)
+    day_name = forms.CharField(required=False, widget=forms.HiddenInput)
+    evidence_page_mode = forms.CharField(required=False, initial="inline", widget=forms.HiddenInput)
+    show_goal = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={"class": "ar-section-checkbox"}))
+    goal = forms.CharField(required=False, widget=forms.Textarea(attrs={
+        "class": "textarea", "rows": 3,
+        "placeholder": "ما الهدف الذي يسعى النشاط أو البرنامج إلى تحقيقه؟",
+    }))
+    idea = forms.CharField(required=False, widget=forms.Textarea(attrs={
+        "class": "textarea", "rows": 5,
+        "placeholder": "اكتب ملخصًا واضحًا لما تم تنفيذه وأبرز تفاصيله",
+        "maxlength": str(REPORT_DETAILS_MAX_LENGTH),
+        "data-recommended-length": str(REPORT_DETAILS_RECOMMENDED_LENGTH),
+        "data-max-length": str(REPORT_DETAILS_MAX_LENGTH),
+        "aria-describedby": "report-details-guidance report-details-status",
+    }))
+    implementation_method = forms.CharField(required=False, widget=forms.Textarea(attrs={
+        "class": "textarea", "rows": 4,
+        "placeholder": "وضح الخطوات والإجراءات وطريقة تنفيذ النشاط",
+    }))
+    academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+    category = forms.ChoiceField(label="نوع التقرير", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
+
+    class Meta:
+        model = PersonalReport
+        fields = (
+            "title", "category", "report_date", "academic_year", "day_name",
+            "show_goal", "goal", "show_details", "idea", "show_implementation",
+            "implementation_method", "show_results", "results", "show_recommendations",
+            "recommendations", "show_beneficiaries", "beneficiaries_count", "status",
+            "section_selection_enabled", "evidence_page_mode",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "input", "placeholder": "العنوان / البرنامج", "maxlength": "255", "autocomplete": "off"}),
+            "report_date": forms.DateInput(attrs={"class": "input", "type": "date"}, format="%Y-%m-%d"),
+            "show_details": forms.CheckboxInput(attrs={"class": "ar-section-checkbox"}),
+            "show_implementation": forms.CheckboxInput(attrs={"class": "ar-section-checkbox"}),
+            "show_results": forms.CheckboxInput(attrs={"class": "ar-section-checkbox"}),
+            "show_recommendations": forms.CheckboxInput(attrs={"class": "ar-section-checkbox"}),
+            "show_beneficiaries": forms.CheckboxInput(attrs={"class": "ar-section-checkbox"}),
+            "results": forms.Textarea(attrs={"class": "textarea", "rows": 4, "placeholder": "اذكر النتائج والمخرجات التي تحققت"}),
+            "recommendations": forms.Textarea(attrs={"class": "textarea", "rows": 4, "placeholder": "أضف التوصيات أو فرص التحسين المستقبلية"}),
+            "beneficiaries_count": forms.NumberInput(attrs={"class": "input", "min": "0", "inputmode": "numeric"}),
+            "status": forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, workspace=None, **kwargs):
+        self.workspace = workspace
+        instance = kwargs.get("instance")
+        assigned_year = (
+            instance.academic_year if instance and instance.pk
+            else (getattr(workspace, "current_academic_year", "") or current_academic_year())
+        )
+        bound_data = args[0] if args else kwargs.get("data")
+        if bound_data is not None:
+            # Status is not part of the school editor; personal state remains
+            # server-owned even if the hidden input is changed by a client.
+            data = bound_data.copy()
+            data["status"] = instance.status if instance and instance.pk else PersonalReport.Status.COMPLETE
+            data["academic_year"] = assigned_year
+            if args:
+                args = (data, *args[1:])
+            else:
+                kwargs["data"] = data
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.initial["academic_year"] = assigned_year
+            self.initial["status"] = instance.status if instance and instance.pk else PersonalReport.Status.COMPLETE
+            self.initial["client_submission_id"] = (
+                instance.client_submission_id if instance and instance.pk else uuid.uuid4()
+            )
+            if instance and instance.pk:
+                self.initial.update({
+                    "show_goal": instance.show_goals,
+                    "goal": instance.goals,
+                    "idea": instance.description,
+                    "implementation_method": instance.implementation,
+                })
+        if instance and instance.pk and len(instance.description or "") > REPORT_DETAILS_MAX_LENGTH:
+            # Older personal reports may predate the school editor's length
+            # limit. Keep them editable without truncating their saved text.
+            self.fields["idea"].widget.attrs.pop("maxlength", None)
+        categories = {code: label for code, label in PERSONAL_REPORT_CATEGORY_CHOICES}
+        if workspace is not None:
+            for value in workspace.reports.exclude(category="").values_list("category", flat=True).distinct()[:100]:
+                categories.setdefault(value, value)
+        if instance and instance.category:
+            categories.setdefault(instance.category, instance.category)
+        self.fields["category"].choices = [("", "— اختر نوع التقرير —"), *categories.items()]
+
+    def clean_idea(self):
+        value = self.cleaned_data.get("idea") or ""
+        if len(value) > REPORT_DETAILS_MAX_LENGTH and value != (self.instance.description or ""):
+            raise ValidationError(report_details_length_error())
+        return value
+
+    def clean_report_date(self):
+        value = self.cleaned_data["report_date"]
+        if value > timezone.localdate() and value != self.instance.report_date:
+            raise ValidationError("لا يمكن اختيار تاريخ مستقبلي.")
+        return value
+
+    def clean_academic_year(self):
+        value = clean_academic_year(self.cleaned_data["academic_year"])
+        if self.instance.pk and value != self.instance.academic_year:
+            if self.instance.evidence.exists():
+                raise ValidationError("لا يمكن تغيير سنة التقرير وهو مرتبط بشواهد.")
+            if self.instance.portfolio_links.exists():
+                raise ValidationError("لا يمكن تغيير سنة التقرير وهو مرتبط بمحور ملف الإنجاز.")
+        return value
+
+    def clean(self):
+        data = super().clean()
+        sections = (
+            ("show_goal", "goal", "الهدف"),
+            ("show_details", "idea", "تفاصيل التقرير"),
+            ("show_implementation", "implementation_method", "آلية التنفيذ"),
+            ("show_results", "results", "النتائج"),
+            ("show_recommendations", "recommendations", "التوصيات"),
+        )
+        if not any(data.get(flag) for flag, _field, _label in sections) and not data.get("show_beneficiaries"):
+            raise ValidationError("اختر بندًا واحدًا على الأقل ليظهر في التقرير.")
+        for flag, field, label in sections:
+            if data.get(flag) and not (data.get(field) or "").strip():
+                self.add_error(field, f"أدخل محتوى بند {label} أو ألغِ اختياره.")
+        if data.get("show_beneficiaries") and data.get("beneficiaries_count") is None:
+            self.add_error("beneficiaries_count", "أدخل عدد المستفيدين أو ألغِ اختيار هذا البند.")
+        return data
+
+    def save(self, commit=True):
+        report = super().save(commit=False)
+        report.show_goals = bool(self.cleaned_data["show_goal"])
+        report.goals = self.cleaned_data.get("goal") or ""
+        report.description = self.cleaned_data.get("idea") or ""
+        report.implementation = self.cleaned_data.get("implementation_method") or ""
+        if commit:
+            report.save()
+            self.save_m2m()
+        return report
+
+
+class PersonalReportEvidenceForm(forms.ModelForm):
+    """School image-card controls backed by a personal witness record."""
+
+    image = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={
+        "accept": "image/jpeg,image/png,image/webp", "data-evidence-file": "",
+    }))
+    description = forms.CharField(required=False, max_length=220, widget=forms.TextInput(attrs={
+        "placeholder": "مثال: صورة من تنفيذ النشاط", "maxlength": "220",
+    }))
+
+    class Meta:
+        model = PersonalEvidence
+        fields = ("image", "order", "description", "display_size", "fit_mode", "show_in_print")
+        widgets = {
+            "order": forms.HiddenInput(),
+            "display_size": forms.Select(),
+            "fit_mode": forms.Select(),
+            "show_in_print": forms.CheckboxInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._stored_description = self.instance.description if self.instance.pk else ""
+        self.fields["display_size"].required = False
+        self.fields["fit_mode"].required = False
+        if not self.is_bound:
+            if self.instance.pk:
+                self.initial["description"] = self.instance.report_card_caption
+            else:
+                try:
+                    index = int(str(self.prefix).rsplit("-", 1)[-1])
+                except (TypeError, ValueError):
+                    index = 0
+                self.initial.setdefault("order", index + 1)
+                self.initial.setdefault("show_in_print", True)
+
+    def clean_display_size(self):
+        return self.cleaned_data.get("display_size") or (
+            self.instance.display_size if self.instance.pk else PersonalEvidence.DisplaySize.AUTO
+        )
+
+    def clean_fit_mode(self):
+        return self.cleaned_data.get("fit_mode") or (
+            self.instance.fit_mode if self.instance.pk else PersonalEvidence.FitMode.CONTAIN
+        )
+
+    def has_changed(self):
+        if not self.instance.pk and not self.files.get(self.add_prefix("image")):
+            return False
+        return super().has_changed()
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        if not image:
+            return image
+        validate_image_file(image)
+        try:
+            image = _compress_image_upload(image, max_px=2000, quality=86)
+        except Exception as exc:
+            raise ValidationError("تعذر تجهيز الصورة. اختر JPG أو PNG أو WebP صالحًا.") from exc
+        if image.size > 2 * 1024 * 1024:
+            raise ValidationError("حجم الصورة بعد التحسين ما زال أكبر من 2MB.")
+        return image
+
+    def save(self, commit=True):
+        evidence = super().save(commit=False)
+        caption = (self.cleaned_data.get("description") or "").strip() or "شاهد التقرير"
+        old_caption = self.instance.report_card_caption if self.instance.pk else ""
+        evidence.title = caption[:200]
+        evidence.report_caption = caption
+        evidence.description = (
+            caption if self.instance.pk and not self._stored_description and caption != old_caption
+            else self._stored_description
+        )
+        image = self.cleaned_data.get("image")
+        if image:
+            evidence.file = image
+            evidence.file_size = image.size
+            evidence.source_url = ""
+        if commit:
+            evidence.save()
+            self.save_m2m()
+        return evidence
+
+
+class BasePersonalReportEvidenceFormSet(BaseInlineFormSet):
+    def clean(self):
+        # Check raw IDs before Django excludes deleted forms from form errors.
+        if self.is_bound:
+            submitted = set()
+            for form in self.forms:
+                raw = self.data.get(form.add_prefix("id"))
+                if raw in (None, ""):
+                    continue
+                try:
+                    submitted.add(int(raw))
+                except (TypeError, ValueError):
+                    raise ValidationError("أحد الشواهد المرسلة غير صالح لهذا التقرير.") from None
+            owned = set(self.get_queryset().filter(pk__in=submitted).values_list("pk", flat=True))
+            if submitted != owned:
+                raise ValidationError("أحد الشواهد المرسلة غير صالح لهذا التقرير.")
+        super().clean()
+        if any(self.errors):
+            return
+        active = [form for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")
+                  and (form.cleaned_data.get("image") or getattr(form.instance.file, "name", ""))]
+        active.sort(key=lambda form: (form.cleaned_data.get("order") or 999, form.prefix))
+        for number, form in enumerate(active, start=1):
+            form.cleaned_data["order"] = number
+            form.instance.order = number
+
+
+def personal_report_evidence_formset(max_images=8):
+    return forms.inlineformset_factory(
+        PersonalReport, PersonalEvidence, form=PersonalReportEvidenceForm,
+        formset=BasePersonalReportEvidenceFormSet,
+        fields=("image", "order", "description", "display_size", "fit_mode", "show_in_print"),
+        extra=1, can_delete=True, max_num=max_images, validate_max=True,
+    )
+
+
+PersonalReportEvidenceFormSet = personal_report_evidence_formset()
 
 
 class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):

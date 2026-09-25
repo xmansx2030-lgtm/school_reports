@@ -58,7 +58,9 @@
      في هذه الجلسة. */
   function evidenceCount() {
     var cards = document.querySelectorAll("[data-evidence-card]");
-    var total = 0;
+    var form = document.getElementById("report-form");
+    var savedDocuments = parseInt(form && form.dataset.existingDocumentCount, 10);
+    var total = Number.isFinite(savedDocuments) && savedDocuments > 0 ? savedDocuments : 0;
     Array.prototype.forEach.call(cards, function (card) {
       var remove = card.querySelector('[data-evidence-delete] input[type="checkbox"]');
       if (remove && remove.checked) return;
@@ -122,6 +124,7 @@
       if (!trigger || !result || !issuesList) return;
 
       var semanticEnabled = root.getAttribute("data-semantic-enabled") === "1";
+      var personalReview = root.getAttribute("data-personal-review") === "1";
       var dailyLimit = parseInt(root.getAttribute("data-daily-limit"), 10);
       var remaining = parseInt(root.getAttribute("data-remaining"), 10);
       if (!Number.isFinite(dailyLimit)) dailyLimit = 5;
@@ -398,7 +401,7 @@
 
         isLoading = true;
         renderTrigger();
-        setStatus("أقرأ التقرير كما يقرؤه المراجع…", false);
+        setStatus(personalReview ? "أراجع اكتمال تقريرك…" : "أقرأ التقرير كما يقرؤه المراجع…", false);
 
         var controller = typeof window.AbortController === "function" ? new window.AbortController() : null;
         var timer = window.setTimeout(function () { if (controller) controller.abort(); }, 32000);

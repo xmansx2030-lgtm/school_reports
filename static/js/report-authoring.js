@@ -180,6 +180,10 @@
         message = "أدخل عددًا صحيحًا غير سالب";
       }
     }
+    if (config.id === "id_idea" && input.validity && input.validity.customError) {
+      valid = false;
+      message = input.validationMessage;
+    }
     setValidity(config, valid, message);
     return valid;
   }

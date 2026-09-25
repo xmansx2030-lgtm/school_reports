@@ -1,4 +1,9 @@
+/* Compatibility for drafts saved by the former personal report editor.
+ * Current authoring and evidence interactions use the school editor scripts.
+ */
 (() => {
+  'use strict';
+
   const completed = document.querySelector('[data-personal-draft-complete]');
   if (completed) {
     try {
@@ -7,132 +12,68 @@
         localStorage.removeItem(pending);
         sessionStorage.removeItem('personal-report-pending');
       }
-    } catch (_) {
-      // Storage is optional; the saved report is already available on the server.
-    }
+    } catch (_) { /* storage unavailable */ }
   }
-  const form = document.querySelector('.personal-report-form');
-  if (!form) return;
-  const options = Array.from(form.querySelectorAll('[data-section-option]'));
-  const summaryTitle = form.querySelector('#personalSummaryTitle');
-  const summaryCategory = form.querySelector('#personalSummaryCategory');
-  const summaryYear = form.querySelector('#personalSummaryYear');
-  const summarySections = form.querySelector('#personalSummarySections');
-  const title = form.querySelector('[name="title"]');
-  const category = form.querySelector('[name="category"]');
-  const year = form.querySelector('[name="academic_year"]');
-  const updateSummary = () => {
-    if (summaryTitle) summaryTitle.textContent = title?.value.trim() || '—';
-    if (summaryCategory) summaryCategory.textContent = category?.value.trim() || '—';
-    if (summaryYear) summaryYear.textContent = year?.value.trim() || '—';
-    if (summarySections) summarySections.textContent = String(options.filter((option) => option.querySelector('input')?.checked).length);
-  };
-  [title, category, year].forEach((control) => control?.addEventListener('input', updateSummary));
-  options.forEach((option) => {
-    const control = option.querySelector('input');
-    if (!control) return;
-    const update = () => {
-      option.classList.toggle('is-selected', control.checked);
-      updateSummary();
-    };
-    control.addEventListener('change', update);
-    update();
-  });
-  for (const section of form.querySelectorAll('[data-personal-section]')) {
-    const control = form.querySelector(`[name="${section.dataset.personalSection}"]`);
-    if (!control) continue;
-    const update = () => { section.hidden = !control.checked; };
-    control.addEventListener('change', update);
-    update();
-  }
-  updateSummary();
-  const reportDate = form.querySelector('[name="report_date"]');
-  const reportDay = form.querySelector('#personalReportDay');
-  const reportHijri = form.querySelector('#personalReportHijri');
-  const updateDate = () => {
-    const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(reportDate?.value || '');
-    const date = parts ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) : null;
-    if (reportDay) reportDay.textContent = date && !Number.isNaN(date.getTime())
-      ? new Intl.DateTimeFormat('ar-SA', { weekday: 'long' }).format(date) : '';
-    if (reportHijri) reportHijri.textContent = window.TawtheeqHijri
-      ? window.TawtheeqHijri.echo(reportDate?.value || '') : '';
-  };
-  reportDate?.addEventListener('change', updateDate);
-  updateDate();
 
-  const draftKey = form.dataset.draftKey;
-  const draftBanner = form.querySelector('#personalDraftBanner');
-  const draftTime = form.querySelector('#personalDraftTime');
-  const draftSaved = form.querySelector('#personalDraftSaved');
-  const draftControls = Array.from(form.elements).filter((control) =>
-    control.name && !control.name.startsWith('evidence-') &&
-    !['file', 'hidden', 'submit', 'button'].includes(control.type)
-  );
-  let draft = null;
-  let draftTimer;
+  const form = document.getElementById('report-form');
+  if (!form || !form.classList.contains('personal-report-form')) return;
+
+  const yearField = form.elements.namedItem('academic_year');
+  const yearContext = document.getElementById('personalYearContext');
+  if (yearField && yearContext) {
+    const serverYear = yearField.value;
+    const showYear = () => {
+      // IndexedDB drafts can contain a year from an older session.
+      // The active personal year comes from the server and cannot be changed here.
+      if (yearField.value !== serverYear) yearField.value = serverYear;
+      yearContext.textContent = serverYear.trim() || '—';
+    };
+    yearField.addEventListener('input', showYear);
+    yearField.addEventListener('change', showYear);
+  }
+
+  const legacyKey = form.dataset.legacyPersonalDraftKey;
+  const banner = document.getElementById('draftBanner');
+  const stamp = document.getElementById('draftTime');
+  if (!legacyKey || !banner) return;
+
+  let draft;
   try {
-    draft = JSON.parse(localStorage.getItem(draftKey) || 'null');
+    draft = JSON.parse(localStorage.getItem(legacyKey) || 'null');
   } catch (_) {
     draft = null;
   }
-  if (draft && draft.values && !form.querySelector('.report-server-errors')) {
-    draftBanner.hidden = false;
-    if (draftTime && draft.savedAt) {
-      draftTime.textContent = 'حُفظت في ' + new Date(draft.savedAt).toLocaleString('ar-SA') + ' · الملفات تحتاج إعادة إرفاق.';
-    }
-  }
-  const saveDraft = () => {
-    if (!draftKey) return;
-    const values = {};
-    draftControls.forEach((control) => {
-      values[control.name] = control.type === 'checkbox' ? control.checked : control.value;
-    });
-    try {
-      localStorage.setItem(draftKey, JSON.stringify({ values, savedAt: Date.now() }));
-      if (draftSaved) draftSaved.hidden = false;
-    } catch (_) {
-      // Private browsing and storage quotas can disable local drafts.
-    }
+  if (!draft || !draft.values || form.querySelector('[data-server-error-summary]')) return;
+
+  const names = {
+    selection_enabled: 'section_selection_enabled',
+    show_goals: 'show_goal',
+    goals: 'goal',
+    description: 'idea',
+    implementation: 'implementation_method',
   };
-  const queueDraft = () => {
-    clearTimeout(draftTimer);
-    draftTimer = setTimeout(saveDraft, 700);
+  const dropLegacy = () => {
+    try { localStorage.removeItem(legacyKey); } catch (_) { /* storage unavailable */ }
+    banner.hidden = true;
   };
-  form.addEventListener('input', queueDraft);
-  form.addEventListener('change', queueDraft);
-  form.querySelector('#personalDraftRestore')?.addEventListener('click', () => {
-    draftControls.forEach((control) => {
-      if (!Object.prototype.hasOwnProperty.call(draft.values, control.name)) return;
-      if (control.type === 'checkbox') control.checked = Boolean(draft.values[control.name]);
-      else control.value = draft.values[control.name];
-      control.dispatchEvent(new Event('input', { bubbles: true }));
-      control.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    draftBanner.hidden = true;
-    updateDate();
-  });
-  form.querySelector('#personalDraftDiscard')?.addEventListener('click', () => {
-    try { localStorage.removeItem(draftKey); } catch (_) { /* unavailable storage */ }
-    draftBanner.hidden = true;
-  });
-  form.addEventListener('submit', () => {
-    clearTimeout(draftTimer);
-    saveDraft();
-    try { sessionStorage.setItem('personal-report-pending', draftKey); } catch (_) { /* unavailable storage */ }
-  });
-  const add = form.querySelector('#personalEvidenceAdd');
-  const template = form.querySelector('#personalEvidenceTemplate');
-  const rows = form.querySelector('#personalEvidenceRows');
-  const total = form.querySelector('[name="evidence-TOTAL_FORMS"]');
-  const max = form.querySelector('[name="evidence-MAX_NUM_FORMS"]');
-  if (add && template && rows && total && max) {
-    const update = () => { add.hidden = Number(total.value) >= Number(max.value); };
-    add.addEventListener('click', () => {
-      if (Number(total.value) >= Number(max.value)) return;
-      rows.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__prefix__', total.value));
-      total.value = String(Number(total.value) + 1);
-      update();
-    });
-    update();
+
+  if (stamp && draft.savedAt) {
+    stamp.textContent = 'حُفظت في ' + new Date(draft.savedAt).toLocaleString('ar-SA') +
+      ' · أعد إرفاق الملفات عند الحاجة.';
   }
+  banner.hidden = false;
+  document.getElementById('draftRestore')?.addEventListener('click', () => {
+    for (const [oldName, stored] of Object.entries(draft.values)) {
+      const name = names[oldName] || oldName;
+      const field = form.elements.namedItem(name);
+      if (!field || ['file', 'hidden'].includes(field.type)) continue;
+      if (field.type === 'checkbox') field.checked = Boolean(stored);
+      else field.value = stored;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    dropLegacy();
+  });
+  document.getElementById('draftDiscard')?.addEventListener('click', dropLegacy);
+  form.addEventListener('tawtheeq:submit-success', dropLegacy, { once: true });
 })();

@@ -24,7 +24,9 @@
   </div>
 
   <div class="ree-preview" data-preview-wrap>
-    {% if evidence_form.instance.image %}
+    {% if personal_evidence and evidence_form.instance.pk and evidence_form.instance.file %}
+      <img src="{% url 'personal:evidence_preview' evidence_form.instance.pk %}" alt="{{ evidence_form.instance.report_card_caption|default:'معاينة الشاهد' }}" data-preview-image>
+    {% elif evidence_form.instance.image %}
       <img src="{{ evidence_form.instance.image.url }}" alt="{{ evidence_form.instance.description|default:'معاينة الشاهد' }}" data-preview-image>
     {% else %}
       <div class="ree-placeholder" data-preview-placeholder><i class="fa-regular fa-image" aria-hidden="true"></i><span>اختر صورة للشاهد</span></div>

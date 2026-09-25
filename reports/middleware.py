@@ -611,6 +611,20 @@ class SubscriptionMiddleware:
         if request.path.startswith('/static/') or request.path.startswith('/media/'):
             return self.get_response(request)
 
+        # These shared PWA entry points route a teacher with only a personal
+        # workspace to /personal/. A stale expired school session must not
+        # intercept that read-only navigation before its view can redirect.
+        if request.method == "GET" and request.path in {
+            reverse("reports:home"),
+            reverse("reports:my_notifications"),
+            reverse("reports:role_guidance"),
+            reverse("reports:my_profile"),
+        }:
+            from .personal_routing import is_personal_only_workspace_user
+
+            if is_personal_only_workspace_user(request.user):
+                return self.get_response(request)
+
         # 3) تحديد المسارات المسموح بها عند انتهاء الاشتراك
         #    - للجميع: صفحة انتهاء الاشتراك + تسجيل الخروج
         #    - للمدير فقط: صفحات التجديد/رفع الإيصال

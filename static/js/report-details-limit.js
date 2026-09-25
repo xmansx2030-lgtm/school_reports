@@ -15,7 +15,10 @@
 
       if (!target || !countValue || !fill || !status) return;
 
-      target.setAttribute("maxlength", String(maximum));
+      var originalText = String(target.value || "");
+      var preserveLegacy = meter.getAttribute("data-preserve-legacy") === "1" &&
+        Array.from(originalText).length > maximum;
+      if (!preserveLegacy) target.setAttribute("maxlength", String(maximum));
       if (marker) marker.style.insetInlineStart = ((recommended / maximum) * 100) + "%";
 
       function render() {
@@ -41,7 +44,10 @@
         fill.style.width = (ratio * 100) + "%";
         status.textContent = message;
 
-        if (length > maximum) {
+        if (preserveLegacy && target.value === originalText) {
+          status.textContent = "النص القديم محفوظ كما هو؛ إذا عدّلته فاختصره إلى " + maximum + " حرفًا أو أقل.";
+          target.setCustomValidity("");
+        } else if (length > maximum) {
           target.setCustomValidity("تفاصيل التقرير لا تتجاوز " + maximum + " حرفًا.");
         } else {
           target.setCustomValidity("");

@@ -30,7 +30,7 @@
       <h2 id="planCapacityTitle">حدود الاستخدام</h2>
       <div class="teacher-plan-form__grid">
         {% for field in form %}
-          {% if field.name == 'max_reports' or field.name == 'max_evidence' or field.name == 'storage_limit_mb' %}
+          {% if field.name == 'max_reports' or field.name == 'max_evidence' or field.name == 'storage_limit_mb' or field.name == 'report_ai_daily_limit' or field.name == 'voice_report_daily_limit' %}
             {% include 'personal/_platform_plan_field.html' with field=field %}
           {% endif %}
         {% endfor %}

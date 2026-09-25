@@ -4,17 +4,25 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import FileExtensionValidator, MinValueValidator
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 
-from reports.validators import validate_circular_attachment_file
+from reports.validators import validate_circular_attachment_file, validate_image_file
 from reports.model_parts.achievements import AchievementSection
 
 
 def personal_evidence_path(instance, filename):
     suffix = Path(filename).suffix.lower()
     return f"personal/{instance.workspace_id}/evidence/{uuid.uuid4().hex}{suffix}"
+
+
+def validate_personal_evidence_file(file_obj):
+    """Accept the school's normalized WebP images alongside existing PDFs."""
+    if Path(getattr(file_obj, "name", "")).suffix.lower() == ".webp":
+        validate_image_file(file_obj)
+    else:
+        validate_circular_attachment_file(file_obj)
 
 
 class PersonalWorkspace(models.Model):
@@ -52,6 +60,14 @@ class PersonalPlan(models.Model):
     max_reports = models.PositiveIntegerField("الحد الأعلى للتقارير", default=500, validators=[MinValueValidator(1)])
     max_evidence = models.PositiveIntegerField("الحد الأعلى للشواهد", default=250, validators=[MinValueValidator(1)])
     storage_limit_mb = models.PositiveIntegerField("سعة الملفات بالميجابايت", default=500, validators=[MinValueValidator(1)])
+    report_ai_daily_limit = models.PositiveSmallIntegerField(
+        "تحسينات التقارير يوميًا", default=0, validators=[MaxValueValidator(3)],
+        help_text="صفر لتعطيل التحسين في الباقة؛ الباقة الأساسية المجانية لا تمنح استخدامًا مدفوعًا.",
+    )
+    voice_report_daily_limit = models.PositiveSmallIntegerField(
+        "تسجيلات التقارير يوميًا", default=0, validators=[MaxValueValidator(3)],
+        help_text="صفر لتعطيل التفريغ في الباقة؛ الباقة الأساسية المجانية لا تمنح استخدامًا مدفوعًا.",
+    )
     is_active = models.BooleanField("متاحة للاشتراكات الجديدة", default=True)
     is_published = models.BooleanField("تظهر في صفحة الهبوط", default=True)
     display_order = models.PositiveSmallIntegerField("ترتيب العرض", default=0)
@@ -69,6 +85,11 @@ class PersonalPlan(models.Model):
             raise ValidationError({"price": "الباقات الإضافية تتطلب سعرًا؛ الباقة الأساسية وحدها يمكن أن تكون مجانية."})
         if self.price and not self.duration_days:
             raise ValidationError({"duration_days": "حدد مدة للباقة المدفوعة."})
+        if self.price == 0 and (self.report_ai_daily_limit or self.voice_report_daily_limit):
+            raise ValidationError({
+                "report_ai_daily_limit": "الأدوات المدفوعة تتطلب باقة مدفوعة.",
+                "voice_report_daily_limit": "الأدوات المدفوعة تتطلب باقة مدفوعة.",
+            })
         if self.pk and PersonalPlan.objects.filter(pk=self.pk, code="personal_free").exists():
             if self.code != "personal_free":
                 raise ValidationError({"code": "لا يمكن تغيير رمز الباقة الأساسية."})
@@ -257,11 +278,12 @@ class PersonalEvidence(models.Model):
         "PersonalInitiative", on_delete=models.SET_NULL, null=True, blank=True, related_name="evidence"
     )
     title = models.CharField("عنوان الشاهد", max_length=200)
+    report_caption = models.CharField("وصف الشاهد في التقرير", max_length=220, blank=True, default="")
     description = models.TextField("الوصف", blank=True)
     academic_year = models.CharField("السنة الدراسية", max_length=20)
     file = models.FileField(
         "الملف", upload_to=personal_evidence_path, blank=True,
-        validators=[validate_circular_attachment_file, FileExtensionValidator(["pdf", "jpg", "jpeg", "png"])],
+        validators=[validate_personal_evidence_file, FileExtensionValidator(["pdf", "jpg", "jpeg", "png", "webp"])],
     )
     source_url = models.URLField("رابط الشاهد", blank=True)
     order = models.PositiveSmallIntegerField("الترتيب", default=1, db_index=True)
@@ -285,8 +307,12 @@ class PersonalEvidence(models.Model):
         return self.title
 
     @property
+    def report_card_caption(self):
+        return self.report_caption or self.title
+
+    @property
     def is_image(self):
-        return bool(self.file and Path(self.file.name).suffix.lower() in {".jpg", ".jpeg", ".png"})
+        return bool(self.file and Path(self.file.name).suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"})
 
     def save(self, *args, **kwargs):
         if self.report_id and self.workspace_id:

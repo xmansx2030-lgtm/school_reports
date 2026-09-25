@@ -32,7 +32,7 @@
 
   function maxForms(editor) {
     var value = parseInt(editor.getAttribute("data-max-forms"), 10);
-    return Number.isFinite(value) && value > 0 ? value : 8;
+    return Number.isFinite(value) && value >= 0 ? value : 8;
   }
 
   /* الترقيم وحالة زر الإضافة والعدّاد — ثلاثتها تتبع عدد البطاقات الحيّة،
@@ -49,7 +49,8 @@
       addButton.hidden = live >= limit;
     }
     if (counter) {
-      if (live >= limit) counter.textContent = "بلغت الحد الأقصى: " + limit + " شواهد.";
+      if (limit === 0) counter.textContent = "لا تتوفر مساحة لصور إضافية في هذا التقرير.";
+      else if (live >= limit) counter.textContent = "بلغت الحد الأقصى: " + limit + " شواهد.";
       else if (live === 0) counter.textContent = "لا شواهد بعد.";
       else counter.textContent = live + " من " + limit;
     }

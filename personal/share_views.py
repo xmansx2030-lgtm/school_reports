@@ -328,15 +328,15 @@ def public_evidence(request, token, evidence_id, mode):
     except Http404:
         return _not_found()
     suffix = Path(evidence.file.name).suffix.lower() if evidence.file else ""
-    if suffix not in {".png", ".jpg", ".jpeg", ".pdf"}:
+    if suffix not in {".png", ".jpg", ".jpeg", ".webp", ".pdf"}:
         return _not_found()
-    if mode == "preview" and suffix not in {".png", ".jpg", ".jpeg"}:
+    if mode == "preview" and suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
         return _not_found()
     try:
         evidence.file.open("rb")
     except Exception:
         return _not_found()
-    content_type = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".pdf": "application/pdf"}[suffix]
+    content_type = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".pdf": "application/pdf"}[suffix]
     response = FileResponse(
         evidence.file, as_attachment=mode == "download",
         filename=Path(evidence.file.name).name if mode == "download" else None,

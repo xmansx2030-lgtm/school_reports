@@ -30,6 +30,7 @@ from ._helpers import (
     _get_active_school, _canonical_sender_name, _canonical_role_label,
     effective_user_role_label, _safe_next_url,
 )
+from ..personal_routing import is_personal_only_workspace_user
 
 
 def _communication_kind(notification) -> str:
@@ -1146,6 +1147,8 @@ def unread_notifications_count(request: HttpRequest) -> HttpResponse:
 @login_required(login_url="reports:login")
 @require_http_methods(["GET"])
 def my_notifications(request: HttpRequest) -> HttpResponse:
+    if is_personal_only_workspace_user(request.user):
+        return redirect("personal:notices")
     if NotificationRecipient is None:
         return render(request, "reports/my_notifications.html", {"page_obj": Paginator([], 12).get_page(1)})
 

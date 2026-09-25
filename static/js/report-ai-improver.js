@@ -26,7 +26,8 @@
       var status = root.querySelector("[data-report-ai-status]");
       var remainingNode = root.querySelector("[data-report-ai-remaining]");
       var quotaDots = root.querySelectorAll("[data-quota-dot]");
-      var dailyLimit = parseInt(root.getAttribute("data-daily-limit"), 10) || 3;
+      var dailyLimit = parseInt(root.getAttribute("data-daily-limit"), 10);
+      if (!Number.isFinite(dailyLimit) || dailyLimit < 0) dailyLimit = 3;
       var recommendedLength = parseInt(root.getAttribute("data-recommended-length"), 10) || 0;
       var maxLength = parseInt(root.getAttribute("data-max-length"), 10) || 6000;
       var previewCount = root.querySelector("[data-report-ai-preview-count]");

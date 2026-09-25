@@ -13,6 +13,7 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from django.db import IntegrityError
 from django.db.models import F, Q
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
 from ..report_ai import (
@@ -50,7 +51,7 @@ from ..voice_report import (
 )
 from ..gender_labels import school_gender_labels, school_gender_template_context
 from ..generated_exports import async_exports_enabled, enqueue_generated_export
-from ..models import GeneratedExportJob
+from ..models import GeneratedExportJob, SchoolMembership, SchoolSubscription
 
 from core.observability import report_degraded as _degraded, soft_fail
 
@@ -82,6 +83,45 @@ def _report_locked_reason(report, school, *, action: str) -> str:
         f"تعذّر {action}: التقرير مُرسل وينتظر القرار. اسحبه للتعديل من صفحة "
         f"الاعتماد، أو اطلب من {_school_manager_label(school)} إعادته إليك."
     )
+
+
+def _active_subscribed_school_for_assistant(request: HttpRequest):
+    """Resolve a school the user can use for school-scoped paid report tools."""
+    school = _get_active_school(request)
+    if school is None:
+        return None
+    today = timezone.localdate()
+    subscription_active = SchoolSubscription.objects.filter(
+        school=school,
+        is_active=True,
+        start_date__lte=today,
+        end_date__gte=today,
+    ).exists()
+    if not subscription_active:
+        return None
+    if request.user.is_superuser:
+        return school
+    if SchoolMembership.objects.filter(
+        school=school,
+        teacher=request.user,
+        is_active=True,
+    ).exists():
+        return school
+    return None
+
+
+def _school_assistant_access_denied() -> JsonResponse:
+    response = JsonResponse(
+        {
+            "ok": False,
+            "reason": "school_membership_required",
+            "message": "هذه الخدمة متاحة ضمن مدرسة ذات اشتراك نشط ترتبط بها عضويتك.",
+        },
+        status=403,
+        json_dumps_params={"ensure_ascii": False},
+    )
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def _report_evidence_post_data(request: HttpRequest):
@@ -428,6 +468,10 @@ def improve_report_text(request: HttpRequest) -> JsonResponse:
         response["Cache-Control"] = "no-store"
         return response
 
+    active_school = _active_subscribed_school_for_assistant(request)
+    if active_school is None:
+        return _school_assistant_access_denied()
+
     if request.content_type != "application/json":
         return JsonResponse(
             {"ok": False, "message": "صيغة الطلب غير صحيحة."},
@@ -488,7 +532,7 @@ def improve_report_text(request: HttpRequest) -> JsonResponse:
         return response
 
     try:
-        with ai_usage_context(school=_get_active_school(request), teacher=request.user):
+        with ai_usage_context(school=active_school, teacher=request.user):
             improved_text = improve_report_text_with_ai(original_text)
     except ReportAIUnavailable as exc:
         release_report_ai_daily_slot(request.user.pk)
@@ -547,6 +591,10 @@ def review_report_readiness(request: HttpRequest) -> JsonResponse:
             status=404,
         )
 
+    active_school = _active_subscribed_school_for_assistant(request)
+    if active_school is None:
+        return _school_assistant_access_denied()
+
     if request.content_type != "application/json":
         return _review_json({"ok": False, "message": "صيغة الطلب غير صحيحة."}, status=415)
     if len(request.body) > 40000:
@@ -559,7 +607,6 @@ def review_report_readiness(request: HttpRequest) -> JsonResponse:
     if not isinstance(payload, dict):
         return _review_json({"ok": False, "message": "تعذر قراءة بيانات التقرير."}, status=400)
 
-    active_school = _get_active_school(request)
     labels = school_gender_labels(active_school)
     try:
         with ai_usage_context(school=active_school, teacher=request.user):
@@ -606,6 +653,10 @@ def transcribe_report_voice(request: HttpRequest) -> JsonResponse:
             status=404,
         )
 
+    active_school = _active_subscribed_school_for_assistant(request)
+    if active_school is None:
+        return _school_assistant_access_denied()
+
     if getattr(settings, "VOICE_REPORT_PWA_ONLY", True) and not _request_is_from_installed_app(request):
         return _voice_json(
             {
@@ -649,7 +700,7 @@ def transcribe_report_voice(request: HttpRequest) -> JsonResponse:
         )
 
     try:
-        with ai_usage_context(school=_get_active_school(request), teacher=request.user):
+        with ai_usage_context(school=active_school, teacher=request.user):
             raw_text = transcribe_audio(audio_bytes, extension)
             text = polish_dictation(raw_text)
     except VoiceReportUnavailable as exc:

@@ -1,11 +1,11 @@
 {% load static %}
 {% if PWA_INSTALL_ENABLED %}
 <link rel="manifest" href="{% static 'manifest.json' %}">
-<meta name="application-name" content="منصة توثيق">
+<meta name="application-name" content="{% if personal_pwa_only %}توثيق | مساحة المعلم الشخصية{% else %}منصة توثيق{% endif %}">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="منصة توثيق">
+<meta name="apple-mobile-web-app-title" content="{% if personal_pwa_only %}توثيق الشخصي{% else %}منصة توثيق{% endif %}">
 <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/pwa/apple-touch-icon-180.png' %}">
 
 {# iOS/iPadOS startup images: portrait and landscape, matched to the exact device canvas. #}
@@ -37,7 +37,7 @@
 <link rel="stylesheet" href="{% static 'css/pwa-install.css' %}?v=20260912.2">
 <script src="{% static 'js/pwa-install.js' %}?v=20260911.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endif %}
-{% if request.user.is_authenticated %}
+{% if request.user.is_authenticated and not personal_pwa_only %}
 <link rel="stylesheet" href="{% static 'css/web-push.css' %}?v=20260912.1">
 <script src="{% static 'js/web-push.js' %}?v=20260912.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% endif %}

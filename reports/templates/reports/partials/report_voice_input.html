@@ -12,8 +12,8 @@
   data-target-id="{{ target_id|default:'id_idea' }}"
   data-document-name="{% if meeting_minutes_mode %}المحضر{% else %}التقرير{% endif %}"
   data-recording-prompt="{% if meeting_minutes_mode %}جارٍ التسجيل… تحدّث بوضوح عن المناقشات والقرارات والتوصيات.{% else %}جارٍ التسجيل… تحدّث بوضوح عن تفاصيل التقرير.{% endif %}"
-  data-daily-limit="{{ voice_report_daily_limit|default:3 }}"
-  data-remaining="{{ voice_report_daily_remaining|default:3 }}"
+  data-daily-limit="{{ voice_report_daily_limit|default_if_none:3 }}"
+  data-remaining="{{ voice_report_daily_remaining|default_if_none:3 }}"
   data-max-seconds="{{ voice_report_max_seconds|default:180 }}"
   data-max-bytes="{{ voice_report_max_bytes|default:10485760 }}"
   data-pwa-only="{% if voice_report_pwa_only %}1{% else %}0{% endif %}"
@@ -27,7 +27,7 @@
     </div>
     <div class="report-voice-quota" data-voice-quota>
       <span>المتبقي اليوم</span>
-      <b><span data-voice-remaining>{{ voice_report_daily_remaining|default:3 }}</span> من {{ voice_report_daily_limit|default:3 }}</b>
+      <b><span data-voice-remaining>{{ voice_report_daily_remaining|default_if_none:3 }}</span> من {{ voice_report_daily_limit|default_if_none:3 }}</b>
     </div>
   </div>
 

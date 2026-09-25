@@ -19,12 +19,12 @@
       <img src="{% static 'img/pwa/icon-192.png' %}" alt="" width="54" height="54">
       <div>
         <p class="pwa-install__eyebrow">وصول أسرع من جوالك</p>
-        <h2 id="pwaInstallTitle">ثبّت منصة توثيق</h2>
+        <h2 id="pwaInstallTitle">{% if personal_pwa_only %}ثبّت مساحة المعلم الشخصية{% else %}ثبّت منصة توثيق{% endif %}</h2>
       </div>
     </div>
 
     <p class="pwa-install__description" id="pwaInstallDescription">
-      أضف منصة توثيق إلى الشاشة الرئيسية وافتحها مثل أي تطبيق.
+      {% if personal_pwa_only %}أضف مساحة المعلم الشخصية إلى الشاشة الرئيسية للوصول إلى تقاريرك وشواهدك.{% else %}أضف منصة توثيق إلى الشاشة الرئيسية وافتحها مثل أي تطبيق.{% endif %}
     </p>
 
     <p
@@ -52,6 +52,6 @@
   </div>
 </section>
 {% endif %}
-{% if request.user.is_authenticated %}
+{% if request.user.is_authenticated and not personal_pwa_only %}
   {% include "reports/partials/web_push_prompt.html" %}
 {% endif %}

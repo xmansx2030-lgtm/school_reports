@@ -4,6 +4,7 @@
   data-target-id="{{ target_id|default:'id_idea' }}"
   data-recommended-length="{{ report_details_recommended_length|default:450 }}"
   data-max-length="{{ report_details_max_length|default:600 }}"
+  data-preserve-legacy="{% if legacy_long_description %}1{% else %}0{% endif %}"
 >
   <div class="report-details-meter__top">
     <div class="report-details-meter__guidance" id="report-details-guidance">
