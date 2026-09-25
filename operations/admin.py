@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     HealthCheck,
+    HostAgentHeartbeat,
     Incident,
     ManagedProject,
     ManagedServer,
@@ -12,6 +13,7 @@ from .models import (
     OperationsMembership,
     OperationsPaymentLink,
     ProjectMetricSnapshot,
+    ProviderAction,
     ServerMetricSnapshot,
 )
 
@@ -50,6 +52,8 @@ admin.site.register(HealthCheck)
 admin.site.register(ServerMetricSnapshot)
 admin.site.register(ProjectMetricSnapshot)
 admin.site.register(OperationAction)
+admin.site.register(HostAgentHeartbeat)
+admin.site.register(ProviderAction)
 admin.site.register(MobileDevice)
 
 

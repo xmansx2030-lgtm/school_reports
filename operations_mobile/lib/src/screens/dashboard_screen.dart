@@ -11,6 +11,7 @@ import 'accounts_screen.dart';
 import 'change_password_screen.dart';
 import 'payment_links_screen.dart';
 import 'project_screen.dart';
+import 'server_management_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -297,9 +298,8 @@ class _AccountTab extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => AccountsScreen(
-                        canManage: user.can('manage_team'),
-                      ),
+                      builder: (_) =>
+                          AccountsScreen(canManage: user.can('manage_team')),
                     ),
                   ),
                 ),
@@ -386,10 +386,7 @@ class _ThemeSelector extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   'مظهر التطبيق',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: ops.ink,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w900, color: ops.ink),
                 ),
               ],
             ),
@@ -842,10 +839,7 @@ class _ReleaseLine extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: ops.accentBlue),
           const SizedBox(width: 6),
-          Text(
-            '$label ',
-            style: TextStyle(color: ops.muted, fontSize: 12),
-          ),
+          Text('$label ', style: TextStyle(color: ops.muted, fontSize: 12)),
           Flexible(
             child: Text(
               sha.isEmpty ? '—' : sha,
@@ -940,41 +934,48 @@ class _ServerPanel extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     child: Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.dns_outlined,
-                color: Color(0xFF006C35),
-                size: 28,
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      server.name,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      [
-                        server.serverType,
-                        server.publicIp,
-                      ].where((value) => value?.isNotEmpty == true).join(' · '),
-                      textDirection: TextDirection.ltr,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(color: context.ops.slate),
-                    ),
-                  ],
+        InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ServerManagementScreen(server: server),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.dns_outlined,
+                  color: Color(0xFF006C35),
+                  size: 28,
                 ),
-              ),
-              StatusDot(server.status),
-            ],
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        server.name,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        [server.serverType, server.publicIp]
+                            .where((value) => value?.isNotEmpty == true)
+                            .join(' · '),
+                        textDirection: TextDirection.ltr,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(color: context.ops.slate),
+                      ),
+                    ],
+                  ),
+                ),
+                StatusDot(server.status),
+                const Icon(Icons.chevron_left),
+              ],
+            ),
           ),
         ),
         const Divider(height: 1),
@@ -1217,11 +1218,7 @@ class _ErrorView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.cloud_off_outlined,
-            size: 54,
-            color: context.ops.danger,
-          ),
+          Icon(Icons.cloud_off_outlined, size: 54, color: context.ops.danger),
           const SizedBox(height: 14),
           Text(
             message,

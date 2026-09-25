@@ -7,4 +7,7 @@ class AppConfig {
   static const provisionedAccessToken = String.fromEnvironment(
     'OPS_ACCESS_TOKEN',
   );
+
+  /// Public Worker URL only. The emergency credential is entered on the device.
+  static const emergencyUrl = String.fromEnvironment('OPS_EMERGENCY_URL');
 }

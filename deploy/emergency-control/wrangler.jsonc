@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "school-reports-emergency-control",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "SERVER_ID": "155662703",
+    "SERVER_SLUG": "school-reports-prod",
+    "ENABLED": "true"
+  },
+  "ratelimits": [
+    {
+      "name": "OPS_RATE_LIMITER",
+      "namespace_id": "155662703",
+      "simple": { "limit": 1, "period": 60 }
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

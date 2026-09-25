@@ -1,8 +1,11 @@
 from unittest.mock import patch
 from datetime import timedelta
 from decimal import Decimal
+from io import StringIO
+import json
 
 from django.core.cache import cache
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -13,15 +16,18 @@ from .collector import sync_inventory_report
 from .deployments import DeploymentState, GitHubDeploymentClient
 from .models import (
     HealthCheck,
+    HostAgentHeartbeat,
     Incident,
     ManagedProject,
     ManagedServer,
+    ManagedService,
     MobileAccessToken,
     MobileDevice,
     OperationAction,
     OperationsMembership,
     OperationsPaymentLink,
     ProjectMetricSnapshot,
+    ProviderAction,
     ServerMetricSnapshot,
 )
 from .payment_links import callback_token
@@ -708,3 +714,117 @@ class OperationsApiTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         client_cls.assert_not_called()
+
+    @override_settings(OPERATIONS_HETZNER_READ_TOKEN="", OPERATIONS_HETZNER_WRITE_TOKEN="")
+    def test_provider_api_fails_closed_without_tokens(self):
+        self.server.slug = "school-reports-prod"
+        self.server.provider_server_id = "155662703"
+        self.server.save(update_fields=("slug", "provider_server_id"))
+        token = self._login()
+        headers = {"HTTP_AUTHORIZATION": f"Ops-Token {token}"}
+        overview = self.client.get(
+            reverse("operations:provider-overview", args=(self.server.pk,)), **headers
+        )
+        self.assertEqual(overview.status_code, 200)
+        self.assertFalse(overview.json()["configured"])
+        attempted = self.client.post(
+            reverse("operations:provider-action", args=(self.server.pk,)),
+            {"action": "poweron", "confirmation": "school-reports-prod:poweron"},
+            content_type="application/json",
+            **headers,
+        )
+        self.assertEqual(attempted.status_code, 503)
+        self.assertFalse(ProviderAction.objects.exists())
+
+    @override_settings(OPERATIONS_HETZNER_WRITE_TOKEN="test-only")
+    @patch("operations.server_views.HetznerClient")
+    def test_provider_action_requires_admin_and_exact_confirmation(self, client_class):
+        self.server.slug = "school-reports-prod"
+        self.server.provider_server_id = "155662703"
+        self.server.save(update_fields=("slug", "provider_server_id"))
+        client_class.return_value.server_state.return_value = {"status": "off"}
+        client_class.return_value.action.return_value = {"id": 42, "status": "running"}
+        OperationsMembership.objects.create(
+            user=self.regular, role=OperationsMembership.Role.VIEWER, created_by=self.admin
+        )
+        _, viewer_token = MobileAccessToken.issue(user=self.regular)
+        url = reverse("operations:provider-action", args=(self.server.pk,))
+        denied = self.client.post(
+            url, {"action": "poweron", "confirmation": "school-reports-prod:poweron"},
+            content_type="application/json", HTTP_AUTHORIZATION=f"Ops-Token {viewer_token}",
+        )
+        self.assertEqual(denied.status_code, 403)
+        admin_token = self._login()
+        wrong = self.client.post(
+            url, {"action": "poweron", "confirmation": "main"},
+            content_type="application/json", HTTP_AUTHORIZATION=f"Ops-Token {admin_token}",
+        )
+        self.assertEqual(wrong.status_code, 409)
+        accepted = self.client.post(
+            url, {"action": "poweron", "confirmation": "school-reports-prod:poweron"},
+            content_type="application/json", HTTP_AUTHORIZATION=f"Ops-Token {admin_token}",
+        )
+        self.assertEqual(accepted.status_code, 202)
+        self.assertEqual(ProviderAction.objects.get().provider_action_id, 42)
+        client_class.return_value.action.assert_called_once_with("155662703", "poweron")
+
+    @override_settings(OPERATIONS_HETZNER_WRITE_TOKEN="test-only")
+    @patch("operations.server_views.HetznerClient")
+    def test_provider_actions_reject_any_other_server_identity(self, client_class):
+        self.server.provider_server_id = "another-server"
+        self.server.save(update_fields=("provider_server_id",))
+        token = self._login()
+        response = self.client.post(
+            reverse("operations:provider-action", args=(self.server.pk,)),
+            {"action": "poweron", "confirmation": "main:poweron"},
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Ops-Token {token}",
+        )
+        self.assertEqual(response.status_code, 404)
+        client_class.assert_not_called()
+
+    def test_host_actions_require_live_agent_and_logs_are_redacted(self):
+        self.project.slug = "tawtheeq"
+        self.project.compose_project = "school_reports"
+        self.project.save(update_fields=("slug", "compose_project"))
+        service = ManagedService.objects.create(
+            project=self.project, name="web", service_key="web",
+            kind=ManagedService.Kind.WEB, restart_allowed=True,
+        )
+        token = self._login()
+        url = reverse("operations:create-action", args=(self.project.pk,))
+        headers = {"HTTP_AUTHORIZATION": f"Ops-Token {token}"}
+        offline = self.client.post(
+            url, {"action": "read_logs", "service_id": service.pk},
+            content_type="application/json", **headers,
+        )
+        self.assertEqual(offline.status_code, 503)
+        self.assertFalse(OperationAction.objects.exists())
+        HostAgentHeartbeat.objects.create(name="primary")
+        queued = self.client.post(
+            url, {"action": "read_logs", "service_id": service.pk, "since_minutes": 30},
+            content_type="application/json", **headers,
+        )
+        self.assertEqual(queued.status_code, 202)
+        claim_out = StringIO()
+        call_command("operations_agent", "claim", stdout=claim_out)
+        job = json.loads(claim_out.getvalue())
+        self.assertEqual(job["service_key"], "web")
+        result = {
+            "id": job["id"],
+            "request_id": job["request_id"],
+            "status": "succeeded",
+            "summary": "captured",
+            "log_content": "ERROR database timeout password=secret123\nAuthorization: Bearer ABCDEF123",
+        }
+        with patch("sys.stdin", StringIO(json.dumps(result))):
+            call_command("operations_agent", "complete", stdout=StringIO())
+        detail = self.client.get(
+            reverse("operations:action-detail", args=(self.project.pk, job["id"])),
+            **headers,
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertNotIn("secret123", detail.json()["log_content"])
+        self.assertNotIn("ABCDEF123", detail.json()["log_content"])
+        self.assertEqual(detail.json()["log_analysis"]["errors"], 1)
+        self.assertEqual(detail.json()["log_analysis"]["categories"]["database"], 1)
