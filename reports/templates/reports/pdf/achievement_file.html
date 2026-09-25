@@ -5,6 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  {% if personal_mode %}<meta name="robots" content="noindex,nofollow" />{% endif %}
   <title>ملف الإنجاز - {{ file.teacher_name }} - {{ file.academic_year }}</title>
 
   {% comment %}الخط والأيقونات محلياً: لا طلب لطرف ثالث قبل أول حرف، ولا نطاق خارجي في سياسة المحتوى.{% endcomment %}
@@ -335,6 +336,11 @@
     .document-footer { position: absolute; right: 20mm; left: 12mm; bottom: 9mm; display: flex; justify-content: space-between; gap: 8mm; padding-top: 3mm; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
     .general-page .section { margin-top: 7mm; }
     .report-page .report-box { margin-top: 7mm; }
+    .personal-link { color: var(--brand); overflow-wrap: anywhere; }
+    .personal-item { margin: 0 0 4mm; padding: 3mm 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+    .personal-item h3 { margin: 0 0 2mm; color: var(--brand-deep); font-size: 14px; }
+    .personal-item p { margin: 1mm 0; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .personal-note { color: var(--muted); font-size: 11px; line-height: 1.8; }
   </style>
 <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1">
 <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1">
@@ -388,25 +394,31 @@
     <div class="brand-rail" aria-hidden="true"></div>
     <div class="cover-top">
       <div class="cover-official">
+        {% if personal_mode %}
+        <div>منصة توثيق</div>
+        <div>ملف {{ workspace.owner.personal_teacher_label }} الشخصي</div>
+        <div>إعداد صاحب الملف</div>
+        {% else %}
         <div>المملكة العربية السعودية</div>
         <div>وزارة التعليم</div>
         <div>{{ school.name|default:"المدرسة" }}</div>
+        {% endif %}
       </div>
       <img src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق" class="cover-logo" />
       <div class="cover-official">
         <div>العام الدراسي</div>
         <div>{{ file.academic_year }} هـ</div>
-        <div>{{ school.get_stage_display|default:"" }}</div>
+        <div>{% if personal_mode %}مساحة مستقلة{% else %}{{ school.get_stage_display|default:"" }}{% endif %}</div>
       </div>
     </div>
 
     <div class="cover-main">
       <div class="cover-kicker">ملف مهني موثق · منصة توثيق</div>
-      <h1 class="cover-title">ملف الإنجاز المهني<br />{{ SCHOOL_TEACHER_DATIVE_LABEL|default:"للمعلم" }}</h1>
+      <h1 class="cover-title">ملف الإنجاز المهني<br />{% if personal_mode %}{{ personal_portfolio_dative_label }}{% else %}{{ SCHOOL_TEACHER_DATIVE_LABEL|default:"للمعلم" }}{% endif %}</h1>
       <div class="cover-subtitle">وفق معايير تقييم أداء شاغلي الوظائف التعليمية</div>
       <table class="cover-data">
         <tr><th>الاسم</th><td>{{ file.teacher_name|default:"—" }}</td></tr>
-        <tr><th>المدرسة</th><td>{{ school.name|default:"—" }}</td></tr>
+        {% if personal_mode %}<tr><th>نوع المساحة</th><td>شخصية مستقلة</td></tr>{% else %}<tr><th>المدرسة</th><td>{{ school.name|default:"—" }}</td></tr>{% endif %}
         <tr><th>التخصص</th><td>{{ file.specialization|default:"—" }}</td></tr>
         <tr><th>حالة الملف</th><td>{{ file.get_status_display|default:"—" }}</td></tr>
       </table>
@@ -414,14 +426,14 @@
 
     <div class="cover-foot">
       <div class="platform-mark"><img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق</div>
-      <div>أُنشئ هذا الملف آليًا من الشواهد الموثقة في المنصة</div>
+      <div>{% if personal_mode %}أُعد في المساحة الشخصية لصاحب الملف{% else %}أُنشئ هذا الملف آليًا من الشواهد الموثقة في المنصة{% endif %}</div>
     </div>
   </div>
 
   <div class="page page-break contents-page">
     <header class="document-header">
       <div class="document-brand"><img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق</div>
-      <div class="document-meta">{{ school.name }}<br />{{ file.academic_year }} هـ</div>
+      <div class="document-meta">{% if personal_mode %}ملف شخصي مستقل{% else %}{{ school.name }}{% endif %}<br />{{ file.academic_year }} هـ</div>
     </header>
     <h1 class="document-title">محتويات الملف</h1>
     <p class="document-lead">بنية موحدة تسهّل مراجعة البيانات والشواهد المهنية والتحقق منها.</p>
@@ -435,6 +447,9 @@
         </div>
       {% endfor %}
       {% if has_evidence_reports %}<div class="toc-item"><span class="toc-index">م</span><span class="toc-name">التقارير المرفقة كشواهد</span><span class="toc-kind">ملاحق موثقة</span></div>{% endif %}
+      {% if personal_mode and unlinked_reports %}<div class="toc-item"><span class="toc-index">ت</span><span class="toc-name">التقارير الأخرى</span><span class="toc-kind">ملاحق شخصية</span></div>{% endif %}
+      {% if personal_mode and visible_evidence %}<div class="toc-item"><span class="toc-index">ش</span><span class="toc-name">مكتبة الشواهد</span><span class="toc-kind">ملاحق شخصية</span></div>{% endif %}
+      {% if personal_mode and initiatives %}<div class="toc-item"><span class="toc-index">ب</span><span class="toc-name">المبادرات</span><span class="toc-kind">ملاحق شخصية</span></div>{% endif %}
     </div>
     <div class="document-footer"><span>ملف الإنجاز المهني</span><span>منصة توثيق</span></div>
   </div>
@@ -442,13 +457,22 @@
   <div class="page page-break general-page">
     <header class="header">
       <div class="hdr-block hdr-right">
+        {% if personal_mode %}
+        <div>منصة توثيق</div>
+        <div>ملف {{ workspace.owner.personal_teacher_label }} الشخصي</div>
+        <div>إعداد صاحب الملف</div>
+        {% else %}
         <div>المملكة العربية السعودية</div>
         <div>وزارة التعليم</div>
         <div>{{ school.name|default:"المدرسة" }}</div>
+        {% endif %}
       </div>
 
       <div class="hdr-center">
         <div class="logos">
+          {% if personal_mode %}
+            <img src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق" class="logo" />
+          {% else %}
           {% if school_logo_url %}
             <img src="{{ school_logo_url }}" alt="شعار المدرسة" class="logo logo-school" />
           {% endif %}
@@ -458,6 +482,7 @@
             alt=""
             class="logo"
           />
+          {% endif %}
         </div>
       </div>
 
@@ -470,7 +495,7 @@
 
     <div class="chapter-label">الفصل الأول</div>
     <div class="title">البيانات العامة</div>
-    <div class="subtitle">{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}: {{ file.teacher_name }} · المرحلة: {{ school.get_stage_display }}</div>
+    <div class="subtitle">{% if personal_mode %}{{ workspace.owner.personal_teacher_label }}: {{ file.teacher_name }} · مساحة شخصية مستقلة{% else %}{{ SCHOOL_TEACHER_LABEL|default:"المعلم" }}: {{ file.teacher_name }} · المرحلة: {{ school.get_stage_display }}{% endif %}</div>
 
     <table class="meta-table">
       <tr>
@@ -512,6 +537,17 @@
       </section>
     {% endif %}
 
+    {% if personal_mode %}
+      <section class="section">
+        <div class="section-h">معلومات تعريفية أدخلها صاحب الملف</div>
+        <p class="personal-note">اسم المدرسة ومديرها بيانات تعريفية، ولا يمثل ذكرهما اعتمادًا أو توقيعًا من المدرسة.</p>
+        <table class="meta-table u-m-0">
+          <tr><th>اسم المدرسة</th><td>{{ school_names|join:"، "|default:"—" }}</td></tr>
+          <tr><th>اسم المدير</th><td>{{ principal_names|join:"، "|default:"—" }}</td></tr>
+        </table>
+      </section>
+    {% endif %}
+
     <div class="document-footer"><span>{{ file.teacher_name }}</span><span>{{ file.academic_year }} هـ</span></div>
   </div>
 
@@ -527,7 +563,7 @@
       <div class="page page-break criterion-page">
         <header class="document-header">
           <div class="document-brand"><img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق</div>
-          <div class="document-meta">{{ school.name }}<br />{{ file.academic_year }} هـ</div>
+          <div class="document-meta">{% if personal_mode %}ملف شخصي مستقل{% else %}{{ school.name }}{% endif %}<br />{{ file.academic_year }} هـ</div>
         </header>
         <div class="criterion-top">
           <div class="criterion-count">المعيار {{ s.code }} من 11</div>
@@ -538,6 +574,7 @@
         <div class="evidence-summary">
           <span class="badge">{{ s.evidence_images.all|length }} صور</span>
           <span class="badge">{{ s.evidence_reports.all|length }} تقارير</span>
+          {% if personal_mode and s.personal_documents %}<span class="badge">{{ s.personal_documents|length }} ملفات وروابط</span>{% endif %}
           {% if s.is_completed %}<span class="badge">مكتمل</span>{% endif %}
         </div>
 
@@ -550,14 +587,20 @@
               {% for img in imgs|slice:":8" %}
                 <div class="img-box">
                   <img src="{{ img.image.url }}" alt="شاهد" />
-                  <div class="img-cap">شاهد ({{ forloop.counter }})</div>
+                  <div class="img-cap">{% if personal_mode %}{{ img.title }}{% else %}شاهد ({{ forloop.counter }}){% endif %}</div>
                 </div>
               {% endfor %}
             </div>
-          {% elif not s.evidence_reports.all %}
+          {% elif not s.evidence_reports.all and not s.personal_documents %}
             <div class="evidence-empty"><div><strong>لا توجد شواهد مرفقة لهذا المعيار</strong><br />يمكن استكمالها من ملف الإنجاز في منصة توثيق.</div></div>
           {% endif %}
         {% endwith %}
+        {% if personal_mode and s.personal_documents %}
+          <div class="xs-achievement-file-1">ملفات وروابط الشواهد</div>
+          {% for item in s.personal_documents %}
+            <div class="personal-item"><strong>{{ item.title }}</strong>{% if item.description %}<p>{{ item.description }}</p>{% endif %}{% if item.file %}<a class="personal-link" href="{% url 'personal:evidence_download' item.pk %}">تنزيل الملف</a>{% elif item.source_url %}<a class="personal-link" href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</div>
+          {% endfor %}
+        {% endif %}
         <div class="document-footer"><span>{{ file.teacher_name }}</span><span>المعيار {{ s.code }}</span></div>
       </div>
     {% endfor %}
@@ -584,6 +627,9 @@
               {% if ev.is_frozen %}<span class="badge">مثبت</span>{% endif %}
             </div>
 
+            {% if personal_mode %}
+              {% include "reports/pdf/partials/personal_portfolio_report.html" with item=ev.report %}
+            {% else %}
             <table class="meta-table xs-achievement-file-2">
               <tr>
                 <th>العنوان</th>
@@ -674,11 +720,15 @@
                 ملاحظة: تم حذف التقرير الأصلي من النظام بعد تثبيته.
               </div>
             {% endif %}
+            {% endif %}
             </div>
             <div class="document-footer"><span>{{ file.teacher_name }}</span><span>تقرير مرفق كشاهد</span></div>
           </div>
         {% endfor %}
       {% endfor %}
+    {% endif %}
+    {% if personal_mode %}
+      {% include "reports/pdf/partials/personal_portfolio_appendix.html" %}
     {% endif %}
 </body>
 </html>

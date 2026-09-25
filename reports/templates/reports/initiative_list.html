@@ -1,9 +1,13 @@
-{% extends "base.html" %}
+{% extends teacher_base_template|default:"base.html" %}
+{% load static %}
 
-{% block title %}المبادرات | منصة توثيق{% endblock %}
-{% block head %}{% include "reports/_plan_theme.html" %}{% endblock %}
+{% block title %}{% if personal_mode %}مبادراتي{% else %}المبادرات | منصة توثيق{% endif %}{% endblock %}
+{% block head %}{% if personal_mode %}<link rel="stylesheet" href="{% static 'css/plans.css' %}?v=20260925.1"><link rel="stylesheet" href="{% static 'css/personal-archive.css' %}?v=20260925.1">{% else %}{% include "reports/_plan_theme.html" %}{% endif %}{% endblock %}
 
 {% block content %}
+{% if personal_mode %}
+{% include "reports/partials/personal_initiatives.html" %}
+{% else %}
 <div class="twq-page plans-page" aria-labelledby="initiativesPageTitle">
   <header class="twq-page-header plans-page-header">
     <div class="twq-page-header__heading">
@@ -56,4 +60,5 @@
     </section>
   </div>
 </div>
+{% endif %}
 {% endblock %}

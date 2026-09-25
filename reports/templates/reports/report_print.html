@@ -6,6 +6,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>تقرير: {% firstof r.title "بدون عنوان" %}</title>
+  {% if personal_mode %}<meta name="robots" content="noindex,nofollow">{% endif %}
   
   {% if not for_pdf %}
     {% comment %}الخط والأيقونات محلياً: لا طلب لطرف ثالث قبل أول حرف، ولا نطاق خارجي في سياسة المحتوى.{% endcomment %}
@@ -331,6 +332,19 @@
       background: transparent;
     }
     .report-footer div { color: var(--muted); }
+    {% if personal_mode %}
+    .personal-print-note { padding-block-start: 4mm; color: #64736c; font-size: 8pt; line-height: 1.7; }
+    .personal-print-evidence-link { padding: 2mm 3mm; border: 1px solid #d6e0da; border-radius: 2mm; margin-block: 2mm; break-inside: avoid; }
+    .personal-print-evidence-link a { color: #006c35; overflow-wrap: anywhere; }
+    .images-grid--mixed.images-grid--3 { grid-template-rows: none; }
+    .images-grid--mixed.images-grid--3 .img-box { grid-row: auto; }
+    .images-grid--mixed.images-grid--3 .img-box img { height: 54mm; }
+    @media screen { .img-box img.img-fit--cover { object-fit: cover; } }
+    @media print {
+      .images-grid--mixed.images-grid--3 .img-box img { height: 43mm; }
+      .images-grid--mixed.images-grid--4 .img-box:nth-child(3) { break-before: auto; page-break-before: auto; }
+    }
+    {% endif %}
     {% include "reports/partials/report_print_official_styles.html" %}
   </style>
 <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1">
@@ -366,6 +380,11 @@
     These classes only select presentation; no report data or action changes.{% endcomment %}
   <main class="page{% if EVIDENCE_COUNT >= 3 %} page--dense-evidence{% endif %}{% if EVIDENCE_COUNT == 1 %} page--single-evidence{% elif EVIDENCE_COUNT == 2 %} page--paired-evidence{% endif %}{% if EVIDENCE_COUNT or r.show_goal and r.goal|length > 700 or r.show_details and r.idea|length > 700 or r.show_implementation and r.implementation_method|length > 700 or r.show_results and r.results|length > 700 or r.show_recommendations and r.recommendations|length > 700 %} page--natural-print-flow{% endif %}">
     <header class="header">
+      {% if personal_mode %}
+      <div class="hdr-block hdr-right"><div>منصة توثيق</div><div>تقرير مهني شخصي</div><div>إعداد {{ workspace.owner.personal_teacher_label }}</div></div>
+      <div class="hdr-center"><img src="{% static 'img/brand-mark.svg' %}" alt="منصة توثيق" class="logo"></div>
+      <div class="hdr-block hdr-left"><div class="hdr-academic-label">السنة الدراسية</div><div class="hdr-academic-year"><bdi dir="ltr">{{ r.academic_year }}</bdi></div></div>
+      {% else %}
       <div class="hdr-block hdr-right">
         <div>المملكة العربية السعودية</div>
         <div>وزارة التعليم</div>
@@ -386,17 +405,19 @@
           <div class="hdr-academic-year"><bdi>{{ r.academic_year }}</bdi> هـ</div>
         {% endif %}
       </div>
+      {% endif %}
     </header>
 
     <section class="report-identity" aria-labelledby="reportTitle">
       <h1 id="reportTitle">{% firstof r.title "تقرير مدرسي" %}</h1>
       <div class="identity-tags">
-        <span><i class="fa-solid fa-hashtag" aria-hidden="true"></i> رقم التقرير: <b><bdi>REP-{{ r.id }}</bdi></b></span>
+        <span><i class="fa-solid fa-hashtag" aria-hidden="true"></i> رقم التقرير: <b><bdi>{% if personal_mode %}PER-{{ r.id }}{% else %}REP-{{ r.id }}{% endif %}</bdi></b></span>
         <span><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> تاريخ التنفيذ: <b>{% if r.day_name %}{{ r.day_name }} - {% endif %}{{ r.report_date|hijri }} هـ</b></span>
       </div>
     </section>
 
     <table class="meta-table meta-table--compact">
+      {% if personal_mode %}<tr><th scope="row">إعداد {{ workspace.owner.personal_teacher_label }}</th><td>{{ r.teacher_name }}</td><th scope="row">الحالة</th><td>{{ personal_report.get_status_display }}</td></tr>{% endif %}
       <tr>
         <th scope="row">التصنيف</th>
         <td{% if not r.show_beneficiaries %} colspan="3"{% endif %}>{% if r.category %}{{ r.category.name }}{% else %}عام{% endif %}</td>
@@ -405,6 +426,7 @@
           <td>{{ r.beneficiaries_count|default_if_none:"—" }}</td>
         {% endif %}
       </tr>
+      {% if personal_mode and personal_report.school_name or personal_mode and personal_report.principal_name %}<tr><th scope="row">اسم المدرسة</th><td>{{ personal_report.school_name|default:"—" }}</td><th scope="row">مدير المدرسة</th><td>{{ personal_report.principal_name|default:"—" }}</td></tr>{% endif %}
     </table>
 
     {% if r.show_goal %}
@@ -452,7 +474,7 @@
     ============================================
     {% endcomment %}
     <div class="signature-spacer"></div>
-    <section class="approval-block">
+    {% if not personal_mode %}<section class="approval-block">
       <div class="approval-heading">
         <h2>الاعتمادات والتوقيعات</h2>
       </div>
@@ -523,7 +545,7 @@
           </div>
         </div>
       {% endif %}
-    </section>
+    </section>{% else %}<p class="personal-print-note">أُعد هذا المستند في المساحة الشخصية. اسم المدرسة واسم المدير، إن وُجدا، معلومات تعريفية أدخلها صاحب الحساب؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</p>{% endif %}
 
     <div class="report-footer">
       <div>تم الإصدار إلكترونيًا: {% now "Y/m/d H:i" %}</div>
@@ -622,7 +644,9 @@
       } catch (e) {}
 
       // Smart back URL based on user role
-      {% if back_url %}
+       {% if personal_mode %}
+       window.location.href = "{% url 'personal:report_detail' r.pk %}";
+       {% elif back_url %}
       window.location.href = "{% url back_url %}";
       {% else %}
       window.location.href = "{% url 'reports:my_reports' %}";

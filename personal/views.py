@@ -3,6 +3,7 @@ from io import BytesIO
 import json
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 import uuid
 
 from django.contrib import messages
@@ -12,6 +13,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.db import IntegrityError, transaction
 from django.db.models import Max, Prefetch, Q, Sum
+from django.forms.models import construct_instance
 from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -48,6 +50,7 @@ from .forms import (
     personal_report_evidence_formset,
 )
 from .models import PersonalAcademicYear, PersonalEvidence, PersonalPayment, PersonalPlan, PersonalReport, PersonalWorkspace
+from .quotas import personal_quota_usage, reserve_personal_quota
 from .services import current_school_membership_for, ensure_personal_subscription, ensure_writable_personal_year
 
 
@@ -240,12 +243,15 @@ def moyasar_return(request, payment_id):
 def billing(request):
     workspace = request.personal_workspace
     payments = PersonalPayment.objects.filter(workspace=workspace).select_related("plan")[:50]
+    _subscription, report_count, evidence_count = personal_quota_usage(workspace)
+    storage_bytes = workspace.evidence.aggregate(total=Sum("file_size"))["total"] or 0
     return render(request, "personal/billing.html", {
         "workspace": workspace,
         "subscription": request.personal_subscription,
         "payments": payments,
-        "report_count": workspace.reports.count(),
-        "evidence_count": workspace.evidence.count(),
+        "report_count": report_count,
+        "evidence_count": evidence_count,
+        "storage_used_mb": storage_bytes / (1024 * 1024),
         "plans": PersonalPlan.objects.filter(is_active=True, is_published=True).order_by("display_order", "price", "id"),
         "paid_plans": PersonalPlan.objects.filter(is_active=True, is_published=True, price__gt=0).order_by("display_order", "price", "id"),
         "moyasar_enabled": moyasar_is_enabled(),
@@ -280,6 +286,28 @@ def payment_invoice(request, payment_id):
 @require_GET
 def dashboard(request):
     ws = request.personal_workspace
+    quota_subscription, reports_created, evidence_created = personal_quota_usage(ws)
+    storage_used_bytes = ws.evidence.aggregate(total=Sum("file_size"))["total"] or 0
+    storage_limit_bytes = quota_subscription.plan.storage_limit_mb * 1024 * 1024
+    quota = {
+        "reports": {
+            "used": reports_created,
+            "remaining": max(quota_subscription.plan.max_reports - reports_created, 0),
+            "limit": quota_subscription.plan.max_reports,
+        },
+        "evidence": {
+            "used": evidence_created,
+            "remaining": max(quota_subscription.plan.max_evidence - evidence_created, 0),
+            "limit": quota_subscription.plan.max_evidence,
+        },
+        "storage": {
+            "used_bytes": storage_used_bytes,
+            "limit_bytes": storage_limit_bytes,
+            "used_mb": storage_used_bytes / (1024 * 1024),
+            "remaining_mb": max(storage_limit_bytes - storage_used_bytes, 0) / (1024 * 1024),
+            "limit_mb": quota_subscription.plan.storage_limit_mb,
+        },
+    }
     active_reports = ws.reports.filter(trashed_at__isnull=True)
     recent_reports = active_reports[:5]
     recent_evidence = ws.evidence.filter(
@@ -293,10 +321,11 @@ def dashboard(request):
         "initiatives": ws.initiatives.count(),
         "unread_notices": ws.notices.filter(read_at__isnull=True).count(),
     }
-    return render(request, "personal/dashboard.html", {
+    return render(request, "reports/home.html", {
         "workspace": ws, "recent_reports": recent_reports,
-        "recent_evidence": recent_evidence, "stats": stats,
-        "subscription": request.personal_subscription,
+        "recent_evidence": recent_evidence, "stats": stats, "quota": quota,
+        "subscription": quota_subscription,
+        "personal_mode": True, "teacher_base_template": "personal/base.html",
     })
 
 
@@ -318,9 +347,15 @@ def report_list(request):
     years = request.personal_workspace.reports.filter(trashed_at__isnull=True).order_by(
         "-academic_year"
     ).values_list("academic_year", flat=True).distinct()
+    today = timezone.localdate()
+    stats = {
+        "total": qs.count(),
+        "this_month": qs.filter(report_date__year=today.year, report_date__month=today.month).count(),
+    }
     page = Paginator(qs, 20).get_page(request.GET.get("page"))
-    return render(request, "personal/report_list.html", {
-        "reports": page, "query": query, "year": year, "status": status,
+    return render(request, "reports/my_reports.html", {
+        "reports": page, "query": query, "q": query, "year": year, "status": status,
+        "stats": stats, "personal_mode": True, "teacher_base_template": "personal/base.html",
         "years": years, "statuses": PersonalReport.Status.choices,
         "subscription_active": request.personal_subscription.is_current,
         "archived_years": set(request.personal_workspace.academic_years.filter(
@@ -379,8 +414,6 @@ def _inline_evidence_capacity_error(workspace, subscription, formset, report=Non
     existing_count = report.evidence.count() if report else 0
     if existing_count + len(new_rows) > 8:
         return "الحد الأعلى لكل تقرير 8 شواهد. أزل شاهدًا قبل إضافة المزيد."
-    if workspace.evidence.count() + len(new_rows) > subscription.plan.max_evidence:
-        return "وصلت إلى الحد الحالي للشواهد الشخصية."
     used = workspace.evidence.aggregate(total=Sum("file_size"))["total"] or 0
     added = sum(row["file"].size for row in new_rows if row.get("file"))
     if used + added > subscription.plan.storage_limit_mb * 1024 * 1024:
@@ -427,7 +460,6 @@ def _school_image_capacity_error(workspace, subscription, formset, report=None):
     current_report_count = report.evidence.count() if report else 0
     new_count = 0
     removed_from_report = 0
-    physically_deleted = 0
     added_bytes = 0
     released_bytes = 0
     for form in formset.forms:
@@ -440,7 +472,6 @@ def _school_image_capacity_error(workspace, subscription, formset, report=None):
             if old.pk:
                 removed_from_report += 1
                 if not old.portfolio_links.exists() and not old.initiative_id:
-                    physically_deleted += 1
                     released_bytes += old.file_size
         elif old.pk:
             if image:
@@ -451,12 +482,25 @@ def _school_image_capacity_error(workspace, subscription, formset, report=None):
             added_bytes += image.size
     if current_report_count + new_count - removed_from_report > 8:
         return "الحد الأعلى لكل تقرير 8 شواهد. أزل شاهدًا قبل إضافة المزيد."
-    if workspace.evidence.count() + new_count - physically_deleted > subscription.plan.max_evidence:
-        return "وصلت إلى الحد الحالي للشواهد الشخصية."
     used = workspace.evidence.aggregate(total=Sum("file_size"))["total"] or 0
     if used + added_bytes - released_bytes > subscription.plan.storage_limit_mb * 1024 * 1024:
         return "تجاوزت الملفات سعة باقتك الحالية."
     return ""
+
+
+def _new_evidence_count(formset, *, school_editor):
+    if formset is None:
+        return 0
+    if school_editor:
+        return sum(
+            bool(form.cleaned_data.get("image")) and not form.instance.pk
+            and not form.cleaned_data.get("DELETE")
+            for form in formset.forms if getattr(form, "cleaned_data", None)
+        )
+    return sum(
+        bool(row and (row.get("file") or row.get("source_url")))
+        for row in formset.cleaned_data
+    )
 
 
 def _save_school_image_evidence(formset, workspace, report):
@@ -563,7 +607,20 @@ def report_create(request):
             return JsonResponse({"ok": False, "message": "اشتراك المساحة الشخصية غير نشط حاليًا."}, status=403)
         messages.error(request, "اشتراك المساحة الشخصية غير نشط حاليًا. أعمالك المحفوظة متاحة للقراءة.")
         return redirect("personal:dashboard")
-    if ws.reports.count() >= subscription.plan.max_reports:
+    if request.method == "POST":
+        try:
+            retry_id = uuid.UUID(request.POST.get("client_submission_id", ""))
+        except (ValueError, AttributeError):
+            retry_id = None
+        if retry_id:
+            existing = ws.reports.filter(client_submission_id=retry_id).first()
+            if existing:
+                messages.info(request, "حُفظ هذا التقرير مسبقًا.")
+                return redirect("personal:report_trash") if existing.trashed_at else redirect(
+                    "personal:report_detail", pk=existing.pk,
+                )
+    _current_subscription, reports_used, _evidence_used = personal_quota_usage(ws)
+    if reports_used >= subscription.plan.max_reports:
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": False, "message": "وصلت إلى حد التقارير الشخصية في باقتك."}, status=422)
         messages.error(request, "وصلت إلى الحد الحالي للتقارير الشخصية. تواصل مع الدعم لزيادة السعة.")
@@ -594,22 +651,25 @@ def report_create(request):
         try:
             with transaction.atomic():
                 locked = PersonalWorkspace.objects.select_for_update().get(pk=ws.pk)
+                current_subscription, _reports_used, _evidence_used = personal_quota_usage(locked, lock=True)
                 existing = locked.reports.filter(client_submission_id=submission_id).first() if submission_id else None
                 if existing:
                     messages.info(request, "حُفظ هذا التقرير مسبقًا.")
                     return redirect("personal:report_trash") if existing.trashed_at else redirect(
                         "personal:report_detail", pk=existing.pk,
                     )
-                if locked.reports.count() >= subscription.plan.max_reports:
-                    raise ValidationError("وصلت إلى الحد الحالي للتقارير الشخصية.")
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
                 capacity_error = (
-                    _school_image_capacity_error(locked, subscription, evidence_formset)
+                    _school_image_capacity_error(locked, current_subscription, evidence_formset)
                     if school_editor else
-                    _inline_evidence_capacity_error(locked, subscription, evidence_formset)
+                    _inline_evidence_capacity_error(locked, current_subscription, evidence_formset)
                 )
                 if capacity_error:
                     raise ValidationError(capacity_error)
+                reserve_personal_quota(
+                    locked, reports=1,
+                    evidence=_new_evidence_count(evidence_formset, school_editor=school_editor),
+                )
                 report = _save_report(form, locked, request.user, submission_id=submission_id)
                 if school_editor:
                     _save_school_image_evidence(evidence_formset, locked, report)
@@ -628,8 +688,10 @@ def report_create(request):
         else:
             messages.success(request, "حُفظ التقرير وشواهده في مساحتك الشخصية.")
             return redirect("personal:report_detail", pk=report.pk)
-    return render(request, "personal/report_form.html", {
+    return render(request, "reports/teacher_report_form.html", {
         "form": form, "evidence_formset": evidence_formset, "editing": False,
+        "personal_mode": True, "teacher_base_template": "personal/base.html",
+        "has_report_types": True,
         "personal_report_review_enabled": True,
         **personal_assistant_template_context(request.user, subscription),
     }, status=422 if request.method == "POST" and request.headers.get("X-Requested-With") == "XMLHttpRequest" else 200)
@@ -664,17 +726,21 @@ def report_edit(request, pk):
         try:
             with transaction.atomic():
                 locked = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
+                current_subscription, _reports_used, _evidence_used = personal_quota_usage(locked, lock=True)
                 get_object_or_404(PersonalReport, pk=report.pk, workspace=locked, trashed_at__isnull=True)
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
                 capacity_error = (
                     _school_image_capacity_error(
-                        locked, request.personal_subscription, evidence_formset, report=report,
+                        locked, current_subscription, evidence_formset, report=report,
                     ) if school_editor else _inline_evidence_capacity_error(
-                        locked, request.personal_subscription, evidence_formset, report=report,
+                        locked, current_subscription, evidence_formset, report=report,
                     )
                 )
                 if capacity_error:
                     raise ValidationError(capacity_error)
+                reserve_personal_quota(
+                    locked, evidence=_new_evidence_count(evidence_formset, school_editor=school_editor),
+                )
                 report = _save_report(form, locked, request.user)
                 if school_editor:
                     _save_school_image_evidence(evidence_formset, locked, report)
@@ -685,8 +751,10 @@ def report_edit(request, pk):
         else:
             messages.success(request, "حُفظت التعديلات والشواهد.")
             return redirect("personal:report_detail", pk=report.pk)
-    return render(request, "personal/report_form.html", {
+    return render(request, "reports/teacher_report_form.html", {
         "form": form, "evidence_formset": evidence_formset, "editing": True, "report": report,
+        "personal_mode": True, "teacher_base_template": "personal/base.html",
+        "has_report_types": True,
         "existing_evidence": report.evidence.order_by("order", "id"),
         "existing_documents": report.evidence.exclude(pk__in=_personal_report_image_queryset(report).values("pk")).order_by("order", "id"),
         "personal_report_review_enabled": True,
@@ -755,9 +823,10 @@ def report_trash(request):
     archived_years = set(request.personal_workspace.academic_years.filter(
         archived_at__isnull=False
     ).values_list("value", flat=True))
-    return render(request, "personal/report_trash.html", {
+    return render(request, "reports/report_trash.html", {
         "reports": page, "subscription_active": request.personal_subscription.is_current,
         "archived_years": archived_years,
+        "personal_mode": True, "teacher_base_template": "personal/base.html",
     })
 
 
@@ -787,11 +856,32 @@ def report_print(request, pk):
         PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
     )
     evidence = list(report.evidence.filter(show_in_print=True).order_by("order", "id"))
-    response = render(request, "personal/report_print.html", {
-        "document_title": report.title, "report": report,
-        "evidence": evidence,
-        "print_image_count": sum(item.is_image for item in evidence),
+    images = [item for item in evidence if item.is_image]
+    printable_report = SimpleNamespace(
+        id=report.pk, pk=report.pk, title=report.title,
+        report_date=report.report_date, academic_year=report.academic_year,
+        day_name="", category=SimpleNamespace(name=report.category) if report.category else None,
+        teacher_name=report.teacher_name,
+        show_goal=report.show_goals and bool(report.goals), goal=report.goals,
+        show_details=report.show_details and bool(report.description), idea=report.description,
+        show_implementation=report.show_implementation and bool(report.implementation),
+        implementation_method=report.implementation,
+        show_results=report.show_results and bool(report.results), results=report.results,
+        show_recommendations=report.show_recommendations and bool(report.recommendations),
+        recommendations=report.recommendations,
+        show_beneficiaries=report.show_beneficiaries,
+        beneficiaries_count=report.beneficiaries_count,
+    )
+    response = render(request, "reports/report_print.html", {
+        "document_title": report.title, "r": printable_report,
+        "personal_report": report, "personal_mode": True,
         "workspace": request.personal_workspace,
+        "EVIDENCE_ITEMS": evidence,
+        "EVIDENCE_COUNT": len(images),
+        "EVIDENCE_LAYOUT": min(len(images), 4),
+        "EVIDENCE_SEPARATE_PAGE": False,
+        "personal_mixed_evidence": len(images) != len(evidence),
+        "report_approval_enabled": False,
     })
     response["Cache-Control"] = "no-store"
     return response
@@ -824,7 +914,8 @@ def evidence_create(request):
     if not subscription.is_current:
         messages.error(request, "اشتراك المساحة الشخصية غير نشط حاليًا. شواهدك المحفوظة متاحة للقراءة.")
         return redirect("personal:dashboard")
-    if ws.evidence.count() >= subscription.plan.max_evidence:
+    _current_subscription, _reports_used, evidence_used = personal_quota_usage(ws)
+    if evidence_used >= subscription.plan.max_evidence:
         messages.error(request, "وصلت إلى الحد الحالي للشواهد الشخصية. تواصل مع الدعم لزيادة السعة.")
         return redirect("personal:evidence")
     initial = {}
@@ -848,6 +939,7 @@ def evidence_create(request):
         new_size = uploaded.size if uploaded else 0
         with transaction.atomic():
             locked = PersonalWorkspace.objects.select_for_update().get(pk=ws.pk)
+            current_subscription, _reports_used, _evidence_used = personal_quota_usage(locked, lock=True)
             try:
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
             except ValidationError as exc:
@@ -855,25 +947,28 @@ def evidence_create(request):
             used = locked.evidence.aggregate(total=Sum("file_size"))["total"] or 0
             if form.errors:
                 pass
-            elif locked.evidence.count() >= subscription.plan.max_evidence:
-                form.add_error(None, "وصلت إلى الحد الحالي للشواهد الشخصية.")
             elif form.cleaned_data.get("report") and locked.evidence.filter(
                 report=form.cleaned_data["report"]
             ).count() >= 8:
                 form.add_error("report", "الحد الأعلى للتقرير 8 شواهد.")
-            elif used + new_size > subscription.plan.storage_limit_mb * 1024 * 1024:
-                form.add_error("file", f"تجاوزت الملفات سعة باقتك الحالية ({subscription.plan.storage_limit_mb} ميجابايت).")
+            elif used + new_size > current_subscription.plan.storage_limit_mb * 1024 * 1024:
+                form.add_error("file", f"تجاوزت الملفات سعة باقتك الحالية ({current_subscription.plan.storage_limit_mb} ميجابايت).")
             else:
-                obj = form.save(commit=False)
-                obj.workspace = locked
-                obj.file_size = new_size
-                if obj.report_id:
-                    obj.order = (locked.evidence.filter(report_id=obj.report_id).aggregate(
-                        max_order=Max("order")
-                    )["max_order"] or 0) + 1
-                obj.save()
-                messages.success(request, "أُضيف الشاهد إلى مكتبتك الشخصية.")
-                return redirect("personal:evidence")
+                try:
+                    reserve_personal_quota(locked, evidence=1)
+                except ValidationError as exc:
+                    form.add_error(None, exc)
+                else:
+                    obj = form.save(commit=False)
+                    obj.workspace = locked
+                    obj.file_size = new_size
+                    if obj.report_id:
+                        obj.order = (locked.evidence.filter(report_id=obj.report_id).aggregate(
+                            max_order=Max("order")
+                        )["max_order"] or 0) + 1
+                    obj.save()
+                    messages.success(request, "أُضيف الشاهد إلى مكتبتك الشخصية.")
+                    return redirect("personal:evidence")
     return render(request, "personal/evidence_form.html", {"form": form})
 
 
@@ -893,13 +988,16 @@ def evidence_edit(request, pk):
     )
     if request.method == "POST" and form.is_valid():
         uploaded = form.cleaned_data.get("file")
-        new_size = (
-            uploaded.size if isinstance(uploaded, UploadedFile)
-            else evidence.file_size if uploaded else 0
-        )
         with transaction.atomic():
             locked = PersonalWorkspace.objects.select_for_update().get(pk=ws.pk)
+            current_subscription, _reports_used, _evidence_used = personal_quota_usage(locked, lock=True)
             current = get_object_or_404(PersonalEvidence.objects.select_for_update(), pk=pk, workspace=locked)
+            new_size = (
+                uploaded.size if isinstance(uploaded, UploadedFile)
+                else current.file_size if uploaded else 0
+            )
+            if not current_subscription.is_current:
+                form.add_error(None, "اشتراك المساحة الشخصية غير نشط حاليًا.")
             try:
                 ensure_writable_personal_year(locked, current.academic_year)
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
@@ -909,7 +1007,7 @@ def evidence_edit(request, pk):
                 if current.portfolio_links.exists():
                     form.add_error("academic_year", "لا يمكن تغيير سنة شاهد مرتبط بمحور ملف الإنجاز.")
             used = locked.evidence.aggregate(total=Sum("file_size"))["total"] or 0
-            if not form.errors and used - current.file_size + new_size > request.personal_subscription.plan.storage_limit_mb * 1024 * 1024:
+            if not form.errors and used - current.file_size + new_size > current_subscription.plan.storage_limit_mb * 1024 * 1024:
                 form.add_error("file", "تجاوزت الملفات سعة باقتك الحالية.")
             target_report = form.cleaned_data.get("report")
             if not form.errors and target_report and locked.evidence.filter(
@@ -917,10 +1015,12 @@ def evidence_edit(request, pk):
             ).exclude(pk=current.pk).count() >= 8:
                 form.add_error("report", "الحد الأعلى للتقرير 8 شواهد.")
             if not form.errors:
+                old_report_id = current.report_id
+                form.instance = construct_instance(form, current, form._meta.fields, form._meta.exclude)
                 obj = form.save(commit=False)
                 obj.workspace = locked
                 obj.file_size = new_size
-                if obj.report_id != current.report_id:
+                if obj.report_id != old_report_id:
                     obj.order = (locked.evidence.filter(report_id=obj.report_id).aggregate(
                         max_order=Max("order")
                     )["max_order"] or 0) + 1 if obj.report_id else 1
@@ -1004,12 +1104,18 @@ def evidence_preview(request, pk):
 @workspace_required
 @require_POST
 def evidence_delete(request, pk):
-    evidence = get_object_or_404(PersonalEvidence, pk=pk, workspace=request.personal_workspace)
-    if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
-        workspace=request.personal_workspace, value=evidence.academic_year, archived_at__isnull=False
-    ).exists():
-        messages.error(request, "لا يمكن حذف شاهد من سنة مؤرشفة أو اشتراك غير نشط.")
-        return redirect("personal:evidence")
-    evidence.delete()
+    with transaction.atomic():
+        workspace = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
+        subscription, _reports_used, _evidence_used = personal_quota_usage(workspace, lock=True)
+        evidence = get_object_or_404(
+            PersonalEvidence.objects.select_for_update(), pk=pk, workspace=workspace,
+        )
+        if not subscription.is_current or PersonalAcademicYear.objects.filter(
+            workspace=workspace, value=evidence.academic_year, archived_at__isnull=False
+        ).exists():
+            messages.error(request, "لا يمكن حذف شاهد من سنة مؤرشفة أو اشتراك غير نشط.")
+            return redirect("personal:evidence")
+        reserve_personal_quota(workspace)
+        evidence.delete()
     messages.success(request, "حُذف الشاهد.")
     return redirect("personal:evidence")

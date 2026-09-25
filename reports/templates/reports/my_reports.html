@@ -1,5 +1,5 @@
 {# reports/templates/reports/my_reports.html #}
-{% extends "base.html" %}
+{% extends teacher_base_template|default:"base.html" %}
 {% load static %}
 {% load hijri_tags %}
 
@@ -18,7 +18,7 @@
         <span>منصة توثيق · سجل تقاريري</span>
       </div>
       <h1 class="twq-page-header__title" id="myReportsTitle">تقاريري</h1>
-      <p class="twq-page-header__lead">ابحث في تقاريرك المدرسية، راجع حالتها وشواهدها، وانتقل إلى الإجراء المطلوب من سجل تشغيلي واحد.</p>
+      <p class="twq-page-header__lead">ابحث في تقاريرك، راجع حالتها وشواهدها، وانتقل إلى الإجراء المطلوب من سجل تشغيلي واحد.</p>
     </div>
 
     <div class="my-reports-header__aside twq-page-header__aside">
@@ -26,14 +26,15 @@
         <img src="{% static 'img/brand-mark.svg' %}" alt="">
       </div>
       <div class="my-reports-header__actions" aria-label="إجراءات التقارير">
-        <a href="{% url 'reports:add_report' %}" class="twq-btn twq-btn--primary">
+        {% if not personal_mode or subscription_active %}<a href="{% if personal_mode %}{% url 'personal:report_create' %}{% else %}{% url 'reports:add_report' %}{% endif %}" class="twq-btn twq-btn--primary">
           <i class="fa-solid fa-plus" aria-hidden="true"></i>
           <span>إضافة تقرير جديد</span>
-        </a>
-        <a href="{% url 'reports:report_trash' %}" class="twq-btn twq-btn--secondary">
+        </a>{% endif %}
+        <a href="{% if personal_mode %}{% url 'personal:report_trash' %}{% else %}{% url 'reports:report_trash' %}{% endif %}" class="twq-btn twq-btn--secondary">
           <i class="fa-solid fa-trash-arrow-up" aria-hidden="true"></i>
           <span>سلة المحذوفات</span>
         </a>
+        {% if personal_mode %}<a href="{% url 'personal:evidence' %}" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-photo-film" aria-hidden="true"></i> مكتبة الشواهد</a>{% endif %}
       </div>
     </div>
   </header>
@@ -61,9 +62,9 @@
       <div>
         <span class="twq-section__kicker">البحث والتصفية</span>
         <h2 class="twq-section__title" id="myReportsFiltersTitle">اعثر على التقرير المطلوب</h2>
-        <p class="twq-section__description">ابحث في العنوان أو المحتوى، وحدد نطاقًا زمنيًا عند الحاجة.</p>
+        <p class="twq-section__description">ابحث في العنوان أو المحتوى، وحدد نطاق النتائج عند الحاجة.</p>
       </div>
-      {% if q or start_date or end_date %}
+      {% if q or start_date or end_date or year or status %}
         <span class="twq-section__meta">
           <i class="fa-solid fa-filter-circle-check" aria-hidden="true"></i>
           تصفية نشطة
@@ -80,6 +81,10 @@
         </div>
       </div>
 
+      {% if personal_mode %}
+      <div class="my-reports-filter__field twq-toolbar__field twq-field"><label class="twq-label" for="mrYear">السنة الدراسية</label><select id="mrYear" name="year" class="twq-control"><option value="">كل السنوات</option>{% for option in years %}<option value="{{ option }}"{% if year == option %} selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+      <div class="my-reports-filter__field twq-toolbar__field twq-field"><label class="twq-label" for="mrStatus">الحالة</label><select id="mrStatus" name="status" class="twq-control"><option value="">كل الحالات</option>{% for value, label in statuses %}<option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      {% else %}
       <div class="my-reports-filter__field twq-toolbar__field twq-field">
         <label class="twq-label" for="mrStart">من تاريخ</label>
         <input id="mrStart" type="date" name="start_date" value="{{ start_date|default:'' }}" class="twq-control">
@@ -89,14 +94,15 @@
         <label class="twq-label" for="mrEnd">إلى تاريخ</label>
         <input id="mrEnd" type="date" name="end_date" value="{{ end_date|default:'' }}" class="twq-control">
       </div>
+      {% endif %}
 
       <div class="my-reports-filter__actions twq-toolbar__actions">
         <button type="submit" class="twq-btn twq-btn--primary">
           <i class="fa-solid fa-filter" aria-hidden="true"></i>
           <span>تطبيق التصفية</span>
         </button>
-        {% if q or start_date or end_date %}
-          <a href="{% url 'reports:my_reports' %}" class="twq-btn twq-btn--ghost">
+        {% if q or start_date or end_date or year or status %}
+          <a href="{% if personal_mode %}{% url 'personal:reports' %}{% else %}{% url 'reports:my_reports' %}{% endif %}" class="twq-btn twq-btn--ghost">
             <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
             <span>مسح الكل</span>
           </a>
@@ -104,12 +110,14 @@
       </div>
     </form>
 
-    {% if q or start_date or end_date %}
+    {% if q or start_date or end_date or year or status %}
       <div class="my-reports-active-filters twq-toolbar__active-filters" aria-label="معايير التصفية الحالية">
         <span class="my-reports-active-filters__label twq-toolbar__active-label">المحدد حاليًا:</span>
         {% if q %}<span class="my-reports-filter-chip twq-filter-chip"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> <bdi>{{ q }}</bdi></span>{% endif %}
         {% if start_date %}<span class="my-reports-filter-chip twq-filter-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i> من <bdi>{{ start_date }}</bdi></span>{% endif %}
         {% if end_date %}<span class="my-reports-filter-chip twq-filter-chip"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> إلى <bdi>{{ end_date }}</bdi></span>{% endif %}
+        {% if year %}<span class="my-reports-filter-chip twq-filter-chip">السنة: <bdi>{{ year }}</bdi></span>{% endif %}
+        {% if status %}<span class="my-reports-filter-chip twq-filter-chip">الحالة: <bdi>{{ status }}</bdi></span>{% endif %}
       </div>
     {% endif %}
   </section>
@@ -134,7 +142,7 @@
           <tr>
             <th scope="col">التقرير</th>
             <th scope="col">التاريخ</th>
-            <th scope="col">{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</th>
+            <th scope="col">{% if personal_mode %}السنة الدراسية{% else %}{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}{% endif %}</th>
             <th scope="col">الوصف</th>
             <th scope="col">الشواهد</th>
             <th scope="col">الإجراءات</th>
@@ -147,7 +155,7 @@
                 <div class="my-report-title-cell">
                   <strong>{{ report.title }}</strong>
                   <div class="my-report-title-cell__meta">
-                    <span class="my-report-category">{% if report.category and report.category.name %}{{ report.category.name }}{% else %}عام{% endif %}</span>
+                    <span class="my-report-category">{{ report.category.name|default:report.category|default:"عام" }}</span>
                     {% include "reports/partials/report_state_chip.html" with report=report %}
                   </div>
                 </div>
@@ -155,20 +163,24 @@
               <td>
                 <time class="my-report-date">
                   <span>{{ report.report_date|hijri }} هـ</span>
-                  <small>{{ report.day_name }}</small>
+                   <small>{% if personal_mode %}{{ report.report_date|date:"Y-m-d" }}{% else %}{{ report.day_name }}{% endif %}</small>
                 </time>
               </td>
-              <td><span class="my-report-beneficiaries"><bdi>{{ report.beneficiaries_count|default:"0" }}</bdi></span></td>
-              <td><p class="my-report-description" title="{{ report.idea|default:'' }}">{{ report.idea|default:"لا يوجد وصف" }}</p></td>
+               <td><span class="my-report-beneficiaries"><bdi>{% if personal_mode %}{{ report.academic_year }}{% else %}{{ report.beneficiaries_count|default:"0" }}{% endif %}</bdi></span></td>
+               <td><p class="my-report-description">{% if personal_mode %}{{ report.description|default:"المحتوى في بنود التقرير المختارة"|truncatechars:150 }}{% else %}{{ report.idea|default:"لا يوجد وصف" }}{% endif %}</p></td>
               <td>
                 <div class="my-report-gallery js-gallery" data-report="{{ report.pk }}" aria-label="شواهد تقرير {{ report.title }}">
-                  {% for evidence in report.evidences.all|slice:":4" %}
+                   {% if personal_mode %}
+                   {% for evidence in report.evidence.all|slice:":4" %}{% if evidence.is_image %}<a href="{% url 'personal:evidence_preview' evidence.pk %}" target="_blank" rel="noopener" aria-label="عرض الشاهد {{ evidence.title }}"><img class="my-report-thumb" src="{% url 'personal:evidence_preview' evidence.pk %}" alt="{{ evidence.title }}" loading="lazy"></a>{% elif evidence.file %}<a href="{% url 'personal:evidence_download' evidence.pk %}" aria-label="تنزيل {{ evidence.title }}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i></a>{% elif evidence.source_url %}<a href="{{ evidence.source_url }}" target="_blank" rel="noopener noreferrer" aria-label="فتح {{ evidence.title }}"><i class="fa-solid fa-link" aria-hidden="true"></i></a>{% endif %}{% empty %}<span class="my-report-no-evidence">لا توجد</span>{% endfor %}
+                   {% else %}
+                   {% for evidence in report.evidences.all|slice:":4" %}
                     <img class="my-report-thumb" src="{{ evidence.image.url }}" data-full="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور' }}" aria-label="فتح الشاهد: {{ evidence.description|default:'شاهد مصور' }}" role="button" tabindex="0" loading="lazy" decoding="async">
                   {% empty %}
                     {% if report.image1 %}<img class="my-report-thumb" src="{{ report.image1.url }}" data-full="{{ report.image1.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الأول" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
                     {% if report.image2 %}<img class="my-report-thumb" src="{{ report.image2.url }}" data-full="{{ report.image2.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الثاني" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
                   {% endfor %}
-                  {% if not report.evidences.all and not report.image1 and not report.image2 %}<span class="my-report-no-evidence">لا يوجد</span>{% endif %}
+                   {% if not report.evidences.all and not report.image1 and not report.image2 %}<span class="my-report-no-evidence">لا يوجد</span>{% endif %}
+                   {% endif %}
                 </div>
               </td>
               <td>
@@ -182,14 +194,14 @@
               <td colspan="6" class="twq-table__state">
                 <div class="twq-empty twq-empty--local">
                   <div class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-folder-open"></i></div>
-                  {% if q or start_date or end_date %}
+                   {% if q or start_date or end_date or year or status %}
                     <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
                     <p class="twq-empty__message">غيّر كلمات البحث أو النطاق الزمني، ثم أعد المحاولة.</p>
-                    <a href="{% url 'reports:my_reports' %}" class="twq-btn twq-btn--secondary">مسح معايير التصفية</a>
+                     <a href="{% if personal_mode %}{% url 'personal:reports' %}{% else %}{% url 'reports:my_reports' %}{% endif %}" class="twq-btn twq-btn--secondary">مسح معايير التصفية</a>
                   {% else %}
                     <h3 class="twq-empty__title">لا توجد تقارير حتى الآن</h3>
-                    <p class="twq-empty__message">ابدأ بتوثيق أول تقرير مدرسي ليظهر هنا.</p>
-                    <a href="{% url 'reports:add_report' %}" class="twq-btn twq-btn--primary">إضافة تقرير</a>
+                     <p class="twq-empty__message">ابدأ بتوثيق أول تقرير ليظهر هنا.</p>
+                     {% if not personal_mode or subscription_active %}<a href="{% if personal_mode %}{% url 'personal:report_create' %}{% else %}{% url 'reports:add_report' %}{% endif %}" class="twq-btn twq-btn--primary">إضافة تقرير</a>{% endif %}
                   {% endif %}
                 </div>
               </td>
@@ -203,33 +215,37 @@
       {% for report in reports %}
         <article class="my-report-card">
           <div class="my-report-card__top">
-            <span class="my-report-category">{% if report.category and report.category.name %}{{ report.category.name }}{% else %}عام{% endif %}</span>
+            <span class="my-report-category">{{ report.category.name|default:report.category|default:"عام" }}</span>
             {% include "reports/partials/report_state_chip.html" with report=report %}
           </div>
           <h3>{{ report.title }}</h3>
-          <p class="my-report-card__description">{{ report.idea|default:"لا يوجد وصف"|truncatechars:150 }}</p>
+          <p class="my-report-card__description">{% if personal_mode %}{{ report.description|default:"المحتوى في بنود التقرير المختارة"|truncatechars:150 }}{% else %}{{ report.idea|default:"لا يوجد وصف"|truncatechars:150 }}{% endif %}</p>
 
           <dl class="my-report-card__meta">
             <div>
               <dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> التاريخ</dt>
-              <dd><time>{{ report.report_date|hijri }} هـ · {{ report.day_name }}</time></dd>
+               <dd><time>{{ report.report_date|hijri }} هـ{% if not personal_mode %} · {{ report.day_name }}{% endif %}</time></dd>
             </div>
             <div>
-              <dt><i class="fa-solid fa-users" aria-hidden="true"></i> {{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}</dt>
-              <dd><bdi>{{ report.beneficiaries_count|default:"0" }}</bdi></dd>
+               <dt><i class="fa-solid fa-users" aria-hidden="true"></i> {% if personal_mode %}السنة الدراسية{% else %}{{ SCHOOL_BENEFICIARIES_LABEL|default:"المستفيدون" }}{% endif %}</dt>
+               <dd><bdi>{% if personal_mode %}{{ report.academic_year }}{% else %}{{ report.beneficiaries_count|default:"0" }}{% endif %}</bdi></dd>
             </div>
           </dl>
 
           <div class="my-report-card__evidence">
-            <span class="my-report-card__label">الشواهد المصورة</span>
-            <div class="my-report-gallery js-gallery" data-report="{{ report.pk }}" aria-label="شواهد تقرير {{ report.title }}">
-              {% for evidence in report.evidences.all|slice:":2" %}
+             <span class="my-report-card__label">الشواهد</span>
+             <div class="my-report-gallery js-gallery" data-report="{{ report.pk }}" aria-label="شواهد تقرير {{ report.title }}">
+               {% if personal_mode %}
+               {% for evidence in report.evidence.all|slice:":2" %}{% if evidence.is_image %}<a href="{% url 'personal:evidence_preview' evidence.pk %}" target="_blank" rel="noopener"><img class="my-report-thumb" src="{% url 'personal:evidence_preview' evidence.pk %}" alt="{{ evidence.title }}" loading="lazy"></a>{% elif evidence.file %}<a href="{% url 'personal:evidence_download' evidence.pk %}"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ evidence.title }}</a>{% elif evidence.source_url %}<a href="{{ evidence.source_url }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-link" aria-hidden="true"></i> {{ evidence.title }}</a>{% endif %}{% empty %}<span class="my-report-no-evidence">لا توجد شواهد</span>{% endfor %}
+               {% else %}
+               {% for evidence in report.evidences.all|slice:":2" %}
                 <img class="my-report-thumb" src="{{ evidence.image.url }}" data-full="{{ evidence.image.url }}" alt="{{ evidence.description|default:'شاهد مصور' }}" aria-label="فتح الشاهد: {{ evidence.description|default:'شاهد مصور' }}" role="button" tabindex="0" loading="lazy" decoding="async">
               {% empty %}
                 {% if report.image1 %}<img class="my-report-thumb" src="{{ report.image1.url }}" data-full="{{ report.image1.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الأول" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
                 {% if report.image2 %}<img class="my-report-thumb" src="{{ report.image2.url }}" data-full="{{ report.image2.url }}" alt="شاهد مصور" aria-label="فتح الشاهد المصور الثاني" role="button" tabindex="0" loading="lazy" decoding="async">{% endif %}
               {% endfor %}
-              {% if not report.evidences.all and not report.image1 and not report.image2 %}<span class="my-report-no-evidence">لا توجد شواهد</span>{% endif %}
+               {% if not report.evidences.all and not report.image1 and not report.image2 %}<span class="my-report-no-evidence">لا توجد شواهد</span>{% endif %}
+               {% endif %}
             </div>
           </div>
 
@@ -240,14 +256,14 @@
       {% empty %}
         <div class="twq-empty twq-empty--page">
           <div class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-folder-open"></i></div>
-          {% if q or start_date or end_date %}
+           {% if q or start_date or end_date or year or status %}
             <h3 class="twq-empty__title">لا توجد نتائج مطابقة</h3>
             <p class="twq-empty__message">غيّر كلمات البحث أو النطاق الزمني، ثم أعد المحاولة.</p>
-            <a href="{% url 'reports:my_reports' %}" class="twq-btn twq-btn--secondary">مسح معايير التصفية</a>
+             <a href="{% if personal_mode %}{% url 'personal:reports' %}{% else %}{% url 'reports:my_reports' %}{% endif %}" class="twq-btn twq-btn--secondary">مسح معايير التصفية</a>
           {% else %}
             <h3 class="twq-empty__title">لا توجد تقارير حتى الآن</h3>
-            <p class="twq-empty__message">ابدأ بتوثيق أول تقرير مدرسي ليظهر هنا.</p>
-            <a href="{% url 'reports:add_report' %}" class="twq-btn twq-btn--primary">إضافة تقرير</a>
+             <p class="twq-empty__message">ابدأ بتوثيق أول تقرير ليظهر هنا.</p>
+             {% if not personal_mode or subscription_active %}<a href="{% if personal_mode %}{% url 'personal:report_create' %}{% else %}{% url 'reports:add_report' %}{% endif %}" class="twq-btn twq-btn--primary">إضافة تقرير</a>{% endif %}
           {% endif %}
         </div>
       {% endfor %}

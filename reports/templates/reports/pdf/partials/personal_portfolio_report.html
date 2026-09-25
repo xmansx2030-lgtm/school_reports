@@ -1,0 +1,21 @@
+{% load hijri_tags %}
+<table class="meta-table xs-achievement-file-2">
+  <tr><th>العنوان</th><td colspan="3">{{ item.title|default:"—" }}</td></tr>
+  <tr><th>التصنيف</th><td>{{ item.category|default:"عمل موثق" }}</td><th>التاريخ</th><td>{{ item.report_date|hijri }} هـ</td></tr>
+  {% if item.show_beneficiaries and item.beneficiaries_count != None %}<tr><th>عدد المستفيدين</th><td colspan="3">{{ item.beneficiaries_count }}</td></tr>{% endif %}
+</table>
+{% if item.show_details and item.description %}<div class="xs-achievement-file-3">الوصف / فكرة التقرير</div><div class="report-body">{{ item.description }}</div>{% endif %}
+{% if item.show_goals and item.goals %}<div class="xs-achievement-file-3">الأهداف</div><div class="report-body">{{ item.goals }}</div>{% endif %}
+{% if item.show_implementation and item.implementation %}<div class="xs-achievement-file-3">آلية التنفيذ</div><div class="report-body">{{ item.implementation }}</div>{% endif %}
+{% if item.show_results and item.results %}<div class="xs-achievement-file-3">النتائج</div><div class="report-body">{{ item.results }}</div>{% endif %}
+{% if item.show_recommendations and item.recommendations %}<div class="xs-achievement-file-3">التوصيات</div><div class="report-body">{{ item.recommendations }}</div>{% endif %}
+{% for evidence in item.evidence.all|dictsort:"order" %}
+  {% if evidence.show_in_print %}
+    <div class="personal-item">
+      <strong>{{ evidence.report_card_caption }}</strong>
+      {% if evidence.is_image %}<div class="img-box"><img src="{% url 'personal:evidence_preview' evidence.pk %}" alt="{{ evidence.title }}" /></div>
+      {% elif evidence.file %}<a class="personal-link" href="{% url 'personal:evidence_download' evidence.pk %}">تنزيل الملف</a>
+      {% elif evidence.source_url %}<a class="personal-link" href="{{ evidence.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}
+    </div>
+  {% endif %}
+{% endfor %}

@@ -148,6 +148,7 @@ def apply_paid_personal_invoice(payment_id, invoice: dict) -> PersonalPayment:
             )
             today = timezone.localdate()
             start_date = today
+            continuing_subscription = subscription.is_current and subscription.plan_id == payment.plan_id
             if subscription.is_current and subscription.end_date and subscription.end_date >= today:
                 # Keep the current entitlement usable while adding the purchased days.
                 # A future start_date would make is_current false immediately after renewal.
@@ -156,12 +157,19 @@ def apply_paid_personal_invoice(payment_id, invoice: dict) -> PersonalPayment:
                     start_date = subscription.start_date
             else:
                 end_date = today + timedelta(days=payment.duration_days - 1)
-            PersonalSubscription.objects.filter(pk=subscription.pk).update(
+            subscription_changes = dict(
                 plan_id=payment.plan_id,
                 start_date=start_date,
                 end_date=end_date,
                 is_active=True,
             )
+            if not continuing_subscription:
+                subscription_changes.update(
+                    quota_started_at=timezone.now(), reports_created=0, evidence_created=0,
+                    quota_report_after_id=payment.workspace.reports.order_by("-pk").values_list("pk", flat=True).first() or 0,
+                    quota_evidence_after_id=payment.workspace.evidence.order_by("-pk").values_list("pk", flat=True).first() or 0,
+                )
+            PersonalSubscription.objects.filter(pk=subscription.pk).update(**subscription_changes)
             payment.status = PersonalPayment.Status.PAID
             payment.gateway_status = "paid"
             payment.gateway_payment_id = capture_id

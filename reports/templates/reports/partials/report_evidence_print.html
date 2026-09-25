@@ -1,11 +1,16 @@
 <section class="section evidence-section evidence-section--layout-{{ EVIDENCE_LAYOUT }}{% if EVIDENCE_SEPARATE_PAGE %} evidence-section--separate{% endif %} print-section">
   <h2 class="section-h"><span class="section-index" aria-hidden="true"></span><span>المرفقات والشواهد</span></h2>
-  <div class="images-grid images-grid--{{ EVIDENCE_LAYOUT }}">
+  <div class="images-grid{% if EVIDENCE_LAYOUT %} images-grid--{{ EVIDENCE_LAYOUT }}{% endif %}{% if personal_mode and personal_mixed_evidence %} images-grid--mixed{% endif %}">
     {% for evidence in EVIDENCE_ITEMS %}
+    {% if personal_mode %}
+      {% if evidence.is_image %}<figure class="img-box img-box--{{ evidence.display_size }}"><img class="img-fit--{{ evidence.fit_mode }}" src="{% url 'personal:evidence_preview' evidence.pk %}" alt="{{ evidence.report_card_caption }}"><figcaption class="img-cap"><span>شاهد {{ forloop.counter|stringformat:"02d" }}</span>{{ evidence.report_card_caption }}</figcaption></figure>
+      {% else %}<div class="personal-print-evidence-link"><strong>شاهد {{ forloop.counter|stringformat:"02d" }} · {{ evidence.title }}</strong> · {% if evidence.file %}<a href="{% url 'personal:evidence_download' evidence.pk %}">تنزيل الملف المرفق</a>{% elif evidence.source_url %}<a href="{{ evidence.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a>{% endif %}</div>{% endif %}
+    {% else %}
     <figure class="img-box img-box--{{ evidence.display_size }}">
        <img class="img-fit--{{ evidence.fit_mode }}" src="{{ evidence.src }}" alt="{{ evidence.description }}">
        <figcaption class="img-cap"><span>شاهد {{ forloop.counter|stringformat:"02d" }}</span>{{ evidence.description }}</figcaption>
     </figure>
+    {% endif %}
     {% endfor %}
   </div>
 </section>

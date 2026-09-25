@@ -1,8 +1,4 @@
-{% extends "personal/base.html" %}
 {% load static %}
-{% block title %}ملف إنجازي{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'css/achievement.css' %}?v=20260923.1"><link rel="stylesheet" href="{% static 'css/personal-portfolio.css' %}?v=20260925.1">{% endblock %}
-{% block content %}
 <div class="twq-page achievement-page achievement-workspace personal-portfolio" aria-labelledby="personalPortfolioTitle">
   <header class="twq-page-header achievement-page-header achievement-workspace-header">
     <div class="twq-page-header__heading">
@@ -72,4 +68,3 @@
     </section>
   {% else %}<div class="twq-empty twq-empty--page"><h2 class="twq-empty__title">ابدأ بسنة دراسية</h2><p class="twq-empty__message">أضف سنة دراسية إلى مساحتك لتبدأ توثيق محاور ملف الإنجاز.</p><a class="twq-btn twq-btn--primary" href="{% url 'personal:years' %}">إدارة السنوات</a></div>{% endif %}
 </div>
-{% endblock %}

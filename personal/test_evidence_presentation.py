@@ -91,6 +91,24 @@ class PersonalEvidencePresentationTests(TestCase):
         printed_html = printed.content.decode("utf-8")
         self.assertLess(printed_html.find("الثاني المعدل"), printed_html.find("الأول"))
 
+    def test_moving_evidence_to_another_report_appends_its_order(self):
+        destination = PersonalReport.objects.create(
+            workspace=self.workspace, title="تقرير آخر", report_date=date(2026, 9, 24),
+            academic_year=self.report.academic_year, teacher_name=self.owner.name,
+        )
+        PersonalEvidence.objects.create(
+            workspace=self.workspace, report=destination, title="شاهد سابق",
+            academic_year=destination.academic_year,
+            source_url="https://example.org/existing", order=1,
+        )
+        response = self.client.post(reverse("personal:evidence_edit", args=[self.first.pk]), {
+            "title": self.first.title, "academic_year": self.report.academic_year,
+            "report": destination.pk, "source_url": self.first.source_url,
+        })
+        self.assertRedirects(response, reverse("personal:report_detail", args=[destination.pk]))
+        self.first.refresh_from_db()
+        self.assertEqual((self.first.report_id, self.first.order), (destination.pk, 2))
+
     def test_edit_and_reorder_are_owner_and_year_scoped(self):
         other = Teacher.objects.create_user(
             phone="0557990131", name="معلم آخر", password="Personal#2026"  # noqa: S106
@@ -171,7 +189,7 @@ class PersonalEvidencePresentationTests(TestCase):
         self.assertContains(printed, 'class="personal-print-evidence-link"')
 
         portfolio = self.client.get(reverse("personal:portfolio_print"), {"year": self.report.academic_year})
-        library = portfolio.content.decode("utf-8").split("مكتبة الشواهد", 1)[1]
+        library = portfolio.content.decode("utf-8").split("<h1>مكتبة الشواهد</h1>", 1)[1]
         self.assertLess(library.index(self.second.title), library.index(image.title))
         self.assertLess(library.index(image.title), library.index(pdf.title))
         self.assertLess(library.index(pdf.title), library.index(self.first.title))
@@ -312,7 +330,7 @@ class PersonalEvidencePresentationTests(TestCase):
 
         printed = self.client.get(reverse("personal:portfolio_print"), {"year": self.report.academic_year})
         self.assertEqual(printed.status_code, 200)
-        self.assertNotContains(printed, self.first.title)
+        self.assertNotContains(printed, self.first.source_url)
         self.assertNotContains(printed, self.report.description)
         self.assertContains(printed, self.second.title)
         self.assertEqual(printed.context["evidence"].count(), 1)

@@ -143,6 +143,9 @@ class PersonalReportTrashTests(TestCase):
         self.assertEqual(privacy["reports"][0]["url"], reverse("personal:report_trash"))
 
     def test_retrying_trashed_report_submission_returns_to_trash(self):
+        plan = self.subscription.plan
+        plan.max_reports = 1
+        plan.save(update_fields=["max_reports"])
         submission_id = uuid.uuid4()
         self.report.client_submission_id = submission_id
         self.report.save(update_fields=["client_submission_id"])

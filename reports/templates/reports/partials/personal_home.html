@@ -1,8 +1,4 @@
-{% extends "personal/base.html" %}
 {% load hijri_tags static %}
-{% block title %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'css/teacher-home.css' %}?v=20260922.2">{% endblock %}
-{% block content %}
 <div class="twq-page teacher-home teacher-home--daily personal-dashboard" dir="rtl">
   <section class="th-hero twq-page-header teacher-daily-header" aria-labelledby="personalHomeTitle">
     <div class="th-hero-main twq-page-header__heading">
@@ -37,6 +33,34 @@
     {% else %}
       <div class="twq-empty twq-empty--local teacher-daily-clear" role="status"><span class="twq-empty__icon"><i class="fa-regular fa-circle-check" aria-hidden="true"></i></span><strong class="twq-empty__title">لا توجد عناصر عاجلة الآن</strong><span class="twq-empty__message">ابدأ توثيق عمل جديد أو راجع ملف إنجازك.</span></div>
     {% endif %}
+  </section>
+
+  <section class="twq-section personal-quota" aria-labelledby="personalQuotaTitle">
+    <div class="twq-section__header teacher-daily-section-head">
+      <div><div class="twq-section__kicker">اشتراكك الشخصي</div><h2 class="twq-section__title" id="personalQuotaTitle">استخدام الباقة والمتبقي</h2></div>
+      <a class="twq-btn twq-btn--ghost" href="{% url 'personal:billing' %}">تفاصيل الباقة</a>
+    </div>
+    <div class="personal-quota__grid">
+      <article class="personal-quota__item" aria-labelledby="personalReportsQuotaTitle">
+        <h3 id="personalReportsQuotaTitle"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> التقارير</h3>
+        <div class="personal-quota__numbers"><span>المستخدم <strong>{{ quota.reports.used }}</strong></span><span>المتبقي <strong>{{ quota.reports.remaining }}</strong></span></div>
+        <progress class="twq-progress__bar" value="{{ quota.reports.used }}" max="{{ quota.reports.limit }}" aria-label="التقارير المنشأة من حد الباقة">{{ quota.reports.used }} من {{ quota.reports.limit }}</progress>
+        <p>من أصل {{ quota.reports.limit }} إنشاء خلال الاشتراك</p>
+      </article>
+      <article class="personal-quota__item" aria-labelledby="personalEvidenceQuotaTitle">
+        <h3 id="personalEvidenceQuotaTitle"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> الشواهد</h3>
+        <div class="personal-quota__numbers"><span>المستخدم <strong>{{ quota.evidence.used }}</strong></span><span>المتبقي <strong>{{ quota.evidence.remaining }}</strong></span></div>
+        <progress class="twq-progress__bar" value="{{ quota.evidence.used }}" max="{{ quota.evidence.limit }}" aria-label="الشواهد المنشأة من حد الباقة">{{ quota.evidence.used }} من {{ quota.evidence.limit }}</progress>
+        <p>من أصل {{ quota.evidence.limit }} إنشاء خلال الاشتراك</p>
+      </article>
+      <article class="personal-quota__item" aria-labelledby="personalStorageQuotaTitle">
+        <h3 id="personalStorageQuotaTitle"><i class="fa-solid fa-hard-drive" aria-hidden="true"></i> التخزين</h3>
+        <div class="personal-quota__numbers"><span>المستخدم <strong>{{ quota.storage.used_mb|floatformat:2 }} م.ب</strong></span><span>المتبقي <strong>{{ quota.storage.remaining_mb|floatformat:2 }} م.ب</strong></span></div>
+        <progress class="twq-progress__bar" value="{{ quota.storage.used_bytes }}" max="{{ quota.storage.limit_bytes }}" aria-label="مساحة التخزين المستخدمة من حد الباقة">{{ quota.storage.used_mb|floatformat:2 }} من {{ quota.storage.limit_mb }} م.ب</progress>
+        <p>من أصل {{ quota.storage.limit_mb }} م.ب للملفات الموجودة</p>
+      </article>
+    </div>
+    <p class="personal-quota__note">حذف التقرير أو الشاهد لا يعيد عدد الإنشاءات. حذف الملف يحرر مساحة التخزين.{% if not subscription.is_current %} اشتراكك غير نشط؛ فعّله لتتمكن من الإضافة.{% endif %}</p>
   </section>
 
   <section class="twq-section teacher-daily-actions" aria-labelledby="personalActionsTitle">
@@ -74,4 +98,3 @@
   </div>
   <p class="personal-hint">هذه مساحة شخصية؛ المستندات من إعداد صاحب الحساب ولا تتضمن دورة اعتماد المدرسة.</p>
 </div>
-{% endblock %}

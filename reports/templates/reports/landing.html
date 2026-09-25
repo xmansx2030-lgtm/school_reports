@@ -324,8 +324,8 @@
                 {% if plan.description %}<p class="personal-plan-card__description">{{ plan.description }}</p>{% endif %}
                 <p class="personal-plan-card__price">{% if plan.is_free %}<strong>مجانية</strong>{% else %}<strong dir="ltr">{{ plan.price_display }}</strong><span> ريال</span>{% endif %}<small> · {{ plan.duration_label }}</small></p>
                 <ul>
-                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> حتى {{ plan.max_reports }} تقرير</li>
-                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> حتى {{ plan.max_evidence }} شاهد</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> إنشاء حتى {{ plan.max_reports }} تقريرًا خلال الاشتراك</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> إنشاء حتى {{ plan.max_evidence }} شاهدًا خلال الاشتراك</li>
                   <li><i class="fa-solid fa-check" aria-hidden="true"></i> {{ plan.storage_limit_mb }} ميجابايت للملفات</li>
                 </ul>
                 {% if plan.is_free %}

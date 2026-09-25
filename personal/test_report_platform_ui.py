@@ -39,6 +39,8 @@ class PersonalTeacherReportInterfaceTests(TestCase):
 
         printed = self.client.get(reverse("personal:report_print", args=[report.pk]))
         self.assertEqual(printed.status_code, 200)
+        self.assertTemplateUsed(printed, "reports/report_print.html")
+        self.assertNotContains(printed, "وزارة التعليم")
         self.assertContains(printed, "page--dense-evidence")
         self.assertContains(printed, "evidence-section--layout-3")
         self.assertContains(printed, 'class="images-grid images-grid--3 images-grid--mixed"')
@@ -64,6 +66,7 @@ class PersonalTeacherReportInterfaceTests(TestCase):
     def test_school_report_components_serve_personal_report_journey_without_school_record(self):
         form = self.client.get(reverse("personal:report_create"))
         self.assertEqual(form.status_code, 200)
+        self.assertTemplateUsed(form, "reports/teacher_report_form.html")
         self.assertContains(form, "css/report-authoring.css")
         self.assertContains(form, 'class="report-authoring-layout"')
         self.assertContains(form, 'data-report-evidence-editor')
@@ -86,6 +89,7 @@ class PersonalTeacherReportInterfaceTests(TestCase):
         self.assertEqual(Report.objects.count(), 0)
 
         listing = self.client.get(reverse("personal:reports"), {"year": "1447-1448"})
+        self.assertTemplateUsed(listing, "reports/my_reports.html")
         self.assertContains(listing, "css/my-reports.css")
         self.assertContains(listing, "عمل مهني مستقل")
         self.assertContains(listing, "شاهد النشاط")
