@@ -465,12 +465,12 @@ class UnifiedPricingSurfacesTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "data-flex-teacher-count")
-        self.assertContains(response, "كم معلماً سيستخدم المنصة؟")
+        self.assertContains(response, "كم معلماً سيستخدم اشتراك المدرسة؟")
 
     def test_landing_lists_the_same_features_as_the_manager_page(self):
         response = self.client.get(reverse("reports:landing"))
 
-        self.assertContains(response, "ما الذي يشمله الاشتراك؟")
+        self.assertContains(response, "ما الذي يشمله اشتراك المدرسة؟")
         for feature in SUBSCRIPTION_INCLUDED_FEATURES:
             self.assertContains(response, feature["title"])
 
