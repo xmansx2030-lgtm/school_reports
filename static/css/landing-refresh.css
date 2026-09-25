@@ -1,4 +1,4 @@
-/* The landing page opens with the actual product and two clear entry paths. */
+/* School and individual teacher subscriptions have distinct entry paths. */
 .hero-refresh {
   padding-block: clamp(58px, 6vw, 94px) 38px;
   text-align: start;
@@ -20,9 +20,24 @@
 .hero-refresh h1 { max-width: 610px; margin: 23px 0 19px; font-size: clamp(2.2rem, 3.9vw, 3.6rem); line-height: 1.36; }
 .hero-refresh h1 span { margin-block-start: 2px; }
 .hero-refresh .hero-lead { max-width: 570px; margin: 0; font-size: 1.01rem; line-height: 1.95; }
-.hero-refresh .hero-actions { justify-content: flex-start; margin-block-start: 26px; }
-.hero-refresh .hero-actions .button { white-space: normal; text-align: center; }
-.hero-refresh .assurance { justify-content: flex-start; margin-block-start: 16px; }
+.audience-paths { display: grid; gap: 12px; margin-block-start: 26px; }
+.audience-path { min-width: 0; padding: 18px 20px; border: 1px solid #cce0d2; border-inline-start: 4px solid #116a49; border-radius: 16px; background: rgba(255, 255, 255, .93); box-shadow: 0 10px 26px rgba(14, 74, 51, .06); }
+.audience-path--teacher { border-color: #d6dfc8; border-inline-start-color: #8a7435; background: #fbfcf7; }
+.audience-path__heading { display: flex; align-items: center; gap: 12px; }
+.audience-path__icon { display: grid; flex: 0 0 38px; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: #e8f5ec; color: #126548; }
+.audience-path--teacher .audience-path__icon { background: #f3eedc; color: #66551f; }
+.audience-path__eyebrow { display: block; color: #416f56; font-size: .72rem; font-weight: 800; line-height: 1.5; }
+.audience-path--teacher .audience-path__eyebrow { color: #756128; }
+.audience-path h2 { margin: 0; color: #173b2d; font-size: 1.12rem; line-height: 1.5; }
+.audience-path > p { margin: 9px 0 13px; color: #475f50; font-size: .83rem; line-height: 1.75; }
+.audience-path__actions { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+.audience-path__actions .button { min-height: 42px; padding: 8px 14px; font-size: .78rem; line-height: 1.5; white-space: normal; text-align: center; }
+.audience-path__plans { color: #145c42; font-size: .78rem; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
+.audience-path__plans:hover { color: #0b3e2d; }
+.audience-path__plans:focus-visible { outline: 2px solid #116a49; outline-offset: 4px; border-radius: 2px; }
+#teacher-personal, #teacher-plans, #pricing { scroll-margin-top: 80px; }
+.personal-plan-catalog { padding-block-start: clamp(18px, 3vw, 30px); border-block-start: 1px solid #cbded0; }
+.personal-plan-catalog__heading p { max-width: 670px; margin-block-start: 6px; }
 .hero-product {
   min-width: 0;
   margin: 0;
@@ -41,7 +56,8 @@
 .hero-product > button:hover img { transform: scale(1.035); transition: transform .35s ease; }
 .hero-product figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 9px 2px; color: var(--muted); font-size: .73rem; font-weight: 700; }
 .hero-product figcaption i { color: var(--brand-800); }
-.hero-refresh .trust-bar { margin-block-start: clamp(36px, 5vw, 66px); }
+.hero-product figcaption a { color: var(--brand-800); text-decoration: underline; text-underline-offset: 3px; }
+.hero-product figcaption a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
 
 .personal-offer-section { background: linear-gradient(160deg, #eef7f0, #e7f3ec 60%, #f7faf4); }
 .personal-offer { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(26px, 4vw, 58px); }
@@ -77,12 +93,24 @@ html[data-theme="dark"] .hero-product { background: #1f3027; border-color: #3854
 html[data-theme="dark"] .hero-product__top { color: #dcefe2; }
 html[data-theme="dark"] .hero-product__top span,
 html[data-theme="dark"] .hero-product figcaption { color: #bad1c0; }
+html[data-theme="dark"] .audience-path { background: #20382c; border-color: #426350; border-inline-start-color: #76c29a; }
+html[data-theme="dark"] .audience-path--teacher { background: #2b3529; border-color: #586448; border-inline-start-color: #c5a75c; }
+html[data-theme="dark"] .audience-path__icon { background: #315340; color: #d7f2e0; }
+html[data-theme="dark"] .audience-path--teacher .audience-path__icon { background: #52492e; color: #f0e5ba; }
+html[data-theme="dark"] .audience-path__eyebrow, html[data-theme="dark"] .audience-path--teacher .audience-path__eyebrow { color: #bad8c2; }
+html[data-theme="dark"] .audience-path h2 { color: #f1f8f2; }
+html[data-theme="dark"] .audience-path > p { color: #c4d7c9; }
+html[data-theme="dark"] .audience-path__plans { color: #b9edcc; }
+html[data-theme="dark"] .personal-plan-catalog { border-color: #3c5644; }
 html[data-theme="dark"] .personal-offer-section { background: linear-gradient(155deg, #172a20, #20372a); }
 html[data-theme="dark"] .personal-offer__clarity { color: #bed2c4; }
 
 @media (max-width: 1080px) {
   .hero-refresh .hero-stage { grid-template-columns: 1fr; }
   .hero-refresh .hero-intro { max-width: 760px; }
+  .audience-paths { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .audience-path { display: flex; flex-direction: column; }
+  .audience-path__actions { margin-block-start: auto; }
   .hero-product { width: min(100%, 860px); transform: none; }
   .hero-product > button { height: clamp(270px, 48vw, 440px); }
   .hero-product > button img { width: 100%; height: auto; }
@@ -94,11 +122,12 @@ html[data-theme="dark"] .personal-offer__clarity { color: #bed2c4; }
 @media (max-width: 620px) {
   .hero-refresh { padding-block-start: 48px; }
   .hero-refresh h1 { margin-block-start: 19px; font-size: clamp(2.02rem, 8vw, 2.7rem); }
-  .hero-refresh .hero-actions { display: grid; gap: 10px; }
-  .hero-refresh .hero-actions .button { width: 100%; }
-  .hero-refresh .assurance { gap: 5px 14px; font-size: .7rem; }
+  .audience-paths { grid-template-columns: 1fr; margin-block-start: 20px; }
+  .audience-path { padding: 15px 16px; }
+  .audience-path__actions .button { flex: 1 1 100%; }
   .hero-product { padding: 7px; border-radius: 16px; }
   .hero-product__top, .hero-product figcaption { font-size: .65rem; }
+  .hero-product figcaption { align-items: start; }
   .hero-product > button { height: auto; aspect-ratio: 16 / 9; }
   .hero-product > button img { height: 100%; width: auto; }
   .personal-offer__preview { min-height: 0; padding: 16px; }

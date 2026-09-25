@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
@@ -6,7 +7,7 @@ from django.utils import timezone
 from core.observability import soft_call
 from reports.models import SchoolMembership
 
-from .models import PersonalPlan, PersonalSubscription
+from .models import PersonalAcademicYear, PersonalPlan, PersonalSubscription, PersonalWorkspace
 
 
 LANDING_PERSONAL_PLAN_CACHE_KEY = "landing:personal-plans:v1"
@@ -29,6 +30,18 @@ def current_school_membership_for(user):
         .order_by("id")
     )
     return memberships.first()
+
+
+def ensure_writable_personal_year(workspace, value):
+    """Register an owned year while holding the workspace row during a write."""
+    locked = PersonalWorkspace.objects.select_for_update().get(pk=workspace.pk)
+    year, _ = PersonalAcademicYear.objects.get_or_create(workspace=locked, value=value)
+    if year.archived_at is not None:
+        raise ValidationError("هذه السنة مؤرشفة. أعد فتحها من إدارة السنوات قبل التعديل.")
+    if not locked.current_academic_year:
+        locked.current_academic_year = value
+        locked.save(update_fields=["current_academic_year", "updated_at"])
+    return year
 
 
 def landing_personal_plan_cards():

@@ -1,0 +1,6 @@
+{% extends "personal/base.html" %}
+{% block title %}إشعارات المنصة{% endblock %}
+{% block content %}
+<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">الرسائل الواردة</p><h1>إشعارات المنصة</h1><p class="twq-page-header__lead">رسائل موجّهة إلى مساحتك الشخصية من إدارة المنصة.</p></div></header>
+<section class="twq-section" aria-label="الإشعارات">{% for receipt in notices %}<a class="personal-record personal-record--link" href="{% url 'personal:notice_detail' receipt.pk %}"><div><p class="personal-record__meta">{{ receipt.notice.created_at|date:"Y-m-d H:i" }} · {% if receipt.read_at %}مقروء{% else %}جديد{% endif %}</p><h2>{{ receipt.notice.title }}</h2><p>{{ receipt.notice.message|truncatechars:180 }}</p></div><span aria-hidden="true">←</span></a>{% empty %}<div class="twq-empty twq-empty--local"><h2>لا توجد إشعارات</h2><p>ستظهر رسائل إدارة المنصة هنا عند إرسالها.</p></div>{% endfor %}</section>
+{% endblock %}

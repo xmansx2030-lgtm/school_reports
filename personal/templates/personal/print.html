@@ -41,10 +41,11 @@
     {% if report %}
       <p class="print-meta">{{ report.report_date }} · {{ report.category|default:"عمل موثق" }} · {{ report.get_status_display }}</p>
       <section><h2>وصف العمل</h2><p>{{ report.description|linebreaksbr }}</p></section>
-      {% if report.goals %}<section><h2>الأهداف</h2><p>{{ report.goals|linebreaksbr }}</p></section>{% endif %}
-      {% if report.implementation %}<section><h2>التنفيذ</h2><p>{{ report.implementation|linebreaksbr }}</p></section>{% endif %}
-      {% if report.results %}<section><h2>النتائج</h2><p>{{ report.results|linebreaksbr }}</p></section>{% endif %}
-      {% if report.recommendations %}<section><h2>التوصيات</h2><p>{{ report.recommendations|linebreaksbr }}</p></section>{% endif %}
+      {% if report.show_goals and report.goals %}<section><h2>الأهداف</h2><p>{{ report.goals|linebreaksbr }}</p></section>{% endif %}
+      {% if report.show_implementation and report.implementation %}<section><h2>آلية التنفيذ</h2><p>{{ report.implementation|linebreaksbr }}</p></section>{% endif %}
+      {% if report.show_results and report.results %}<section><h2>النتائج</h2><p>{{ report.results|linebreaksbr }}</p></section>{% endif %}
+      {% if report.show_recommendations and report.recommendations %}<section><h2>التوصيات</h2><p>{{ report.recommendations|linebreaksbr }}</p></section>{% endif %}
+      {% if report.show_beneficiaries and report.beneficiaries_count != None %}<section><h2>عدد المستفيدين</h2><p>{{ report.beneficiaries_count }}</p></section>{% endif %}
     {% else %}
       <section>
         <h2>الأعمال الموثقة</h2>
@@ -53,10 +54,11 @@
             <h3>{{ item.title }}</h3>
             <p class="print-meta">{{ item.report_date }} · {{ item.category|default:"عمل موثق" }} · {{ item.get_status_display }} · {{ item.school_name }}</p>
             <p>{{ item.description|linebreaksbr }}</p>
-            {% if item.goals %}<p><strong>الأهداف:</strong> {{ item.goals|linebreaksbr }}</p>{% endif %}
-            {% if item.implementation %}<p><strong>التنفيذ:</strong> {{ item.implementation|linebreaksbr }}</p>{% endif %}
-            {% if item.results %}<p><strong>النتائج:</strong> {{ item.results|linebreaksbr }}</p>{% endif %}
-            {% if item.recommendations %}<p><strong>التوصيات:</strong> {{ item.recommendations|linebreaksbr }}</p>{% endif %}
+            {% if item.show_goals and item.goals %}<p><strong>الأهداف:</strong> {{ item.goals|linebreaksbr }}</p>{% endif %}
+            {% if item.show_implementation and item.implementation %}<p><strong>آلية التنفيذ:</strong> {{ item.implementation|linebreaksbr }}</p>{% endif %}
+            {% if item.show_results and item.results %}<p><strong>النتائج:</strong> {{ item.results|linebreaksbr }}</p>{% endif %}
+            {% if item.show_recommendations and item.recommendations %}<p><strong>التوصيات:</strong> {{ item.recommendations|linebreaksbr }}</p>{% endif %}
+            {% if item.show_beneficiaries and item.beneficiaries_count != None %}<p><strong>عدد المستفيدين:</strong> {{ item.beneficiaries_count }}</p>{% endif %}
           </article>
         {% empty %}
           <p>لا توجد تقارير في هذه السنة.</p>
@@ -71,13 +73,14 @@
           <strong>{{ item.title }}</strong>
           {% if item.report %}<span> · {{ item.report.title }}</span>{% endif %}
           {% if item.description %}<p>{{ item.description|linebreaksbr }}</p>{% endif %}
-          {% if item.file %}<p>ملف محفوظ في مكتبة الشواهد الشخصية</p>{% endif %}
+          {% if item.is_image %}<img class="print-evidence-image" src="{% url 'personal:evidence_preview' item.pk %}" alt="{{ item.title }}">{% elif item.file %}<p>مرفق PDF: <a href="{% url 'personal:evidence_download' item.pk %}">تنزيل الملف</a></p>{% endif %}
           {% if item.source_url %}<p>الرابط: <span dir="ltr">{{ item.source_url }}</span></p>{% endif %}
         </article>
       {% empty %}
         <p>لا توجد شواهد مرتبطة.</p>
       {% endfor %}
     </section>
+    {% if initiatives %}<section><h2>المبادرات</h2>{% for item in initiatives %}<article class="print-entry"><h3>{{ item.title }}</h3><p>{{ item.summary|linebreaksbr }}</p>{% if item.impact %}<p><strong>الأثر:</strong> {{ item.impact|linebreaksbr }}</p>{% endif %}</article>{% endfor %}</section>{% endif %}
     <footer>أُعد هذا المستند في المساحة الشخصية. أسماء المدرسة والمدير معلومات تعريفية أدخلها {{ workspace.owner.personal_teacher_label }}؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</footer>
   </main>
 </body>

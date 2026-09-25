@@ -1,5 +1,8 @@
 from datetime import date, timedelta
 from tempfile import TemporaryDirectory
+from io import BytesIO
+from zipfile import ZipFile
+import uuid
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from unittest.mock import patch
@@ -10,7 +13,11 @@ from django.utils import timezone
 from reports.models import Report, School, SchoolMembership, SchoolSubscription, SubscriptionPlan, Teacher
 from reports.services_data_rights import build_personal_data_export
 
-from .models import PersonalEvidence, PersonalPayment, PersonalPlan, PersonalReport, PersonalSubscription, PersonalWorkspace
+from .models import (
+    PersonalAcademicYear, PersonalEvidence, PersonalInitiative, PersonalNotice,
+    PersonalNoticeRecipient, PersonalPayment, PersonalPlan, PersonalReport,
+    PersonalSubscription, PersonalWorkspace,
+)
 from .services import ensure_personal_subscription
 
 
@@ -407,6 +414,8 @@ class PersonalWorkspaceJourneyTests(TestCase):
         payment.refresh_from_db()
         subscription.refresh_from_db()
         self.assertEqual(payment.status, PersonalPayment.Status.PAID)
+
+
         self.assertIsNotNone(payment.activated_at)
         self.assertEqual(subscription.plan_id, plan.pk)
         self.assertEqual((subscription.end_date - subscription.start_date).days, 179)
@@ -731,3 +740,161 @@ class PersonalPlanManagementTests(TestCase):
         self.assertEqual(subscription.plan_id, self.plan.pk)
         self.assertEqual((subscription.end_date - subscription.start_date).days, 29)
         self.assertEqual(payment.status, PersonalPayment.Status.PAID)
+
+@override_settings(ALLOWED_HOSTS=["testserver"], RATELIMIT_ENABLE=False)
+class PersonalSelfServiceTests(TestCase):
+    def setUp(self):
+        self.teacher = Teacher.objects.create_user(
+            phone="0557011111", name="معلمة مستقلة", password="Personal#2026"  # noqa: S106
+        )
+        self.workspace = PersonalWorkspace.objects.create(owner=self.teacher, school_name="مدرسة غير مشتركة")
+        self.other = Teacher.objects.create_user(
+            phone="0557011112", name="معلم آخر", password="Personal#2026"  # noqa: S106
+        )
+        self.other_workspace = PersonalWorkspace.objects.create(owner=self.other, school_name="مدرسة أخرى")
+        self.client.force_login(self.teacher)
+
+    def test_year_archive_blocks_mutation_but_keeps_export_and_read_access(self):
+        for value in ("1447-1448", "1448/1449"):
+            response = self.client.post(reverse("personal:years"), {
+                "action": "add", "value": value, "make_current": "on",
+            })
+            self.assertRedirects(response, reverse("personal:years"))
+        self.assertEqual(PersonalAcademicYear.objects.filter(workspace=self.workspace).count(), 2)
+        report = PersonalReport.objects.create(
+            workspace=self.workspace, title="عمل محفوظ", report_date=date.today(),
+            academic_year="1447-1448", description="سجل سابق", teacher_name=self.teacher.name,
+            school_name=self.workspace.school_name,
+        )
+        self.client.post(reverse("personal:years"), {
+            "action": "archive", "year": "1447-1448", "confirm_year": "1447-1448",
+        })
+        self.assertIsNotNone(PersonalAcademicYear.objects.get(
+            workspace=self.workspace, value="1447-1448"
+        ).archived_at)
+        self.assertContains(self.client.post(reverse("personal:years"), {
+            "action": "add", "value": "1447-1448", "make_current": "on",
+        }), "هذه السنة مؤرشفة")
+        denied = self.client.post(reverse("personal:report_edit", args=[report.pk]), {
+            "title": "تغيير غير مسموح", "category": "نشاط", "report_date": "2026-09-24",
+            "academic_year": "1448-1449", "description": "تغيير", "status": "complete",
+        })
+        self.assertEqual(denied.status_code, 302)
+        report.refresh_from_db()
+        self.assertEqual(report.title, "عمل محفوظ")
+        response = self.client.get(reverse("personal:year_export", args=["1447-1448"]))
+        self.assertEqual(response.status_code, 200)
+        with ZipFile(BytesIO(b"".join(response.streaming_content))) as bundle:
+            self.assertIn("عمل محفوظ", bundle.read("manifest.json").decode("utf-8"))
+        response.close()
+        self.assertEqual(self.client.get(reverse("personal:report_detail", args=[report.pk])).status_code, 200)
+        subscription = PersonalSubscription.objects.get(workspace=self.workspace)
+        subscription.is_active = False
+        subscription.save(update_fields=["is_active"])
+        self.assertEqual(self.client.get(reverse("personal:year_export", args=["1447-1448"])).status_code, 200)
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(reverse("personal:year_export", args=["1447-1448"])).status_code, 404)
+
+    def test_report_authoring_saves_evidence_together_and_stays_out_of_school_report(self):
+        payload = {
+            "title": "تقرير مبادرة", "category": "نشاط", "report_date": "2026-09-24",
+            "academic_year": "1447-1448", "description": "تنفيذ النشاط",
+            "show_goals": "on", "goals": "رفع المهارة", "status": "complete",
+            "selection_enabled": "on", "evidence-TOTAL_FORMS": "3",
+            "evidence-INITIAL_FORMS": "0", "evidence-MIN_NUM_FORMS": "0",
+            "evidence-MAX_NUM_FORMS": "5", "evidence-0-title": "شاهد البرنامج",
+            "evidence-0-file": SimpleUploadedFile(
+                "proof.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf"
+            ),
+        }
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.post(reverse("personal:report_create"), payload)
+            self.assertEqual(response.status_code, 302)
+            report = PersonalReport.objects.get(workspace=self.workspace)
+            evidence = PersonalEvidence.objects.get(report=report)
+            self.assertEqual(evidence.workspace_id, self.workspace.pk)
+            self.assertEqual(report.goals, "رفع المهارة")
+            self.assertEqual(Report.objects.count(), 0)
+            printed = self.client.get(reverse("personal:report_print", args=[report.pk]))
+            self.assertContains(printed, "شاهد البرنامج")
+            self.assertContains(printed, reverse("personal:evidence_download", args=[evidence.pk]))
+            self.client.force_login(self.other)
+            self.assertEqual(self.client.get(reverse("personal:evidence_download", args=[evidence.pk])).status_code, 404)
+
+    def test_personal_initiative_and_platform_notice_are_owner_scoped(self):
+        response = self.client.post(reverse("personal:initiatives"), {
+            "title": "مبادرة القراءة", "academic_year": "1447-1448",
+            "summary": "جلسات قراءة", "impact": "تحسن المشاركة", "status": "complete",
+        })
+        self.assertRedirects(response, reverse("personal:initiatives"))
+        initiative = PersonalInitiative.objects.get(workspace=self.workspace)
+        self.assertContains(self.client.get(reverse("personal:portfolio") + "?year=1447-1448"), initiative.title)
+        exported = build_personal_data_export(self.teacher)["sections"]["personal_workspace"]
+        self.assertEqual(exported["initiatives"][0]["title"], initiative.title)
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(reverse("personal:initiative_edit", args=[initiative.pk])).status_code, 404)
+
+        owner = Teacher.objects.create_superuser(
+            phone="0557011199", name="مالك المنصة", password="Personal#2026"  # noqa: S106
+        )
+        self.client.force_login(owner)
+        submission_key = str(uuid.uuid4())
+        notice_payload = {
+            "submission_key": submission_key, "title": "رسالة للمعلمة",
+            "message": "تحديث المساحة", "audience": "one",
+            "recipient_phone": self.teacher.phone,
+        }
+        response = self.client.post(reverse("personal:platform_notice_compose"), notice_payload)
+        self.assertEqual(response.status_code, 302)
+        self.client.post(reverse("personal:platform_notice_compose"), notice_payload)
+        self.assertEqual(PersonalNotice.objects.count(), 1)
+        notice = PersonalNotice.objects.get()
+        receipt = PersonalNoticeRecipient.objects.get(notice=notice)
+        self.assertEqual(receipt.workspace_id, self.workspace.pk)
+        self.client.force_login(self.other)
+        self.assertNotContains(self.client.get(reverse("personal:notices")), "رسالة للمعلمة")
+        self.assertEqual(self.client.get(reverse("personal:notice_detail", args=[receipt.pk])).status_code, 404)
+        self.client.force_login(self.teacher)
+        self.assertContains(self.client.get(reverse("personal:notices")), "رسالة للمعلمة")
+        self.client.post(reverse("personal:notice_mark_read", args=[receipt.pk]))
+        receipt.refresh_from_db()
+        self.assertIsNotNone(receipt.read_at)
+
+    def test_account_password_change_keeps_personal_session_usable(self):
+        response = self.client.post(reverse("personal:account"), {
+            "action": "password", "password-old_password": "Personal#2026",
+            "password-new_password1": "FreshPersonal#2027",
+            "password-new_password2": "FreshPersonal#2027",
+            "password-email": "demo@example.test",
+        })
+        self.assertRedirects(response, reverse("personal:account"))
+        self.teacher.refresh_from_db()
+        self.assertTrue(self.teacher.check_password("FreshPersonal#2027"))
+        self.assertEqual(self.client.get(reverse("personal:dashboard")).status_code, 200)
+
+    def test_initiative_year_cannot_change_with_evidence_or_from_archive(self):
+        initiative = PersonalInitiative.objects.create(
+            workspace=self.workspace, title="مبادرة القراءة", academic_year="1447-1448",
+            summary="جلسات قراءة",
+        )
+        PersonalEvidence.objects.create(
+            workspace=self.workspace, initiative=initiative, title="رابط شاهد",
+            academic_year="1447-1448", source_url="https://example.com/proof",
+        )
+        payload = {
+            "title": initiative.title, "academic_year": "1448-1449",
+            "summary": initiative.summary, "impact": "", "status": "draft",
+        }
+        response = self.client.post(reverse("personal:initiative_edit", args=[initiative.pk]), payload)
+        self.assertContains(response, "لا يمكن تغيير سنة المبادرة وهي مرتبطة بشواهد")
+        initiative.refresh_from_db()
+        self.assertEqual(initiative.academic_year, "1447-1448")
+        PersonalAcademicYear.objects.create(
+            workspace=self.workspace, value="1447-1448", archived_at=timezone.now()
+        )
+        payload["academic_year"] = "1447-1448"
+        payload["title"] = "عنوان معدل"
+        response = self.client.post(reverse("personal:initiative_edit", args=[initiative.pk]), payload)
+        self.assertContains(response, "السنة الأصلية مؤرشفة")
+        initiative.refresh_from_db()
+        self.assertEqual(initiative.title, "مبادرة القراءة")

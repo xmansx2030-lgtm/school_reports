@@ -1,0 +1,10 @@
+{% extends "personal/base.html" %}
+{% block title %}مبادراتي{% endblock %}
+{% block content %}
+<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">أعمالك المهنية</p><h1>مبادراتي</h1><p class="twq-page-header__lead">وثّق مبادراتك الشخصية وفكرتها وأثرها وشواهدها؛ لا تتطلب اعتماد مدرسة.</p></div></header>
+<div class="personal-work-grid"><section class="twq-section" aria-labelledby="initiativesTitle"><header class="twq-section__header"><h2 id="initiativesTitle">المبادرات المحفوظة</h2></header>
+{% for item in initiatives %}<article class="personal-record"><div><p class="personal-record__meta"><bdi dir="ltr">{{ item.academic_year }}</bdi> · {{ item.get_status_display }}</p><h3>{{ item.title }}</h3><p>{{ item.summary|truncatechars:180 }}</p><small>{{ item.evidence.count }} شاهد</small></div><div class="personal-record__actions"><a href="{% url 'personal:initiative_edit' item.pk %}">تعديل</a><a href="{% url 'personal:evidence_create' %}?initiative={{ item.pk }}">إضافة شاهد</a></div></article>{% empty %}<div class="twq-empty twq-empty--local"><h3>لا توجد مبادرات بعد</h3><p>سجّل أول مبادرة لتظهر في ملف إنجاز سنتها.</p></div>{% endfor %}
+</section><section class="twq-section" aria-labelledby="initiativeFormTitle"><header class="twq-section__header"><h2 id="initiativeFormTitle">{% if initiative %}تعديل المبادرة{% else %}مبادرة جديدة{% endif %}</h2></header>
+<form method="post" class="personal-form" novalidate>{% csrf_token %}{% if form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--primary" type="submit">حفظ المبادرة</button>{% if initiative %}<a href="{% url 'personal:initiatives' %}">إلغاء التعديل</a>{% endif %}</form>
+</section></div>
+{% endblock %}

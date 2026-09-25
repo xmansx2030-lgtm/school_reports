@@ -1,0 +1,6 @@
+{% extends "personal/base.html" %}
+{% block title %}{{ receipt.notice.title }}{% endblock %}
+{% block content %}
+<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">إشعار من إدارة المنصة</p><h1>{{ receipt.notice.title }}</h1><p class="twq-page-header__lead">{{ receipt.notice.created_at|date:"Y-m-d H:i" }} · {% if receipt.read_at %}مقروء{% else %}جديد{% endif %}</p></div><a class="twq-btn twq-btn--secondary" href="{% url 'personal:notices' %}">كل الإشعارات</a></header>
+<article class="twq-section"><div class="personal-notice-body">{{ receipt.notice.message|linebreaksbr }}</div>{% if not receipt.read_at %}<form method="post" action="{% url 'personal:notice_mark_read' receipt.pk %}">{% csrf_token %}<button class="twq-btn twq-btn--primary" type="submit">تحديد كمقروء</button></form>{% endif %}</article>
+{% endblock %}

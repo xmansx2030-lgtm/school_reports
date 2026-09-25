@@ -24,6 +24,7 @@ class PersonalWorkspace(models.Model):
     principal_name = models.CharField("اسم مدير المدرسة للتعريف", max_length=150, blank=True)
     school_stage = models.CharField("المرحلة", max_length=50, blank=True)
     specialization = models.CharField("التخصص", max_length=120, blank=True)
+    current_academic_year = models.CharField("السنة الدراسية الحالية", max_length=20, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -173,6 +174,12 @@ class PersonalReport(models.Model):
     implementation = models.TextField("التنفيذ", blank=True)
     results = models.TextField("النتائج", blank=True)
     recommendations = models.TextField("التوصيات", blank=True)
+    beneficiaries_count = models.PositiveIntegerField("عدد المستفيدين", null=True, blank=True)
+    show_goals = models.BooleanField("إظهار الأهداف", default=True)
+    show_implementation = models.BooleanField("إظهار آلية التنفيذ", default=True)
+    show_results = models.BooleanField("إظهار النتائج", default=True)
+    show_recommendations = models.BooleanField("إظهار التوصيات", default=True)
+    show_beneficiaries = models.BooleanField("إظهار عدد المستفيدين", default=False)
     status = models.CharField(
         "الحالة", max_length=12, choices=Status.choices, default=Status.DRAFT
     )
@@ -199,6 +206,9 @@ class PersonalEvidence(models.Model):
     report = models.ForeignKey(
         PersonalReport, on_delete=models.SET_NULL, null=True, blank=True, related_name="evidence"
     )
+    initiative = models.ForeignKey(
+        "PersonalInitiative", on_delete=models.SET_NULL, null=True, blank=True, related_name="evidence"
+    )
     title = models.CharField("عنوان الشاهد", max_length=200)
     description = models.TextField("الوصف", blank=True)
     academic_year = models.CharField("السنة الدراسية", max_length=20)
@@ -219,8 +229,75 @@ class PersonalEvidence(models.Model):
     def __str__(self):
         return self.title
 
+    @property
+    def is_image(self):
+        return bool(self.file and Path(self.file.name).suffix.lower() in {".jpg", ".jpeg", ".png"})
+
     def save(self, *args, **kwargs):
         if self.report_id and self.workspace_id:
-            if not PersonalReport.objects.filter(pk=self.report_id, workspace_id=self.workspace_id).exists():
-                raise ValidationError("الشاهد والتقرير يجب أن يكونا في المساحة الشخصية نفسها.")
+            report = PersonalReport.objects.filter(pk=self.report_id, workspace_id=self.workspace_id).first()
+            if report is None or report.academic_year != self.academic_year:
+                raise ValidationError("الشاهد والتقرير يجب أن يكونا في المساحة الشخصية والسنة نفسها.")
+        if self.initiative_id and self.workspace_id:
+            initiative = PersonalInitiative.objects.filter(pk=self.initiative_id, workspace_id=self.workspace_id).first()
+            if initiative is None or initiative.academic_year != self.academic_year:
+                raise ValidationError("الشاهد والمبادرة يجب أن يكونا في المساحة الشخصية والسنة نفسها.")
         return super().save(*args, **kwargs)
+
+
+class PersonalAcademicYear(models.Model):
+    workspace = models.ForeignKey(PersonalWorkspace, on_delete=models.CASCADE, related_name="academic_years")
+    value = models.CharField("السنة الدراسية", max_length=20)
+    archived_at = models.DateTimeField("أُرشفت في", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-value"]
+        constraints = [models.UniqueConstraint(fields=["workspace", "value"], name="unique_personal_workspace_year")]
+
+    def __str__(self):
+        return self.value
+
+
+class PersonalInitiative(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "مسودة"
+        COMPLETE = "complete", "مكتملة"
+        ARCHIVED = "archived", "مؤرشفة"
+
+    workspace = models.ForeignKey(PersonalWorkspace, on_delete=models.CASCADE, related_name="initiatives")
+    academic_year = models.CharField("السنة الدراسية", max_length=20)
+    title = models.CharField("عنوان المبادرة", max_length=200)
+    summary = models.TextField("الفكرة والتنفيذ")
+    impact = models.TextField("الأثر والنتائج", blank=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["workspace", "academic_year", "status"])]
+
+    def __str__(self):
+        return self.title
+
+
+class PersonalNotice(models.Model):
+    submission_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    title = models.CharField("العنوان", max_length=160)
+    message = models.TextField("الرسالة")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="personal_notices_sent")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
+class PersonalNoticeRecipient(models.Model):
+    notice = models.ForeignKey(PersonalNotice, on_delete=models.CASCADE, related_name="recipients")
+    workspace = models.ForeignKey(PersonalWorkspace, on_delete=models.CASCADE, related_name="notices")
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["notice", "workspace"], name="unique_personal_notice_recipient")]
+        indexes = [models.Index(fields=["workspace", "read_at"])]
