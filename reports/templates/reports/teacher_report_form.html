@@ -1,5 +1,5 @@
 {% extends teacher_base_template|default:"base.html" %}
-{% load static %}
+{% load static hijri_tags %}
 
 {% block title %}{% if editing %}تعديل التقرير{% else %}إنشاء تقرير{% endif %}{% endblock %}
 
@@ -21,12 +21,11 @@
     <header class="twq-page-header report-authoring-header">
       <div class="twq-page-header__heading">
         <p class="twq-page-header__eyebrow report-authoring-eyebrow"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> {% if editing and not personal_mode %}مساحة تحرير تقرير قائم{% else %}مساحة إعداد التقرير{% endif %}</p>
-        <h1 class="twq-page-header__title">{% if editing %}تعديل التقرير{% else %}إنشاء تقرير{% endif %}</h1>
-        <p class="twq-page-header__lead">{% if personal_mode and editing %}راجع بيانات التقرير وشواهده الحالية، ثم احفظ التعديلات في مساحتك الشخصية.{% elif editing %}راجع بيانات التقرير وشواهده الحالية، ثم احفظ التعديلات دون تغيير حالة الاعتماد تلقائيًا.{% else %}أدخل بيانات التقرير، وحدد محتواه، وأرفق الشواهد المناسبة قبل الحفظ.{% endif %}</p>
+        <h1 class="twq-page-header__title">{% if editing %}تعديل التقرير{% elif not personal_mode and IS_LAB_TECHNICIAN %}توثيق إنجاز مهني{% elif not personal_mode and IS_ADMIN_STAFF %}توثيق عمل إداري{% else %}إنشاء تقرير{% endif %}</h1>
+        <p class="twq-page-header__lead">{% if personal_mode and editing %}راجع بيانات التقرير وشواهده الحالية، ثم احفظ التعديلات في مساحتك الشخصية.{% elif editing %}راجع بيانات التقرير وشواهده الحالية، ثم احفظ التعديلات دون تغيير حالة الاعتماد تلقائيًا.{% elif not personal_mode and IS_LAB_TECHNICIAN %}وثّق أعمال المختبر ونتائجها وشواهدها، ثم راجع التقرير قبل الحفظ.{% elif not personal_mode and IS_ADMIN_STAFF %}سجّل ما نُفّذ ونتائجه وشواهده، ثم راجع التقرير قبل الحفظ.{% else %}أدخل بيانات التقرير، وحدد محتواه، وأرفق الشواهد المناسبة قبل الحفظ.{% endif %}</p>
         <dl class="twq-page-header__context report-authoring-context" aria-label="سياق التقرير">
-          {% if personal_mode %}<div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> السنة الدراسية</dt><dd><bdi id="personalYearContext" dir="ltr">{{ form.academic_year.value|default:"—" }}</bdi></dd></div>{% else %}<div><dt><i class="fa-solid fa-school" aria-hidden="true"></i> المدرسة</dt><dd>{{ SCHOOL_NAME|default:"المدرسة النشطة" }}</dd></div>{% endif %}
-          <div><dt><i class="fa-solid fa-user" aria-hidden="true"></i> المنفّذ</dt><dd>{{ request.user.name|default:"—" }}</dd></div>
-          {% if editing and not personal_mode %}<div><dt><i class="fa-solid fa-layer-group" aria-hidden="true"></i> النوع</dt><dd>{{ report.category.name|default:"غير محدد" }}</dd></div>{% endif %}
+          {% if personal_mode %}<div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> السنة الدراسية</dt><dd><bdi id="personalYearContext" dir="ltr">{{ form.academic_year.value|default:"—" }}</bdi></dd></div>{% else %}<div><dt><i class="fa-solid fa-school" aria-hidden="true"></i> المدرسة</dt><dd>{% if editing %}{{ SCHOOL_NAME|default:report.school.name|default:"المدرسة النشطة" }}{% else %}{{ SCHOOL_NAME|default:"المدرسة النشطة" }}{% endif %}</dd></div>{% endif %}
+          {% if editing and not personal_mode %}<div><dt><i class="fa-solid fa-user" aria-hidden="true"></i> مُعِدّ التقرير</dt><dd>{{ report.teacher_display_name|default:"—" }}</dd></div><div><dt><i class="fa-solid fa-layer-group" aria-hidden="true"></i> النوع</dt><dd>{{ report.category.name|default:"غير محدد" }}</dd></div><div><dt><i class="fa-regular fa-calendar" aria-hidden="true"></i> التاريخ</dt><dd><bdi>{{ report.report_date|hijri }} هـ</bdi></dd></div>{% else %}<div><dt><i class="fa-solid fa-user" aria-hidden="true"></i> {% if personal_mode %}إعداد {{ request.user.personal_teacher_label }}{% else %}{{ SCHOOL_EXECUTOR_LABEL|default:"المنفّذ" }}{% endif %}</dt><dd>{{ request.user.name|default:"—" }}</dd></div>{% endif %}
         </dl>
       </div>
       <div class="twq-page-header__aside">
@@ -49,6 +48,7 @@
       {% if personal_mode %}{{ form.academic_year.as_hidden }}{{ form.status }}{% endif %}
       {% if leadership_section %}<input type="hidden" name="leadership_section" value="{{ leadership_section.pk }}">{% endif %}
       {% if next_url and not personal_mode %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+      {% if leadership_section and not personal_mode %}<div class="twq-alert twq-alert--info report-leadership-context" role="status"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>سيُضاف هذا التقرير تلقائيًا إلى محور الأداء القيادي «{{ leadership_section.get_code_display }}» بعد الحفظ.</span></div>{% endif %}
 
       <section class="report-legacy-draft" id="draftBanner" role="status" hidden>
         <div class="report-legacy-draft__message"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span><strong>عُثر على مسودة محفوظة في هذا المتصفح.</strong><small id="draftTime"></small></span></div>
@@ -101,7 +101,7 @@
                 {% for error in form.report_date.errors %}<p class="ar-error-msg" id="report-date-error">{{ error }}</p>{% endfor %}
                 <p class="ar-error-msg" id="futureDateErr" hidden>لا يمكن اختيار تاريخ مستقبلي.</p>
               </div>
-              <div class="ar-field"><span class="report-field-label">المنفّذ</span><p class="ar-static-value"><i class="fa-solid fa-user-check" aria-hidden="true"></i>{% if editing and not personal_mode %}{{ report.teacher_display_name|default:"—" }}{% else %}{{ request.user.name|default:"—" }}{% endif %}</p><p class="report-field-help">هوية صاحب التقرير محفوظة ولا يمكن تغييرها من هذه الصفحة.</p></div>
+              <div class="ar-field"><span class="report-field-label">{% if personal_mode %}إعداد {{ request.user.personal_teacher_label }}{% elif editing %}مُعِدّ التقرير{% else %}{{ SCHOOL_EXECUTOR_LABEL|default:"المنفّذ" }}{% endif %}</span><p class="ar-static-value"><i class="fa-solid fa-user-check" aria-hidden="true"></i>{% if editing and not personal_mode %}{{ report.teacher_display_name|default:"—" }}{% else %}{{ request.user.name|default:"—" }}{% endif %}</p><p class="report-field-help">هوية صاحب التقرير محفوظة ولا يمكن تغييرها من هذه الصفحة.</p></div>
             </div>
           </section>
 
@@ -113,7 +113,7 @@
               <label class="report-section-option" data-section-option="implementation">{{ form.show_implementation }}<span class="report-option-icon"><i class="fa-solid fa-gears" aria-hidden="true"></i></span><span class="report-option-copy"><strong>آلية التنفيذ</strong><small>الخطوات والإجراءات</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
               <label class="report-section-option" data-section-option="results">{{ form.show_results }}<span class="report-option-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span><span class="report-option-copy"><strong>النتائج</strong><small>المخرجات المتحققة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
               <label class="report-section-option" data-section-option="recommendations">{{ form.show_recommendations }}<span class="report-option-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><span class="report-option-copy"><strong>التوصيات</strong><small>التحسينات والخطوات القادمة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
-              <label class="report-section-option" data-section-option="beneficiaries">{{ form.show_beneficiaries }}<span class="report-option-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span><span class="report-option-copy"><strong>عدد المستفيدين</strong><small>حجم الفئة المستفيدة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
+              <label class="report-section-option" data-section-option="beneficiaries">{{ form.show_beneficiaries }}<span class="report-option-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span><span class="report-option-copy"><strong>عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</strong><small>حجم الفئة المستفيدة</small></span><i class="fa-solid fa-circle-check report-option-check" aria-hidden="true"></i></label>
             </div></fieldset>
             <div class="report-selected-fields">
               <div class="report-section-field" data-section-field="goal"><div class="ar-field" data-group="goal"><label for="{{ form.goal.id_for_label }}"><i class="fa-solid fa-bullseye" aria-hidden="true"></i> الهدف</label>{{ form.goal }}{% for error in form.goal.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
@@ -121,7 +121,7 @@
               <div class="report-section-field" data-section-field="implementation"><div class="ar-field" data-group="implementation_method"><label for="{{ form.implementation_method.id_for_label }}"><i class="fa-solid fa-gears" aria-hidden="true"></i> آلية التنفيذ</label>{{ form.implementation_method }}{% for error in form.implementation_method.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
               <div class="report-section-field" data-section-field="results"><div class="ar-field" data-group="results"><label for="{{ form.results.id_for_label }}"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> النتائج</label>{{ form.results }}{% for error in form.results.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
               <div class="report-section-field" data-section-field="recommendations"><div class="ar-field" data-group="recommendations"><label for="{{ form.recommendations.id_for_label }}"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> التوصيات</label>{{ form.recommendations }}{% for error in form.recommendations.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
-              <div class="report-section-field" data-section-field="beneficiaries"><div class="ar-field" data-group="beneficiaries_count"><label for="{{ form.beneficiaries_count.id_for_label }}"><i class="fa-solid fa-users" aria-hidden="true"></i> عدد المستفيدين</label>{{ form.beneficiaries_count }}{% for error in form.beneficiaries_count.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
+              <div class="report-section-field" data-section-field="beneficiaries"><div class="ar-field" data-group="beneficiaries_count"><label for="{{ form.beneficiaries_count.id_for_label }}"><i class="fa-solid fa-users" aria-hidden="true"></i> عدد {{ SCHOOL_BENEFICIARIES_OBJ_LABEL|default:"المستفيدين" }}</label>{{ form.beneficiaries_count }}{% for error in form.beneficiaries_count.errors %}<p class="ar-error-msg">{{ error }}</p>{% endfor %}</div></div>
             </div>
           </section>
 
