@@ -42,7 +42,9 @@ class Command(BaseCommand):
                 )
                 action = (
                     OperationAction.objects.select_for_update()
-                    .select_related("project", "service")
+                    # service is nullable. Joining it here makes PostgreSQL reject
+                    # SELECT FOR UPDATE on the nullable side of the outer join.
+                    .select_related("project")
                     .filter(status=OperationAction.Status.QUEUED)
                     .order_by("requested_at", "pk")
                     .first()
