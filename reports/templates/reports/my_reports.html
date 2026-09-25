@@ -163,7 +163,7 @@
               <td>
                 <time class="my-report-date">
                   <span>{{ report.report_date|hijri }} هـ</span>
-                   <small>{% if personal_mode %}{{ report.report_date|date:"Y-m-d" }}{% else %}{{ report.day_name }}{% endif %}</small>
+                   {% if not personal_mode %}<small>{{ report.day_name }}</small>{% endif %}
                 </time>
               </td>
                <td><span class="my-report-beneficiaries"><bdi>{% if personal_mode %}{{ report.academic_year }}{% else %}{{ report.beneficiaries_count|default:"0" }}{% endif %}</bdi></span></td>
