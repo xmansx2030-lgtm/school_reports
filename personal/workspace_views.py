@@ -227,7 +227,8 @@ def initiatives(request, pk=None):
             PersonalInitiative.Status.COMPLETE: "completed",
             PersonalInitiative.Status.ARCHIVED: "info",
         }.get(item.status, "draft")
-    return render(request, "personal/initiatives.html", {
+    return render(request, "reports/initiative_list.html", {
+        "personal_mode": True, "teacher_base_template": "personal/base.html",
         "form": form, "initiative": initiative, "initiatives": initiatives_list,
         "years": ws.academic_years.all(), "year": year,
         "can_edit": request.personal_subscription.is_current and not (

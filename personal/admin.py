@@ -16,7 +16,14 @@ class PersonalPlanAdmin(admin.ModelAdmin):
 
 @admin.register(PersonalSubscription)
 class PersonalSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("workspace", "plan", "start_date", "end_date", "is_active")
+    list_display = (
+        "workspace", "plan", "start_date", "end_date", "is_active",
+        "reports_created", "evidence_created",
+    )
+    readonly_fields = (
+        "quota_started_at", "quota_report_after_id", "quota_evidence_after_id",
+        "reports_created", "evidence_created",
+    )
     list_filter = ("is_active", "plan")
     search_fields = ("workspace__owner__name", "workspace__owner__phone")
 

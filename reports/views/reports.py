@@ -331,10 +331,11 @@ def add_report(request: HttpRequest) -> HttpResponse:
                 messages.error(request, capacity_error)
                 return render(
                     request,
-                    "reports/add_report.html",
+                    "reports/teacher_report_form.html",
                     {
                         "form": form,
                         "evidence_formset": evidence_formset,
+                        "editing": False,
                         "leadership_section": leadership_section,
                         "has_report_types": _has_report_types(form),
                         **_report_ai_template_context(request.user),
@@ -442,10 +443,11 @@ def add_report(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        "reports/add_report.html",
+        "reports/teacher_report_form.html",
         {
             "form": form,
             "evidence_formset": evidence_formset,
+            "editing": False,
             "leadership_section": leadership_section,
             "has_report_types": _has_report_types(form),
             **_report_ai_template_context(request.user),
@@ -2783,11 +2785,12 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
                 messages.error(request, capacity_error)
                 return render(
                     request,
-                    "reports/edit_report.html",
+                    "reports/teacher_report_form.html",
                     {
                         "form": form,
                         "report": r,
                         "evidence_formset": evidence_formset,
+                        "editing": True,
                         "has_report_types": form.fields["category"].queryset.exists(),
                         "next_url": next_url,
                         **_report_ai_template_context(request.user),
@@ -2821,11 +2824,12 @@ def edit_my_report(request: HttpRequest, pk: int) -> HttpResponse:
 
     return render(
         request,
-        "reports/edit_report.html",
+        "reports/teacher_report_form.html",
         {
             "form": form,
             "report": r,
             "evidence_formset": evidence_formset,
+            "editing": True,
             "has_report_types": form.fields["category"].queryset.exists(),
             "next_url": next_url,
             **_report_ai_template_context(request.user),

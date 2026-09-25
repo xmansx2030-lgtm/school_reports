@@ -1,13 +1,17 @@
-{% extends "base.html" %}
+{% extends teacher_base_template|default:"base.html" %}
 {% load static hijri_tags %}
 
-{% block title %}ملف الإنجاز — {{ file.academic_year }}{% endblock %}
+{% block title %}{% if personal_mode %}ملف إنجازي{% else %}ملف الإنجاز — {{ file.academic_year }}{% endif %}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{% static 'css/achievement.css' %}?v=20260923.1">
+{% if personal_mode %}<link rel="stylesheet" href="{% static 'css/personal-portfolio.css' %}?v=20260925.1">{% endif %}
 {% endblock %}
 
 {% block content %}
+{% if personal_mode %}
+{% include "reports/partials/personal_portfolio.html" %}
+{% else %}
 <div class="twq-page achievement-page achievement-workspace" aria-labelledby="achievementWorkspaceTitle">
   <header class="twq-page-header achievement-page-header achievement-workspace-header">
     <div class="twq-page-header__heading">
@@ -116,8 +120,9 @@
 <dialog class="achievement-dialog achievement-preview-dialog" id="achievementImageDialog" aria-labelledby="achievementImageDialogTitle"><div class="achievement-dialog__header"><h2 id="achievementImageDialogTitle">معاينة الشاهد</h2><button class="twq-btn twq-btn--ghost achievement-icon-button" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div><div class="achievement-dialog__body"><img id="achievementImagePreview" src="" alt=""></div></dialog>
 
 <dialog class="achievement-dialog achievement-report-dialog" id="achievementReportDialog" aria-labelledby="achievementReportDialogTitle" data-picker-url="{% url 'reports:achievement_report_picker' file.pk %}"><div class="achievement-dialog__header"><div><span class="twq-section__kicker">تقاريري المؤهلة</span><h2 id="achievementReportDialogTitle">ربط تقرير كشاهد</h2></div><button class="twq-btn twq-btn--ghost achievement-icon-button" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div><div class="achievement-dialog__body"><div class="achievement-picker-search"><label class="twq-label" for="achievementReportSearch">البحث في أول 50 تقريرًا مطابقًا</label><div class="twq-toolbar__control"><i class="fa-solid fa-magnifying-glass twq-toolbar__icon" aria-hidden="true"></i><input class="twq-control" id="achievementReportSearch" type="search" placeholder="عنوان التقرير..."></div></div><div id="achievementReportResults" class="achievement-picker-results" aria-live="polite"></div></div></dialog>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/achievement.js' %}?v=20260923.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+{% if not personal_mode %}<script src="{% static 'js/achievement.js' %}?v=20260923.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
 {% endblock %}

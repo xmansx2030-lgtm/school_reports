@@ -1,11 +1,15 @@
 """Teacher-owned achievement portfolio, with no school approval workflow."""
 
+from types import SimpleNamespace
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max, Prefetch, Sum
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 from django_ratelimit.decorators import ratelimit
@@ -19,6 +23,7 @@ from .models import (
     PersonalPortfolioReport, PersonalPortfolioSection, PersonalReport,
     PersonalWorkspace,
 )
+from .quotas import personal_quota_usage, reserve_personal_quota
 from .services import ensure_writable_personal_year
 from .views import workspace_required
 
@@ -73,6 +78,7 @@ def _context(workspace, year):
     year_record = PersonalAcademicYear.objects.filter(workspace=workspace, value=year).first() if year else None
     return {
         "workspace": workspace, "years": _portfolio_years(workspace), "year": year,
+        "personal_mode": True, "teacher_base_template": "personal/base.html",
         "year_record": year_record, "general_form": PersonalPortfolioProfileForm(instance=year_record),
         "sections": sections, "documented_count": documented,
         "progress_percent": round(documented * 100 / len(AchievementSection.Code.choices)),
@@ -124,7 +130,7 @@ def portfolio(request):
             context = _context(workspace, year)
             context["general_form"] = general_form
             context["can_edit"] = True
-            return render(request, "personal/portfolio.html", context, status=400)
+            return render(request, "reports/achievement_file.html", context, status=400)
         try:
             code = int(request.POST.get("section_code", ""))
         except (TypeError, ValueError):
@@ -181,10 +187,11 @@ def portfolio(request):
                     return target
                 uploaded = form.cleaned_data.get("file")
                 file_size = uploaded.size if uploaded else 0
-                plan = request.personal_subscription.plan
+                current_subscription, _reports_used, _evidence_used = personal_quota_usage(locked, lock=True)
+                plan = current_subscription.plan
                 used = locked.evidence.aggregate(total=Sum("file_size"))["total"] or 0
-                if section.linked_evidence.count() >= 8 or locked.evidence.count() >= plan.max_evidence:
-                    messages.error(request, "بلغت الحد الأعلى للشواهد في المحور أو الباقة.")
+                if section.linked_evidence.count() >= 8:
+                    messages.error(request, "بلغت الحد الأعلى للشواهد في المحور.")
                     return target
                 report = form.cleaned_data.get("report")
                 if report and locked.evidence.filter(report=report).count() >= 8:
@@ -192,6 +199,11 @@ def portfolio(request):
                     return target
                 if used + file_size > plan.storage_limit_mb * 1024 * 1024:
                     messages.error(request, "تجاوز الملف سعة باقتك الحالية.")
+                    return target
+                try:
+                    reserve_personal_quota(locked, evidence=1)
+                except ValidationError as exc:
+                    messages.error(request, exc.messages[0])
                     return target
                 evidence = form.save(commit=False)
                 evidence.workspace = locked
@@ -207,7 +219,7 @@ def portfolio(request):
 
     context = _context(workspace, year)
     context["can_edit"] = bool(year and request.personal_subscription.is_current and not context["is_archived"])
-    return render(request, "personal/portfolio.html", context)
+    return render(request, "reports/achievement_file.html", context)
 
 
 @workspace_required
@@ -224,9 +236,46 @@ def portfolio_print(request):
         section["evidence"] = [link for link in section["evidence"] if link.evidence.show_in_print]
         section["documented"] = bool(section["notes"].strip() or section["reports"] or section["evidence"])
     context["documented_count"] = sum(section["documented"] for section in context["sections"])
-    context["document_title"] = f"ملف الإنجاز {year}"
     context["school_names"] = list(context["reports"].order_by("school_name").values_list("school_name", flat=True).distinct()) or [workspace.school_name]
     context["principal_names"] = list(context["reports"].exclude(principal_name="").order_by("principal_name").values_list("principal_name", flat=True).distinct()) or ([workspace.principal_name] if workspace.principal_name else [])
-    response = render(request, "personal/portfolio_print.html", context)
+    profile = context["year_record"]
+    context["file"] = SimpleNamespace(
+        id=f"PER-{workspace.pk}", teacher_name=workspace.owner.name, academic_year=year,
+        get_status_display="ملف شخصي", manager_notes="",
+        **{field: getattr(profile, field, "") for field in (
+            "qualifications", "professional_experience", "specialization",
+            "teaching_load", "subjects_taught", "contact_info",
+        )},
+    )
+    visible_evidence = list(context["evidence"])
+    linked_report_ids = set()
+    for section in context["sections"]:
+        images = [
+            SimpleNamespace(
+                image=SimpleNamespace(url=reverse("personal:evidence_preview", args=[link.evidence.pk])),
+                title=link.evidence.title,
+            )
+            for link in section["evidence"] if link.evidence.is_image
+        ]
+        section["get_code_display"] = section["title"]
+        section["teacher_notes"] = section["notes"]
+        section["is_completed"] = section["documented"]
+        section["evidence_images"] = SimpleNamespace(all=images)
+        section["evidence_reports"] = SimpleNamespace(all=section["reports"])
+        section["personal_documents"] = [
+            link.evidence for link in section["evidence"] if not link.evidence.is_image
+        ]
+        linked_report_ids.update(link.report_id for link in section["reports"])
+    context.update({
+        "has_evidence_reports": bool(linked_report_ids),
+        "unlinked_reports": [report for report in context["reports"] if report.pk not in linked_report_ids],
+        "visible_evidence": visible_evidence,
+        "personal_portfolio_dative_label": {
+            "female": "للمعلمة", "male": "للمعلم",
+        }.get(workspace.owner.gender, "لصاحب الملف"),
+        "now": timezone.localtime(),
+        "back_url": "personal:portfolio",
+    })
+    response = render(request, "reports/pdf/achievement_file.html", context)
     response["Cache-Control"] = "private, no-store"
     return response

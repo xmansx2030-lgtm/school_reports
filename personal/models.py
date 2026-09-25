@@ -107,19 +107,41 @@ class PersonalSubscription(models.Model):
     start_date = models.DateField(default=timezone.localdate)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    quota_started_at = models.DateTimeField("بداية احتساب حدود الإنشاء", default=timezone.now)
+    quota_report_after_id = models.PositiveBigIntegerField(default=0, editable=False)
+    quota_evidence_after_id = models.PositiveBigIntegerField(default=0, editable=False)
+    reports_created = models.PositiveIntegerField("التقارير المنشأة خلال الاشتراك", default=0)
+    evidence_created = models.PositiveIntegerField("الشواهد المنشأة خلال الاشتراك", default=0)
 
     class Meta:
         verbose_name = "اشتراك معلم شخصي"
         verbose_name_plural = "اشتراكات المعلمين الشخصية"
 
     def save(self, *args, **kwargs):
-        previous_plan_id = None
+        previous = None
         if self.pk:
-            previous_plan_id = PersonalSubscription.objects.filter(pk=self.pk).values_list("plan_id", flat=True).first()
-        if self._state.adding or previous_plan_id != self.plan_id:
+            previous = PersonalSubscription.objects.filter(pk=self.pk).values("plan_id", "start_date").first()
+        plan_changed = previous is not None and previous["plan_id"] != self.plan_id
+        if self._state.adding or plan_changed:
             self.start_date = timezone.localdate()
             days = self.plan.duration_days
             self.end_date = self.start_date + timedelta(days=days - 1) if days and self.is_active else None
+        if previous is not None and (plan_changed or previous["start_date"] != self.start_date):
+            self.quota_started_at = timezone.now()
+            self.quota_report_after_id = PersonalReport.objects.filter(
+                workspace_id=self.workspace_id,
+            ).order_by("-pk").values_list("pk", flat=True).first() or 0
+            self.quota_evidence_after_id = PersonalEvidence.objects.filter(
+                workspace_id=self.workspace_id,
+            ).order_by("-pk").values_list("pk", flat=True).first() or 0
+            self.reports_created = 0
+            self.evidence_created = 0
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and (plan_changed or previous and previous["start_date"] != self.start_date):
+            kwargs["update_fields"] = set(update_fields) | {
+                "start_date", "end_date", "quota_started_at", "reports_created", "evidence_created",
+                "quota_report_after_id", "quota_evidence_after_id",
+            }
         return super().save(*args, **kwargs)
 
     @property
@@ -315,6 +337,14 @@ class PersonalEvidence(models.Model):
         return bool(self.file and Path(self.file.name).suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"})
 
     def save(self, *args, **kwargs):
+        if self.file and not self.file._committed:
+            self.file_size = self.file.size
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"file_size"}
+        elif not self.file:
+            self.file_size = 0
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"file_size"}
         if self.report_id and self.workspace_id:
             report = PersonalReport.objects.filter(pk=self.report_id, workspace_id=self.workspace_id).first()
             if report is None or report.academic_year != self.academic_year:

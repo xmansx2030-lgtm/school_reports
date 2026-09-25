@@ -1,0 +1,38 @@
+{% load static %}
+{% if unlinked_reports %}
+  <div class="page page-break chapter-page"><div class="brand-rail" aria-hidden="true"></div><span class="chapter-label">ملاحق شخصية</span><h1>التقارير الأخرى</h1><p>تقارير صاحب الملف التي لم تُربط بعد بمعيار من معايير الأداء.</p><div class="chapter-rule" aria-hidden="true"></div></div>
+  {% for item in unlinked_reports %}
+    <div class="page page-break report-page">
+      <header class="document-header"><div class="document-brand"><img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق</div><div class="document-meta">تقرير شخصي<br />{{ file.academic_year }} هـ</div></header>
+      <div class="report-box"><div class="report-head"><span>{{ item.title }}</span></div>{% include "reports/pdf/partials/personal_portfolio_report.html" %}</div>
+      <div class="document-footer"><span>{{ file.teacher_name }}</span><span>تقرير شخصي</span></div>
+    </div>
+  {% endfor %}
+{% endif %}
+{% if visible_evidence %}
+  <div class="page page-break chapter-page"><div class="brand-rail" aria-hidden="true"></div><span class="chapter-label">ملاحق شخصية</span><h1>مكتبة الشواهد</h1><p>الشواهد التي اختار صاحب الملف إظهارها في الطباعة.</p><div class="chapter-rule" aria-hidden="true"></div></div>
+  {% for item in visible_evidence %}
+    <div class="page page-break criterion-page">
+      <header class="document-header"><div class="document-brand"><img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق</div><div class="document-meta">شاهد شخصي<br />{{ file.academic_year }} هـ</div></header>
+      <h2 class="criterion-title">{{ item.title }}</h2>
+      {% if item.description %}<div class="section-body">{{ item.description }}</div>{% endif %}
+      {% if item.is_image %}<div class="images-grid"><div class="img-box"><img src="{% url 'personal:evidence_preview' item.pk %}" alt="{{ item.title }}" /><div class="img-cap">{{ item.title }}</div></div></div>
+      {% elif item.file %}<p><a class="personal-link" href="{% url 'personal:evidence_download' item.pk %}">تنزيل الملف</a></p>
+      {% elif item.source_url %}<p><a class="personal-link" href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">فتح الرابط</a></p>{% endif %}
+      <div class="document-footer"><span>{{ file.teacher_name }}</span><span>شاهد شخصي</span></div>
+    </div>
+  {% endfor %}
+{% endif %}
+{% if initiatives %}
+  <div class="page page-break chapter-page"><div class="brand-rail" aria-hidden="true"></div><span class="chapter-label">ملاحق شخصية</span><h1>المبادرات</h1><p>مبادرات وممارسات صاحب الملف خلال العام الدراسي.</p><div class="chapter-rule" aria-hidden="true"></div></div>
+  {% for item in initiatives %}
+    <div class="page page-break criterion-page">
+      <header class="document-header"><div class="document-brand"><img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق</div><div class="document-meta">مبادرة شخصية<br />{{ file.academic_year }} هـ</div></header>
+      <h2 class="criterion-title">{{ item.title }}</h2>
+      {% if item.is_best_practice %}<div class="badge">ممارسة ناجحة</div>{% endif %}
+      <section class="section"><div class="section-h">الفكرة والتنفيذ</div><div class="section-body">{{ item.summary }}</div></section>
+      {% if item.impact %}<section class="section"><div class="section-h">الأثر والنتائج</div><div class="section-body">{{ item.impact }}</div></section>{% endif %}
+      <div class="document-footer"><span>{{ file.teacher_name }}</span><span>مبادرة شخصية</span></div>
+    </div>
+  {% endfor %}
+{% endif %}

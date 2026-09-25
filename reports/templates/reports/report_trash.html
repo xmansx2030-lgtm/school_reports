@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends teacher_base_template|default:"base.html" %}
 {% load hijri_tags %}
 
 {% block title %}سلة التقارير المحذوفة | منصة توثيق{% endblock %}
@@ -26,22 +26,24 @@
   <header class="trash-head">
     <div>
       <h1>سلة التقارير المحذوفة</h1>
-      <p>{% if is_manager_view %}تقارير المدرسة المنقولة إلى السلة.{% else %}تقاريرك المنقولة إلى السلة.{% endif %} المرفقات وروابط الاعتماد محفوظة حتى الاستعادة.</p>
+      <p>{% if is_manager_view %}تقارير المدرسة المنقولة إلى السلة.{% else %}تقاريرك المنقولة إلى السلة.{% endif %} الشواهد والروابط محفوظة حتى الاستعادة.</p>
     </div>
-    <a class="trash-btn" href="{% if is_manager_view %}{% url 'reports:admin_reports' %}{% else %}{% url 'reports:my_reports' %}{% endif %}"><i class="fa-solid fa-arrow-right"></i> التقارير</a>
+    <a class="trash-btn" href="{% if personal_mode %}{% url 'personal:reports' %}{% elif is_manager_view %}{% url 'reports:admin_reports' %}{% else %}{% url 'reports:my_reports' %}{% endif %}"><i class="fa-solid fa-arrow-right"></i> التقارير</a>
   </header>
+  {% if personal_mode and not subscription_active %}<div class="twq-alert twq-alert--info" role="note">يمكنك مراجعة السلة أثناء توقف الاشتراك؛ يلزم اشتراك نشط للاستعادة.</div>{% endif %}
 
   <section class="trash-list" aria-label="التقارير المحذوفة">
     {% for report in reports %}
       <article class="trash-row">
         <div>
           <h2>{{ report.title }}</h2>
-          <div class="trash-meta">{{ report.teacher_display_name }} · {{ report.report_date|hijri }} هـ · نُقل إلى السلة {{ report.trashed_at|date:"Y-m-d H:i" }}{% if report.trashed_by %} بواسطة {{ report.trashed_by.name }}{% endif %}</div>
+          <div class="trash-meta">{% if personal_mode %}{{ report.academic_year }}{% else %}{{ report.teacher_display_name }}{% endif %} · {{ report.report_date|hijri }} هـ · نُقل إلى السلة {{ report.trashed_at|date:"Y-m-d H:i" }}{% if report.trashed_by %} بواسطة {{ report.trashed_by.name }}{% endif %}</div>
+          {% if personal_mode and report.academic_year in archived_years %}<span class="twq-status twq-status--draft">السنة مؤرشفة؛ أعد فتحها قبل الاستعادة</span>{% endif %}
         </div>
-        <form method="post" action="{% url 'reports:report_restore' report.pk %}">
+        {% if not personal_mode or subscription_active and report.academic_year not in archived_years %}<form method="post" action="{% if personal_mode %}{% url 'personal:report_restore' report.pk %}{% else %}{% url 'reports:report_restore' report.pk %}{% endif %}">
           {% csrf_token %}
           <button class="trash-btn trash-btn--restore" type="submit"><i class="fa-solid fa-rotate-left"></i> استعادة</button>
-        </form>
+        </form>{% endif %}
       </article>
     {% empty %}
       <div class="trash-empty"><i class="fa-solid fa-trash-can" aria-hidden="true"></i><p>سلة التقارير فارغة.</p></div>

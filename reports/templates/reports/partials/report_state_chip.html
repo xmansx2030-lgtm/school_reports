@@ -11,7 +11,9 @@
 
 يتوقّع: ``report`` و``report_approval_enabled`` في السياق.
 {% endcomment %}
-{% if report_approval_enabled %}
+{% if personal_mode %}
+  <span class="twq-status {% if report.status == 'complete' %}twq-status--success{% elif report.status == 'archived' %}twq-status--draft{% else %}twq-status--warning{% endif %}">{{ report.get_status_display }}</span>
+{% elif report_approval_enabled %}
   <a class="id-chip mr-state twq-status" data-tone="{{ report.approval_tone }}" data-status="{{ report.approval_tone }}"
      href="{% url 'reports:approval_detail' report.pk %}"
      title="حالة الاعتماد — افتح لمتابعة التقرير أو إرساله">

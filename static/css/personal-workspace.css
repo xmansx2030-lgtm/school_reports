@@ -1,5 +1,8 @@
 /* Personal teacher adaptations to the shared Tawtheeq application shell. */
 body.personal-page {
+  /* The shared reset sets body to 100% of the viewport. Long personal forms
+     must grow with their content so the document has one vertical scrollbar. */
+  height: auto;
   background: var(--twq-bg);
   color: var(--twq-text);
 }
@@ -120,6 +123,44 @@ body.personal-page .drawer-footer { border-color: var(--twq-border); }
 /* The personal daily home uses the school's teacher-home.css component classes. */
 .personal-dashboard-summary { margin-block-start: var(--twq-space-6); }
 
+.personal-quota__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--twq-space-3);
+}
+
+.personal-quota__item {
+  min-inline-size: 0;
+  padding: var(--twq-space-4);
+  border: 1px solid var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface);
+}
+
+.personal-quota__item h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--twq-space-2);
+  margin: 0 0 var(--twq-space-3);
+  color: var(--twq-text);
+  font-size: var(--twq-font-size-base);
+}
+
+.personal-quota__item h3 i { color: var(--twq-primary); }
+
+.personal-quota__numbers {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2) var(--twq-space-4);
+  margin-block-end: var(--twq-space-3);
+}
+
+.personal-quota__numbers span { display: grid; color: var(--twq-text-secondary); font-size: var(--twq-font-size-sm); }
+.personal-quota__numbers strong { color: var(--twq-text); font-size: var(--twq-font-size-lg); font-variant-numeric: tabular-nums; }
+.personal-quota__item p, .personal-quota__note { margin: var(--twq-space-2) 0 0; color: var(--twq-text-muted); font-size: var(--twq-font-size-xs); }
+.personal-quota__note { margin-block-start: var(--twq-space-3); }
+
 .personal-dashboard__recent {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -208,4 +249,12 @@ body.personal-page .drawer-footer { border-color: var(--twq-border); }
   .personal-main { padding-block: var(--twq-space-4) var(--twq-space-8); }
   .personal-dashboard__recent { grid-template-columns: minmax(0, 1fr); }
   .personal-footer { flex-direction: column; }
+}
+
+@media (max-width: 900px) {
+  .personal-quota__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .personal-quota__grid { grid-template-columns: minmax(0, 1fr); }
 }

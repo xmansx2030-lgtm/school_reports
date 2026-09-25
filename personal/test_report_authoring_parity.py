@@ -664,6 +664,28 @@ class PersonalSchoolReportAuthoringParityTests(TestCase):
         self.assertEqual(PersonalReport.objects.count(), 0)
         self.assertEqual(PersonalEvidence.objects.count(), 1)
 
+    def test_deleting_image_during_edit_does_not_refill_creation_quota(self):
+        self.subscription.plan.max_evidence = 1
+        self.subscription.plan.save(update_fields=["max_evidence"])
+        report = self.make_report()
+        original = PersonalEvidence.objects.create(
+            workspace=self.workspace, report=report, academic_year=self.YEAR,
+            title="الصورة الأصلية", file=image_upload("original.png"),
+        )
+        response = self.client.post(
+            reverse("personal:report_edit", args=[report.pk]),
+            self.editor_payload(**{
+                "evidence-TOTAL_FORMS": "2", "evidence-INITIAL_FORMS": "1",
+                "evidence-0-id": str(original.pk), "evidence-0-DELETE": "on",
+                "evidence-0-order": "1", "evidence-1-image": image_upload("new.png"),
+                "evidence-1-order": "2",
+            }),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertTrue(PersonalEvidence.objects.filter(pk=original.pk, report=report).exists())
+        self.assertFalse(PersonalEvidence.objects.filter(title="شاهد التقرير").exists())
+
     def test_school_editor_image_upload_obeys_personal_plan_storage_limit(self):
         self.subscription.plan.storage_limit_mb = 1
         self.subscription.plan.save(update_fields=["storage_limit_mb"])
