@@ -1,0 +1,1 @@
+{% load static %}<div class="document-brand{% if personal_mode %} document-brand--ministry{% endif %}">{% if personal_mode %}<img src="{% if ministry_logo_src %}{{ ministry_logo_src }}{% else %}{% static 'img/UntiTtled-1.png' %}{% endif %}" alt="" /> وزارة التعليم{% else %}<img src="{% static 'img/brand-mark.svg' %}" alt="" /> منصة توثيق{% endif %}</div>

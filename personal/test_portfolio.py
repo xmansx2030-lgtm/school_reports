@@ -90,7 +90,9 @@ class PersonalPortfolioTests(TestCase):
         self.assertContains(printed, "أثر موثق في الصف")
         self.assertContains(printed, "تقرير القراءة")
         self.assertContains(printed, "شاهد القراءة")
-        self.assertNotContains(printed, "وزارة التعليم")
+        self.assertContains(printed, 'alt="شعار وزارة التعليم"')
+        self.assertContains(printed, "img/UntiTtled-1.png")
+        self.assertNotContains(printed, "img/brand-mark.svg")
         self.assertNotContains(printed, "إرسال للاعتماد")
         export = self.client.get(reverse("personal:year_export", args=[self.YEAR]))
         with ZipFile(BytesIO(b"".join(export.streaming_content))) as bundle:

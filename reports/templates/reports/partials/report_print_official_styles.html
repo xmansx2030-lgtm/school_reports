@@ -339,7 +339,8 @@ body {
   /* Chrome otherwise paints the page margins black when previewing from dark mode. */
   background: #fff;
   @bottom-center {
-    content: "منصة توثيق  |  صفحة " counter(page) " من " counter(pages);
+    {% if personal_mode %}content: "تقرير مهني شخصي  |  صفحة " counter(page) " من " counter(pages);
+    {% else %}content: "منصة توثيق  |  صفحة " counter(page) " من " counter(pages);{% endif %}
     padding-top: 2mm;
     border-top: .35mm solid #d6e0da;
     color: #64736c;
