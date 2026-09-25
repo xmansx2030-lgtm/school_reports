@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, workspace_views
+from . import portfolio_views, views, workspace_views
 
 app_name = "personal"
 
@@ -24,8 +24,8 @@ urlpatterns = [
     path("evidence/<int:pk>/download/", views.evidence_download, name="evidence_download"),
     path("evidence/<int:pk>/preview/", views.evidence_preview, name="evidence_preview"),
     path("evidence/<int:pk>/delete/", views.evidence_delete, name="evidence_delete"),
-    path("portfolio/", views.portfolio, name="portfolio"),
-    path("portfolio/print/", views.portfolio_print, name="portfolio_print"),
+    path("portfolio/", portfolio_views.portfolio, name="portfolio"),
+    path("portfolio/print/", portfolio_views.portfolio_print, name="portfolio_print"),
     path("years/", workspace_views.years, name="years"),
     path("years/<str:value>/export/", workspace_views.year_export, name="year_export"),
     path("initiatives/", workspace_views.initiatives, name="initiatives"),

@@ -9,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 
 from reports.validators import validate_circular_attachment_file
+from reports.model_parts.achievements import AchievementSection
 
 
 def personal_evidence_path(instance, filename):
@@ -165,11 +166,13 @@ class PersonalReport(models.Model):
     workspace = models.ForeignKey(
         PersonalWorkspace, on_delete=models.CASCADE, related_name="reports"
     )
+    client_submission_id = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     title = models.CharField("عنوان العمل", max_length=255)
     category = models.CharField("نوع العمل", max_length=100, blank=True)
     report_date = models.DateField("تاريخ العمل")
     academic_year = models.CharField("السنة الدراسية", max_length=20)
-    description = models.TextField("وصف العمل")
+    description = models.TextField("وصف العمل", blank=True)
+    show_details = models.BooleanField("إظهار تفاصيل التقرير", default=True)
     goals = models.TextField("الأهداف", blank=True)
     implementation = models.TextField("التنفيذ", blank=True)
     results = models.TextField("النتائج", blank=True)
@@ -249,6 +252,12 @@ class PersonalAcademicYear(models.Model):
     workspace = models.ForeignKey(PersonalWorkspace, on_delete=models.CASCADE, related_name="academic_years")
     value = models.CharField("السنة الدراسية", max_length=20)
     archived_at = models.DateTimeField("أُرشفت في", null=True, blank=True)
+    qualifications = models.TextField("المؤهلات", blank=True)
+    professional_experience = models.TextField("الخبرات المهنية", blank=True)
+    specialization = models.TextField("التخصص", blank=True)
+    teaching_load = models.TextField("نصاب الحصص", blank=True)
+    subjects_taught = models.TextField("مواد التدريس", blank=True)
+    contact_info = models.TextField("بيانات التواصل", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -270,6 +279,7 @@ class PersonalInitiative(models.Model):
     title = models.CharField("عنوان المبادرة", max_length=200)
     summary = models.TextField("الفكرة والتنفيذ")
     impact = models.TextField("الأثر والنتائج", blank=True)
+    is_best_practice = models.BooleanField("ممارسة ناجحة", default=False)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -280,6 +290,70 @@ class PersonalInitiative(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class PersonalPortfolioSection(models.Model):
+    """One teacher-owned achievement axis for a personal academic year."""
+
+    workspace = models.ForeignKey(PersonalWorkspace, on_delete=models.CASCADE, related_name="portfolio_sections")
+    academic_year = models.CharField("السنة الدراسية", max_length=20)
+    code = models.PositiveSmallIntegerField("المحور", choices=AchievementSection.Code.choices)
+    teacher_notes = models.TextField("وصف الممارسة", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["code", "id"]
+        constraints = [models.UniqueConstraint(
+            fields=["workspace", "academic_year", "code"], name="unique_personal_portfolio_axis"
+        )]
+
+    def __str__(self):
+        return f"{self.workspace_id} · {self.academic_year} · {self.get_code_display()}"
+
+
+class PersonalPortfolioReport(models.Model):
+    section = models.ForeignKey(PersonalPortfolioSection, on_delete=models.CASCADE, related_name="linked_reports")
+    report = models.ForeignKey(PersonalReport, on_delete=models.CASCADE, related_name="portfolio_links")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["section", "report"], name="unique_personal_axis_report")]
+
+    def clean(self):
+        super().clean()
+        if self.section_id and self.report_id and (
+            self.section.workspace_id != self.report.workspace_id or
+            self.section.academic_year != self.report.academic_year
+        ):
+            raise ValidationError("يجب أن يخص التقرير صاحب المحور وسنته الدراسية.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class PersonalPortfolioEvidence(models.Model):
+    section = models.ForeignKey(PersonalPortfolioSection, on_delete=models.CASCADE, related_name="linked_evidence")
+    evidence = models.ForeignKey(PersonalEvidence, on_delete=models.CASCADE, related_name="portfolio_links")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["section", "evidence"], name="unique_personal_axis_evidence")]
+
+    def clean(self):
+        super().clean()
+        if self.section_id and self.evidence_id and (
+            self.section.workspace_id != self.evidence.workspace_id or
+            self.section.academic_year != self.evidence.academic_year
+        ):
+            raise ValidationError("يجب أن يخص الشاهد صاحب المحور وسنته الدراسية.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class PersonalNotice(models.Model):

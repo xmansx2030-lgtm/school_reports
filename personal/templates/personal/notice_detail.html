@@ -1,6 +1,33 @@
 {% extends "personal/base.html" %}
+{% load static %}
 {% block title %}{{ receipt.notice.title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/notifications-user.css' %}">{% endblock %}
 {% block content %}
-<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">إشعار من إدارة المنصة</p><h1>{{ receipt.notice.title }}</h1><p class="twq-page-header__lead">{{ receipt.notice.created_at|date:"Y-m-d H:i" }} · {% if receipt.read_at %}مقروء{% else %}جديد{% endif %}</p></div><a class="twq-btn twq-btn--secondary" href="{% url 'personal:notices' %}">كل الإشعارات</a></header>
-<article class="twq-section"><div class="personal-notice-body">{{ receipt.notice.message|linebreaksbr }}</div>{% if not receipt.read_at %}<form method="post" action="{% url 'personal:notice_mark_read' receipt.pk %}">{% csrf_token %}<button class="twq-btn twq-btn--primary" type="submit">تحديد كمقروء</button></form>{% endif %}</article>
+<div class="twq-page notification-detail-page" dir="rtl" aria-labelledby="notificationDetailTitle" data-notifications-page="detail">
+  <header class="twq-page-header notification-detail-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i> رسالة واردة من المنصة</p>
+      <h1 class="twq-page-header__title" id="notificationDetailTitle">{{ receipt.notice.title }}</h1>
+      <p class="twq-page-header__lead">رسالة موجهة إلى مساحتك الشخصية من إدارة منصة توثيق.</p>
+      <dl class="twq-page-header__context notification-detail-header__context" aria-label="بيانات الإشعار الأساسية">
+        <div><dt>الحالة</dt><dd>مقروء</dd></div>
+        <div><dt>النوع</dt><dd>إشعار</dd></div>
+        <div><dt>المرسل</dt><dd>إدارة المنصة</dd></div>
+      </dl>
+    </div>
+    <div class="twq-page-header__aside notification-detail-header__aside">
+      <span class="twq-status" data-status="completed"><i class="fa-solid fa-check-double" aria-hidden="true"></i> تمت القراءة</span>
+      <a class="twq-btn twq-btn--secondary" href="{% url 'personal:notices' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى الإشعارات</a>
+    </div>
+  </header>
+  <section class="twq-section notification-message notification-detail-layout" aria-labelledby="notificationMessageTitle">
+    <div class="twq-section__header notification-message__header"><div><span class="twq-section__kicker">محتوى الرسالة</span><h2 class="twq-section__title" id="notificationMessageTitle">{{ receipt.notice.title }}</h2></div><div class="notification-message__labels"><span class="notification-type"><i class="fa-regular fa-bell" aria-hidden="true"></i> إشعار من المنصة</span></div></div>
+    <div class="notification-message__body">{{ receipt.notice.message|linebreaksbr }}</div>
+    <dl class="notification-detail-meta">
+      <div><dt>المرسل</dt><dd>إدارة المنصة</dd></div>
+      <div><dt>تاريخ الوصول</dt><dd><time datetime="{{ receipt.notice.created_at|date:'c' }}">{{ receipt.notice.created_at|date:"Y-m-d H:i" }}</time></dd></div>
+      {% if receipt.read_at %}<div><dt>تاريخ القراءة</dt><dd><time datetime="{{ receipt.read_at|date:'c' }}">{{ receipt.read_at|date:"Y-m-d H:i" }}</time></dd></div>{% endif %}
+    </dl>
+  </section>
+</div>
 {% endblock %}

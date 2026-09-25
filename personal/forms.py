@@ -195,6 +195,7 @@ def clean_academic_year(value):
 
 class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
     selection_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
+    client_submission_id = forms.UUIDField(required=False, widget=forms.HiddenInput)
     academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
 
     def __init__(self, *args, **kwargs):
@@ -202,6 +203,7 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
         if bound is not None and "selection_enabled" not in bound:
             data = bound.copy()
             for flag, field in (
+                ("show_details", "description"),
                 ("show_goals", "goals"), ("show_implementation", "implementation"),
                 ("show_results", "results"), ("show_recommendations", "recommendations"),
             ):
@@ -214,11 +216,12 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
             else:
                 kwargs["data"] = data
         super().__init__(*args, **kwargs)
+        self.fields["description"].required = False
 
     class Meta:
         model = PersonalReport
         fields = [
-            "title", "category", "report_date", "academic_year", "description",
+            "title", "category", "report_date", "academic_year", "show_details", "description",
             "show_goals", "goals", "show_implementation", "implementation",
             "show_results", "results", "show_recommendations", "recommendations",
             "show_beneficiaries", "beneficiaries_count", "status",
@@ -237,6 +240,13 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        if not any(data.get(flag) for flag in (
+            "show_details", "show_goals", "show_implementation", "show_results",
+            "show_recommendations", "show_beneficiaries",
+        )):
+            self.add_error(None, "اختر بندًا واحدًا على الأقل من محتوى التقرير.")
+        if data.get("show_details") and not (data.get("description") or "").strip():
+            self.add_error("description", "أدخل وصف العمل أو ألغِ اختيار هذا البند.")
         for flag, field, label in (
             ("show_goals", "goals", "الأهداف"),
             ("show_implementation", "implementation", "آلية التنفيذ"),
@@ -303,7 +313,7 @@ class PersonalInitiativeForm(PersonalFormStyleMixin, forms.ModelForm):
 
     class Meta:
         model = PersonalInitiative
-        fields = ["title", "academic_year", "summary", "impact", "status"]
+        fields = ["title", "academic_year", "summary", "impact", "is_best_practice", "status"]
         widgets = {"summary": forms.Textarea(attrs={"rows": 5}), "impact": forms.Textarea(attrs={"rows": 3})}
 
     def clean_academic_year(self):

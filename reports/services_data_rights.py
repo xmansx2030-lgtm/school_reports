@@ -164,8 +164,27 @@ def _personal_workspace_section(user) -> dict[str, Any]:
         "specialization": workspace.specialization,
         "current_academic_year": workspace.current_academic_year,
         "years": [
-            {"value": row.value, "archived_at": _iso(row.archived_at)}
+            {
+                "value": row.value, "archived_at": _iso(row.archived_at),
+                "qualifications": row.qualifications,
+                "professional_experience": row.professional_experience,
+                "specialization": row.specialization,
+                "teaching_load": row.teaching_load,
+                "subjects_taught": row.subjects_taught,
+                "contact_info": row.contact_info,
+            }
             for row in workspace.academic_years.all()
+        ],
+        "portfolio_sections": [
+            {
+                "academic_year": row.academic_year,
+                "code": row.code,
+                "title": row.get_code_display(),
+                "teacher_notes": row.teacher_notes,
+                "report_ids": list(row.linked_reports.values_list("report_id", flat=True)),
+                "evidence_ids": list(row.linked_evidence.values_list("evidence_id", flat=True)),
+            }
+            for row in workspace.portfolio_sections.prefetch_related("linked_reports", "linked_evidence")
         ],
         "reports": [
             {
@@ -181,6 +200,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
                 "recommendations": row.recommendations,
                 "show_goals": row.show_goals,
                 "show_implementation": row.show_implementation,
+                "show_details": row.show_details,
                 "show_results": row.show_results,
                 "show_recommendations": row.show_recommendations,
                 "show_beneficiaries": row.show_beneficiaries,
@@ -211,6 +231,7 @@ def _personal_workspace_section(user) -> dict[str, Any]:
             {
                 "id": row.pk, "title": row.title, "academic_year": row.academic_year,
                 "summary": row.summary, "impact": row.impact, "status": row.get_status_display(),
+                "is_best_practice": row.is_best_practice,
             }
             for row in workspace.initiatives.all()
         ],

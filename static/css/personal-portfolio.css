@@ -1,0 +1,16 @@
+.personal-portfolio .personal-portfolio__year{display:flex;align-items:end;flex-wrap:wrap;gap:.75rem;margin-block:1rem 1.5rem}
+.personal-portfolio__year .twq-field{min-inline-size:min(100%,15rem)}
+.personal-portfolio__link-form{display:flex;align-items:end;flex-wrap:wrap;gap:.75rem;margin-block-start:1rem}
+.personal-portfolio__link-form .twq-field{flex:1 1 16rem;min-inline-size:0}
+.personal-portfolio__add-evidence{margin-block-start:1rem;border-block-start:1px solid var(--twq-border);padding-block-start:.75rem}
+.personal-portfolio__add-evidence summary{inline-size:max-content;max-inline-size:100%;color:var(--twq-primary);font-weight:800;cursor:pointer}
+.personal-portfolio__add-evidence form{margin-block-start:1rem;display:grid;gap:.8rem}
+.personal-portfolio .twq-document-item__content{min-inline-size:0;overflow-wrap:anywhere}
+.personal-portfolio .twq-document-item__actions{display:flex;flex-wrap:wrap;gap:.4rem}
+.personal-portfolio__works{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
+.personal-portfolio__works h3{font-size:1rem;margin:0 0 .7rem}
+.personal-portfolio__work{display:grid;gap:.1rem;padding:.7rem 0;border-block-end:1px solid var(--twq-border);color:var(--twq-text);text-decoration:none}
+.personal-portfolio__work strong{overflow-wrap:anywhere}
+.personal-portfolio__work small{color:var(--twq-text-muted)}
+.personal-portfolio__work:hover strong{color:var(--twq-primary)}
+@media(max-width:760px){.personal-portfolio__works{grid-template-columns:minmax(0,1fr)}.personal-portfolio__year .twq-field,.personal-portfolio__year .twq-btn{inline-size:100%}.personal-portfolio__link-form .twq-btn{inline-size:100%}}

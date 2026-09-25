@@ -1,58 +1,111 @@
 {% load static %}
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#006c35">
   <meta name="color-scheme" content="light dark">
   {% include "reports/partials/theme_bootstrap.html" %}
   <meta name="robots" content="noindex,nofollow">
   <title>{% block title %}{% if request.user.is_authenticated %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% else %}مساحة شخصية للمعلمين والمعلمات{% endif %}{% endblock %} | توثيق</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+  {# Share the school workspace's application CSS cascade. #}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260912.1">
+  <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
+  <link rel="stylesheet" href="{% static 'css/app-shell.css' %}?v=20260912.4">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/v4-shims.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/mobile-professional.css' %}?v=20260912.2">
+  <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}?v=20260912.1">
   {% include "reports/_identity.html" %}
+  <link rel="stylesheet" href="{% static 'css/app-components.css' %}?v=20260903.1">
+  <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1">
+  <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1">
+  <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
   <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1">
-  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20260925.1">
-  <script src="{% static 'js/theme-manager.js' %}" defer></script>
+  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20260925.2">
+  {% block head %}{% endblock %}
+  <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
+  <script src="{% static 'js/personal-workspace-shell.js' %}?v=20260925.1" defer></script>
 </head>
-<body class="personal-page id-root">
-  <a class="personal-skip" href="#personalMain">انتقل إلى المحتوى</a>
-  <header class="personal-header id-hairline">
-    <div class="personal-container personal-header__inner">
-      <a class="personal-brand" href="{% if request.user.is_authenticated %}{% url 'personal:dashboard' %}{% else %}{% url 'reports:landing' %}{% endif %}">
+<body class="page personal-page not-home"{% if request.user.is_authenticated %} data-pwa-user-id="{{ request.user.id }}"{% endif %}>
+  <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
+  <header class="site-header" id="siteHeader">
+    <div class="container hdr">
+      <button class="hamburger" id="hamburger" type="button" aria-label="فتح القائمة" aria-controls="mobileDrawer" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="hdr-brand" href="{% if request.user.is_authenticated %}{% url 'personal:dashboard' %}{% else %}{% url 'reports:landing' %}{% endif %}">
         <img src="{% static 'img/brand-mark.svg' %}" alt="" width="42" height="42">
-        <span><strong>منصة توثيق</strong><small>{% if request.user.is_authenticated %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% else %}مساحة شخصية للمعلمين والمعلمات{% endif %}</small></span>
+        <span class="hdr-brand-txt">
+          <strong class="hdr-brand-name">منصة توثيق</strong>
+          <small class="hdr-brand-sub">مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية</small>
+        </span>
       </a>
-      <nav class="personal-nav" aria-label="التنقل الشخصي">
+      {% with active=request.resolver_match.url_name %}
+      <nav class="hdr-nav" aria-label="التنقل في مساحة المعلم الشخصية">
         {% if request.user.is_authenticated %}
-          <a class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'personal:dashboard' %}">الرئيسية</a>
-          <a class="{% if request.resolver_match.url_name == 'reports' or request.resolver_match.url_name == 'report_create' or request.resolver_match.url_name == 'report_detail' or request.resolver_match.url_name == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}">التقارير</a>
-          <a class="{% if request.resolver_match.url_name == 'evidence' or request.resolver_match.url_name == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}">الشواهد</a>
-          <a class="{% if request.resolver_match.url_name == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}">ملف الإنجاز</a>
-          <a class="{% if request.resolver_match.url_name == 'initiatives' or request.resolver_match.url_name == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}">المبادرات</a>
-          <a class="{% if request.resolver_match.url_name == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}">السنوات والأرشيف</a>
-          <a class="{% if request.resolver_match.url_name == 'notices' or request.resolver_match.url_name == 'notice_detail' %}is-active{% endif %}" href="{% url 'personal:notices' %}">الإشعارات</a>
-          <a class="{% if request.resolver_match.url_name == 'billing' or request.resolver_match.url_name == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}">الاشتراك والفواتير</a>
-          <a class="{% if request.resolver_match.url_name == 'account' or request.resolver_match.url_name == 'setup' %}is-active{% endif %}" href="{% url 'personal:account' %}">حسابي</a>
-          {% if request.user.school_memberships.exists %}<a href="{% url 'reports:home' %}">مساحة المدرسة</a>{% endif %}
-          <a href="{% url 'reports:logout' %}">خروج</a>
+          <a class="tab {% if active == 'dashboard' %}is-active{% endif %}" href="{% url 'personal:dashboard' %}"{% if active == 'dashboard' %} aria-current="page"{% endif %}>الرئيسية</a>
+          <a class="tab {% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}"{% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %} aria-current="page"{% endif %}>التقارير</a>
+          <a class="tab {% if active == 'evidence' or active == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' %} aria-current="page"{% endif %}>الشواهد</a>
+          <a class="tab {% if active == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}>ملف الإنجاز</a>
+          <a class="tab {% if active == 'initiatives' or active == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}"{% if active == 'initiatives' or active == 'initiative_edit' %} aria-current="page"{% endif %}>المبادرات</a>
+          <a class="tab {% if active == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}"{% if active == 'years' %} aria-current="page"{% endif %}>الأرشيف</a>
+          <a class="tab {% if active == 'billing' or active == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}"{% if active == 'billing' or active == 'checkout_start' %} aria-current="page"{% endif %}>الاشتراك</a>
         {% else %}
-          <a href="{% url 'reports:landing' %}">المنصة</a>
-          <a href="{% url 'reports:login' %}?next={% url 'personal:dashboard' %}">تسجيل الدخول</a>
+          <a class="tab" href="{% url 'reports:landing' %}">المنصة</a>
+          <a class="tab" href="{% url 'reports:login' %}?next={% url 'personal:dashboard' %}">تسجيل الدخول</a>
         {% endif %}
       </nav>
+      {% endwith %}
+      <div class="hdr-actions">
+        {% if request.user.is_authenticated %}<a class="icon-btn" href="{% url 'personal:notices' %}" aria-label="إشعارات المنصة" title="إشعارات المنصة"><i class="fa-solid fa-bell" aria-hidden="true"></i></a>{% endif %}
+        <button class="icon-btn theme-toggle" type="button" aria-label="تفعيل الوضع الليلي" title="تفعيل الوضع الليلي"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
+        {% if request.user.is_authenticated %}<a class="avatar personal-account-avatar" href="{% url 'personal:account' %}" aria-label="حسابي" title="حسابي">{{ request.user.name|default:'ح'|slice:':1' }}</a>{% endif %}
+      </div>
     </div>
   </header>
-  <main id="personalMain" class="personal-container personal-main twq-page">
+
+  <div class="drawer-overlay" id="drawerOverlay" aria-hidden="true"></div>
+  <aside class="drawer" id="mobileDrawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="drawerTitle" inert>
+    <div class="drawer-head">
+      <strong class="drawer-title" id="drawerTitle">مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية</strong>
+      <button class="btn btn-sm" id="drawerClose" type="button" aria-label="إغلاق القائمة">إغلاق</button>
+    </div>
+    <div class="drawer-actions"><button class="icon-btn theme-toggle" type="button" aria-label="تفعيل الوضع الليلي" title="تفعيل الوضع الليلي"><i class="fa-solid fa-moon" aria-hidden="true"></i></button></div>
+    {% with active=request.resolver_match.url_name %}
+    <nav class="drawer-nav" aria-label="القائمة الجانبية لمساحة المعلم">
+      {% if request.user.is_authenticated %}
+        <a class="{% if active == 'dashboard' %}is-active{% endif %}" href="{% url 'personal:dashboard' %}"{% if active == 'dashboard' %} aria-current="page"{% endif %}><span>الرئيسية</span><i class="fa-solid fa-house" aria-hidden="true"></i></a>
+        <a class="{% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %}is-active{% endif %}" href="{% url 'personal:reports' %}"{% if active == 'reports' or active == 'report_create' or active == 'report_detail' or active == 'report_edit' %} aria-current="page"{% endif %}><span>التقارير</span><i class="fa-solid fa-file-lines" aria-hidden="true"></i></a>
+        <a class="{% if active == 'evidence' or active == 'evidence_create' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' %} aria-current="page"{% endif %}><span>الشواهد</span><i class="fa-solid fa-paperclip" aria-hidden="true"></i></a>
+        <a class="{% if active == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}><span>ملف الإنجاز</span><i class="fa-solid fa-briefcase" aria-hidden="true"></i></a>
+        <a class="{% if active == 'initiatives' or active == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}"{% if active == 'initiatives' or active == 'initiative_edit' %} aria-current="page"{% endif %}><span>المبادرات</span><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></a>
+        <a class="{% if active == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}"{% if active == 'years' %} aria-current="page"{% endif %}><span>السنوات والأرشيف</span><i class="fa-solid fa-box-archive" aria-hidden="true"></i></a>
+        <a class="{% if active == 'notices' or active == 'notice_detail' %}is-active{% endif %}" href="{% url 'personal:notices' %}"{% if active == 'notices' or active == 'notice_detail' %} aria-current="page"{% endif %}><span>إشعارات المنصة</span><i class="fa-solid fa-bell" aria-hidden="true"></i></a>
+        <a class="{% if active == 'billing' or active == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}"{% if active == 'billing' or active == 'checkout_start' %} aria-current="page"{% endif %}><span>الاشتراك والفواتير</span><i class="fa-solid fa-credit-card" aria-hidden="true"></i></a>
+        <a class="{% if active == 'account' or active == 'setup' %}is-active{% endif %}" href="{% url 'personal:account' %}"{% if active == 'account' or active == 'setup' %} aria-current="page"{% endif %}><span>حسابي</span><i class="fa-solid fa-user" aria-hidden="true"></i></a>
+        {% if request.user.school_memberships.exists %}<a href="{% url 'reports:home' %}"><span>مساحة المدرسة</span><i class="fa-solid fa-school" aria-hidden="true"></i></a>{% endif %}
+      {% else %}
+        <a href="{% url 'reports:landing' %}"><span>المنصة</span><i class="fa-solid fa-house" aria-hidden="true"></i></a>
+        <a href="{% url 'reports:login' %}?next={% url 'personal:dashboard' %}"><span>تسجيل الدخول</span><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i></a>
+      {% endif %}
+    </nav>
+    {% endwith %}
+    {% if request.user.is_authenticated %}<div class="drawer-footer"><a class="personal-logout-link" href="{% url 'reports:logout' %}"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> تسجيل الخروج</a></div>{% endif %}
+  </aside>
+
+  <main class="container page-main personal-main" id="mainContent">
     {% if messages %}<div class="personal-messages" aria-live="polite">{% for message in messages %}<p class="personal-message personal-message--{{ message.tags|default:'info' }}">{{ message }}</p>{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>
-  <footer class="personal-footer personal-container">
-    <span>مساحتك الشخصية في توثيق</span>
-    <span>{% if request.user.is_authenticated %}المستندات الشخصية من إعداد {{ request.user.personal_teacher_label }} ولا تمثل اعتمادًا من المدرسة.{% else %}المستندات الشخصية من إعداد صاحب الحساب ولا تمثل اعتمادًا من المدرسة.{% endif %}</span>
+  <footer class="personal-footer container">
+    <span>مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية في توثيق</span>
+    <span>أعمالك المهنية محفوظة في حسابك الشخصي دون اعتماد مدرسي.</span>
   </footer>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

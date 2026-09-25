@@ -1,8 +1,56 @@
 {% extends "personal/base.html" %}
-{% block title %}إدارة حسابي{% endblock %}
+{% load static %}
+{% block title %}{% if force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260923.1">{% endblock %}
 {% block content %}
-<header class="twq-page-header"><div><p class="twq-page-header__eyebrow">أمان الحساب وبياناته</p><h1>إدارة حسابي</h1><p class="twq-page-header__lead">تُستخدم بيانات الدخول نفسها إذا انضممت إلى مدرسة مشتركة لاحقًا.</p></div></header>
-<div class="personal-work-grid"><section class="twq-section"><h2>البيانات الأساسية</h2><form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="profile">{% for field in profile_form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--primary" type="submit">حفظ البيانات</button></form><p><a href="{% url 'personal:setup' %}">تعديل بيانات المدرسة التعريفية والتخصص</a></p></section>
-<section class="twq-section"><h2>رقم الجوال للدخول</h2><form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="phone">{% for field in phone_form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--secondary" type="submit">تغيير الجوال</button></form></section>
-<section class="twq-section"><h2>كلمة المرور</h2>{% if force_password_change %}<p>يلزم تغيير كلمة المرور قبل تعديل رقم الجوال.</p>{% endif %}<form method="post" class="personal-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="password">{% for field in password_form %}{% include "personal/_field.html" with field=field %}{% endfor %}<button class="twq-btn twq-btn--secondary" type="submit">تغيير كلمة المرور</button></form></section></div>
+<div class="profile-scope twq-page" dir="rtl">
+  <div class="profile-container">
+    <header class="profile-header twq-page-header" aria-labelledby="profilePageTitle">
+      <div class="profile-header-content">
+        <p class="profile-eyebrow">حساب المستخدم · المساحة الشخصية</p>
+        <h1 class="profile-title" id="profilePageTitle"><i class="fa-solid fa-user" aria-hidden="true"></i><span>{% if force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}</span></h1>
+        <p class="profile-subtitle">راجع بياناتك المهنية ووسائل التواصل، ثم حدّث كلمة المرور عند الحاجة. أعمالك الشخصية محفوظة باسم حسابك.</p>
+        <dl class="profile-header-context" aria-label="ملخص الحساب الحالي">
+          <div><dt>الاسم</dt><dd>{{ request.user.name|default:"—" }}</dd></div>
+          <div><dt>رقم الجوال</dt><dd><bdi>{{ request.user.phone|default:"—" }}</bdi></dd></div>
+          <div><dt>نطاق العمل</dt><dd>مساحة شخصية</dd></div>
+        </dl>
+      </div>
+      <div class="profile-header-status"><span class="twq-status" data-status="{% if request.user.is_active %}completed{% else %}danger{% endif %}">{% if request.user.is_active %}حساب نشط{% else %}حساب غير نشط{% endif %}</span><span class="profile-header-status__note">بيانات هذا الحساب تخصك وحدك</span></div>
+    </header>
+
+    {% if force_password_change %}<div class="twq-alert twq-alert--warning profile-security-alert" role="alert"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div><strong>يلزم تحديث كلمة المرور.</strong><p>أكمل هذه الخطوة قبل تعديل رقم الجوال.</p></div></div>{% endif %}
+
+    <div class="profile-grid">
+      <section class="profile-card twq-section" aria-labelledby="profileIdentityTitle">
+        <div class="twq-section__header"><div><span class="twq-section__kicker">الهوية المهنية</span><h2 class="profile-card-title twq-section__title" id="profileIdentityTitle"><i class="fa-solid fa-id-card" aria-hidden="true"></i> بياناتي الأساسية</h2></div></div>
+        <form method="post" class="profile-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="profile">
+          {% if profile_form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ profile_form.non_field_errors }}</div>{% endif %}
+          {% for field in profile_form %}{% include "personal/_field.html" with field=field %}{% endfor %}
+          <button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ البيانات</button>
+        </form>
+        <p class="profile-protected-note"><i class="fa-solid fa-briefcase" aria-hidden="true"></i><span>بيانات التخصص والسنة الدراسية وبيانات المستندات المهنية تُدار في <a href="{% url 'personal:setup' %}">إعدادات المساحة</a>.</span></p>
+      </section>
+
+      <section class="profile-card twq-section" aria-labelledby="profileContactTitle">
+        <div class="twq-section__header"><div><span class="twq-section__kicker">التواصل والدخول</span><h2 class="profile-card-title twq-section__title" id="profileContactTitle"><i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i> رقم الجوال</h2></div></div>
+        <p class="twq-section__description">يُستخدم رقم الجوال لتسجيل الدخول إلى حسابك.</p>
+        <form method="post" class="profile-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="phone">
+          {% if phone_form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ phone_form.non_field_errors }}</div>{% endif %}
+          {% for field in phone_form %}{% include "personal/_field.html" with field=field %}{% endfor %}
+          <button class="twq-btn twq-btn--secondary" type="submit" {% if force_password_change %}disabled{% endif %}>تغيير الجوال</button>
+        </form>
+      </section>
+
+      <section class="profile-card twq-section" aria-labelledby="profileSecurityTitle">
+        <div class="twq-section__header"><div><span class="twq-section__kicker">أمان الحساب</span><h2 class="profile-card-title twq-section__title" id="profileSecurityTitle"><i class="fa-solid fa-lock" aria-hidden="true"></i> كلمة المرور</h2></div></div>
+        <form method="post" class="profile-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="password">
+          {% if password_form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ password_form.non_field_errors }}</div>{% endif %}
+          {% for field in password_form %}{% include "personal/_field.html" with field=field %}{% endfor %}
+          <button class="twq-btn twq-btn--secondary" type="submit">تغيير كلمة المرور</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
 {% endblock %}
