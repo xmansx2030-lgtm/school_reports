@@ -1108,7 +1108,7 @@
     padding: 7px 10px;
     border: 1px solid color-mix(in srgb, var(--id-ink) 12%, transparent);
     border-radius: var(--id-r2);
-    background: #fff;
+    background: var(--id-surface);
     color: var(--id-ink);
     font-size: .68rem;
     font-weight: 900;
