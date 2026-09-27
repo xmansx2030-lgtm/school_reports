@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from reports.models import Payment, School, SchoolSubscription, SubscriptionPlan, Teacher
+from personal.models import PersonalPlan, PersonalSubscription, PersonalWorkspace
 
 
 class PlatformDashboardAssetContractTests(SimpleTestCase):
@@ -117,6 +118,43 @@ class PlatformDashboardUiTests(TestCase):
         self.assertEqual(payload["kpis"]["total_revenue"], 0.0)
         self.assertEqual(payload["charts"]["revenue"]["data"], [])
         self.assertEqual(payload["charts"]["reports"]["data"], [])
+
+    def test_personal_subscriptions_appear_in_dashboard_without_changing_school_count(self):
+        teacher = Teacher.objects.create_user(
+            phone="599755502", name="معلمة مشتركة", password="pass"
+        )
+        workspace = PersonalWorkspace.objects.create(owner=teacher, school_name="للتعريف")
+        plan = PersonalPlan.objects.create(
+            code="dashboard_personal_paid", name="باقة شخصية", price=49, duration_days=30
+        )
+        subscription = PersonalSubscription.objects.create(workspace=workspace, plan=plan)
+        PersonalSubscription.objects.filter(pk=subscription.pk).update(
+            end_date=timezone.localdate() + timedelta(days=7)
+        )
+        free_teacher = Teacher.objects.create_user(
+            phone="599755503", name="معلم مجاني", password="pass"  # noqa: S106
+        )
+        free_workspace = PersonalWorkspace.objects.create(
+            owner=free_teacher, school_name="للتعريف"
+        )
+        free_plan, _ = PersonalPlan.objects.get_or_create(
+            code="personal_free", defaults={"name": "مجانية", "price": 0}
+        )
+        PersonalSubscription.objects.create(workspace=free_workspace, plan=free_plan)
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("reports:platform_admin_dashboard"), {"refresh": "1"})
+        payload = self.client.get(
+            reverse("reports:api_platform_dashboard_data"), {"refresh": "1"}
+        ).json()
+
+        self.assertContains(response, "معلمة مشتركة")
+        self.assertContains(response, "معلمون ومعلمات أفراد")
+        self.assertEqual(response.context["subscriptions_active"], 0)
+        self.assertEqual(response.context["personal_subscriptions_active"], 2)
+        self.assertEqual(payload["kpis"]["subscriptions_active"], 0)
+        self.assertEqual(payload["kpis"]["personal_subscriptions_active"], 2)
+        self.assertEqual(payload["operations"]["personal_subscriptions_expiring_soon"], 1)
 
     def test_primary_shortcuts_resolve_in_committed_dashboard_contract(self):
         self.client.force_login(self.owner)

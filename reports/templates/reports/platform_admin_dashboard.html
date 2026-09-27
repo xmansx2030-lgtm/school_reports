@@ -58,7 +58,7 @@
     <div class="platform-dashboard__attention-grid">
       <a class="platform-dashboard__attention{% if pending_payments > 0 %} is-danger{% endif %}" href="{% url 'reports:platform_payments_list' %}">
         <span class="platform-dashboard__attention-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
-        <span><strong id="pendingPaymentsValue" dir="ltr">{{ pending_payments|default:0 }}</strong><span>دفعات قيد المراجعة</span></span>
+        <span><strong id="pendingPaymentsValue" dir="ltr">{{ pending_payments|default:0 }}</strong><span>دفعات مدارس قيد المراجعة</span></span>
         <span class="platform-dashboard__attention-action">فتح القائمة <i class="fas fa-arrow-left" aria-hidden="true"></i></span>
       </a>
       <a class="platform-dashboard__attention{% if tickets_open > 0 %} is-warning{% endif %}" href="{% url 'reports:platform_tickets_list' %}">
@@ -71,9 +71,9 @@
         <span><strong id="complaintsPendingValue" dir="ltr">{{ complaints_pending|default:0 }}</strong><span>شكاوى تحتاج متابعة</span></span>
         <span class="platform-dashboard__attention-action">مراجعة الشكاوى <i class="fas fa-arrow-left" aria-hidden="true"></i></span>
       </a>
-      <a class="platform-dashboard__attention{% if subscriptions_expiring_soon > 0 %} is-info{% endif %}" href="{% url 'reports:platform_subscriptions_list' %}">
+      <a class="platform-dashboard__attention{% if subscriptions_expiring_soon or personal_subscriptions_expiring_soon %} is-info{% endif %}" href="{% url 'reports:platform_subscriptions_list' %}">
         <span class="platform-dashboard__attention-icon"><i class="fas fa-hourglass-half" aria-hidden="true"></i></span>
-        <span><strong id="expiringSubscriptionsValue" dir="ltr">{{ subscriptions_expiring_soon|default:0 }}</strong><span>اشتراكات تنتهي خلال 30 يومًا</span></span>
+        <span><strong id="expiringSubscriptionsValue" dir="ltr">{{ subscriptions_expiring_soon|add:personal_subscriptions_expiring_soon }}</strong><span>اشتراكات تنتهي خلال 30 يومًا</span><small><span id="expiringSchoolsCount">{{ subscriptions_expiring_soon|default:0 }}</span> مدارس · <span id="expiringPersonalCount">{{ personal_subscriptions_expiring_soon|default:0 }}</span> أفراد</small></span>
         <span class="platform-dashboard__attention-action">عرض الاشتراكات <i class="fas fa-arrow-left" aria-hidden="true"></i></span>
       </a>
     </div>
@@ -86,8 +86,8 @@
     </div>
     <div class="twq-metrics platform-dashboard__metrics">
       <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:schools_admin_list' %}"><span class="twq-metric__label">إجمالي المدارس</span><strong class="twq-metric__value" id="schoolsTotalValue" dir="ltr">{{ platform_schools_total|default:0|intcomma }}</strong><span class="twq-metric__meta"><span id="schoolsActiveValue" dir="ltr">{{ platform_schools_active|default:0|intcomma }}</span> نشطة</span></a>
-      <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:platform_subscriptions_list' %}"><span class="twq-metric__label">الاشتراكات النشطة الآن</span><strong class="twq-metric__value" id="subscriptionsActiveValue" dir="ltr">{{ subscriptions_active|default:0|intcomma }}</strong><span class="twq-metric__meta"><span dir="ltr">{{ subscriptions_expired|default:0|intcomma }}</span> منتهية أو معطلة</span></a>
-      <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:platform_payments_list' %}"><span class="twq-metric__label">الإيرادات المعتمدة ضمن الفترة</span><strong class="twq-metric__value" id="totalRevenueValue" dir="ltr">{{ total_revenue|default:0|floatformat:0|intcomma }} <small>ر.س</small></strong><span class="twq-metric__meta">وفق تاريخ الدفع</span></a>
+      <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:platform_subscriptions_list' %}"><span class="twq-metric__label">الاشتراكات النشطة الآن · مدارس وأفراد</span><strong class="twq-metric__value" id="subscriptionsActiveValue" dir="ltr">{{ subscriptions_active|add:personal_subscriptions_active|intcomma }}</strong><span class="twq-metric__meta"><span id="schoolSubscriptionsActiveValue">{{ subscriptions_active|default:0|intcomma }}</span> مدارس · <span id="personalSubscriptionsActiveValue">{{ personal_subscriptions_active|default:0|intcomma }}</span> معلمون ومعلمات أفراد</span><span class="twq-metric__meta"><span dir="ltr">{{ subscriptions_expired|default:0|intcomma }}</span> مدارس و<span dir="ltr">{{ personal_subscriptions_expired|default:0|intcomma }}</span> أفراد منتهية أو معطلة</span></a>
+      <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:platform_payments_list' %}"><span class="twq-metric__label">إيرادات المدارس المعتمدة ضمن الفترة</span><strong class="twq-metric__value" id="totalRevenueValue" dir="ltr">{{ total_revenue|default:0|floatformat:0|intcomma }} <small>ر.س</small></strong><span class="twq-metric__meta">وفق تاريخ الدفع</span></a>
       <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:platform_tickets_list' %}"><span class="twq-metric__label">تذاكر المنصة ضمن الفترة</span><strong class="twq-metric__value" id="ticketsTotalValue" dir="ltr">{{ tickets_total|default:0|intcomma }}</strong><span class="twq-metric__meta"><span id="ticketsDoneValue" dir="ltr">{{ tickets_done|default:0|intcomma }}</span> منجزة</span></a>
       <div class="twq-metric platform-dashboard__metric"><span class="twq-metric__label">التقارير المنشأة ضمن الفترة</span><strong class="twq-metric__value" id="reportsCountValue" dir="ltr">{{ reports_count|default:0|intcomma }}</strong><span class="twq-metric__meta">على مستوى جميع المدارس</span></div>
       <a class="twq-metric platform-dashboard__metric" href="{% url 'reports:platform_settings' %}#storage-overview"><span class="twq-metric__label">التخزين المستخدم</span><strong class="twq-metric__value" id="storageUsedValue" dir="ltr">{{ platform_storage_used_bytes|default:0|filesizeformat }}</strong><span class="twq-metric__meta"><span id="storageNearLimitValue" dir="ltr">{{ storage_near_limit_count|default:0 }}</span> مدارس قاربت الحد</span></a>
@@ -96,7 +96,7 @@
 
   <div class="platform-dashboard__operational-grid">
     <section class="twq-section" aria-labelledby="expiring-subscriptions-title">
-      <div class="platform-dashboard__section-heading"><div><p class="platform-dashboard__section-kicker">خلال 30 يومًا</p><h2 id="expiring-subscriptions-title">اشتراكات قريبة الانتهاء</h2></div><a class="twq-link" href="{% url 'reports:platform_subscriptions_list' %}">عرض الكل</a></div>
+      <div class="platform-dashboard__section-heading"><div><p class="platform-dashboard__section-kicker">خلال 30 يومًا</p><h2 id="expiring-subscriptions-title">اشتراكات مدارس قريبة الانتهاء</h2></div><a class="twq-link" href="{% url 'reports:platform_subscriptions_list' %}#schoolSubscriptions">عرض الكل</a></div>
       {% if subscriptions_expiring_list %}
         <div class="platform-dashboard__table-wrap" tabindex="0" aria-label="جدول الاشتراكات قريبة الانتهاء">
           <table class="platform-dashboard__table">
@@ -119,12 +119,26 @@
     </section>
   </div>
 
+  <section class="twq-section" aria-labelledby="personal-expiring-title">
+    <div class="platform-dashboard__section-heading"><div><p class="platform-dashboard__section-kicker">خلال 30 يومًا</p><h2 id="personal-expiring-title">اشتراكات أفراد قريبة الانتهاء</h2></div><a class="twq-link" href="{% url 'reports:platform_subscriptions_list' %}#personalSubscriptions">عرض الكل</a></div>
+    {% if personal_subscriptions_expiring_list %}
+      <div class="platform-dashboard__table-wrap" tabindex="0" aria-label="جدول اشتراكات الأفراد قريبة الانتهاء">
+        <table class="platform-dashboard__table">
+          <thead><tr><th scope="col">المشترك</th><th scope="col">الباقة</th><th scope="col">الانتهاء</th><th scope="col">المتبقي</th></tr></thead>
+          <tbody>{% for sub in personal_subscriptions_expiring_list %}<tr><td data-label="المشترك"><strong><bdi>{{ sub.workspace.owner.name }}</bdi></strong></td><td data-label="الباقة">{{ sub.plan.name }}</td><td data-label="الانتهاء"><time datetime="{{ sub.end_date|date:'Y-m-d' }}" dir="ltr">{{ sub.end_date|date:'Y-m-d' }}</time></td><td data-label="المتبقي"><span class="twq-status twq-status--warning">{{ sub.dashboard_days_remaining }} يوم</span></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="twq-empty-state platform-dashboard__empty"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>لا توجد اشتراكات فردية قريبة الانتهاء</h3><p>لا توجد باقات شخصية نشطة تنتهي خلال الثلاثين يومًا القادمة.</p></div>
+    {% endif %}
+  </section>
+
   <section class="twq-section" aria-labelledby="platform-analytics-title">
     <div class="platform-dashboard__section-heading"><div><p class="platform-dashboard__section-kicker">تحليل ثانوي</p><h2 id="platform-analytics-title">الاتجاهات والتوزيع</h2></div><p>كل رسم يتضمن جدول بيانات نصيًا مكافئًا.</p></div>
     <div class="platform-dashboard__charts">
       <figure class="platform-dashboard__chart-card">
-        <figcaption><span><strong>الإيرادات المعتمدة شهريًا</strong><small>المبالغ المعتمدة وفق تاريخ الدفع وضمن الفترة المختارة.</small></span><button type="button" class="platform-dashboard__chart-print" data-print-chart="revenueChart" aria-label="طباعة بيانات الإيرادات"><i class="fas fa-print" aria-hidden="true"></i></button></figcaption>
-        <div class="platform-dashboard__chart-area"><canvas id="revenueChart" role="img" aria-label="رسم خطي للإيرادات المعتمدة شهريًا"></canvas></div>
+        <figcaption><span><strong>إيرادات المدارس المعتمدة شهريًا</strong><small>المبالغ المعتمدة وفق تاريخ الدفع وضمن الفترة المختارة.</small></span><button type="button" class="platform-dashboard__chart-print" data-print-chart="revenueChart" aria-label="طباعة بيانات إيرادات المدارس"><i class="fas fa-print" aria-hidden="true"></i></button></figcaption>
+        <div class="platform-dashboard__chart-area"><canvas id="revenueChart" role="img" aria-label="رسم خطي لإيرادات المدارس المعتمدة شهريًا"></canvas></div>
         <p class="platform-dashboard__chart-empty" data-chart-empty="revenueChart" hidden>لا توجد إيرادات معتمدة ضمن الفترة.</p>
         <details class="platform-dashboard__chart-data"><summary>عرض البيانات الرقمية للإيرادات</summary><table><thead><tr><th scope="col">الشهر</th><th scope="col">الإيراد (ر.س)</th></tr></thead><tbody id="revenueChartRows">{% for label, value in revenue_chart_rows %}<tr><td dir="ltr">{{ label }}</td><td dir="ltr">{{ value|floatformat:2 }}</td></tr>{% empty %}<tr data-empty-row><td colspan="2">لا توجد بيانات.</td></tr>{% endfor %}</tbody></table></details>
       </figure>
@@ -168,5 +182,5 @@
 
 {{ dashboard_period_payload|json_script:"dashboardPeriodPayload" }}
 {{ platform_dashboard_chart_data|json_script:"platformDashboardChartData" }}
-<script nonce="{{ CSP_NONCE }}" src="{% static 'js/platform-dashboard.js' %}?v=1" data-cfasync="false" defer></script>
+<script nonce="{{ CSP_NONCE }}" src="{% static 'js/platform-dashboard.js' %}?v=2" data-cfasync="false" defer></script>
 {% endblock %}

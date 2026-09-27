@@ -214,7 +214,9 @@
     setText("dashboardPeriodLabel", `الفترة: ${payload.period_label || "كل الوقت"}`);
     setText("schoolsTotalValue", formatNumber(kpis.schools_total));
     setText("schoolsActiveValue", formatNumber(kpis.schools_active));
-    setText("subscriptionsActiveValue", formatNumber(kpis.subscriptions_active));
+    setText("subscriptionsActiveValue", formatNumber(asNumber(kpis.subscriptions_active) + asNumber(kpis.personal_subscriptions_active)));
+    setText("schoolSubscriptionsActiveValue", formatNumber(kpis.subscriptions_active));
+    setText("personalSubscriptionsActiveValue", formatNumber(kpis.personal_subscriptions_active));
     setText("totalRevenueValue", `${moneyFormatter.format(asNumber(kpis.total_revenue))} ر.س`);
     setText("ticketsTotalValue", formatNumber(kpis.tickets_total));
     setText("ticketsDoneValue", formatNumber(kpis.tickets_done));
@@ -228,11 +230,13 @@
     setAttentionState("pendingPaymentsValue", operations.pending_payments, "is-danger");
     setAttentionState("openTicketsValue", kpis.tickets_open, "is-warning");
     setAttentionState("complaintsPendingValue", operations.complaints_pending, "is-danger");
-    setAttentionState("expiringSubscriptionsValue", operations.subscriptions_expiring_soon, "is-info");
+    setAttentionState("expiringSubscriptionsValue", asNumber(operations.subscriptions_expiring_soon) + asNumber(operations.personal_subscriptions_expiring_soon), "is-info");
+    setText("expiringSchoolsCount", formatNumber(operations.subscriptions_expiring_soon));
+    setText("expiringPersonalCount", formatNumber(operations.personal_subscriptions_expiring_soon));
 
     replaceRows("revenueChartRows", revenue.labels, revenue.data, "money");
     replaceRows("reportsChartRows", reports.labels, reports.data, "number");
-    createOrUpdateChart("revenueChart", "line", revenue.labels, revenue.data, "الإيرادات المعتمدة", null);
+    createOrUpdateChart("revenueChart", "line", revenue.labels, revenue.data, "إيرادات المدارس المعتمدة", null);
     createOrUpdateChart("reportsChart", "bar", reports.labels, reports.data, "التقارير المنشأة", null);
 
     root.querySelectorAll("[data-period]").forEach((button) => {

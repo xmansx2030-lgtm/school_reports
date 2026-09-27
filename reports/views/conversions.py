@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import re
+from urllib.parse import quote, urlencode
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -23,9 +27,49 @@ from ..models import (
     School,
     SchoolConversionOutreach,
 )
+from ..model_parts.schools import normalize_sa_mobile_identity
 from ..resend_email import ResendError, send_platform_email
 from ..utils import create_system_notification
 from ..view_access import platform_superuser_required
+from personal.models import PersonalSubscription
+
+
+def _contact_links(*, phone, email, whatsapp_text="", email_subject="", email_body=""):
+    """Build manual contact links only for valid Saudi mobiles and email addresses."""
+    local_phone = normalize_sa_mobile_identity(phone or "")
+    whatsapp_url = ""
+    if re.fullmatch(r"05\d{8}", local_phone):
+        whatsapp_url = f"https://wa.me/966{local_phone[1:]}"
+        if whatsapp_text:
+            whatsapp_url += "?" + urlencode({"text": whatsapp_text})
+
+    clean_email = (email or "").strip()
+    email_url = ""
+    if clean_email:
+        try:
+            validate_email(clean_email)
+        except ValidationError:
+            pass
+        else:
+            email_url = f"mailto:{quote(clean_email, safe='@.+_-')}"
+            if email_subject or email_body:
+                email_url += "?" + urlencode({"subject": email_subject, "body": email_body})
+    return {"whatsapp_url": whatsapp_url, "email_url": email_url}
+
+
+def _school_contacts(row, *, outreach=None):
+    school = row["school"]
+    draft = {
+        "whatsapp_text": outreach.whatsapp_body,
+        "email_subject": outreach.email_subject,
+        "email_body": outreach.email_body,
+    } if outreach else {}
+    row["school_contact"] = _contact_links(phone=school.phone, email=school.email, **draft)
+    row["manager_contacts"] = [
+        {"manager": manager, **_contact_links(phone=manager.phone, email=manager.email, **draft)}
+        for manager in row["managers"]
+    ]
+    return row
 
 
 def _audit(request, *, school, action, outreach, changes):
@@ -120,6 +164,28 @@ def platform_conversion_dashboard(request):
     }
     paginator = Paginator(rows, 20)
     page_obj = paginator.get_page(request.GET.get("page"))
+    for row in page_obj:
+        _school_contacts(row)
+
+    personal_query = (request.GET.get("personal_q") or "").strip()
+    personal_subscriptions = PersonalSubscription.objects.select_related(
+        "workspace__owner", "plan"
+    ).filter(workspace__owner__is_active=True)
+    if personal_query:
+        personal_subscriptions = personal_subscriptions.filter(
+            Q(workspace__owner__name__icontains=personal_query)
+            | Q(workspace__owner__phone__icontains=personal_query)
+            | Q(workspace__owner__email__icontains=personal_query)
+        )
+    personal_paginator = Paginator(personal_subscriptions.order_by("workspace__owner__name", "pk"), 20)
+    personal_page_obj = personal_paginator.get_page(request.GET.get("personal_page"))
+    personal_contacts = [
+        {"subscription": subscription, **_contact_links(
+            phone=subscription.workspace.owner.phone,
+            email=subscription.workspace.owner.email,
+        )}
+        for subscription in personal_page_obj
+    ]
     return render(
         request,
         "reports/platform_conversion_dashboard.html",
@@ -131,6 +197,9 @@ def platform_conversion_dashboard(request):
             "priority": priority,
             "sort": sort,
             "mail_status": _mail_status(),
+            "personal_contacts": personal_contacts,
+            "personal_page_obj": personal_page_obj,
+            "personal_query": personal_query,
         },
     )
 
@@ -141,6 +210,7 @@ def platform_conversion_school(request, pk):
     school = get_object_or_404(School.objects.select_related("subscription__plan"), pk=pk)
     row = _row_for_school(school)
     outreach = school.conversion_outreaches.select_related("created_by", "approved_by").first()
+    _school_contacts(row, outreach=outreach)
     mail_status = _mail_status()
     draft_form = ConversionDraftForm(
         initial={"objective": default_objective(row), "tone": SchoolConversionOutreach.Tone.EXECUTIVE}

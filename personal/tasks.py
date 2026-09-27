@@ -9,15 +9,104 @@ from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import Q
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
 
 from reports.email_branding import platform_url, render_branded_email
 
 from .billing import generate_personal_invoice_pdf
-from .models import PersonalPayment
+from .models import PersonalNotice, PersonalNoticeRecipient, PersonalPayment, PersonalSubscription
 
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(ignore_result=True, soft_time_limit=120, time_limit=300)
+def check_personal_subscription_expiry_task() -> dict:
+    """Remind owners of dated personal subscriptions before they expire."""
+    from reports.tasks import _email_delivery_configured, _is_valid_email, _periodic_lock
+
+    enabled = bool(getattr(settings, "SUBSCRIPTION_EXPIRY_REMINDER_ENABLED", True))
+    summary = {"enabled": enabled, "subscriptions_checked": 0, "reminders_sent": 0, "emails_sent": 0, "skipped_duplicate": 0}
+    if not enabled or not _periodic_lock("check_personal_subscription_expiry", ttl=300):
+        return summary
+
+    today = timezone.localdate()
+    reminder_days = set(getattr(settings, "SUBSCRIPTION_EXPIRY_REMINDER_DAYS", [14, 7, 3, 1]))
+    if not reminder_days:
+        return summary
+    email_enabled = bool(getattr(settings, "SUBSCRIPTION_EXPIRY_REMINDER_EMAIL_ENABLED", True)) and _email_delivery_configured()
+    cutoff = timezone.now() - timedelta(hours=24)
+    subscriptions = (
+        PersonalSubscription.objects.filter(
+            is_active=True,
+            start_date__lte=today,
+            end_date__gte=today,
+            end_date__lte=today + timedelta(days=max(reminder_days)),
+            workspace__owner__is_active=True,
+        )
+        .select_related("workspace__owner", "plan")
+    )
+    billing_url = platform_url(reverse("personal:billing"))
+    for subscription in subscriptions.iterator():
+        summary["subscriptions_checked"] += 1
+        days_left = (subscription.end_date - today).days
+        if days_left not in reminder_days:
+            continue
+
+        owner = subscription.workspace.owner
+        day_word = "يوم" if days_left == 1 else "أيام"
+        title = f"اشتراكك الشخصي ينتهي خلال {days_left} {day_word}"
+        if PersonalNoticeRecipient.objects.filter(
+            workspace=subscription.workspace,
+            notice__title=title,
+            notice__created_at__gte=cutoff,
+        ).exists():
+            summary["skipped_duplicate"] += 1
+            continue
+
+        message = (
+            f"باقة {subscription.plan.name} الشخصية تنتهي في {subscription.end_date:%Y-%m-%d}. "
+            "افتح صفحة الاشتراك لتجديدها قبل توقف إنشاء أعمال جديدة في مساحتك الشخصية."
+        )
+        with transaction.atomic():
+            notice = PersonalNotice.objects.create(title=title, message=message)
+            PersonalNoticeRecipient.objects.create(notice=notice, workspace=subscription.workspace)
+        summary["reminders_sent"] += 1
+
+        if email_enabled and owner.email and _is_valid_email(owner.email):
+            try:
+                html_message = render_branded_email(
+                    "subscription_expiry.html",
+                    recipient_name=owner.name,
+                    email_title=title,
+                    email_eyebrow=f"اشتراك {owner.personal_teacher_label} الشخصي",
+                    email_preheader=message,
+                    email_tone="warning",
+                    action_url=billing_url,
+                    action_label="إدارة الاشتراك والتجديد",
+                    meta_items=[
+                        {"label": "الباقة", "value": subscription.plan.name},
+                        {"label": "تاريخ الانتهاء", "value": subscription.end_date.isoformat()},
+                        {"label": "المدة المتبقية", "value": f"{days_left} {day_word}"},
+                    ],
+                    notice_title="حافظ على استمرارية مساحتك الشخصية",
+                    notice_text="أكمل التجديد قبل تاريخ الانتهاء لتواصل إنشاء التقارير والشواهد.",
+                )
+                email = EmailMultiAlternatives(
+                    subject=f"{title} | منصة توثيق",
+                    body=f"مرحبًا {owner.name}،\n{message}\n{billing_url}",
+                    from_email=(getattr(settings, "DEFAULT_FROM_EMAIL", "") or "no-reply@tawtheeq-ksa.com").strip(),
+                    to=[owner.email],
+                )
+                email.attach_alternative(html_message, "text/html")
+                email.send(fail_silently=False)
+                summary["emails_sent"] += 1
+            except Exception:
+                logger.exception("Personal subscription expiry email failed subscription=%s", subscription.pk)
+
+    logger.info("Personal subscription expiry reminder result: %s", summary)
+    return summary
 
 
 @shared_task(

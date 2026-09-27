@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from reports.models import Payment, School, SchoolSubscription, SubscriptionPlan, Teacher
+from personal.models import PersonalPlan, PersonalSubscription, PersonalWorkspace
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"])
@@ -59,6 +60,28 @@ class PlatformBillingPagesTests(TestCase):
         self.assertContains(response, "قيمة الاشتراكات السارية")
         self.assertContains(response, "محفظة الاشتراكات")
         self.assertContains(response, self.school.name)
+
+    def test_platform_subscriptions_distinguishes_school_and_personal_types(self):
+        teacher = Teacher.objects.create_user(
+            phone="0557999001", name="معلمة فردية", password="Personal#2026"
+        )
+        workspace = PersonalWorkspace.objects.create(
+            owner=teacher, school_name="اسم مدرسة للتعريف"
+        )
+        personal_plan, _ = PersonalPlan.objects.get_or_create(
+            code="personal_free", defaults={"name": "أساسية", "price": 0}
+        )
+        PersonalSubscription.objects.create(workspace=workspace, plan=personal_plan)
+
+        response = self.client.get(reverse("reports:platform_subscriptions_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-label="نوع الاشتراك"', count=2)
+        self.assertContains(response, "معلم/معلمة فردي")
+        self.assertContains(response, "معلمة فردية")
+        self.assertContains(response, "للتعريف فقط")
+        self.assertEqual(response.context["stats_total"], 1)
+        self.assertEqual(response.context["personal_results_count"], 1)
 
     def test_platform_payments_list_renders_financial_summary_and_search(self):
         response = self.client.get(

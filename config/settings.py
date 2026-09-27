@@ -1180,6 +1180,7 @@ CELERY_TASK_ROUTES = {
     "reports.tasks.send_daily_manager_summary_task": {"queue": "periodic"},
     "reports.tasks._daily_summary_for_school": {"queue": "periodic"},
     "reports.tasks.check_subscription_expiry_task": {"queue": "periodic"},
+    "personal.tasks.check_personal_subscription_expiry_task": {"queue": "periodic"},
     "reports.tasks.check_archive_addon_expiry_task": {"queue": "periodic"},
     "reports.tasks.check_storage_thresholds_task": {"queue": "periodic"},
     "reports.tasks.reconcile_pending_gateway_payments_task": {"queue": "periodic"},
@@ -1508,6 +1509,10 @@ if crontab is not None:
         CELERY_BEAT_SCHEDULE["check-subscription-expiry-daily"] = {
             "task": "reports.tasks.check_subscription_expiry_task",
             "schedule": crontab(minute=30, hour=8),  # يومياً الساعة 8:30 صباحاً
+        }
+        CELERY_BEAT_SCHEDULE["check-personal-subscription-expiry-daily"] = {
+            "task": "personal.tasks.check_personal_subscription_expiry_task",
+            "schedule": crontab(minute=40, hour=8),
         }
 
     if ARCHIVE_ADDON_EXPIRY_REMINDER_ENABLED:

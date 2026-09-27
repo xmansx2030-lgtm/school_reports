@@ -12,6 +12,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from reports.conversion_analytics import build_conversion_rows, safe_ai_snapshot
+from reports.views.conversions import _contact_links
+from personal.models import PersonalPlan, PersonalSubscription, PersonalWorkspace
 from reports.models import (
     AiUsageEvent,
     ApprovalState,
@@ -139,6 +141,51 @@ class PlatformConversionIntelligenceTests(TestCase):
         response = self.client.get(reverse("reports:platform_conversion_dashboard"))
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("reports:platform_login"), response.url)
+
+    def test_school_and_manager_contact_links_open_valid_addresses(self):
+        School.objects.filter(pk=self.school.pk).update(
+            phone="+966 55 123 4567", email="school@nour.example"
+        )
+        Teacher.objects.filter(pk=self.manager.pk).update(phone="0552345678")
+
+        list_response = self.client.get(reverse("reports:platform_conversion_dashboard"))
+        detail_response = self.client.get(
+            reverse("reports:platform_conversion_school", args=[self.school.pk])
+        )
+
+        for response in (list_response, detail_response):
+            self.assertContains(response, "https://wa.me/966551234567")
+            self.assertContains(response, "mailto:school@nour.example")
+            self.assertContains(response, "https://wa.me/966552345678")
+            self.assertContains(response, "mailto:manager@nour.example")
+        self.assertEqual(SchoolConversionOutreach.objects.count(), 0)
+        self.assertEqual(PlatformEmail.objects.count(), 0)
+
+    def test_individual_subscriber_contact_links_are_separate_and_searchable(self):
+        owner = Teacher.objects.create_user(
+            phone="0553456789", name="معلمة فردية", email="individual@example.com",
+            password="pass",  # noqa: S106
+        )
+        workspace = PersonalWorkspace.objects.create(owner=owner, school_name="اسم للتعريف")
+        plan, _ = PersonalPlan.objects.get_or_create(
+            code="personal_free", defaults={"name": "مجانية", "price": 0}
+        )
+        PersonalSubscription.objects.create(workspace=workspace, plan=plan)
+
+        response = self.client.get(
+            reverse("reports:platform_conversion_dashboard"), {"personal_q": "معلمة فردية"}
+        )
+
+        self.assertContains(response, "معلمة فردية")
+        self.assertContains(response, "https://wa.me/966553456789")
+        self.assertContains(response, "mailto:individual@example.com")
+        self.assertEqual(response.context["personal_page_obj"].paginator.count, 1)
+        self.assertEqual(response.context["summary"]["total"], 2)
+
+    def test_invalid_contact_values_do_not_create_external_links(self):
+        self.assertEqual(_contact_links(phone="12345", email="not-an-email"), {
+            "whatsapp_url": "", "email_url": "",
+        })
 
     def test_scores_cover_multiple_tawtheeq_services_and_are_deterministic(self):
         first = build_conversion_rows([self.school])[0]
