@@ -366,7 +366,7 @@
 
   /* ── الجدول ───────────────────────────────────────────────────── */
   .pfsubs-scroll { overflow-x: auto; }
-  .pfsubs-table { width: 100%; border-collapse: collapse; min-width: 1020px; }
+  .pfsubs-table { width: 100%; border-collapse: collapse; min-width: 1120px; }
   .pfsubs-table thead th {
     padding: 13px 14px;
     border-bottom: 1px solid var(--pf-line);
@@ -434,6 +434,7 @@
   .pfsubs-badge--info { color: var(--id-tone-pending); background: var(--id-tone-pending-wash); }
   .pfsubs-badge--danger { color: var(--id-tone-danger); background: var(--id-tone-danger-wash); }
   .pfsubs-badge--muted { color: var(--id-tone-draft); background: var(--id-tone-draft-wash); }
+  .pfsubs-type { color: var(--pf-accent); background: var(--id-accent-wash); border-color: var(--id-green-500); }
 
   .pfsubs-actions { display: flex; align-items: flex-start; gap: 7px; min-width: 168px; }
   .pfsubs-menu { position: relative; }
@@ -546,10 +547,10 @@
 
       <nav class="pfsubs-hero__actions" aria-label="إجراءات الاشتراكات الرئيسية">
         <a href="{% url 'reports:platform_subscription_add' %}" class="pfsubs-hero__button pfsubs-hero__button--primary">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i> اشتراك جديد
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> اشتراك مدرسة جديد
         </a>
         <a href="{% url 'reports:platform_payments_list' %}" class="pfsubs-hero__button">
-          <i class="fa-solid fa-receipt" aria-hidden="true"></i> المدفوعات
+          <i class="fa-solid fa-receipt" aria-hidden="true"></i> مدفوعات المدارس
         </a>
         <a href="{% url 'reports:platform_discount_codes_list' %}" class="pfsubs-hero__button">
           <i class="fa-solid fa-ticket" aria-hidden="true"></i> أكواد الخصم
@@ -564,18 +565,23 @@
     </div>
 
     <div class="pfsubs-hero__summary">
-      <span>تحتاج إجراءً الآن</span>
+      <span>اشتراكات مدارس تحتاج إجراءً الآن</span>
       <strong>{{ urgent_renewals_count|add:collection_gap_count }}</strong>
       <small>{{ urgent_renewals_count|default:0 }} تجديد عاجل · {{ collection_gap_count|default:0 }} دفعة غير مسجلة</small>
     </div>
   </header>
 
+  <nav class="pfsubs-tabs" aria-label="أنواع الاشتراكات">
+    <a class="pfsubs-tab" href="#schoolSubscriptions"><i class="fa-solid fa-school" aria-hidden="true"></i> اشتراكات المدارس <b>{{ stats_total|default:0 }}</b></a>
+    <a class="pfsubs-tab" href="#personalSubscriptions"><i class="fa-solid fa-user" aria-hidden="true"></i> اشتراكات المعلمين والمعلمات الأفراد <b>{{ personal_results_count|default:0 }}</b></a>
+  </nav>
+
   {# ═══ مؤشرات المال ═════════════════════════════════════════════ #}
-  <section class="pfsubs-kpis" aria-label="مؤشرات الاشتراكات">
+  <section class="pfsubs-kpis" aria-label="مؤشرات اشتراكات المدارس">
     <article class="pfsubs-kpi">
       <div class="pfsubs-kpi__icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></div>
       <div>
-        <div class="pfsubs-kpi__label">قيمة الاشتراكات السارية</div>
+        <div class="pfsubs-kpi__label">قيمة الاشتراكات السارية · المدارس</div>
         <div class="pfsubs-kpi__value">{{ active_value|floatformat:0|intcomma }} ريال</div>
         <div class="pfsubs-kpi__hint">{{ stats_active|default:0 }} اشتراك نشط</div>
       </div>
@@ -583,7 +589,7 @@
     <article class="pfsubs-kpi pfsubs-kpi--gold">
       <div class="pfsubs-kpi__icon"><i class="fa-solid fa-wallet" aria-hidden="true"></i></div>
       <div>
-        <div class="pfsubs-kpi__label">المحصّل هذا الشهر</div>
+        <div class="pfsubs-kpi__label">المحصّل من المدارس هذا الشهر</div>
         <div class="pfsubs-kpi__value">{{ collected_this_month|floatformat:0|intcomma }} ريال</div>
         <div class="pfsubs-kpi__hint">المدفوعات المقبولة فقط</div>
       </div>
@@ -591,7 +597,7 @@
     <article class="pfsubs-kpi pfsubs-kpi--warn">
       <div class="pfsubs-kpi__icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></div>
       <div>
-        <div class="pfsubs-kpi__label">تجديدات خلال {{ soon_days }} يومًا</div>
+        <div class="pfsubs-kpi__label">تجديدات المدارس خلال {{ soon_days }} يومًا</div>
         <div class="pfsubs-kpi__value">{{ expiring_soon_count|default:0 }} اشتراك</div>
         <div class="pfsubs-kpi__hint">بقيمة {{ expiring_value|floatformat:0|intcomma }} ريال</div>
       </div>
@@ -599,7 +605,7 @@
     <article class="pfsubs-kpi pfsubs-kpi--danger">
       <div class="pfsubs-kpi__icon"><i class="fa-solid fa-bell" aria-hidden="true"></i></div>
       <div>
-        <div class="pfsubs-kpi__label">تحتاج متابعة عاجلة</div>
+        <div class="pfsubs-kpi__label">مدارس تحتاج متابعة عاجلة</div>
         <div class="pfsubs-kpi__value">{{ urgent_renewals_count|default:0 }} اشتراك</div>
         <div class="pfsubs-kpi__hint">تنتهي خلال {{ urgent_days }} أيام</div>
       </div>
@@ -611,7 +617,7 @@
     <div class="pfsubs-panel__head">
       <div class="pfsubs-panel__icon"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></div>
       <div class="pfsubs-panel__title">
-        <h2 id="decisionTitle">ملخص المتابعة</h2>
+        <h2 id="decisionTitle">ملخص متابعة المدارس</h2>
         <p>ابدأ من الأعلى: العاجل أولاً، ثم ما لا يملك دفعة مسجلة للفترة الحالية.</p>
       </div>
     </div>
@@ -633,7 +639,7 @@
           <small>خلال {{ soon_days }} يومًا</small>
         </div>
         <div class="pfsubs-priority">
-          <span>إجمالي الاشتراكات</span>
+          <span>إجمالي اشتراكات المدارس</span>
           <strong>{{ stats_total|default:0 }}</strong>
           <small>{{ stats_expired|default:0 }} منتهية · {{ stats_cancelled|default:0 }} ملغاة</small>
         </div>
@@ -650,7 +656,7 @@
     <div class="pfsubs-panel__head">
       <div class="pfsubs-panel__icon"><i class="fa-solid fa-sliders" aria-hidden="true"></i></div>
       <div class="pfsubs-panel__title">
-        <h2 id="filtersTitle">البحث والتصفية</h2>
+        <h2 id="filtersTitle">بحث وتصفية اشتراكات المدارس</h2>
         <p>ابدأ بحالة الاشتراك، ثم ضيّق النتيجة باسم المدرسة أو الباقة.</p>
       </div>
     </div>
@@ -694,12 +700,12 @@
   </section>
 
   {# ═══ الكشف ════════════════════════════════════════════════════ #}
-  <section class="pfsubs-panel" aria-labelledby="subscriptionsTableTitle">
+  <section class="pfsubs-panel" id="schoolSubscriptions" aria-labelledby="subscriptionsTableTitle">
     <div class="pfsubs-panel__head">
       <div class="pfsubs-panel__icon"><i class="fa-solid fa-building-columns" aria-hidden="true"></i></div>
       <div class="pfsubs-panel__title">
-        <h2 id="subscriptionsTableTitle">محفظة الاشتراكات</h2>
-        <p>كل صف يحمل حالته وحالة تحصيله وإجراءه في مكان واحد.</p>
+        <h2 id="subscriptionsTableTitle">محفظة الاشتراكات · المدارس</h2>
+        <p>كل صف يحمل نوعه وحالته وحالة تحصيله وإجراءه في مكان واحد.</p>
       </div>
       <div class="pfsubs-panel__aside">
         <span class="pfsubs-count" aria-live="polite"><i class="fa-solid fa-list-ol" aria-hidden="true"></i> {{ results_count|default:0 }} نتيجة</span>
@@ -711,6 +717,7 @@
         <thead>
           <tr>
             <th scope="col">المدرسة</th>
+            <th scope="col">نوع الاشتراك</th>
             <th scope="col">الباقة</th>
             <th scope="col">فترة الاشتراك</th>
             <th scope="col">الحالة</th>
@@ -730,6 +737,7 @@
                   </div>
                 </div>
               </td>
+              <td data-label="نوع الاشتراك"><span class="pfsubs-badge pfsubs-type">مدرسة</span></td>
               <td data-label="الباقة">
                 <div class="pfsubs-main">{{ sub.plan.name }}</div>
                 <div class="pfsubs-sub pfsubs-price">سعة {{ sub.teacher_limit }} معلماً · {{ sub.plan.price|floatformat:0|intcomma }} ريال</div>
@@ -808,7 +816,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6">
+              <td colspan="7">
                 <div class="pfsubs-empty">
                   <div class="pfsubs-empty__icon"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></div>
                   <strong>لا توجد اشتراكات مطابقة</strong>
@@ -821,6 +829,42 @@
       </table>
     </div>
     {% include "reports/_pagination.html" %}
+  </section>
+
+  <section class="pfsubs-panel" id="personalSubscriptions" aria-labelledby="personalSubscriptionsTitle">
+    <div class="pfsubs-panel__head">
+      <div class="pfsubs-panel__icon"><i class="fa-solid fa-user" aria-hidden="true"></i></div>
+      <div class="pfsubs-panel__title">
+        <h2 id="personalSubscriptionsTitle">اشتراكات المعلمين والمعلمات الأفراد</h2>
+        <p>اشتراكات المساحات الشخصية، واسم المدرسة فيها معلومة تعريفية يكتبها صاحب الحساب.</p>
+      </div>
+      <div class="pfsubs-panel__aside"><span class="pfsubs-count">{{ personal_results_count }} نتيجة</span></div>
+    </div>
+    <div class="pfsubs-scroll">
+      <table class="pfsubs-table">
+        <thead><tr><th scope="col">المشترك</th><th scope="col">نوع الاشتراك</th><th scope="col">الباقة</th><th scope="col">فترة الاشتراك</th><th scope="col">الحالة</th></tr></thead>
+        <tbody>
+          {% for sub in personal_subscriptions %}
+            <tr>
+              <td data-label="المشترك"><div class="pfsubs-main"><bdi>{{ sub.workspace.owner.name }}</bdi></div>{% if sub.workspace.school_name %}<div class="pfsubs-sub">{{ sub.workspace.school_name }} · للتعريف فقط</div>{% endif %}</td>
+              <td data-label="نوع الاشتراك"><span class="pfsubs-badge pfsubs-type">معلم/معلمة فردي</span></td>
+              <td data-label="الباقة"><div class="pfsubs-main">{{ sub.plan.name }}</div><div class="pfsubs-sub pfsubs-price">{{ sub.plan.price|floatformat:0|intcomma }} ريال</div></td>
+              <td data-label="فترة الاشتراك"><div class="pfsubs-main">{{ sub.start_date|hijri }} هـ</div><div class="pfsubs-sub">{% if sub.end_date %}حتى {{ sub.end_date|hijri }} هـ{% else %}بلا تاريخ انتهاء{% endif %}</div></td>
+              <td data-label="الحالة">{% if sub.is_current %}<span class="pfsubs-badge pfsubs-badge--ok">ساري</span>{% else %}<span class="pfsubs-badge pfsubs-badge--muted">غير ساري</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><div class="pfsubs-empty"><strong>لا توجد اشتراكات فردية بعد</strong></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if personal_page_obj.paginator.num_pages > 1 %}
+      <nav class="royal-pagination twq-pagination" aria-label="صفحات الاشتراكات الفردية">
+        {% if personal_page_obj.has_previous %}<a class="btn btn-outline twq-pagination__link" href="?personal_page={{ personal_page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'personal_page' %}&{{ k|urlencode }}={{ v|urlencode }}{% endif %}{% endfor %}#personalSubscriptions">السابق</a>{% endif %}
+        <span class="royal-pagination__meta twq-pagination__meta">صفحة {{ personal_page_obj.number }} من {{ personal_page_obj.paginator.num_pages }}</span>
+        {% if personal_page_obj.has_next %}<a class="btn btn-outline twq-pagination__link" href="?personal_page={{ personal_page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'personal_page' %}&{{ k|urlencode }}={{ v|urlencode }}{% endif %}{% endfor %}#personalSubscriptions">التالي</a>{% endif %}
+      </nav>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

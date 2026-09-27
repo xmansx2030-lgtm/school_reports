@@ -353,6 +353,8 @@ def platform_mansour_content(request: HttpRequest) -> HttpResponse:
 @user_passes_test(lambda u: getattr(u, "is_superuser", False), login_url="reports:platform_login")
 def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
     """لوحة تحكم خاصة بمالك النظام لإدارة المنصة بالكامل - تحديث 2026."""
+    from personal.models import PersonalSubscription
+
     from django.core.cache import cache
     from django.http import JsonResponse
     from django.db.models.functions import TruncMonth
@@ -511,6 +513,33 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
         
         _cache_set(financial_cache_key, financial, 180)  # 3 دقائق
 
+    # اشتراكات المساحات الشخصية مستقلة عن اشتراكات المدارس ومؤشراتها المالية.
+    personal_financial_key = "platform_personal_subscriptions_v1"
+    personal_financial = None if force_refresh else cache.get(personal_financial_key)
+    if personal_financial is None:
+        today = timezone.localdate()
+        personal_qs = PersonalSubscription.objects.all()
+        personal_counts = personal_qs.aggregate(
+            active=Count("id", filter=Q(is_active=True, start_date__lte=today) & (Q(end_date__isnull=True) | Q(end_date__gte=today))),
+            expired=Count("id", filter=Q(is_active=False) | Q(end_date__lt=today)),
+            expiring=Count("id", filter=Q(is_active=True, start_date__lte=today, end_date__gte=today, end_date__lte=today + timedelta(days=30))),
+        )
+        personal_expiring_list = list(
+            personal_qs.filter(
+                is_active=True, start_date__lte=today,
+                end_date__gte=today, end_date__lte=today + timedelta(days=30),
+            ).select_related("workspace__owner", "plan").order_by("end_date", "pk")[:10]
+        )
+        for sub in personal_expiring_list:
+            sub.dashboard_days_remaining = (sub.end_date - today).days
+        personal_financial = {
+            "personal_subscriptions_active": personal_counts["active"],
+            "personal_subscriptions_expired": personal_counts["expired"],
+            "personal_subscriptions_expiring_soon": personal_counts["expiring"],
+            "personal_subscriptions_expiring_list": personal_expiring_list,
+        }
+        _cache_set(personal_financial_key, personal_financial, 180)
+
     # ملاحظة: SchoolSubscription.days_remaining خاصية محسوبة (read-only)،
     # والقالب يقرأها مباشرة، فلا حاجة لإسنادها هنا (الإسناد كان يسبب AttributeError).
 
@@ -550,7 +579,7 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
         _cache_set(charts_cache_key, charts, 600)  # 10 دقائق
 
     def _build_period_payload(period: str, *, force: bool = False) -> dict:
-        cache_key = f"platform_dashboard_period_payload_v2:{period}"
+        cache_key = f"platform_dashboard_period_payload_v3:{period}"
         cached_payload = None if force else cache.get(cache_key)
         if cached_payload:
             return cached_payload
@@ -621,6 +650,7 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
                 "schools_active": int(stats.get("platform_schools_active", 0)),
                 "schools_created_in_period": int(schools_count_period),
                 "subscriptions_active": int(financial.get("subscriptions_active", 0)),
+                "personal_subscriptions_active": int(personal_financial["personal_subscriptions_active"]),
                 "storage_used_bytes": int(stats.get("platform_storage_used_bytes", 0)),
                 "storage_near_limit": int(stats.get("storage_near_limit_count", 0)),
                 "total_revenue": float(total_revenue_period),
@@ -633,6 +663,7 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
             "operations": {
                 "pending_payments": int(pending_payments),
                 "subscriptions_expiring_soon": int(financial.get("subscriptions_expiring_soon", 0)),
+                "personal_subscriptions_expiring_soon": int(personal_financial["personal_subscriptions_expiring_soon"]),
             },
             "charts": {
                 "revenue": {
@@ -732,6 +763,7 @@ def platform_admin_dashboard(request: HttpRequest) -> HttpResponse:
     ctx = {
         **stats,
         **financial,
+        **personal_financial,
         **charts,
         "pending_payments": pending_payments,
         "pending_school_addition_requests": pending_school_addition_requests,
@@ -949,6 +981,8 @@ def platform_audit_logs(request: HttpRequest) -> HttpResponse:
 @login_required(login_url="reports:login")
 @user_passes_test(lambda u: getattr(u, "is_superuser", False), login_url="reports:login")
 def platform_subscriptions_list(request: HttpRequest) -> HttpResponse:
+    from personal.models import PersonalSubscription
+
     today = timezone.localdate()
     status = (request.GET.get("status") or "all").strip().lower()
     plan_id = (request.GET.get("plan") or "").strip()
@@ -1052,6 +1086,11 @@ def platform_subscriptions_list(request: HttpRequest) -> HttpResponse:
 
     paginator = Paginator(subscriptions, 30)
     page_obj = paginator.get_page(request.GET.get("page"))
+    personal_subscriptions = PersonalSubscription.objects.select_related(
+        "workspace__owner", "plan"
+    ).order_by("-start_date", "-pk")
+    personal_paginator = Paginator(personal_subscriptions, 30)
+    personal_page_obj = personal_paginator.get_page(request.GET.get("personal_page"))
 
     # تزيين كائنات الصفحة الحالية فقط (بدل كل النتائج)
     collection_gap_count = 0
@@ -1097,6 +1136,9 @@ def platform_subscriptions_list(request: HttpRequest) -> HttpResponse:
     ctx = {
         "subscriptions": page_obj,
         "page_obj": page_obj,
+        "personal_subscriptions": personal_page_obj,
+        "personal_page_obj": personal_page_obj,
+        "personal_results_count": personal_paginator.count,
         "status": status,
         "plans": plans,
         "plan_id": plan_id,

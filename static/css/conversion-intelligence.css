@@ -250,6 +250,53 @@
   font-size: var(--twq-font-size-xs);
 }
 
+.conversion-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+  min-inline-size: 0;
+}
+
+.conversion-contact-actions .twq-btn {
+  min-block-size: 2.75rem;
+  padding: var(--twq-space-2) var(--twq-space-3);
+  font-size: var(--twq-font-size-xs);
+  white-space: normal;
+}
+
+.conversion-contact-missing {
+  color: var(--twq-text-muted);
+  font-size: var(--twq-font-size-xs);
+}
+
+.conversion-personal {
+  margin-block-start: var(--twq-space-8);
+}
+
+.conversion-personal-search {
+  display: grid;
+  gap: var(--twq-space-2);
+  margin-block: var(--twq-space-4);
+}
+
+.conversion-personal-search > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twq-space-2);
+}
+
+.conversion-personal-search input {
+  flex: 1 1 16rem;
+}
+
+.conversion-personal-table {
+  min-inline-size: 45rem;
+}
+
+.conversion-personal-card .conversion-contact-actions {
+  margin-block-start: var(--twq-space-4);
+}
+
 .conversion-score {
   min-inline-size: 8.75rem;
 }
@@ -671,6 +718,15 @@
   gap: var(--twq-space-3);
 }
 
+.conversion-contacts article > div {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.conversion-contacts .conversion-contact-actions {
+  margin-block-start: var(--twq-space-2);
+}
+
 .conversion-contacts article > span {
   display: grid;
   flex: 0 0 auto;
@@ -897,6 +953,11 @@
 
   .conversion-school-card > .twq-btn {
     inline-size: 100%;
+  }
+
+  .conversion-personal-search .twq-btn,
+  .conversion-school-card .conversion-contact-actions .twq-btn {
+    flex: 1 1 auto;
   }
 
   .conversion-approval {

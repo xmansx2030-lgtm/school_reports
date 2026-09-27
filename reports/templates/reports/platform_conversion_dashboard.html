@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}مساعد التحويل الذكي | توثيق{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'css/conversion-intelligence.css' %}?v=20260923.4">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/conversion-intelligence.css' %}?v=20260927.1">{% endblock %}
 
 {% block content %}
 <div class="twq-page conversion-page">
@@ -80,7 +80,12 @@
             <td><div class="conversion-score"><strong>{{ row.utilization_score }}<small>/100</small></strong><progress max="100" value="{{ row.utilization_score }}" aria-label="درجة الاستفادة {{ row.utilization_score }} من 100">{{ row.utilization_score }}%</progress><small>{{ row.services_used }} خدمات · {{ row.completed_total }} أعمال مكتملة</small></div></td>
             <td><div class="conversion-score"><strong>{{ row.intent_score }}<small>/100</small></strong><progress max="100" value="{{ row.intent_score }}" aria-label="درجة نية الشراء {{ row.intent_score }} من 100">{{ row.intent_score }}%</progress><small>{% if row.pending_payments %}طلب دفع قائم{% elif row.intent_factors %}{{ row.intent_factors.0 }}{% else %}لا توجد إشارة قوية بعد{% endif %}</small></div></td>
             <td><span class="conversion-priority is-{{ row.priority }}">{{ row.priority_label }}</span><p>{{ row.recommended_action }}</p></td>
-            <td class="twq-table__actions"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_conversion_school' row.school.pk %}">فتح الفرصة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></td>
+            <td class="twq-table__actions"><div class="conversion-contact-actions">
+              {% if row.school_contact.whatsapp_url %}<a class="twq-btn twq-btn--secondary" href="{{ row.school_contact.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="فتح واتساب المدرسة {{ row.school.name }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> واتساب المدرسة</a>{% endif %}
+              {% if row.school_contact.email_url %}<a class="twq-btn twq-btn--secondary" href="{{ row.school_contact.email_url }}" aria-label="فتح بريد المدرسة {{ row.school.name }}"><i class="fa-regular fa-envelope" aria-hidden="true"></i> بريد المدرسة</a>{% endif %}
+              {% with contact=row.manager_contacts.0 %}{% if contact.whatsapp_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="فتح واتساب {{ contact.manager.name }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> واتساب المدير</a>{% endif %}{% if contact.email_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.email_url }}" aria-label="فتح بريد {{ contact.manager.name }}"><i class="fa-regular fa-envelope" aria-hidden="true"></i> بريد المدير</a>{% endif %}{% endwith %}
+              <a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_conversion_school' row.school.pk %}">فتح الفرصة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+            </div></td>
           </tr>
           {% empty %}
           <tr><td colspan="6"><div class="twq-empty"><i class="fa-solid fa-school-circle-check" aria-hidden="true"></i><h2>لا توجد مدارس مطابقة</h2><p>غيّر المرشحات أو اعرض كل المدارس.</p></div></td></tr>
@@ -95,7 +100,12 @@
         <header><div><strong>{{ row.school.name }}</strong><small>{{ row.school.get_stage_display }}{% if row.school.city %} · {{ row.school.city }}{% endif %}</small></div><span class="twq-status" data-status="{% if row.segment == 'trial_expired' or row.segment == 'paid_expired' %}warning{% else %}info{% endif %}">{{ row.segment_label }}</span></header>
         <div class="conversion-mobile-scores"><div><span>الاستفادة</span><strong>{{ row.utilization_score }}/100</strong><progress max="100" value="{{ row.utilization_score }}">{{ row.utilization_score }}%</progress></div><div><span>نية الشراء</span><strong>{{ row.intent_score }}/100</strong><progress max="100" value="{{ row.intent_score }}">{{ row.intent_score }}%</progress></div></div>
         <p><span class="conversion-priority is-{{ row.priority }}">{{ row.priority_label }}</span> {{ row.recommended_action }}</p>
-        <a class="twq-btn twq-btn--primary" href="{% url 'reports:platform_conversion_school' row.school.pk %}">فتح الفرصة</a>
+        <div class="conversion-contact-actions">
+          {% if row.school_contact.whatsapp_url %}<a class="twq-btn twq-btn--secondary" href="{{ row.school_contact.whatsapp_url }}" target="_blank" rel="noopener noreferrer">واتساب المدرسة</a>{% endif %}
+          {% if row.school_contact.email_url %}<a class="twq-btn twq-btn--secondary" href="{{ row.school_contact.email_url }}">بريد المدرسة</a>{% endif %}
+          {% with contact=row.manager_contacts.0 %}{% if contact.whatsapp_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="فتح واتساب {{ contact.manager.name }}">واتساب المدير</a>{% endif %}{% if contact.email_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.email_url }}" aria-label="فتح بريد {{ contact.manager.name }}">بريد المدير</a>{% endif %}{% endwith %}
+          <a class="twq-btn twq-btn--primary" href="{% url 'reports:platform_conversion_school' row.school.pk %}">فتح الفرصة</a>
+        </div>
       </article>
       {% empty %}<div class="twq-empty"><h2>لا توجد مدارس مطابقة</h2><p>غيّر المرشحات أو اعرض كل المدارس.</p></div>{% endfor %}
     </div>
@@ -108,5 +118,30 @@
     {% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary" href="?q={{ query|urlencode }}&segment={{ segment }}&priority={{ priority }}&sort={{ sort }}&page={{ page_obj.next_page_number }}">التالي</a>{% endif %}
   </nav>
   {% endif %}
+
+  <section class="conversion-personal" id="personalContacts" aria-labelledby="personalContactsTitle">
+    <div class="conversion-section-heading"><div><p>تواصل يدوي</p><h2 id="personalContactsTitle">المعلمون والمعلمات أصحاب الاشتراكات الفردية</h2></div><span>{{ personal_page_obj.paginator.count }} مشترك</span></div>
+    <p class="conversion-section-lead">افتح المحادثة أو تطبيق البريد للمشترك مباشرة. يبقى إرسال الرسالة تحت تحكمك ولا يُسجَّل فتح الرابط بوصفه رسالة مرسلة.</p>
+    <form method="get" class="conversion-personal-search">
+      <input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="segment" value="{{ segment }}"><input type="hidden" name="priority" value="{{ priority }}"><input type="hidden" name="sort" value="{{ sort }}">
+      <label for="personalContactSearch">بحث باسم المعلم أو المعلمة أو الجوال أو البريد</label>
+      <div><input id="personalContactSearch" type="search" name="personal_q" value="{{ personal_query }}"><button class="twq-btn twq-btn--primary" type="submit">بحث</button>{% if personal_query %}<a class="twq-btn twq-btn--secondary" href="?q={{ query|urlencode }}&segment={{ segment|urlencode }}&priority={{ priority|urlencode }}&sort={{ sort|urlencode }}#personalContacts">مسح</a>{% endif %}</div>
+    </form>
+    <div class="twq-table-wrap conversion-table-wrap">
+      <table class="twq-table conversion-table conversion-personal-table">
+        <thead><tr><th scope="col">المشترك الفردي</th><th scope="col">الباقة والحالة</th><th scope="col">التواصل</th></tr></thead>
+        <tbody>{% for contact in personal_contacts %}<tr>
+          <td><strong><bdi>{{ contact.subscription.workspace.owner.name }}</bdi></strong><small dir="ltr">{{ contact.subscription.workspace.owner.phone }}</small>{% if contact.subscription.workspace.owner.email %}<small><bdi>{{ contact.subscription.workspace.owner.email }}</bdi></small>{% endif %}</td>
+          <td><strong>{{ contact.subscription.plan.name }}</strong><small>{% if contact.subscription.is_current %}ساري{% else %}غير ساري{% endif %} · اشتراك فردي</small></td>
+          <td><div class="conversion-contact-actions">{% if contact.whatsapp_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="فتح واتساب {{ contact.subscription.workspace.owner.name }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> فتح واتساب</a>{% endif %}{% if contact.email_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.email_url }}" aria-label="فتح بريد {{ contact.subscription.workspace.owner.name }}"><i class="fa-regular fa-envelope" aria-hidden="true"></i> فتح البريد</a>{% endif %}{% if not contact.whatsapp_url and not contact.email_url %}<span class="conversion-contact-missing">لا توجد وسيلة تواصل صالحة</span>{% endif %}</div></td>
+        </tr>{% empty %}<tr><td colspan="3"><div class="twq-empty"><p>لا توجد اشتراكات فردية مطابقة.</p></div></td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <div class="conversion-mobile-list">{% for contact in personal_contacts %}<article class="twq-card conversion-school-card conversion-personal-card">
+      <header><div><strong><bdi>{{ contact.subscription.workspace.owner.name }}</bdi></strong><small>{{ contact.subscription.plan.name }} · {% if contact.subscription.is_current %}ساري{% else %}غير ساري{% endif %}</small></div></header>
+      <div class="conversion-contact-actions">{% if contact.whatsapp_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="فتح واتساب {{ contact.subscription.workspace.owner.name }}">فتح واتساب</a>{% endif %}{% if contact.email_url %}<a class="twq-btn twq-btn--secondary" href="{{ contact.email_url }}" aria-label="فتح بريد {{ contact.subscription.workspace.owner.name }}">فتح البريد</a>{% endif %}{% if not contact.whatsapp_url and not contact.email_url %}<span class="conversion-contact-missing">لا توجد وسيلة تواصل صالحة</span>{% endif %}</div>
+    </article>{% empty %}<div class="twq-empty"><p>لا توجد اشتراكات فردية مطابقة.</p></div>{% endfor %}</div>
+    {% if personal_page_obj.paginator.num_pages > 1 %}<nav class="conversion-pagination" aria-label="صفحات المشتركين الأفراد">{% if personal_page_obj.has_previous %}<a class="twq-btn twq-btn--secondary" href="?q={{ query|urlencode }}&segment={{ segment|urlencode }}&priority={{ priority|urlencode }}&sort={{ sort|urlencode }}&personal_q={{ personal_query|urlencode }}&personal_page={{ personal_page_obj.previous_page_number }}#personalContacts">السابق</a>{% endif %}<span>صفحة {{ personal_page_obj.number }} من {{ personal_page_obj.paginator.num_pages }}</span>{% if personal_page_obj.has_next %}<a class="twq-btn twq-btn--secondary" href="?q={{ query|urlencode }}&segment={{ segment|urlencode }}&priority={{ priority|urlencode }}&sort={{ sort|urlencode }}&personal_q={{ personal_query|urlencode }}&personal_page={{ personal_page_obj.next_page_number }}#personalContacts">التالي</a>{% endif %}</nav>{% endif %}
+  </section>
 </div>
 {% endblock %}
