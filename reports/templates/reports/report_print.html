@@ -333,9 +333,13 @@
     }
     .report-footer div { color: var(--muted); }
     {% if personal_mode %}
-    .personal-print-note { padding-block-start: 4mm; color: #64736c; font-size: 8pt; line-height: 1.7; }
     .personal-print-evidence-link { padding: 2mm 3mm; border: 1px solid #d6e0da; border-radius: 2mm; margin-block: 2mm; break-inside: avoid; }
     .personal-print-evidence-link a { color: #006c35; overflow-wrap: anywhere; }
+    .personal-print-ending { break-inside: avoid; page-break-inside: avoid; }
+    .personal-print-credits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; margin-block-start: 7mm; padding-block: 4mm; border-top: 1px solid #d6e0da; }
+    .personal-print-credits > div { min-width: 0; }
+    .personal-print-credits dt { color: #52645b; font-size: 9pt; font-weight: 700; }
+    .personal-print-credits dd { margin: 1.5mm 0 0; color: #173b2c; font-size: 11pt; font-weight: 800; overflow-wrap: anywhere; }
     .images-grid--mixed.images-grid--3 { grid-template-rows: none; }
     .images-grid--mixed.images-grid--3 .img-box { grid-row: auto; }
     .images-grid--mixed.images-grid--3 .img-box img { height: 54mm; }
@@ -346,6 +350,21 @@
     }
     {% endif %}
     {% include "reports/partials/report_print_official_styles.html" %}
+    {% if personal_mode %}
+    .page--many-evidence .images-grid--many img { height: 62mm; }
+    .page--many-evidence .images-grid--many .img-box--small img { height: 38mm; }
+    .page--many-evidence .images-grid--many .img-box--large img { height: 88mm; }
+    @media print {
+      .page--many-evidence .images-grid--many { display: block; font-size: 0; }
+      .page--many-evidence .images-grid--many > .img-box { display: inline-block; vertical-align: top; width: calc(50% - 2mm); margin: 0 0 3mm 2mm; font-size: 9pt; }
+      .page--many-evidence .images-grid--many > .img-box--large { display: block; width: 100%; margin-inline: 0; }
+      .page--many-evidence .images-grid--many > .personal-print-evidence-link { display: block; font-size: 9pt; }
+      .page--many-evidence .images-grid--many img { height: 52mm; }
+      .page--many-evidence .images-grid--many .img-box--small img { height: 34mm; }
+      .page--many-evidence .images-grid--many .img-box--large img { height: 86mm; }
+    }
+    @media screen and (max-width: 520px) { .personal-print-credits { grid-template-columns: 1fr; } }
+    {% endif %}
   </style>
 <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1">
 <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1">
@@ -378,7 +397,7 @@
   {% comment %}Long copy and evidence need block fragmentation in Chrome print;
     compact text-only reports retain the bottom-aligned signature layout.
     These classes only select presentation; no report data or action changes.{% endcomment %}
-  <main class="page{% if EVIDENCE_COUNT >= 3 %} page--dense-evidence{% endif %}{% if EVIDENCE_COUNT == 1 %} page--single-evidence{% elif EVIDENCE_COUNT == 2 %} page--paired-evidence{% endif %}{% if EVIDENCE_COUNT or r.show_goal and r.goal|length > 700 or r.show_details and r.idea|length > 700 or r.show_implementation and r.implementation_method|length > 700 or r.show_results and r.results|length > 700 or r.show_recommendations and r.recommendations|length > 700 %} page--natural-print-flow{% endif %}">
+  <main class="page{% if EVIDENCE_COUNT >= 3 %} page--dense-evidence{% endif %}{% if EVIDENCE_COUNT == 1 %} page--single-evidence{% elif EVIDENCE_COUNT == 2 %} page--paired-evidence{% endif %}{% if personal_mode and EVIDENCE_ITEMS|length > 4 %} page--many-evidence{% endif %}{% if EVIDENCE_COUNT or personal_mode and EVIDENCE_ITEMS|length > 4 or r.show_goal and r.goal|length > 700 or r.show_details and r.idea|length > 700 or r.show_implementation and r.implementation_method|length > 700 or r.show_results and r.results|length > 700 or r.show_recommendations and r.recommendations|length > 700 %} page--natural-print-flow{% endif %}">
     <header class="header">
       {% if personal_mode %}
       <div class="hdr-block hdr-right"><div>المملكة العربية السعودية</div><div>وزارة التعليم</div><div>تقرير مهني شخصي</div></div>
@@ -417,7 +436,6 @@
     </section>
 
     <table class="meta-table meta-table--compact">
-      {% if personal_mode %}<tr><th scope="row">إعداد {{ workspace.owner.personal_teacher_label }}</th><td>{{ r.teacher_name }}</td><th scope="row">الحالة</th><td>{{ personal_report.get_status_display }}</td></tr>{% endif %}
       <tr>
         <th scope="row">التصنيف</th>
         <td{% if not r.show_beneficiaries %} colspan="3"{% endif %}>{% if r.category %}{{ r.category.name }}{% else %}عام{% endif %}</td>
@@ -426,7 +444,7 @@
           <td>{{ r.beneficiaries_count|default_if_none:"—" }}</td>
         {% endif %}
       </tr>
-      {% if personal_mode and personal_report.school_name or personal_mode and personal_report.principal_name %}<tr><th scope="row">اسم المدرسة</th><td>{{ personal_report.school_name|default:"—" }}</td><th scope="row">مدير المدرسة</th><td>{{ personal_report.principal_name|default:"—" }}</td></tr>{% endif %}
+      {% if personal_mode and personal_report.school_name %}<tr><th scope="row">اسم المدرسة</th><td colspan="3">{{ personal_report.school_name }}</td></tr>{% endif %}
     </table>
 
     {% if r.show_goal %}
@@ -473,6 +491,9 @@
     Spacer لدفع التوقيعات للأسفل
     ============================================
     {% endcomment %}
+    {% if personal_mode and EVIDENCE_ITEMS and EVIDENCE_SEPARATE_PAGE %}
+      {% include "reports/partials/report_evidence_print.html" %}
+    {% endif %}
     <div class="signature-spacer"></div>
     {% if not personal_mode %}<section class="approval-block">
       <div class="approval-heading">
@@ -545,14 +566,21 @@
           </div>
         </div>
       {% endif %}
-    </section>{% else %}<p class="personal-print-note">أُعد هذا المستند في المساحة الشخصية. اسم المدرسة واسم المدير، إن وُجدا، معلومات تعريفية أدخلها صاحب الحساب؛ لا يمثل المستند اعتمادًا أو توقيعًا من المدرسة.</p>{% endif %}
+    </section>{% endif %}
 
+    {% if personal_mode %}<div class="personal-print-ending">
+      <dl class="personal-print-credits">
+        <div><dt>اسم {{ workspace.owner.personal_teacher_label }}</dt><dd>{{ r.teacher_name|default:workspace.owner.name }}</dd></div>
+        {% if personal_report.principal_name %}<div><dt>اسم مدير المدرسة</dt><dd>{{ personal_report.principal_name }}</dd></div>{% endif %}
+      </dl>
+    {% endif %}
     <div class="report-footer">
       <div>تم الإصدار إلكترونيًا: {% now "Y/m/d H:i" %}</div>
       <div class="footer-brand">{% if personal_mode %}تقرير مهني شخصي{% else %}منصة توثيق{% endif %}</div>
     </div>
+    {% if personal_mode %}</div>{% endif %}
 
-    {% if EVIDENCE_ITEMS and EVIDENCE_SEPARATE_PAGE %}
+    {% if not personal_mode and EVIDENCE_ITEMS and EVIDENCE_SEPARATE_PAGE %}
       {% include "reports/partials/report_evidence_print.html" %}
     {% endif %}
 
