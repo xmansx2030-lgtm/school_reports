@@ -44,8 +44,9 @@ class PersonalTeacherReportInterfaceTests(TestCase):
         self.assertContains(printed, "img/UntiTtled-1.png")
         self.assertNotContains(printed, "img/brand-mark.svg")
         self.assertContains(printed, "page--dense-evidence")
+        self.assertContains(printed, "page--many-evidence")
         self.assertContains(printed, "evidence-section--layout-3")
-        self.assertContains(printed, 'class="images-grid images-grid--3 images-grid--mixed"')
+        self.assertContains(printed, 'class="images-grid images-grid--many images-grid--mixed"')
         self.assertContains(printed, reverse("personal:evidence_preview", args=[first.pk]))
         self.assertContains(printed, reverse("personal:evidence_download", args=[pdf.pk]))
         self.assertContains(printed, "https://example.org/source")
@@ -57,13 +58,37 @@ class PersonalTeacherReportInterfaceTests(TestCase):
         add_evidence("الصورة الرابعة", 7, file="personal/evidence/fourth.jpeg")
         four_images = self.client.get(reverse("personal:report_print", args=[report.pk]))
         self.assertContains(four_images, "evidence-section--layout-4")
-        self.assertContains(four_images, 'class="images-grid images-grid--4 images-grid--mixed"')
+        self.assertContains(four_images, 'class="images-grid images-grid--many images-grid--mixed"')
 
         pdf.delete()
         link.delete()
         images_only = self.client.get(reverse("personal:report_print", args=[report.pk]))
         self.assertContains(images_only, 'class="images-grid images-grid--4"')
         self.assertNotContains(images_only, 'class="images-grid images-grid--4 images-grid--mixed"')
+
+    def test_personal_print_keeps_names_at_the_end_after_many_evidence_items(self):
+        report = PersonalReport.objects.create(
+            workspace=self.workspace, title="تقرير شواهد متعددة",
+            report_date=timezone.localdate(), academic_year="1447-1448",
+            teacher_name=self.teacher.name, school_name="مدرسة التعريف",
+            principal_name="مديرة المدرسة",
+        )
+        for order in range(1, 9):
+            PersonalEvidence.objects.create(
+                workspace=self.workspace, report=report,
+                academic_year=report.academic_year, title=f"شاهد {order}",
+                order=order, file=f"personal/evidence/{order}.jpg",
+            )
+
+        printed = self.client.get(reverse("personal:report_print", args=[report.pk]))
+        html = printed.content.decode("utf-8")
+        self.assertContains(printed, 'class="images-grid images-grid--many"')
+        self.assertEqual(html.count('class="img-box img-box--'), 8)
+        self.assertLess(html.index("اسم المدرسة"), html.index("المرفقات والشواهد"))
+        self.assertLess(html.index("شاهد 8"), html.index("اسم المعلم"))
+        self.assertLess(html.index("شاهد 8"), html.index("اسم مدير المدرسة"))
+        self.assertNotContains(printed, '<th scope="row">الحالة</th>')
+        self.assertNotContains(printed, "أُعد هذا المستند في المساحة الشخصية")
 
     def test_school_report_components_serve_personal_report_journey_without_school_record(self):
         form = self.client.get(reverse("personal:report_create"))
@@ -101,7 +126,7 @@ class PersonalTeacherReportInterfaceTests(TestCase):
         printed = self.client.get(reverse("personal:report_print", args=[report.pk]))
         self.assertContains(printed, "شاهد النشاط")
         self.assertContains(printed, 'class="report-identity"')
-        self.assertContains(printed, "لا يمثل المستند اعتمادًا")
+        self.assertNotContains(printed, "لا يمثل المستند اعتمادًا")
         self.assertNotContains(printed, 'class="approval-block"')
         self.assertContains(self.client.get(reverse("personal:evidence")), "شاهد النشاط")
         self.assertContains(self.client.get(reverse("personal:evidence_create")), "بيانات الشاهد")

@@ -217,8 +217,8 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertContains(annual_print, "ورش أسبوعية")
         self.assertContains(annual_print, "المتابعة")
         report_print = self.client.get(reverse("personal:report_print", args=[report.pk]))
-        self.assertContains(report_print, "إعداد المعلمة")
-        self.assertContains(report_print, "لا يمثل المستند اعتمادًا")
+        self.assertContains(report_print, "اسم المعلمة")
+        self.assertNotContains(report_print, "لا يمثل المستند اعتمادًا")
         exported = build_personal_data_export(self.teacher)["sections"]["personal_workspace"]
         self.assertEqual(exported["reports"][0]["title"], "برنامج القراءة")
         self.assertEqual(exported["evidence"][0]["title"], "نتيجة البرنامج")
