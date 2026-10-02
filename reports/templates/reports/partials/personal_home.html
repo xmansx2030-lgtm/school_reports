@@ -2,8 +2,8 @@
 <div class="twq-page teacher-home teacher-home--daily personal-dashboard" dir="rtl">
   <section class="th-hero twq-page-header teacher-daily-header" aria-labelledby="personalHomeTitle">
     <div class="th-hero-main twq-page-header__heading">
-      <div class="th-eyebrow twq-page-header__eyebrow"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> مساحة {{ request.user.personal_teacher_label }} المهنية</div>
-      <h1 class="th-title twq-page-header__title" id="personalHomeTitle">{% if request.user.gender == 'female' %}مرحبًا بكِ{% elif request.user.gender == 'male' %}مرحبًا بك{% else %}مرحبًا{% endif %}، {{ request.user.name }}</h1>
+      <div class="th-eyebrow twq-page-header__eyebrow"><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> مساحة {{ personal_owner.personal_teacher_label }} المهنية</div>
+      <h1 class="th-title twq-page-header__title" id="personalHomeTitle">{% if personal_owner.gender == 'female' %}مرحبًا بكِ{% elif personal_owner.gender == 'male' %}مرحبًا بك{% else %}مرحبًا{% endif %}، {{ personal_owner.name }}</h1>
       <p class="th-lead twq-page-header__lead">وثّق أعمالك، نظّم شواهدك، واحتفظ بملف إنجازك لكل سنة دراسية.</p>
       <div class="th-context twq-page-header__context" aria-label="سياق العمل الحالي"><i class="fa-solid fa-user" aria-hidden="true"></i><span>مساحة شخصية مستقلة</span></div>
       <div class="th-hero-actions">

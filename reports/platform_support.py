@@ -108,7 +108,7 @@ def exit_support(request):
 
 
 class PlatformSupportMiddleware(MiddlewareMixin):
-    """Validate with the real owner on every request, then scope only personal views."""
+    """Keep the authenticated admin and attach the selected workspace explicitly."""
 
     def process_request(self, request):
         scope = request.session.get(SESSION_KEY)
@@ -191,10 +191,14 @@ class PlatformSupportMiddleware(MiddlewareMixin):
             if match.view_name in shared_entries and request.method in SAFE_METHODS:
                 return redirect(shared_entries[match.view_name])
             if match.namespace == "personal" and not match.url_name.startswith("platform_"):
-                owner = request.support_workspace.owner
-                request.user = owner
-                request._cached_user = owner
-                request._acached_user = owner
+                request.personal_owner = request.support_workspace.owner
+        if scope["kind"] == "school":
+            request.support_school_navigation = (
+                match.namespace == "reports" and not match.url_name.startswith("platform_")
+                and match.url_name not in {"schools_admin_list", "school_create", "school_profile"}
+            )
+            if match.view_name in {"reports:home", "reports:staff_dashboard"} and request.method in SAFE_METHODS:
+                return redirect("reports:admin_dashboard")
         if scope["kind"] == "school" and match.view_name == "reports:switch_school":
             return self._conflict(request)
         return None
@@ -217,3 +221,13 @@ class PlatformSupportMiddleware(MiddlewareMixin):
             add_never_cache_headers(response)
             response["X-Platform-Support"] = "active" if getattr(request, "support_scope", None) else "ended"
         return response
+
+
+def workspace_navigation(request):
+    """Presentation identities never change authentication or permission checks."""
+    return {
+        "IS_PLATFORM_NAVIGATION": bool(
+            request.user.is_superuser and not getattr(request, "support_school_navigation", False)
+        ),
+        "personal_owner": getattr(request, "personal_owner", request.user),
+    }

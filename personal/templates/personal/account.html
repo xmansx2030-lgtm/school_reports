@@ -11,12 +11,12 @@
         <h1 class="profile-title" id="profilePageTitle"><i class="fa-solid fa-user" aria-hidden="true"></i><span>{% if request.support_scope %}إدارة حساب المعلم{% elif force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}</span></h1>
         <p class="profile-subtitle">راجع بياناتك المهنية ووسائل التواصل، ثم حدّث كلمة المرور عند الحاجة. أعمالك الشخصية محفوظة باسم حسابك.</p>
         <dl class="profile-header-context" aria-label="ملخص الحساب الحالي">
-          <div><dt>الاسم</dt><dd>{{ request.user.name|default:"—" }}</dd></div>
-          <div><dt>رقم الجوال</dt><dd><bdi>{{ request.user.phone|default:"—" }}</bdi></dd></div>
+          <div><dt>الاسم</dt><dd>{{ personal_owner.name|default:"—" }}</dd></div>
+          <div><dt>رقم الجوال</dt><dd><bdi>{{ personal_owner.phone|default:"—" }}</bdi></dd></div>
           <div><dt>نطاق العمل</dt><dd>مساحة شخصية</dd></div>
         </dl>
       </div>
-      <div class="profile-header-status"><span class="twq-status" data-status="{% if request.user.is_active %}completed{% else %}danger{% endif %}">{% if request.user.is_active %}حساب نشط{% else %}حساب غير نشط{% endif %}</span><span class="profile-header-status__note">بيانات هذا الحساب تخصك وحدك</span></div>
+      <div class="profile-header-status"><span class="twq-status" data-status="{% if personal_owner.is_active %}completed{% else %}danger{% endif %}">{% if personal_owner.is_active %}حساب نشط{% else %}حساب غير نشط{% endif %}</span><span class="profile-header-status__note">بيانات هذا الحساب تخصك وحدك</span></div>
     </header>
 
     {% if force_password_change %}<div class="twq-alert twq-alert--warning profile-security-alert" role="alert"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div><strong>يلزم تحديث كلمة المرور.</strong><p>أكمل هذه الخطوة قبل تعديل رقم الجوال.</p></div></div>{% endif %}

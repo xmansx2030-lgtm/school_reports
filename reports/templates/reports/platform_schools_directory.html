@@ -143,7 +143,7 @@
       </div>
 
       {% if schools %}
-        <div class="ps-results"><span><strong>{{ page_obj.paginator.count }}</strong> مدرسة ضمن النطاق الحالي</span><span>اختر «دخول» لفتح مساحة المدرسة</span></div>
+        <div class="ps-results"><span><strong>{{ page_obj.paginator.count }}</strong> مدرسة ضمن النطاق الحالي</span><span>اختر «الدخول كمدير المدرسة» لفتح مساحتها بحساب الآدمن</span></div>
         <div class="ps-grid">
           {% for s in schools %}
             <article class="ps-card">
@@ -174,7 +174,7 @@
 
               <div class="ps-card-actions">
                 <form method="post" action="{% url 'reports:platform_support_school' s.id %}" class="platform-support-entry">
-                  {% csrf_token %}<button class="btn btn-primary" type="submit" aria-label="الدخول لإدارة وصيانة {{ s.name }}"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> إدارة وصيانة</button>
+                  {% csrf_token %}<button class="btn btn-primary" type="submit" aria-label="الدخول كمدير المدرسة إلى {{ s.name }} بحساب الآدمن"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> الدخول كمدير المدرسة</button>
                 </form>
                 <a class="btn btn-outline" href="{% url 'reports:platform_enter_school' pk=s.id %}">
                   <i class="fa-solid fa-arrow-right-to-bracket"></i>

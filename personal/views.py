@@ -31,7 +31,7 @@ from reports.models import Teacher
 from reports.report_review import normalise_draft, review_draft
 
 from .assistant_views import personal_assistant_template_context
-from .access import subscription_can_write, support_access_for_workspace
+from .access import subscription_can_write, support_access_for_workspace, workspace_for_request, workspace_owner
 from .billing import (
     PersonalPaymentError,
     create_personal_checkout,
@@ -62,7 +62,7 @@ def workspace_required(view):
     @login_required(login_url="reports:login")
     @wraps(view)
     def wrapped(request, *args, **kwargs):
-        workspace = PersonalWorkspace.objects.filter(owner=request.user).first()
+        workspace = workspace_for_request(request)
         if workspace is None:
             return redirect("personal:setup")
         request.personal_workspace = workspace
@@ -125,29 +125,30 @@ def register(request):
 @login_required(login_url="reports:login")
 @require_http_methods(["GET", "POST"])
 def setup(request):
-    workspace = PersonalWorkspace.objects.filter(owner=request.user).first()
+    owner = workspace_owner(request)
+    workspace = workspace_for_request(request)
     form = PersonalWorkspaceForm(request.POST or None, instance=workspace)
     next_url = (request.POST.get("next") or request.GET.get("next") or "").strip()
     safe_next = next_url if url_has_allowed_host_and_scheme(
         next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
     ) else ""
     email_form = PersonalEmailForm(
-        request.POST or None, teacher=request.user, require_email=bool(safe_next)
+        request.POST or None, teacher=owner, require_email=bool(safe_next)
     )
-    gender_form = PersonalGenderForm(request.POST or None, teacher=request.user)
+    gender_form = PersonalGenderForm(request.POST or None, teacher=owner)
     if request.method == "POST" and form.is_valid() and email_form.is_valid() and gender_form.is_valid():
         obj = form.save(commit=False)
-        obj.owner = request.user
+        obj.owner = owner
         obj.save()
         user_update_fields = []
-        if request.user.email != email_form.cleaned_data["email"]:
-            request.user.email = email_form.cleaned_data["email"]
+        if owner.email != email_form.cleaned_data["email"]:
+            owner.email = email_form.cleaned_data["email"]
             user_update_fields.append("email")
-        if request.user.gender != gender_form.cleaned_data["gender"]:
-            request.user.gender = gender_form.cleaned_data["gender"]
+        if owner.gender != gender_form.cleaned_data["gender"]:
+            owner.gender = gender_form.cleaned_data["gender"]
             user_update_fields.append("gender")
         if user_update_fields:
-            request.user.save(update_fields=user_update_fields)
+            owner.save(update_fields=user_update_fields)
         ensure_personal_subscription(obj)
         messages.success(request, "حُفظت بيانات مساحتك وبريد الفواتير والتنبيهات.")
         if safe_next:
@@ -169,7 +170,8 @@ def checkout_start(request, plan_id):
     )
     if not request.user.is_authenticated:
         return redirect(f"{reverse('personal:register')}?{urlencode({'plan': plan.pk})}")
-    school_membership = current_school_membership_for(request.user)
+    owner = workspace_owner(request)
+    school_membership = current_school_membership_for(owner)
     if school_membership is not None:
         messages.warning(
             request,
@@ -177,12 +179,12 @@ def checkout_start(request, plan_id):
             "المساحة المدرسية متاحة لهذا الحساب، ولا يلزم اشتراك شخصي منفصل.",
         )
         return redirect("reports:home")
-    workspace = PersonalWorkspace.objects.filter(owner=request.user).first()
+    workspace = workspace_for_request(request)
     checkout_path = reverse("personal:checkout_start", args=[plan.pk])
     if workspace is None:
         return redirect(f"{reverse('personal:setup')}?{urlencode({'next': checkout_path})}")
     ensure_personal_subscription(workspace)
-    if not request.user.email:
+    if not owner.email:
         return redirect(f"{reverse('personal:setup')}?{urlencode({'next': checkout_path})}")
     if request.method == "POST":
         try:
@@ -233,7 +235,7 @@ def moyasar_return(request, payment_id):
             messages.error(request, "لم تكتمل عملية الدفع. يمكنك بدء محاولة جديدة من صفحة الاشتراك.")
         else:
             messages.info(request, "الدفع قيد التحقق. ستتحدث صفحة الاشتراك تلقائيًا بعد تأكيد ميسّر.")
-    if request.user.is_authenticated and PersonalWorkspace.objects.filter(owner=request.user).exists():
+    if request.user.is_authenticated and workspace_for_request(request) is not None:
         return redirect("personal:billing")
     return redirect(f"{reverse('reports:login')}?{urlencode({'next': reverse('personal:dashboard')})}")
 
@@ -256,7 +258,7 @@ def billing(request):
         "plans": PersonalPlan.objects.filter(is_active=True, is_published=True).order_by("display_order", "price", "id"),
         "paid_plans": PersonalPlan.objects.filter(is_active=True, is_published=True, price__gt=0).order_by("display_order", "price", "id"),
         "moyasar_enabled": moyasar_is_enabled(),
-        **personal_assistant_template_context(request.user, request.personal_subscription),
+        **personal_assistant_template_context(workspace_owner(request), request.personal_subscription),
     })
 
 
@@ -325,7 +327,7 @@ def dashboard(request):
     }
     getting_started = [
         {"title": "أكمل بيانات مستنداتك", "hint": "اسم المدرسة والمدير للتعريف في الطباعة فقط.",
-         "route": "personal:setup", "done": bool(ws.school_name and request.user.email)},
+         "route": "personal:setup", "done": bool(ws.school_name and ws.owner.email)},
         {"title": "وثّق أول تقرير", "hint": "اكتب ما نفذته، ثم حسّن الصياغة إن شملتها باقتك.",
          "route": "personal:report_create" if subscription_can_write(quota_subscription) else "personal:billing",
          "done": bool(stats["reports"])},
@@ -344,7 +346,7 @@ def dashboard(request):
         "subscription": quota_subscription,
         "getting_started": getting_started,
         "getting_started_done": sum(step["done"] for step in getting_started),
-        **personal_assistant_template_context(request.user, quota_subscription),
+        **personal_assistant_template_context(workspace_owner(request), quota_subscription),
         "personal_mode": True, "teacher_base_template": "personal/base.html",
     })
 
@@ -697,7 +699,7 @@ def report_create(request):
                     locked, reports=1,
                     evidence=_new_evidence_count(evidence_formset, school_editor=school_editor),
                 )
-                report = _save_report(form, locked, request.user, submission_id=submission_id)
+                report = _save_report(form, locked, workspace_owner(request), submission_id=submission_id)
                 if school_editor:
                     _save_school_image_evidence(evidence_formset, locked, report)
                 else:
@@ -718,7 +720,7 @@ def report_create(request):
         "personal_mode": True, "teacher_base_template": "personal/base.html",
         "has_report_types": True,
         "personal_report_review_enabled": True,
-        **personal_assistant_template_context(request.user, subscription),
+        **personal_assistant_template_context(workspace_owner(request), subscription),
     }, status=422 if request.method == "POST" and request.headers.get("X-Requested-With") == "XMLHttpRequest" else 200)
 
 
@@ -766,7 +768,7 @@ def report_edit(request, pk):
                 reserve_personal_quota(
                     locked, evidence=_new_evidence_count(evidence_formset, school_editor=school_editor),
                 )
-                report = _save_report(form, locked, request.user)
+                report = _save_report(form, locked, workspace_owner(request))
                 if school_editor:
                     _save_school_image_evidence(evidence_formset, locked, report)
                 else:
@@ -784,7 +786,7 @@ def report_edit(request, pk):
         "existing_documents": report.evidence.exclude(pk__in=_personal_report_image_queryset(report).values("pk")).order_by("order", "id"),
         "personal_report_review_enabled": True,
         "legacy_long_description": len(report.description or "") > 600,
-        **personal_assistant_template_context(request.user, request.personal_subscription),
+        **personal_assistant_template_context(workspace_owner(request), request.personal_subscription),
     }, status=422 if request.method == "POST" and request.headers.get("X-Requested-With") == "XMLHttpRequest" else 200)
 
 

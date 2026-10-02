@@ -144,7 +144,7 @@
 
                 <div class="school-actions">
                   <form method="post" action="{% url 'reports:platform_support_school' s.id %}" class="platform-support-entry">
-                    {% csrf_token %}<button class="btn btn-primary" type="submit" aria-label="الدخول لإدارة وصيانة {{ s.name }}"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> إدارة وصيانة</button>
+                    {% csrf_token %}<button class="btn btn-primary" type="submit" aria-label="الدخول كمدير المدرسة إلى {{ s.name }} بحساب الآدمن"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> الدخول كمدير المدرسة</button>
                   </form>
                   <a class="btn btn-outline" href="{% url 'reports:school_profile' s.id %}">بروفايل</a>
                   <a class="btn btn-outline" href="{% url 'reports:school_managers_manage' s.id %}">المدراء</a>

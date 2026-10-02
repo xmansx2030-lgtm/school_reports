@@ -3,14 +3,14 @@
   <div class="platform-support__identity">
     <span class="platform-support__icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
     <div>
-      <p class="platform-support__eyebrow">وضع الإدارة والصيانة · {% if request.support_scope.kind == 'school' %}مدرسة{% else %}معلم مستقل{% endif %}</p>
+      <p class="platform-support__eyebrow">وضع الإدارة والصيانة · {% if request.support_scope.kind == 'school' %}بصلاحيات مدير المدرسة{% else %}بصلاحيات {{ request.support_workspace.owner.personal_teacher_label }}{% endif %}</p>
       <p class="platform-support__title"><bdi>{{ request.support_scope.label }}</bdi></p>
-      <p class="platform-support__meta">بإدارة {{ request.support_actor.name }} · تنتهي الجلسة <bdi>{{ request.support_expires_at|date:'H:i' }}</bdi></p>
+      <p class="platform-support__meta">بحساب الآدمن: <bdi>{{ request.support_actor.name }}</bdi> · تنتهي الجلسة <bdi>{{ request.support_expires_at|date:'H:i' }}</bdi></p>
     </div>
   </div>
   <form method="post" action="{% url 'reports:platform_support_exit' %}" class="platform-support__exit">
     {% csrf_token %}<input type="hidden" name="_support_context" value="{{ request.support_scope.token }}">
-    <button type="submit" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> إنهاء الصيانة والعودة للأدمن</button>
+    <button type="submit" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> إنهاء الدخول الإداري والعودة للآدمن</button>
   </form>
   <details class="platform-support__tools">
     <summary>أدوات الإدارة والتهيئة <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
@@ -38,7 +38,7 @@
         <a class="twq-btn twq-btn--ghost" href="{% url 'personal:platform_subscriber_detail' request.support_scope.target_id %}">إدارة الاشتراك</a>
       {% endif %}
     </nav>
-    <p class="platform-support__note">تُسجَّل التعديلات باسم أدمن المنصة. صلاحية الصيانة لا تغيّر حالة الاشتراك أو المدفوعات.</p>
+    <p class="platform-support__note">الدخول بحساب الآدمن، وتُسجَّل التعديلات باسمه. صلاحية الصيانة لا تغيّر حالة الاشتراك أو المدفوعات.</p>
   </details>
 </aside>
 {% endif %}

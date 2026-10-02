@@ -6,9 +6,9 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from personal.models import PersonalReport, PersonalWorkspace
+from personal.models import PersonalNotice, PersonalNoticeRecipient, PersonalReport, PersonalWorkspace
 from personal.services import ensure_personal_subscription
-from reports.models import AuditLog, School, Teacher
+from reports.models import AuditLog, School, SchoolMembership, Teacher
 from reports.platform_support import CONTEXT_FIELD, SESSION_KEY
 from reports.audit_labels import describe
 
@@ -73,6 +73,9 @@ class PlatformSupportTests(TestCase):
         page = self.client.get(reverse("personal:dashboard"))
         self.assertEqual(page.status_code, 200)
         self.assertEqual(page.context["workspace"].pk, self.workspace.pk)
+        self.assertEqual(page.wsgi_request.user.pk, self.admin.pk)
+        self.assertEqual(page.context["user"].pk, self.admin.pk)
+        self.assertEqual(page.context["personal_owner"].pk, self.teacher.pk)
         self.assertContains(page, "وضع الإدارة والصيانة")
         self.assertContains(page, self.teacher.name)
         self.assertEqual(self.client.session[AUTH_SESSION_KEY], str(self.admin.pk))
@@ -284,3 +287,94 @@ class PlatformSupportTests(TestCase):
         response = self.client.post(reverse("personal:report_create"), self.report_payload(), HTTP_X_PLATFORM_SUPPORT_CONTEXT="wrong")
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json()["detail"], "support_context_changed")
+
+    def test_school_navigation_uses_manager_workspace_without_changing_identity_or_membership(self):
+        self.enter_school()
+        page = self.client.get(reverse("reports:admin_dashboard"))
+        self.assertEqual(page.status_code, 200)
+        self.assertTrue(page.context["IS_SCHOOL_MANAGER"])
+        self.assertFalse(page.context["IS_PLATFORM_NAVIGATION"])
+        self.assertContains(page, "منسوبو المدرسة")
+        self.assertContains(page, "لوحة التكليفات")
+        self.assertContains(page, "بصلاحيات مدير المدرسة")
+        header = page.content.decode().split('<header class="site-header', 1)[1].split('</header>', 1)[0]
+        self.assertIn(self.school.name, header)
+        self.assertNotIn(reverse("reports:platform_operations"), header)
+        self.assertEqual(page.wsgi_request.user.pk, self.admin.pk)
+        self.assertEqual(self.client.session[AUTH_SESSION_KEY], str(self.admin.pk))
+        self.assertFalse(SchoolMembership.objects.filter(teacher=self.admin).exists())
+        self.assertRedirects(self.client.get(reverse("reports:home")), reverse("reports:admin_dashboard"), fetch_redirect_response=False)
+
+    def test_platform_navigation_and_cache_remain_separate_from_school_support(self):
+        session = self.client.session
+        session["active_school_id"] = self.school.pk
+        session.save()
+        ordinary = self.client.get(reverse("reports:admin_dashboard"))
+        self.assertFalse(ordinary.context["IS_SCHOOL_MANAGER"])
+        self.assertTrue(ordinary.context["IS_PLATFORM_NAVIGATION"])
+        self.enter_school()
+        self.assertTrue(self.client.get(reverse("reports:admin_dashboard")).context["IS_SCHOOL_MANAGER"])
+        platform = self.client.get(reverse("reports:platform_admin_dashboard"))
+        self.assertTrue(platform.context["IS_PLATFORM_NAVIGATION"])
+        self.assertFalse(platform.context["IS_SCHOOL_MANAGER"])
+        self.client.post(reverse("reports:platform_support_exit"), {CONTEXT_FIELD: self.token()})
+        ordinary = self.client.get(reverse("reports:admin_dashboard"))
+        self.assertFalse(ordinary.context["IS_SCHOOL_MANAGER"])
+        self.assertTrue(ordinary.context["IS_PLATFORM_NAVIGATION"])
+
+    def test_school_settings_write_only_to_selected_school_with_admin_audit(self):
+        self.enter_school()
+        result = self.client.post(reverse("reports:school_settings"), {
+            "current_academic_year": "1448-1449", "email": "support-school@example.com",
+            "phone": "0551234567", "share_link_default_days": "7",
+            "school_id": self.other_school.pk, CONTEXT_FIELD: self.token(),
+        })
+        self.assertEqual(result.status_code, 302)
+        self.school.refresh_from_db()
+        self.other_school.refresh_from_db()
+        self.assertEqual(self.school.email, "support-school@example.com")
+        self.assertNotEqual(self.other_school.email, "support-school@example.com")
+        self.assertTrue(AuditLog.objects.filter(model_name="School", object_id=self.school.pk, teacher=self.admin).exists())
+
+    def test_personal_navigation_uses_selected_owner_even_when_admin_has_own_workspace(self):
+        own_workspace = PersonalWorkspace.objects.create(owner=self.admin, school_name="مساحة الآدمن")
+        self.enter_personal()
+        for route in ("personal:dashboard", "personal:reports", "personal:report_create", "personal:portfolio", "personal:account", "personal:setup", "personal:billing"):
+            with self.subTest(route=route):
+                page = self.client.get(reverse(route))
+                self.assertEqual(page.status_code, 200)
+                self.assertEqual(page.wsgi_request.user.pk, self.admin.pk)
+                self.assertEqual(page.context["personal_owner"].pk, self.teacher.pk)
+                self.assertContains(page, self.teacher.name)
+        page = self.client.get(reverse("personal:report_create"))
+        self.assertContains(page, f'personal-report-add-u{self.teacher.pk}-y')
+        self.client.post(reverse("personal:report_create"), self.report_payload() | {CONTEXT_FIELD: self.token()})
+        self.assertEqual(own_workspace.reports.count(), 0)
+        self.assertEqual(self.workspace.reports.get().teacher_name, self.teacher.name)
+
+    def test_setup_updates_selected_teacher_without_editing_admin(self):
+        self.enter_personal()
+        before = (self.admin.email, self.admin.gender, self.admin.password)
+        result = self.client.post(reverse("personal:setup"), {
+            "school_name": "مدرسة التعريف المحدثة", "principal_name": "مدير المستندات",
+            "current_academic_year": "1447-1448", "subject": "العلوم",
+            "email": "selected-teacher@example.com", "gender": "female",
+            CONTEXT_FIELD: self.token(),
+        })
+        self.assertEqual(result.status_code, 302)
+        self.teacher.refresh_from_db()
+        self.admin.refresh_from_db()
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.teacher.email, "selected-teacher@example.com")
+        self.assertEqual(self.teacher.gender, "female")
+        self.assertEqual(self.workspace.school_name, "مدرسة التعريف المحدثة")
+        self.assertEqual((self.admin.email, self.admin.gender, self.admin.password), before)
+        self.assertEqual(self.client.session[AUTH_SESSION_KEY], str(self.admin.pk))
+
+    def test_selected_teacher_notification_badges_preserve_admin_identity(self):
+        notice = PersonalNotice.objects.create(title="تنبيه المعلم", message="رسالة", created_by=self.admin)
+        PersonalNoticeRecipient.objects.create(notice=notice, workspace=self.workspace)
+        self.enter_personal()
+        page = self.client.get(reverse("personal:dashboard"))
+        self.assertContains(page, 'aria-label="إشعارات المنصة، 1 غير مقروء"')
+        self.assertEqual(page.wsgi_request.user.pk, self.admin.pk)

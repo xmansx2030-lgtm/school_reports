@@ -27,7 +27,7 @@ from reports.middleware import clear_force_password_change_flag, is_force_passwo
 from reports.model_parts.schools import normalize_sa_mobile_identity
 
 from .forms import PersonalAccountForm, PersonalInitiativeForm, PersonalNoticeForm, PersonalYearForm
-from .access import subscription_can_write
+from .access import subscription_can_write, workspace_owner
 from .models import (
     PersonalAcademicYear, PersonalInitiative,
     PersonalNotice, PersonalNoticeRecipient, PersonalWorkspace,
@@ -282,7 +282,7 @@ def notice_mark_read(request, pk):
 @ratelimit(key="user", rate="10/h", method="POST", block=True)
 @require_http_methods(["GET", "POST"])
 def account(request):
-    user = request.user
+    user = workspace_owner(request)
     maintenance = bool(getattr(request, "support_scope", None))
     force_password_change = not maintenance and is_force_password_change_required(request)
     action = request.POST.get("action") if request.method == "POST" else ""

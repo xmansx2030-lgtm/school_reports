@@ -835,6 +835,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "reports.context_processors.nav_context",
+                "reports.platform_support.workspace_navigation",
                 "reports.ai_features.ai_feature_flags",
                 "reports.context_processors.csp",
                 "reports.context_processors.seo",
