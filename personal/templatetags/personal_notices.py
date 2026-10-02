@@ -3,6 +3,7 @@
 from django import template
 
 from personal.models import PersonalNoticeRecipient
+from personal.access import workspace_owner
 
 
 register = template.Library()
@@ -11,7 +12,7 @@ register = template.Library()
 @register.simple_tag(takes_context=True)
 def personal_unread_notices(context):
     request = context.get("request")
-    user = getattr(request, "user", None)
+    user = workspace_owner(request) if request is not None else None
     if not getattr(user, "is_authenticated", False):
         return 0
 

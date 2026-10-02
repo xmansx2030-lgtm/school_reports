@@ -9,7 +9,7 @@
   <meta name="color-scheme" content="light dark">
   {% include "reports/partials/theme_bootstrap.html" %}
   <meta name="robots" content="noindex,nofollow">
-  <title>{% block title %}{% if request.user.is_authenticated %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% else %}مساحة شخصية للمعلمين والمعلمات{% endif %}{% endblock %} | توثيق</title>
+  <title>{% block title %}{% if request.user.is_authenticated %}مساحة {{ personal_owner.personal_teacher_label }} الشخصية{% else %}مساحة شخصية للمعلمين والمعلمات{% endif %}{% endblock %} | توثيق</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/brand-mark.svg' %}">
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   {# Share the school workspace's application CSS cascade. #}
@@ -47,7 +47,7 @@
         <img src="{% static 'img/brand-mark.svg' %}" alt="" width="42" height="42">
         <span class="hdr-brand-txt">
           <strong class="hdr-brand-name">منصة توثيق</strong>
-          <small class="hdr-brand-sub">مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية</small>
+          <small class="hdr-brand-sub">مساحة {{ personal_owner.personal_teacher_label|default:'المعلم' }} الشخصية</small>
         </span>
       </a>
       {% with active=request.resolver_match.url_name %}
@@ -69,7 +69,7 @@
       <div class="hdr-actions">
         {% if request.user.is_authenticated %}<a class="icon-btn" href="{% url 'personal:notices' %}" aria-label="إشعارات المنصة{% if personal_unread_count %}، {{ personal_unread_count }} غير مقروء{% endif %}" title="إشعارات المنصة"><i class="fa-solid fa-bell" aria-hidden="true"></i>{% if personal_unread_count %}<span class="dot" aria-hidden="true">{% if personal_unread_count > 99 %}99+{% else %}{{ personal_unread_count }}{% endif %}</span>{% endif %}</a>{% endif %}
         <button class="icon-btn theme-toggle" type="button" aria-label="تفعيل الوضع الليلي" title="تفعيل الوضع الليلي"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
-        {% if request.user.is_authenticated %}<a class="avatar personal-account-avatar" href="{% url 'personal:account' %}" aria-label="حسابي" title="حسابي">{{ request.user.name|default:'ح'|slice:':1' }}</a>{% endif %}
+        {% if request.user.is_authenticated %}<a class="avatar personal-account-avatar" href="{% url 'personal:account' %}" aria-label="حسابي" title="حسابي">{{ personal_owner.name|default:'ح'|slice:':1' }}</a>{% endif %}
       </div>
     </div>
   </header>
@@ -77,7 +77,7 @@
   <div class="drawer-overlay" id="drawerOverlay" aria-hidden="true"></div>
   <aside class="drawer" id="mobileDrawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="drawerTitle" inert>
     <div class="drawer-head">
-      <strong class="drawer-title" id="drawerTitle">مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية</strong>
+      <strong class="drawer-title" id="drawerTitle">مساحة {{ personal_owner.personal_teacher_label|default:'المعلم' }} الشخصية</strong>
       <button class="btn btn-sm" id="drawerClose" type="button" aria-label="إغلاق القائمة">إغلاق</button>
     </div>
     <div class="drawer-actions"><button class="icon-btn theme-toggle" type="button" aria-label="تفعيل الوضع الليلي" title="تفعيل الوضع الليلي"><i class="fa-solid fa-moon" aria-hidden="true"></i></button></div>
@@ -93,7 +93,7 @@
         <a class="{% if active == 'notices' or active == 'notice_detail' %}is-active{% endif %}" href="{% url 'personal:notices' %}"{% if active == 'notices' or active == 'notice_detail' %} aria-current="page"{% endif %}><span>إشعارات المنصة</span><i class="fa-solid fa-bell" aria-hidden="true"></i></a>
         <a class="{% if active == 'billing' or active == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}"{% if active == 'billing' or active == 'checkout_start' %} aria-current="page"{% endif %}><span>الاشتراك والفواتير</span><i class="fa-solid fa-credit-card" aria-hidden="true"></i></a>
         <a class="{% if active == 'account' or active == 'setup' %}is-active{% endif %}" href="{% url 'personal:account' %}"{% if active == 'account' or active == 'setup' %} aria-current="page"{% endif %}><span>حسابي</span><i class="fa-solid fa-user" aria-hidden="true"></i></a>
-        {% if request.user.school_memberships.exists %}<a href="{% url 'reports:home' %}"><span>مساحة المدرسة</span><i class="fa-solid fa-school" aria-hidden="true"></i></a>{% endif %}
+        {% if not request.support_scope and personal_owner.school_memberships.exists %}<a href="{% url 'reports:home' %}"><span>مساحة المدرسة</span><i class="fa-solid fa-school" aria-hidden="true"></i></a>{% endif %}
       {% else %}
         <a href="{% url 'reports:landing' %}"><span>المنصة</span><i class="fa-solid fa-house" aria-hidden="true"></i></a>
         <a href="{% url 'reports:login' %}?next={% url 'personal:dashboard' %}"><span>تسجيل الدخول</span><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i></a>
@@ -132,7 +132,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="personal-footer container">
-    <span>مساحة {{ request.user.personal_teacher_label|default:'المعلم' }} الشخصية في توثيق</span>
+    <span>مساحة {{ personal_owner.personal_teacher_label|default:'المعلم' }} الشخصية في توثيق</span>
     <span>أعمالك المهنية محفوظة في حسابك الشخصي دون اعتماد مدرسي.</span>
   </footer>
   {% include "reports/partials/pwa_install.html" with personal_pwa_only=True %}

@@ -44,7 +44,7 @@ from .assistant_quota import (
     release_daily_slot,
     reserve_daily_slot,
 )
-from .models import PersonalWorkspace
+from .access import workspace_for_request, workspace_owner
 from .services import ensure_personal_subscription
 
 
@@ -124,7 +124,7 @@ def _json(payload: dict, *, status: int = 200) -> JsonResponse:
 
 
 def _entitled_limit(request, kind: str) -> tuple[int, JsonResponse | None]:
-    workspace = PersonalWorkspace.objects.filter(owner=request.user).first()
+    workspace = workspace_for_request(request)
     if workspace is None:
         return 0, _json(
             {"ok": False, "reason": "subscription_required", "message": "أنشئ مساحتك الشخصية أولًا."},
@@ -185,7 +185,7 @@ def improve_report_text(request):
         return _json({"ok": False, "message": str(exc)}, status=400)
 
     try:
-        remaining = reserve_daily_slot("improvement", request.user.pk, limit)
+        remaining = reserve_daily_slot("improvement", workspace_owner(request).pk, limit)
     except PersonalAssistantQuotaUnavailable:
         return _json({"ok": False, "message": "تعذر التحقق من رصيد التحسينات الآن. حاول مرة أخرى بعد قليل."}, status=503)
     if remaining is None:
@@ -197,18 +197,18 @@ def improve_report_text(request):
         }, status=429)
 
     try:
-        with ai_usage_context(school=None, teacher=request.user):
+        with ai_usage_context(school=None, teacher=workspace_owner(request)):
             improved_text = improve_report_text_with_ai(original_text)
     except (ReportAIUnavailable, ReportAIError) as exc:
-        release_daily_slot("improvement", request.user.pk)
+        release_daily_slot("improvement", workspace_owner(request).pk)
         return _json({
             "ok": False,
             "message": str(exc),
-            "remaining": daily_remaining("improvement", request.user.pk, limit),
+            "remaining": daily_remaining("improvement", workspace_owner(request).pk, limit),
             "daily_limit": limit,
         }, status=503 if isinstance(exc, ReportAIUnavailable) else 400)
     except Exception:
-        release_daily_slot("improvement", request.user.pk)
+        release_daily_slot("improvement", workspace_owner(request).pk)
         logger.exception("Unexpected personal report improvement failure")
         return _json({"ok": False, "message": "تعذر تحسين النص الآن. حاول مرة أخرى بعد قليل."}, status=503)
 
@@ -251,11 +251,11 @@ def transcribe_report_voice(request):
         return _json({
             "ok": False,
             "message": str(exc),
-            "remaining": daily_remaining("voice", request.user.pk, limit),
+            "remaining": daily_remaining("voice", workspace_owner(request).pk, limit),
             "daily_limit": limit,
         }, status=400)
     try:
-        remaining = reserve_daily_slot("voice", request.user.pk, limit)
+        remaining = reserve_daily_slot("voice", workspace_owner(request).pk, limit)
     except PersonalAssistantQuotaUnavailable:
         return _json({"ok": False, "message": "تعذر التحقق من رصيد التفريغ الآن. حاول مرة أخرى بعد قليل."}, status=503)
     if remaining is None:
@@ -267,23 +267,24 @@ def transcribe_report_voice(request):
         }, status=429)
 
     try:
-        with ai_usage_context(school=None, teacher=request.user):
+        with ai_usage_context(school=None, teacher=workspace_owner(request)):
             raw_text = transcribe_audio(audio_bytes, extension)
             text = polish_dictation(raw_text)
     except (VoiceReportUnavailable, VoiceReportError) as exc:
-        release_daily_slot("voice", request.user.pk)
+        release_daily_slot("voice", workspace_owner(request).pk)
         return _json({
             "ok": False,
             "message": str(exc),
-            "remaining": daily_remaining("voice", request.user.pk, limit),
+            "remaining": daily_remaining("voice", workspace_owner(request).pk, limit),
             "daily_limit": limit,
         }, status=503 if isinstance(exc, VoiceReportUnavailable) else 400)
     except Exception:
-        release_daily_slot("voice", request.user.pk)
+        release_daily_slot("voice", workspace_owner(request).pk)
         logger.exception("Unexpected personal report voice failure")
         return _json({"ok": False, "message": "تعذر تفريغ التسجيل الآن. حاول مرة أخرى بعد قليل."}, status=503)
 
-    logger.info("Personal report voice transcription user_id=%s chars=%s", request.user.pk, len(text))
+    logger.info("Personal report voice transcription user_id=%s actor_id=%s chars=%s",
+                workspace_owner(request).pk, request.user.pk, len(text))
     return _json({
         "ok": True,
         "text": text,

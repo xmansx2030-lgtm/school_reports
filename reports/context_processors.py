@@ -1377,6 +1377,10 @@ def nav_context(request: HttpRequest) -> Dict[str, Any]:
         lambda: int(getattr(settings, "NAV_CONTEXT_CACHE_TTL_SECONDS", 20) or 0),
         default=20,
     )
+    # Support navigation depends on the current request's workspace and route.
+    # It must never reuse or overwrite the admin's regular cached navigation.
+    if getattr(request, "support_scope", None):
+        ttl = 0
     cache_key = _nav_cache_key(request, user) if ttl > 0 else None
     if cache_key:
         cached = _cache_get(cache_key)
@@ -1387,6 +1391,8 @@ def nav_context(request: HttpRequest) -> Dict[str, Any]:
 
     # ── الأدوار والنطاق ──
     any_school_manager, is_school_manager = _manager_scope(user, active_school)
+    if getattr(request, "support_school_navigation", False) and active_school is not None:
+        any_school_manager = is_school_manager = True
     officer_depts, member_depts = _department_roles(user, active_school)
     is_officer = bool(officer_depts)
     show_officer_link = bool(getattr(user, "is_superuser", False) or is_officer)

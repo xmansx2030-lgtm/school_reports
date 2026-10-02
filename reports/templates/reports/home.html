@@ -4,7 +4,7 @@
 {% comment %} اللوحة ليست للمعلّم وحده: المدير له لوحته، ومن سواه — وكيلاً أو موظفاً
    إدارياً أو محضّر مختبر — يهبط هنا. فتُنادى الصفحة صاحبَها بما يُعرف به،
    ولا تُسمّي المحضّرَ معلّماً بعد أن أصلحت الترويسةُ ذلك. {% endcomment %}
-{% block title %}{% if personal_mode %}مساحة {{ request.user.personal_teacher_label }} الشخصية{% else %}مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}{% endif %}{% endblock %}
+{% block title %}{% if personal_mode %}مساحة {{ personal_owner.personal_teacher_label }} الشخصية{% else %}مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}{% endif %}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{% static 'css/teacher-home.css' %}?v=20260922.2">

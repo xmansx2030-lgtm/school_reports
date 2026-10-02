@@ -6,7 +6,7 @@
       <h1 class="twq-page-header__title" id="personalPortfolioTitle">ملف الإنجاز</h1>
       <p class="twq-page-header__lead">وثّق أعمالك في محاور ملف المعلم نفسها، واربط تقاريرك وشواهدك بكل محور. هذا الملف من إعدادك الشخصي.</p>
       {% if year %}<dl class="twq-page-header__context" aria-label="سياق ملف الإنجاز">
-        <div><dt>صاحب الملف</dt><dd>{{ request.user.name }}</dd></div>
+        <div><dt>صاحب الملف</dt><dd>{{ personal_owner.name }}</dd></div>
         <div><dt>السنة الدراسية</dt><dd><bdi dir="ltr">{{ year }}</bdi></dd></div>
         <div><dt>وضع الصفحة</dt><dd>{% if is_archived %}أرشيف للقراءة{% elif can_edit %}تحرير{% else %}عرض فقط{% endif %}</dd></div>
       </dl>{% endif %}
