@@ -24,13 +24,17 @@ def _key(kind: AssistantKind, user_id: int) -> str:
     return f"personal-report-{kind}:daily:v1:{timezone.localdate().isoformat()}:{int(user_id)}"
 
 
-def daily_remaining(kind: AssistantKind, user_id: int, limit: int) -> int:
+def daily_balance(kind: AssistantKind, user_id: int, limit: int) -> int | None:
     try:
         used = max(0, int(cache.get(_key(kind, user_id), 0) or 0))
     except Exception:
         logger.exception("Unable to read personal %s quota user_id=%s", kind, user_id)
-        return 0
+        return None
     return max(0, int(limit) - used)
+
+
+def daily_remaining(kind: AssistantKind, user_id: int, limit: int) -> int:
+    return daily_balance(kind, user_id, limit) or 0
 
 
 def reserve_daily_slot(kind: AssistantKind, user_id: int, limit: int) -> int | None:

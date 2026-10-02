@@ -48,6 +48,13 @@
   box-shadow: 0 3px 8px rgba(13, 74, 53, .04), 0 26px 70px rgba(13, 74, 53, .16);
   transform: rotate(-1deg);
 }
+.hero-product--personal { transform: none; }
+.hero-product--personal .personal-preview-ui { box-shadow: none; }
+.personal-preview-ui__axis p { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.8; }
+.personal-offer.personal-offer--focused { grid-template-columns: minmax(0, 1fr); }
+.personal-offer--focused .personal-offer__content > p { max-inline-size: 85ch; }
+.personal-plan-card__fit { color: var(--muted); font-size: .8rem; line-height: 1.8; }
+.audience-path__actions .button { min-block-size: 44px; }
 .hero-product__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 9px 13px; color: var(--brand-900); font-size: .75rem; }
 .hero-product__top span { color: var(--muted); font-weight: 700; }
 .hero-product__top i { margin-inline-end: 4px; color: #18a36b; font-size: .55rem; }
@@ -101,6 +108,7 @@
 .showcase-secondary .showcase-frame { min-height: 205px; }
 .mobile-sticky .mobile-teacher { color: var(--brand-900); }
 
+html[data-theme="dark"] .brand-text strong { color: var(--twq-text-primary, #edf5ee); }
 html[data-theme="dark"] .hero-refresh { background: linear-gradient(155deg, #102b22, #14261e 65%, #192720); }
 html[data-theme="dark"] .hero-product { background: #1f3027; border-color: #385447; }
 html[data-theme="dark"] .hero-product__top { color: #dcefe2; }
@@ -126,12 +134,16 @@ html[data-theme="dark"] .personal-preview-ui__axis span { color: #9fdfb7; }
 html[data-theme="dark"] .personal-preview-ui__hero { border-color: #3c5b48; background: linear-gradient(115deg, #294b36, #1f382a); }
 html[data-theme="dark"] .personal-preview-ui__hero small { color: #a8e3bc; }
 html[data-theme="dark"] .personal-preview-ui__hero span { color: #c3d9c9; }
+html[data-theme="dark"] .personal-preview-ui__axis p { color: var(--twq-text-secondary); }
 html[data-theme="dark"] .personal-preview-ui__hero b { border-color: #4d7459; background: #2e5039; color: #ddf3e2; }
 html[data-theme="dark"] .personal-preview-ui__metrics i { color: #8fd8a7; }
 html[data-theme="dark"] .personal-preview-ui__axis i { background: #456450; }
 html[data-theme="dark"] .personal-preview-ui__axis i:nth-child(-n+4) { background: #58c883; }
 
 @media (max-width: 1080px) {
+  .nav-links, .desktop-login { display: none; }
+  .nav-actions { margin-inline-start: auto; }
+  .menu-toggle { display: grid; place-items: center; }
   .hero-refresh .hero-stage { grid-template-columns: 1fr; }
   .hero-refresh .hero-intro { max-width: 760px; }
   .audience-paths { grid-template-columns: repeat(2, minmax(0, 1fr)); }

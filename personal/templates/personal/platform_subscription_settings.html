@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}تهيئة اشتراك {{ workspace.owner.name }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20261002.1">{% endblock %}
+{% block content %}
+<div class="twq-page teacher-plans">
+  <header class="twq-page-header">
+    <div class="twq-page-header__heading"><p class="twq-page-header__eyebrow">إدارة المنصة · تهيئة الاشتراك الفردي</p><h1 class="twq-page-header__title">اشتراك {{ workspace.owner.name }}</h1><p class="twq-page-header__lead">اضبط الباقة وحالة الاستخدام ومدة الاشتراك لهذا الحساب.</p></div>
+    <div class="twq-page-header__aside"><a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_subscriber_detail' workspace.pk %}">العودة لتفاصيل الحساب</a></div>
+  </header>
+  <section class="twq-section" aria-labelledby="subscriptionConfigurationTitle">
+    <div class="twq-section__header"><h2 class="twq-section__title" id="subscriptionConfigurationTitle">إعدادات الاشتراك</h2></div>
+    <p class="teacher-plans__notice">هذا تعديل إداري للاشتراك. يبقى سجل المدفوعات والفواتير بحالته الفعلية.</p>
+    <form method="post" class="teacher-plans__form" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}
+      <div class="platform-support-actions"><button type="submit" class="twq-btn twq-btn--primary">حفظ إعدادات الاشتراك</button><a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_subscriber_detail' workspace.pk %}">إلغاء</a></div>
+    </form>
+  </section>
+</div>
+{% endblock %}

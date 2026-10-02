@@ -447,18 +447,20 @@ def _audit_write(sender, instance, action, *, school_override=None) -> None:
 
     school = school_override if school_override is not None else _audit_school_for(sender, instance)
 
-    actor_name, actor_role = _audit_actor_snapshot(request.user, school)
+    actor = getattr(request, "support_actor", request.user)
+    actor_name, actor_role = _audit_actor_snapshot(actor, school)
+    scope = getattr(request, "support_scope", None)
 
     AuditLog.objects.create(
         school=school,
-        teacher=request.user,
+        teacher=actor,
         actor_name=actor_name,
         actor_role=actor_role,
         action=action,
         model_name=sender.__name__,
         object_id=getattr(instance, "pk", None),
         object_repr=str(instance)[:255],
-        changes={},
+        changes={"support": {"kind": scope["kind"], "target_id": scope["target_id"], "context": scope["token"]}} if scope else {},
         ip_address=request.META.get("REMOTE_ADDR"),
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
     )

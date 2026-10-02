@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from .models import PersonalSubscription
+from .access import subscription_can_write, support_access_for_workspace
 
 
 def personal_quota_usage(workspace, *, lock=False):
@@ -30,11 +31,12 @@ def reserve_personal_quota(workspace, *, reports=0, evidence=0):
     with transaction.atomic():
         workspace.__class__.objects.select_for_update().get(pk=workspace.pk)
         subscription, reports_used, evidence_used = personal_quota_usage(workspace, lock=True)
-        if not subscription.is_current:
+        maintenance = support_access_for_workspace(workspace)
+        if not subscription_can_write(subscription):
             raise ValidationError("اشتراك المساحة الشخصية غير نشط حاليًا.")
-        if reports and reports_used + reports > subscription.plan.max_reports:
+        if not maintenance and reports and reports_used + reports > subscription.plan.max_reports:
             raise ValidationError("وصلت إلى حد إنشاء التقارير خلال اشتراكك الحالي.")
-        if evidence and evidence_used + evidence > subscription.plan.max_evidence:
+        if not maintenance and evidence and evidence_used + evidence > subscription.plan.max_evidence:
             raise ValidationError("وصلت إلى حد إنشاء الشواهد خلال اشتراكك الحالي.")
         if (reports or evidence or subscription.reports_created != reports_used
                 or subscription.evidence_created != evidence_used):

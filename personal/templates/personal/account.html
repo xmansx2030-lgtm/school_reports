@@ -1,6 +1,6 @@
 {% extends "personal/base.html" %}
 {% load static %}
-{% block title %}{% if force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}{% endblock %}
+{% block title %}{% if request.support_scope %}إدارة حساب المعلم{% elif force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=20260923.1">{% endblock %}
 {% block content %}
 <div class="profile-scope twq-page" dir="rtl">
@@ -8,7 +8,7 @@
     <header class="profile-header twq-page-header" aria-labelledby="profilePageTitle">
       <div class="profile-header-content">
         <p class="profile-eyebrow">حساب المستخدم · المساحة الشخصية</p>
-        <h1 class="profile-title" id="profilePageTitle"><i class="fa-solid fa-user" aria-hidden="true"></i><span>{% if force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}</span></h1>
+        <h1 class="profile-title" id="profilePageTitle"><i class="fa-solid fa-user" aria-hidden="true"></i><span>{% if request.support_scope %}إدارة حساب المعلم{% elif force_password_change %}تأمين الحساب{% else %}حسابي وملفي الشخصي{% endif %}</span></h1>
         <p class="profile-subtitle">راجع بياناتك المهنية ووسائل التواصل، ثم حدّث كلمة المرور عند الحاجة. أعمالك الشخصية محفوظة باسم حسابك.</p>
         <dl class="profile-header-context" aria-label="ملخص الحساب الحالي">
           <div><dt>الاسم</dt><dd>{{ request.user.name|default:"—" }}</dd></div>
@@ -47,7 +47,7 @@
         <form method="post" class="profile-form" novalidate>{% csrf_token %}<input type="hidden" name="action" value="password">
           {% if password_form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ password_form.non_field_errors }}</div>{% endif %}
           {% for field in password_form %}{% include "personal/_field.html" with field=field %}{% endfor %}
-          <button class="twq-btn twq-btn--secondary" type="submit">تغيير كلمة المرور</button>
+          <button class="twq-btn twq-btn--secondary" type="submit">{% if request.support_scope %}إعادة تعيين كلمة مرور المعلم{% else %}تغيير كلمة المرور{% endif %}</button>
         </form>
       </section>
     </div>

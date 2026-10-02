@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="{% static 'css/mobile-professional.css' %}?v=20260912.2">
   <link rel="stylesheet" href="{% static 'css/royal-theme.css' %}?v=20260912.1">
   {% include "reports/_identity.html" %}
+  <link rel="stylesheet" href="{% static 'css/platform-support.css' %}?v=20261002.1">
+  {% if request.support_scope %}<script src="{% static 'js/platform-support.js' %}?v=20261002.1" defer></script>{% endif %}
   <link rel="stylesheet" href="{% static 'css/app-components.css' %}?v=20260903.1">
   <link rel="stylesheet" href="{% static 'css/utilities.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'css/extracted.css' %}?v=20260812.1">
@@ -28,11 +30,12 @@
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
   <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1">
   <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20260925.4">
+  <link rel="stylesheet" href="{% static 'css/personal-journey.css' %}?v=20261002.1">
   {% block head %}{% endblock %}
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/personal-workspace-shell.js' %}?v=20260925.2" defer></script>
 </head>
-<body class="page personal-page not-home"{% if request.user.is_authenticated %} data-pwa-user-id="{{ request.user.id }}"{% endif %}>
+<body class="page personal-page not-home"{% if request.user.is_authenticated %} data-pwa-user-id="{{ request.support_actor.id|default:request.user.id }}"{% endif %}>
   {% personal_unread_notices as personal_unread_count %}
   <a class="skip-link" href="#mainContent">تخطي إلى المحتوى</a>
   <header class="site-header" id="siteHeader">
@@ -124,6 +127,7 @@
   {% endif %}
 
   <main class="container page-main personal-main" id="mainContent">
+    {% include "reports/partials/platform_support_banner.html" %}
     {% if messages %}<div class="personal-messages" aria-live="polite">{% for message in messages %}<p class="personal-message personal-message--{{ message.tags|default:'info' }}">{{ message }}</p>{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>

@@ -18,6 +18,15 @@
     </aside>
   </section>
 
+  {% if getting_started_done < 4 %}
+  <section class="twq-section personal-start" aria-labelledby="personalStartTitle">
+    <div class="twq-section__header"><div><p class="twq-section__kicker">خطواتك الأولى</p><h2 class="twq-section__title" id="personalStartTitle">من أول تقرير إلى ملف إنجاز متكامل</h2><p class="twq-section__description">خدماتك الشخصية تعمل حتى إن لم تكن مدرستك مشتركة. {{ getting_started_done }} من 4 خطوات مكتملة.</p></div></div>
+    <ol class="personal-start__steps">{% for step in getting_started %}<li><a href="{% url step.route %}"><span class="personal-start__number" aria-hidden="true">{% if step.done %}<i class="fa-solid fa-check"></i>{% else %}{{ forloop.counter }}{% endif %}</span><span><strong>{{ step.title }}</strong><small>{{ step.hint }}</small><span class="personal-start__state">{% if step.done %}مكتملة{% else %}ابدأ هذه الخطوة{% endif %}</span></span></a></li>{% endfor %}</ol>
+    <p class="personal-assistants__note">التقارير والشواهد وملف الإنجاز والمبادرات والطباعة والمشاركة والأرشيف متاحة في مساحتك ضمن حدود الباقة. المهام والتعاميم والاعتماد المدرسي تتطلب عضوية مدرسة مشتركة.</p>
+  </section>
+  {% endif %}
+  {% include "personal/_assistant_access.html" %}
+
   <section class="twq-section teacher-daily-attention" aria-labelledby="personalAttentionTitle">
     <div class="twq-section__header teacher-daily-section-head">
       <div><div class="twq-section__kicker">الأولوية اليومية</div><h2 class="twq-section__title" id="personalAttentionTitle">ما يحتاج انتباهك الآن</h2></div>

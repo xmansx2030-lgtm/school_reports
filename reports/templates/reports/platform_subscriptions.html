@@ -846,7 +846,7 @@
         <tbody>
           {% for sub in personal_subscriptions %}
             <tr>
-              <td data-label="المشترك"><div class="pfsubs-main"><bdi>{{ sub.workspace.owner.name }}</bdi></div>{% if sub.workspace.school_name %}<div class="pfsubs-sub">{{ sub.workspace.school_name }} · للتعريف فقط</div>{% endif %}</td>
+              <td data-label="المشترك"><div class="pfsubs-main"><a href="{% url 'personal:platform_subscriber_detail' sub.workspace_id %}"><bdi>{{ sub.workspace.owner.name }}</bdi></a></div>{% if sub.workspace.school_name %}<div class="pfsubs-sub">{{ sub.workspace.school_name }} · للتعريف فقط</div>{% endif %}</td>
               <td data-label="نوع الاشتراك"><span class="pfsubs-badge pfsubs-type">معلم/معلمة فردي</span></td>
               <td data-label="الباقة"><div class="pfsubs-main">{{ sub.plan.name }}</div><div class="pfsubs-sub pfsubs-price">{{ sub.plan.price|floatformat:0|intcomma }} ريال</div></td>
               <td data-label="فترة الاشتراك"><div class="pfsubs-main">{{ sub.start_date|hijri }} هـ</div><div class="pfsubs-sub">{% if sub.end_date %}حتى {{ sub.end_date|hijri }} هـ{% else %}بلا تاريخ انتهاء{% endif %}</div></td>

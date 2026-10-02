@@ -1,4 +1,10 @@
 .teacher-plans { color: var(--twq-text); }
+.personal-subscribers__filters { display: flex; flex-wrap: wrap; align-items: end; gap: var(--twq-space-3); }
+.personal-subscribers__filters > div { flex: 1 1 200px; min-inline-size: 0; }
+.personal-subscribers__filters label { display: block; margin-block-end: var(--twq-space-2); }
+.personal-subscribers__filters .twq-control { inline-size: 100%; }
+.teacher-plans .twq-section { margin-block-end: var(--twq-space-4); }
+.teacher-plans .teacher-plans__facts dd { overflow-wrap: anywhere; }
 .teacher-plans__header { margin-block-end: 1.25rem; }
 .teacher-plans__summary {
   display: grid;
@@ -8,6 +14,7 @@
 }
 .teacher-plans__summary > div {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
@@ -17,7 +24,7 @@
   background: var(--twq-surface);
 }
 .teacher-plans__summary span { color: var(--twq-text-secondary); }
-.teacher-plans__summary strong { color: var(--twq-primary); font-size: 1.45rem; }
+.teacher-plans__summary strong { color: var(--twq-primary); font-size: 1.45rem; white-space: nowrap; }
 .teacher-plans__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
@@ -52,6 +59,7 @@
 .teacher-plans__empty h3 { margin-block: 0 .35rem; }
 .teacher-plans__empty p { color: var(--twq-text-secondary); }
 .teacher-plans__notice, .teacher-plan-form__hint { color: var(--twq-text-secondary); line-height: 1.8; }
+.teacher-plans .personal-plan-assistants { color: var(--twq-text-secondary); line-height: 1.8; }
 .teacher-plans__notice { margin-block: 1.25rem; }
 .teacher-plan-form__body { max-inline-size: 920px; }
 .teacher-plan-form__section { margin-block-end: 1rem; padding: 1.25rem; border: 1px solid var(--twq-border); border-radius: var(--twq-radius-lg); background: var(--twq-surface); }

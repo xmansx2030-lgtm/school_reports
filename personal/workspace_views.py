@@ -1,5 +1,6 @@
 """Self-service tools for independent teachers, isolated from school tenancy."""
 
+
 import json
 import shutil
 from itertools import islice
@@ -8,6 +9,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -25,6 +27,7 @@ from reports.middleware import clear_force_password_change_flag, is_force_passwo
 from reports.model_parts.schools import normalize_sa_mobile_identity
 
 from .forms import PersonalAccountForm, PersonalInitiativeForm, PersonalNoticeForm, PersonalYearForm
+from .access import subscription_can_write
 from .models import (
     PersonalAcademicYear, PersonalInitiative,
     PersonalNotice, PersonalNoticeRecipient, PersonalWorkspace,
@@ -40,7 +43,7 @@ def years(request):
     ws = request.personal_workspace
     form = PersonalYearForm(request.POST or None, initial={"value": ws.current_academic_year})
     if request.method == "POST":
-        if not request.personal_subscription.is_current:
+        if not subscription_can_write(request.personal_subscription):
             messages.error(request, "يلزم اشتراك نشط لتعديل السنوات الدراسية.")
             return redirect("personal:years")
         action = (request.POST.get("action") or "").strip()
@@ -98,7 +101,7 @@ def years(request):
         year.portfolio_count = counts["portfolio"].get(year.value, 0)
     return render(request, "personal/years.html", {
         "form": form, "years": years_list, "current_year": ws.current_academic_year,
-        "can_edit": request.personal_subscription.is_current,
+        "can_edit": subscription_can_write(request.personal_subscription),
     })
 
 
@@ -193,7 +196,7 @@ def initiatives(request, pk=None):
     initial = {"academic_year": ws.current_academic_year} if not initiative else None
     form = PersonalInitiativeForm(request.POST or None, instance=initiative, initial=initial)
     if request.method == "POST":
-        if not request.personal_subscription.is_current:
+        if not subscription_can_write(request.personal_subscription):
             messages.error(request, "يلزم اشتراك نشط لتعديل المبادرات.")
             return redirect("personal:initiatives")
         if form.is_valid():
@@ -222,7 +225,7 @@ def initiatives(request, pk=None):
     initiatives_list = list(query)
     archived_years = set(ws.academic_years.filter(archived_at__isnull=False).values_list("value", flat=True))
     for item in initiatives_list:
-        item.can_edit_personal = request.personal_subscription.is_current and item.academic_year not in archived_years
+        item.can_edit_personal = subscription_can_write(request.personal_subscription) and item.academic_year not in archived_years
         item.status_tone = {
             PersonalInitiative.Status.COMPLETE: "completed",
             PersonalInitiative.Status.ARCHIVED: "info",
@@ -231,7 +234,7 @@ def initiatives(request, pk=None):
         "personal_mode": True, "teacher_base_template": "personal/base.html",
         "form": form, "initiative": initiative, "initiatives": initiatives_list,
         "years": ws.academic_years.all(), "year": year,
-        "can_edit": request.personal_subscription.is_current and not (
+        "can_edit": subscription_can_write(request.personal_subscription) and not (
             initiative and PersonalAcademicYear.objects.filter(
                 workspace=ws, value=initiative.academic_year, archived_at__isnull=False
             ).exists()
@@ -280,7 +283,8 @@ def notice_mark_read(request, pk):
 @require_http_methods(["GET", "POST"])
 def account(request):
     user = request.user
-    force_password_change = is_force_password_change_required(request)
+    maintenance = bool(getattr(request, "support_scope", None))
+    force_password_change = not maintenance and is_force_password_change_required(request)
     action = request.POST.get("action") if request.method == "POST" else ""
     profile_form = PersonalAccountForm(
         request.POST if action == "profile" else None, instance=user, prefix="profile"
@@ -288,10 +292,15 @@ def account(request):
     phone_form = MyProfilePhoneForm(
         request.POST if action == "phone" else None, instance=user, prefix="phone"
     )
-    password_form = MyPasswordChangeForm(
-        user, request.POST if action == "password" else None,
-        prefix="password", require_email=force_password_change,
-    )
+    if maintenance:
+        password_form = SetPasswordForm(user, request.POST if action == "password" else None, prefix="password")
+        for field in password_form.fields.values():
+            field.widget.attrs["class"] = "twq-control"
+    else:
+        password_form = MyPasswordChangeForm(
+            user, request.POST if action == "password" else None,
+            prefix="password", require_email=force_password_change,
+        )
     if action == "profile" and profile_form.is_valid():
         profile_form.save()
         messages.success(request, "حُفظت بيانات الحساب.")
@@ -309,12 +318,13 @@ def account(request):
                 return redirect("personal:account")
     if action == "password" and password_form.is_valid():
         changed_user = password_form.save()
-        update_session_auth_hash(request, changed_user)
-        session_key = request.session.session_key or ""
-        if session_key and changed_user.current_session_key != session_key:
-            changed_user.current_session_key = session_key
-            changed_user.save(update_fields=["current_session_key"])
-        clear_force_password_change_flag(request)
+        if not maintenance:
+            update_session_auth_hash(request, changed_user)
+            session_key = request.session.session_key or ""
+            if session_key and changed_user.current_session_key != session_key:
+                changed_user.current_session_key = session_key
+                changed_user.save(update_fields=["current_session_key"])
+            clear_force_password_change_flag(request)
         messages.success(request, "تغيّرت كلمة المرور.")
         return redirect("personal:account")
     return render(request, "personal/account.html", {

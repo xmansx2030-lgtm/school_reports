@@ -1,0 +1,21 @@
+.personal-assistants, .personal-start { margin-block-end: var(--twq-space-4); }
+.personal-assistant-disclosure { margin-block-end: var(--twq-space-4); }
+.personal-assistant-disclosure > summary { display: flex; align-items: center; gap: var(--twq-space-3); padding: var(--twq-space-4); min-block-size: var(--twq-tap-target); }
+.personal-assistant-disclosure > summary > span { flex: 1; }
+.personal-assistant-disclosure > .twq-disclosure__body { padding: var(--twq-space-4); }
+.personal-assistant-disclosure .personal-assistants { margin: 0; }
+.personal-assistants .twq-section__header { flex-wrap: wrap; gap: var(--twq-space-3); }
+.personal-assistants__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--twq-space-4); }
+.personal-assistants__tool { min-inline-size: 0; padding: var(--twq-space-4); border: 1px solid var(--twq-border); border-radius: var(--twq-radius-md); background: var(--twq-surface-secondary); }
+.personal-assistants__heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--twq-space-2); }
+.personal-assistants__heading h3 { margin: 0; font-size: var(--twq-font-size-md); }
+.personal-assistants__tool p { margin-block: var(--twq-space-3) var(--twq-space-2); }
+.personal-assistants__tool small, .personal-assistants__note, .personal-plan-assistants { color: var(--twq-text-secondary); line-height: 1.8; }
+.personal-assistants__note { margin-block: var(--twq-space-4) 0; font-size: var(--twq-font-size-sm); }
+.personal-start__steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; margin: 0; gap: var(--twq-space-4); list-style: none; }
+.personal-start__steps a { display: flex; gap: var(--twq-space-3); min-block-size: var(--twq-tap-target); padding-block: var(--twq-space-3); color: var(--twq-text); text-decoration: none; }
+.personal-start__steps small, .personal-start__state { display: block; margin-block-start: var(--twq-space-2); font-size: var(--twq-font-size-sm); color: var(--twq-text-secondary); line-height: 1.8; }
+.personal-start__state { color: var(--twq-primary); }
+.personal-start__number { display: grid; place-items: center; flex: 0 0 2rem; block-size: 2rem; border-radius: var(--twq-radius-pill); background: var(--twq-primary-soft); color: var(--twq-primary); }
+@media (max-width: 1023px) { .personal-start__steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 639px) { .personal-assistants__grid, .personal-start__steps { grid-template-columns: minmax(0, 1fr); } }

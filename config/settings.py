@@ -807,6 +807,7 @@ MIDDLEWARE = [
     "reports.middleware.MaintenanceModeMiddleware",
     "reports.middleware.SearchEngineIndexingMiddleware",
     "reports.middleware.IdleLogoutMiddleware",
+    "reports.platform_support.PlatformSupportMiddleware",
     "reports.middleware.ActiveSchoolGuardMiddleware",
     # ActiveSchoolGuard has already authorised and attached request.active_school,
     # so the tenant limiter adds no database query.

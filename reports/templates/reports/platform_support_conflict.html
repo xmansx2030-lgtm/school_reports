@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}تغيّرت مساحة الصيانة{% endblock %}
+{% block content %}
+<section class="twq-page twq-empty twq-empty--page" aria-labelledby="supportConflictTitle">
+  <div class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></div>
+  <h1 class="twq-empty__title" id="supportConflictTitle">تغيّرت مساحة الصيانة</h1>
+  <p class="twq-empty__message">قد تكون اخترت مدرسة أو معلمًا آخر في نافذة ثانية، أو انتهت مدة الجلسة. لم يُنفَّذ الحفظ من هذه الصفحة.</p>
+  <p class="twq-empty__message">افتح المساحة الحالية وتأكد من اسمها قبل متابعة التعديل.</p>
+  <div class="platform-support-actions">
+    <a class="twq-btn twq-btn--primary" href="{% url support_destination %}">فتح المساحة الحالية</a>
+    <a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_admin_dashboard' %}">لوحة أدمن المنصة</a>
+  </div>
+</section>
+{% endblock %}

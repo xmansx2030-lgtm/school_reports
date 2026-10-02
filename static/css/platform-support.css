@@ -1,0 +1,39 @@
+.platform-support {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--twq-space-4, 16px);
+  margin-block-end: var(--twq-space-6, 24px);
+  padding: var(--twq-space-5, 20px);
+  border: 1px solid var(--twq-border);
+  border-inline-start: 4px solid var(--twq-focus);
+  border-radius: var(--twq-radius-lg, 16px);
+  background: var(--twq-surface);
+  color: var(--twq-text);
+  box-shadow: var(--twq-shadow-sm);
+}
+.platform-support__identity { display: flex; gap: 12px; align-items: center; min-inline-size: 0; }
+.platform-support__identity > div { min-inline-size: 0; }
+.platform-support__icon { display: grid; place-items: center; flex: 0 0 44px; block-size: 44px; border-radius: 12px; background: var(--twq-surface-secondary); color: var(--twq-focus); }
+.platform-support__eyebrow, .platform-support__meta, .platform-support__note { margin: 0; color: var(--twq-text-secondary); font-size: var(--twq-font-size-sm); line-height: 1.8; }
+.platform-support__eyebrow { font-weight: var(--twq-font-weight-semibold); }
+.platform-support__title { margin: 4px 0; overflow-wrap: anywhere; font-size: var(--twq-font-size-xl); font-weight: var(--twq-font-weight-bold); }
+.platform-support__exit { align-self: center; margin: 0; }
+.platform-support__exit .twq-btn { min-block-size: 44px; white-space: normal; text-align: center; }
+.platform-support__tools { grid-column: 1 / -1; border-block-start: 1px solid var(--twq-divider); padding-block-start: 12px; }
+.platform-support__tools summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; min-block-size: 44px; font-weight: var(--twq-font-weight-semibold); }
+.platform-support__tools summary::-webkit-details-marker { display: none; }
+.platform-support__tools[open] summary i { transform: rotate(180deg); }
+.platform-support__links { display: flex; flex-wrap: wrap; gap: 8px; padding-block: 12px; }
+.platform-support__links a { min-block-size: 44px; }
+.platform-support summary:focus-visible, .platform-support a:focus-visible, .platform-support button:focus-visible { outline: 2px solid var(--twq-focus); outline-offset: 3px; }
+.platform-support-entry { display: inline-flex; margin: 0; }
+.platform-support-entry button { min-block-size: 44px; }
+.platform-support-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (max-width: 39.999rem) {
+  .platform-support { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .platform-support__exit, .platform-support__exit button { inline-size: 100%; }
+  .platform-support__links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .platform-support__links a { white-space: normal; text-align: center; }
+  .platform-support-actions { align-items: stretch; }
+}
+@media print { .platform-support { display: none; } }

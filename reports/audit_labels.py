@@ -45,6 +45,18 @@ _MODELS: dict[str, tuple[str, str, str]] = {
     "Delegation": ("تفويض", "تفويضاً", "fa-handshake-angle"),
     "SchoolYearResetJob": ("تصفير سنة دراسية", "تصفير سنة دراسية", "fa-arrows-rotate"),
     "Auth": ("الحساب", "الحساب", "fa-right-to-bracket"),
+    "PlatformSupportSession": ("جلسة صيانة", "جلسة صيانة", "fa-user-shield"),
+    "PlatformSupportAction": ("إجراء صيانة", "إجراء صيانة", "fa-screwdriver-wrench"),
+    "PersonalWorkspace": ("مساحة معلم مستقل", "مساحة معلم مستقل", "fa-user"),
+    "PersonalSubscription": ("اشتراك فردي", "اشتراكاً فردياً", "fa-credit-card"),
+    "PersonalReport": ("تقرير شخصي", "تقريراً شخصياً", "fa-file-lines"),
+    "PersonalEvidence": ("شاهد شخصي", "شاهداً شخصياً", "fa-paperclip"),
+    "PersonalAcademicYear": ("سنة شخصية", "سنة دراسية شخصية", "fa-calendar"),
+    "PersonalInitiative": ("مبادرة شخصية", "مبادرة شخصية", "fa-lightbulb"),
+    "PersonalPortfolioSection": ("محور ملف إنجاز", "محور ملف إنجاز", "fa-folder-open"),
+    "PersonalPortfolioReport": ("ربط تقرير بملف الإنجاز", "ربط تقرير بملف الإنجاز", "fa-link"),
+    "PersonalPortfolioEvidence": ("ربط شاهد بملف الإنجاز", "ربط شاهد بملف الإنجاز", "fa-link"),
+    "PersonalShareLink": ("مشاركة شخصية", "مشاركة شخصية", "fa-share-nodes"),
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +95,17 @@ def describe(log) -> AuditEntryView:
     """
     action = (getattr(log, "action", "") or "").strip().lower()
     model_name = (getattr(log, "model_name", "") or "").strip()
+
+    if model_name == "PlatformSupportSession":
+        event = (getattr(log, "changes", None) or {}).get("event")
+        headline = {
+            "enter": "بدء جلسة إدارة وصيانة", "exit": "إنهاء جلسة الصيانة",
+            "switch": "تبديل مساحة الصيانة", "expire": "انتهاء مدة جلسة الصيانة",
+            "target_unavailable": "إغلاق جلسة لمساحة غير متاحة",
+        }.get(event, "جلسة إدارة وصيانة")
+        return AuditEntryView(headline, log.object_repr, "session", "fa-user-shield", "جلسة صيانة")
+    if model_name == "PlatformSupportAction":
+        return AuditEntryView("طلب إجراء أثناء الصيانة", log.object_repr, "update", "fa-screwdriver-wrench", "إجراء صيانة")
 
     verb, tone, action_icon = _ACTIONS.get(action, (action or "إجراء", "update", "fa-circle"))
     singular, accusative, model_icon = _MODELS.get(

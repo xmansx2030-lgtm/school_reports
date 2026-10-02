@@ -173,9 +173,12 @@
               {% include "reports/partials/consumption_rows.html" with row=s.consumption_row %}
 
               <div class="ps-card-actions">
-                <a class="btn btn-primary" href="{% url 'reports:platform_enter_school' pk=s.id %}">
+                <form method="post" action="{% url 'reports:platform_support_school' s.id %}" class="platform-support-entry">
+                  {% csrf_token %}<button class="btn btn-primary" type="submit" aria-label="الدخول لإدارة وصيانة {{ s.name }}"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> إدارة وصيانة</button>
+                </form>
+                <a class="btn btn-outline" href="{% url 'reports:platform_enter_school' pk=s.id %}">
                   <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                  دخول
+                  ملخص المدرسة
                 </a>
               </div>
             </article>

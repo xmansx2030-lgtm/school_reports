@@ -1,0 +1,44 @@
+{% if request.support_scope %}
+<aside class="platform-support" aria-label="جلسة الإدارة والصيانة" data-support-context="{{ request.support_scope.token }}">
+  <div class="platform-support__identity">
+    <span class="platform-support__icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
+    <div>
+      <p class="platform-support__eyebrow">وضع الإدارة والصيانة · {% if request.support_scope.kind == 'school' %}مدرسة{% else %}معلم مستقل{% endif %}</p>
+      <p class="platform-support__title"><bdi>{{ request.support_scope.label }}</bdi></p>
+      <p class="platform-support__meta">بإدارة {{ request.support_actor.name }} · تنتهي الجلسة <bdi>{{ request.support_expires_at|date:'H:i' }}</bdi></p>
+    </div>
+  </div>
+  <form method="post" action="{% url 'reports:platform_support_exit' %}" class="platform-support__exit">
+    {% csrf_token %}<input type="hidden" name="_support_context" value="{{ request.support_scope.token }}">
+    <button type="submit" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> إنهاء الصيانة والعودة للأدمن</button>
+  </form>
+  <details class="platform-support__tools">
+    <summary>أدوات الإدارة والتهيئة <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
+    <nav class="platform-support__links" aria-label="أدوات صيانة المساحة">
+      {% if request.support_scope.kind == 'school' %}
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:admin_dashboard' %}">لوحة المدرسة</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:school_settings' %}">الإعدادات</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:manage_teachers' %}">المنسوبون</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:staff_roles' %}">الصلاحيات</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:departments_list' %}">الأقسام</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:reporttypes_list' %}">أنواع التقارير</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:admin_reports' %}">التقارير</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:school_update' request.support_scope.target_id %}">بيانات المدرسة</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:school_health' %}">جاهزية المدرسة</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'reports:school_audit_logs' %}">سجل المدرسة</a>
+        {% if request.support_school.subscription %}<a class="twq-btn twq-btn--ghost" href="{% url 'reports:platform_subscription_detail' request.support_school.subscription.pk %}">إدارة الاشتراك</a>{% endif %}
+      {% else %}
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:dashboard' %}">لوحة المعلم</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:setup' %}">تهيئة المساحة</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:account' %}">الحساب والأمان</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:reports' %}">التقارير</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:evidence' %}">الشواهد</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:portfolio' %}">ملف الإنجاز</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:years' %}">السنوات والأرشيف</a>
+        <a class="twq-btn twq-btn--ghost" href="{% url 'personal:platform_subscriber_detail' request.support_scope.target_id %}">إدارة الاشتراك</a>
+      {% endif %}
+    </nav>
+    <p class="platform-support__note">تُسجَّل التعديلات باسم أدمن المنصة. صلاحية الصيانة لا تغيّر حالة الاشتراك أو المدفوعات.</p>
+  </details>
+</aside>
+{% endif %}
