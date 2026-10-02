@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}باقات المعلمين والمعلمات | إدارة المنصة{% endblock %}
-{% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20260924.1">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20261002.1">{% endblock %}
 {% block content %}
 <div class="twq-page teacher-plans">
   <p><a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_notice_compose' %}">إشعارات المشتركين الفرديين</a></p>
@@ -12,6 +12,7 @@
       <p class="twq-page-header__description">حدّد السعر والمدة والسعة وحالة النشر لكل باقة، بما فيها الباقة الأساسية. الباقات المنشورة والنشطة تظهر في قسم المعلم بصفحة الهبوط، بمعزل عن تسعير المدارس.</p>
     </div>
     <div class="twq-page-header__actions">
+      <a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_subscribers' %}">متابعة المشتركين الأفراد</a>
       <a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_plans_list' %}">باقات المدارس</a>
       <a class="twq-btn twq-btn--primary" href="{% url 'reports:platform_personal_plan_add' %}">إضافة باقة شخصية</a>
     </div>
@@ -43,6 +44,7 @@
             <div><dt>التخزين</dt><dd>{{ plan.storage_limit_mb }} م.ب</dd></div>
             <div><dt>مشتركون</dt><dd>{{ plan.subscriber_count }}</dd></div>
           </dl>
+          {% include "personal/_plan_assistants.html" %}
           <a class="twq-btn twq-btn--secondary teacher-plans__edit" href="{% url 'reports:platform_personal_plan_edit' plan.pk %}">تعديل الباقة</a>
         </article>
       {% empty %}

@@ -496,7 +496,11 @@ class ActiveSchoolGuardMiddleware:
                 from .models import School as _School
                 sid_raw = request.session.get(self.SESSION_KEY)
                 if sid_raw:
-                    request.active_school = _School.objects.filter(pk=int(sid_raw), is_active=True).first()
+                    support_school = getattr(request, "support_school", None)
+                    request.active_school = (
+                        support_school if support_school is not None and support_school.pk == int(sid_raw)
+                        else _School.objects.filter(pk=int(sid_raw), is_active=True).first()
+                    )
                 else:
                     request.active_school = None
             except Exception:

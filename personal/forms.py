@@ -92,7 +92,7 @@ class PersonalRegistrationForm(PersonalFormStyleMixin, forms.Form):
         help_text="تُستخدم هذه الصيغة في اسم المساحة والنصوص الموجّهة داخلها.",
     )
     phone = forms.CharField(label="رقم الجوال", max_length=16)
-    email = forms.EmailField(label="البريد الإلكتروني للفواتير والتنبيهات")
+    email = forms.EmailField(label="البريد الإلكتروني")
     school_name = forms.CharField(label="اسم المدرسة", max_length=200)
     principal_name = forms.CharField(label="اسم مدير المدرسة", max_length=150, required=False)
     password = forms.CharField(label="كلمة المرور", widget=forms.PasswordInput)
@@ -178,7 +178,7 @@ class PersonalAccountForm(PersonalFormStyleMixin, forms.ModelForm):
 
 class PersonalEmailForm(PersonalFormStyleMixin, forms.Form):
     email = forms.EmailField(
-        label="البريد الإلكتروني للفواتير والتنبيهات",
+        label="البريد الإلكتروني",
         max_length=254,
         required=False,
         help_text="ستُرسل إلى هذا العنوان رسالة تأكيد الدفع والفاتورة الإلكترونية.",
@@ -587,6 +587,7 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
         self.fields["report"].label = "التقرير المرتبط"
         self.fields["report"].required = False
         self.fields["initiative"].queryset = PersonalInitiative.objects.filter(workspace=workspace)
+        self.fields["initiative"].label = "المبادرة المرتبطة"
         self.fields["initiative"].required = False
         self.fields["display_size"].required = False
         self.fields["fit_mode"].required = False

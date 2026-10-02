@@ -307,16 +307,33 @@
     });
 
     request.addEventListener("load", () => {
+      const contentType = request.getResponseHeader("Content-Type") || "";
+      let result = null;
+      if (contentType.includes("application/json")) {
+        try { result = JSON.parse(request.responseText); } catch (_error) { result = null; }
+      }
       if (request.status >= 200 && request.status < 400) {
+        let destination = request.responseURL || form.dataset.successUrl;
+        if (contentType.includes("application/json")) {
+          try {
+            if (!result || result.ok !== true || typeof result.redirect_url !== "string") throw new Error("Invalid save response");
+            const target = new URL(result.redirect_url, window.location.href);
+            if (target.origin !== window.location.origin) throw new Error("Invalid save destination");
+            destination = target.href;
+          } catch (_error) {
+            setSubmitting(false);
+            showValidationSummary([{ message: "تعذر تأكيد نتيجة الحفظ. راجع قائمة تقاريرك قبل إعادة المحاولة." }], "تحقق من حالة التقرير.");
+            return;
+          }
+        }
         setProgress(100, "تم الحفظ");
         form.dispatchEvent(new CustomEvent("tawtheeq:submit-success", { bubbles: true, detail: { form } }));
         window.dispatchEvent(new CustomEvent("tawtheeq:task-complete", { detail: { kind: "report" } }));
         window.setTimeout(() => {
-          window.location.href = request.responseURL || form.dataset.successUrl;
+          window.location.href = destination;
         }, 300);
         return;
       }
-      const contentType = request.getResponseHeader("Content-Type") || "";
       if (contentType.includes("text/html")) {
         document.open();
         document.write(request.responseText);
@@ -324,7 +341,7 @@
         return;
       }
       setSubmitting(false);
-      showValidationSummary([{ message: "تعذر حفظ التقرير حاليًا. تحقق من البيانات والاتصال ثم أعد المحاولة." }], "لم يتم حفظ التقرير.");
+      showValidationSummary([{ message: result && typeof result.message === "string" ? result.message : "تعذر حفظ التقرير حاليًا. تحقق من البيانات والاتصال ثم أعد المحاولة." }], "لم يتم حفظ التقرير.");
     });
 
     request.addEventListener("error", () => {

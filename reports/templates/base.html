@@ -62,6 +62,8 @@
   {% include "reports/_identity.html" %}
 
   {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{% static 'css/platform-support.css' %}?v=20261002.1">
+  {% if request.support_scope %}<script src="{% static 'js/platform-support.js' %}?v=20261002.1" defer></script>{% endif %}
   <link rel="stylesheet" href="{% static 'css/app-components.css' %}?v=20260903.1" />
   {% comment %}
     طبقة الأدوات بعد أوراق المكوّنات عمداً: أسبقيتها تأتي من ترتيب التحميل لا
@@ -108,7 +110,7 @@
             <a class="tab {% if active == 'platform_operations' %}is-active{% endif %}" href="{% url 'reports:platform_operations' %}">المراقبة</a>
             <a class="tab {% if active == 'schools_admin_list' or active == 'platform_schools_directory' or active == 'school_profile' or active == 'school_create' or active == 'school_update' %}is-active{% endif %}" href="{% url 'reports:schools_admin_list' %}">المدارس</a>
             <a class="tab {% if active == 'platform_executive_directors' or active == 'platform_executive_director_add' or active == 'platform_executive_director_edit' %}is-active{% endif %}" href="{% url 'reports:platform_executive_directors' %}">المدراء التنفيذيون</a>
-            <a class="tab {% if active == 'platform_subscriptions_list' or active == 'platform_subscription_detail' or active == 'platform_subscription_add' %}is-active{% endif %}" href="{% url 'reports:platform_subscriptions_list' %}">الاشتراكات</a>
+            <a class="tab {% if active == 'platform_subscriptions_list' or active == 'platform_subscription_detail' or active == 'platform_subscription_add' or active == 'platform_subscribers' or active == 'platform_subscriber_detail' %}is-active{% endif %}" href="{% url 'reports:platform_subscriptions_list' %}">الاشتراكات</a>
             <a class="tab {% if active == 'platform_payments_list' or active == 'platform_payment_detail' or active == 'platform_discount_codes_list' or active == 'platform_discount_code_add' or active == 'platform_discount_code_edit' or active == 'platform_discount_code_detail' %}is-active{% endif %}" href="{% url 'reports:platform_payments_list' %}">المالية</a>
             <a class="tab {% if active == 'platform_tickets_list' %}is-active{% endif %}" href="{% url 'reports:platform_tickets_list' %}">الدعم</a>
             <a class="tab {% if active == 'platform_complaints_list' or active == 'platform_complaint_detail' %}is-active{% endif %}" href="{% url 'reports:platform_complaints_list' %}">الشكاوى</a>
@@ -737,6 +739,9 @@
             <span>باقات المعلمين والمعلمات</span>
             <i class="fa-solid fa-book-open"></i>
           </a>
+          <a class="{% if active == 'platform_subscribers' or active == 'platform_subscriber_detail' %}is-active{% endif %}" href="{% url 'personal:platform_subscribers' %}"{% if active == 'platform_subscribers' or active == 'platform_subscriber_detail' %} aria-current="page"{% endif %}>
+            <span>المشتركون الأفراد</span><i class="fa-solid fa-user" aria-hidden="true"></i>
+          </a>
           <a class="{% if active == 'platform_conversion_dashboard' or active == 'platform_conversion_school' or active == 'platform_conversion_generate' or active == 'platform_conversion_send' %}is-active{% endif %}" href="{% url 'reports:platform_conversion_dashboard' %}">
             <span>التحويل الذكي</span>
             <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -1073,6 +1078,7 @@
   </div>
 
   <main class="container page-main" id="mainContent">
+    {% include "reports/partials/platform_support_banner.html" %}
     {% block content %}{% endblock %}
   </main>
 

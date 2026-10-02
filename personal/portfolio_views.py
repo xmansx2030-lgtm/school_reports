@@ -17,6 +17,7 @@ from django_ratelimit.decorators import ratelimit
 from reports.model_parts.achievements import AchievementSection
 
 from .forms import PersonalEvidenceForm, clean_academic_year
+from .access import subscription_can_write, support_access_for_workspace
 from .portfolio_forms import PersonalPortfolioProfileForm
 from .models import (
     PersonalAcademicYear, PersonalEvidence, PersonalPortfolioEvidence,
@@ -101,7 +102,7 @@ def portfolio(request):
     if request.method == "POST":
         if selected_year not in years:
             raise Http404
-        if not request.personal_subscription.is_current:
+        if not subscription_can_write(request.personal_subscription):
             messages.error(request, "يلزم اشتراك نشط لتعديل ملف الإنجاز.")
             return redirect("personal:portfolio")
         if PersonalAcademicYear.objects.filter(
@@ -197,7 +198,7 @@ def portfolio(request):
                 if report and locked.evidence.filter(report=report).count() >= 8:
                     messages.error(request, "الحد الأعلى للتقرير المرتبط 8 شواهد.")
                     return target
-                if used + file_size > plan.storage_limit_mb * 1024 * 1024:
+                if not support_access_for_workspace(workspace) and used + file_size > plan.storage_limit_mb * 1024 * 1024:
                     messages.error(request, "تجاوز الملف سعة باقتك الحالية.")
                     return target
                 try:
@@ -218,7 +219,7 @@ def portfolio(request):
         return target
 
     context = _context(workspace, year)
-    context["can_edit"] = bool(year and request.personal_subscription.is_current and not context["is_archived"])
+    context["can_edit"] = bool(year and subscription_can_write(request.personal_subscription) and not context["is_archived"])
     return render(request, "reports/achievement_file.html", context)
 
 

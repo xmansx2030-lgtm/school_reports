@@ -1,0 +1,19 @@
+<section class="twq-section personal-assistants" aria-labelledby="personalAssistantsTitle">
+  <div class="twq-section__header">
+    <div><p class="twq-section__kicker">أدوات إعداد التقارير</p><h2 class="twq-section__title" id="personalAssistantsTitle">الذكاء الاصطناعي في باقتك</h2><p class="twq-section__description">اكتب تفاصيل العمل ثم حسّن صياغتها، أو أمْلِها صوتيًا. تراجع النتيجة قبل اعتمادها في تقريرك.</p></div>
+    {% if not assistant_in_editor and not assistant_platform %}<a class="twq-btn twq-btn--secondary" href="{% if subscription.is_current %}{% url 'personal:report_create' %}{% else %}{% url 'personal:billing' %}{% endif %}">{% if subscription.is_current %}فتح محرر التقرير{% else %}إدارة الاشتراك{% endif %}</a>{% endif %}
+  </div>
+  <div class="personal-assistants__grid">
+    {% for tool in personal_assistant_tools %}
+      <article class="personal-assistants__tool" data-assistant-state="{{ tool.state }}" data-assistant-kind="{{ tool.kind }}">
+        <div class="personal-assistants__heading"><h3><i class="fa-solid {{ tool.icon }}" aria-hidden="true"></i> {{ tool.title }}</h3><span data-assistant-label class="twq-status {% if tool.state == 'available' %}twq-status--success{% elif tool.state == 'excluded' %}twq-status--draft{% else %}twq-status--warning{% endif %}">{{ tool.label }}</span></div>
+        {% if tool.state == 'available' or tool.state == 'exhausted' %}<p>المتبقي اليوم <strong data-assistant-remaining>{{ tool.remaining }}</strong> من <strong>{{ tool.limit }}</strong></p><small>يتجدد الرصيد يوميًا؛ المحاولات الفاشلة لا تخصم من رصيدك.</small>
+        {% elif tool.state == 'excluded' %}<p>اختر باقة تتضمن هذه الأداة للاستفادة منها.</p>{% if not assistant_platform %}<a class="twq-btn twq-btn--ghost" href="{% url 'personal:billing' %}#personalPlans">مقارنة الباقات</a>{% endif %}
+        {% elif tool.state == 'inactive' %}<p>أعمالك محفوظة. تعود الأدوات المشمولة بعد تفعيل اشتراكك.</p>
+        {% elif tool.state == 'quota_unavailable' %}<p>لم نتمكن من قراءة رصيدك الآن. حاول لاحقًا، أو تابع كتابة تقريرك يدويًا.</p>
+        {% else %}<p>مشمول بحد {{ tool.included }} يوميًا، والخدمة متوقفة مؤقتًا. يمكنك متابعة كتابة تقريرك يدويًا.</p>{% endif %}
+      </article>
+    {% endfor %}
+  </div>
+  <p class="personal-assistants__note">فحص جاهزية التقرير متاح دون خصم من رصيد AI.{% if voice_report_pwa_only %} الإملاء الصوتي يتطلب تطبيق توثيق المثبّت؛ ثبّته من قائمة المتصفح أو خيار «تثبيت التطبيق» عند ظهوره.{% endif %}</p>
+</section>

@@ -39,6 +39,7 @@ from reports.voice_report import (
 
 from .assistant_quota import (
     PersonalAssistantQuotaUnavailable,
+    daily_balance,
     daily_remaining,
     release_daily_slot,
     reserve_daily_slot,
@@ -50,7 +51,7 @@ from .services import ensure_personal_subscription
 logger = logging.getLogger(__name__)
 
 
-def personal_assistant_template_context(user, subscription) -> dict[str, int | bool]:
+def personal_assistant_template_context(user, subscription) -> dict:
     """Expose only the paid tools available in the current personal plan."""
     is_current = bool(subscription and subscription.is_current)
     plan = subscription.plan if is_current and subscription.plan.price > 0 else None
@@ -69,15 +70,47 @@ def personal_assistant_template_context(user, subscription) -> dict[str, int | b
         and platform_ai_toggle_enabled(FEATURE_VOICE_REPORT)
         and voice_report_is_enabled()
     )
+    ai_remaining = daily_balance("improvement", user.pk, ai_limit) if ai_enabled else 0
+    voice_remaining = daily_balance("voice", user.pk, voice_limit) if voice_enabled else 0
+    tools = []
+    configured_plan = subscription.plan if subscription else None
+    for kind, title, icon, included, enabled, limit, remaining in (
+        ("improvement", "تحسين صياغة التقرير", "fa-wand-magic-sparkles", getattr(configured_plan, "report_ai_daily_limit", 0),
+         ai_enabled, ai_limit, ai_remaining),
+        ("voice", "الإملاء الصوتي", "fa-microphone", getattr(configured_plan, "voice_report_daily_limit", 0),
+         voice_enabled, voice_limit, voice_remaining),
+    ):
+        included = included if configured_plan and configured_plan.price > 0 else 0
+        if not is_current:
+            state, label = "inactive", "يتطلب اشتراكًا نشطًا"
+        elif not included:
+            state, label = "excluded", "غير مشمول في باقتك"
+        elif not enabled:
+            state, label = "unavailable", "غير متاح حاليًا"
+        elif remaining is None:
+            state, label = "quota_unavailable", "تعذر التحقق من الرصيد"
+        elif not remaining:
+            state, label = "exhausted", "اكتمل استخدام اليوم"
+        else:
+            state = "available"
+            label = (
+                "متاح في التطبيق المثبّت"
+                if kind == "voice" and getattr(settings, "VOICE_REPORT_PWA_ONLY", True) else "متاح الآن"
+            )
+        tools.append({
+            "kind": kind, "title": title, "icon": icon, "state": state, "label": label,
+            "included": int(included), "limit": limit, "remaining": remaining or 0,
+        })
     return {
-        "report_ai_enabled": ai_enabled,
+        "personal_assistant_tools": tools,
+        "report_ai_enabled": ai_enabled and ai_remaining is not None,
         "report_ai_daily_limit": ai_limit,
-        "report_ai_daily_remaining": daily_remaining("improvement", user.pk, ai_limit) if ai_enabled else 0,
+        "report_ai_daily_remaining": ai_remaining or 0,
         "report_details_recommended_length": REPORT_DETAILS_RECOMMENDED_LENGTH,
         "report_details_max_length": REPORT_DETAILS_MAX_LENGTH,
-        "voice_report_enabled": voice_enabled,
+        "voice_report_enabled": voice_enabled and voice_remaining is not None,
         "voice_report_daily_limit": voice_limit,
-        "voice_report_daily_remaining": daily_remaining("voice", user.pk, voice_limit) if voice_enabled else 0,
+        "voice_report_daily_remaining": voice_remaining or 0,
         "voice_report_max_seconds": int(getattr(settings, "VOICE_REPORT_MAX_SECONDS", 180)),
         "voice_report_max_bytes": int(getattr(settings, "VOICE_REPORT_MAX_BYTES", 10 * 1024 * 1024)),
         "voice_report_pwa_only": bool(getattr(settings, "VOICE_REPORT_PWA_ONLY", True)),

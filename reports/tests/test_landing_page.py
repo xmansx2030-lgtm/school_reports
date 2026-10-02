@@ -21,8 +21,8 @@ class LandingPageTests(TestCase):
         response = self.client.get(reverse("reports:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "مدرستك منظّمة.")
-        self.assertContains(response, "وإنجازك موثّق.")
+        self.assertContains(response, "للمعلمين والمعلمات.")
+        self.assertContains(response, "ولمدارسهم.")
         self.assertContains(response, "إدارة التقارير والطلبات والخطط والاعتمادات من مكان واحد.")
         self.assertContains(response, "التعاميم")
         self.assertContains(response, "الأرشيف")
@@ -48,8 +48,8 @@ class LandingPageTests(TestCase):
         mobile_menu = html[html.index('id="mobileMenu"'): html.index("<main")]
         self.assertIn('href="#pricing">باقات المدارس</a>', header)
         self.assertIn('href="#pricing">باقات المدارس</a>', mobile_menu)
-        self.assertIn('href="#teacher-plans">باقات المعلمين</a>', header)
-        self.assertIn('href="#teacher-plans">باقات المعلمين</a>', mobile_menu)
+        self.assertIn('href="#teacher-plans">باقات المعلمين والمعلمات</a>', header)
+        self.assertIn('href="#teacher-plans">باقات المعلمين والمعلمات</a>', mobile_menu)
         self.assertContains(response, "سعر مدرستك")
 
     def test_landing_separates_school_and_individual_teacher_paths(self):
@@ -71,6 +71,8 @@ class LandingPageTests(TestCase):
         self.assertIn("باقات المعلمين والمعلمات", html)
         self.assertIn("اشتراك المدرسة وفريقها", school_pricing)
         self.assertIn("عدد معلمي المدرسة", school_pricing)
+        self.assertLess(html.index('class="audience-path audience-path--teacher"'), html.index('class="audience-path audience-path--school"'))
+        self.assertLess(html.index('id="teacher-personal"'), html.index('id="features"'))
 
     @override_settings(LANDING_PRICING_CACHE_TTL_SECONDS=0)
     def test_unpublished_teacher_plans_do_not_leave_a_dead_pricing_link(self):
@@ -79,8 +81,8 @@ class LandingPageTests(TestCase):
         html = self.client.get(reverse("reports:landing")).content.decode("utf-8")
 
         self.assertNotIn('id="teacher-plans"', html)
-        self.assertIn('href="#teacher-personal">للمعلم الفردي</a>', html)
-        self.assertIn('href="#teacher-personal">تعرف على مساحة المعلم</a>', html)
+        self.assertIn('href="#teacher-personal">للمعلم والمعلمة</a>', html)
+        self.assertIn('href="#teacher-personal">تعرف على المساحة الشخصية</a>', html)
 
     def test_landing_uses_a_short_decision_focused_information_architecture(self):
         response = self.client.get(reverse("reports:landing"))
@@ -108,7 +110,7 @@ class LandingPageTests(TestCase):
 
         self.assertContains(
             response,
-            "<title>منصة توثيق | للمدارس ومساحة إنجاز شخصية للمعلمين والمعلمات</title>",
+            "<title>منصة توثيق | اشتراكات للمعلمين والمعلمات وباقات للمدارس</title>",
             html=True,
         )
         for audience in ("مدير المدرسة", "المعلم", "المدير التنفيذي", "الموظف الإداري"):

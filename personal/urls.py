@@ -1,10 +1,12 @@
 from django.urls import path
 
-from . import assistant_views, portfolio_views, share_views, views, workspace_views
+from . import assistant_views, platform_views, portfolio_views, share_views, views, workspace_views
+from . import support_views
 
 app_name = "personal"
 
 urlpatterns = [
+    path("platform/subscribers/<int:pk>/settings/", support_views.subscription_settings, name="platform_subscription_settings"),
     path("register/", views.register, name="register"),
     path("setup/", views.setup, name="setup"),
     path("checkout/<int:plan_id>/", views.checkout_start, name="checkout_start"),
@@ -47,5 +49,7 @@ urlpatterns = [
     path("notices/<int:pk>/", workspace_views.notice_detail, name="notice_detail"),
     path("notices/<int:pk>/read/", workspace_views.notice_mark_read, name="notice_mark_read"),
     path("platform/notices/new/", workspace_views.platform_notice_compose, name="platform_notice_compose"),
+    path("platform/subscribers/", platform_views.subscriber_list, name="platform_subscribers"),
+    path("platform/subscribers/<int:pk>/", platform_views.subscriber_detail, name="platform_subscriber_detail"),
     path("account/", workspace_views.account, name="account"),
 ]

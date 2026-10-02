@@ -1,11 +1,15 @@
 # reports/urls.py
 from django.urls import path
 from . import views
+from . import platform_support
 from personal import platform_views as personal_platform_views
 
 app_name = "reports"
 
 urlpatterns = [
+    path("platform/access/schools/<int:pk>/", platform_support.enter_school, name="platform_support_school"),
+    path("platform/access/personal/<int:pk>/", platform_support.enter_personal, name="platform_support_personal"),
+    path("platform/access/exit/", platform_support.exit_support, name="platform_support_exit"),
     # =========================
     # الدخول والخروج
     # =========================

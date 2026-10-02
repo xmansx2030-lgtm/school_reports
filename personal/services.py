@@ -10,7 +10,7 @@ from reports.models import SchoolMembership
 from .models import PersonalAcademicYear, PersonalPlan, PersonalSubscription, PersonalWorkspace
 
 
-LANDING_PERSONAL_PLAN_CACHE_KEY = "landing:personal-plans:v1"
+LANDING_PERSONAL_PLAN_CACHE_KEY = "landing:personal-plans:v2"
 
 
 def current_school_membership_for(user):
@@ -74,6 +74,8 @@ def landing_personal_plan_cards():
             "max_reports": plan.max_reports,
             "max_evidence": plan.max_evidence,
             "storage_limit_mb": plan.storage_limit_mb,
+            "report_ai_daily_limit": plan.report_ai_daily_limit,
+            "voice_report_daily_limit": plan.voice_report_daily_limit,
         }
         for plan in plans
     ]

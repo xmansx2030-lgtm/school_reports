@@ -35,6 +35,7 @@
     </header>
     {% if editing and not personal_mode and report.approval_state == 'returned' or editing and not personal_mode and report.approval_state == 'needs_info' %}<section class="twq-alert twq-alert--warning report-edit-state-note" role="status"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><div><h2>التقرير متاح للاستكمال</h2><p>عدّل المطلوب ثم احفظه؛ الحفظ وحده لا يعيد إرساله للاعتماد.</p>{% if report.review_note %}<blockquote>{{ report.review_note }}</blockquote>{% endif %}</div></section>{% endif %}
 
+    {% if personal_mode %}<details class="twq-disclosure personal-assistant-disclosure"><summary class="twq-disclosure__summary"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>أدوات AI في باقتك · المزايا والرصيد</span><i class="fa-solid fa-chevron-left twq-disclosure__chevron" aria-hidden="true"></i></summary><div class="twq-disclosure__body">{% include "personal/_assistant_access.html" with assistant_in_editor=True %}</div></details>{% endif %}
     <form id="report-form" class="report-authoring-form{% if personal_mode %} personal-report-form{% endif %}" method="post" enctype="multipart/form-data" novalidate
           data-report-authoring-mode="{% if editing %}edit{% else %}create{% endif %}"
           data-has-report-types="{{ has_report_types|yesno:'true,false' }}"
@@ -161,9 +162,10 @@
 <script src="{% static 'js/report-details-limit.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% if report_ai_enabled %}<script src="{% static 'js/report-ai-improver.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
 {% if voice_report_enabled %}<script src="{% static 'js/report-voice.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
+{% if personal_mode %}<script src="{% static 'js/personal-assistant-balance.js' %}?v=20261002.1" defer></script>{% endif %}
 {% if personal_report_review_enabled or report_review_enabled %}<script src="{% static 'js/report-review.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
 {% if personal_mode %}<script src="{% static 'js/pwa-form-draft.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}
-<script src="{% static 'js/report-authoring.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+<script src="{% static 'js/report-authoring.js' %}?v=20261002.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 <script src="{% static 'js/report-evidence-editor.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 <script src="{% static 'js/report-summary-rail.js' %}?v=20260925.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
 {% if personal_mode %}<script src="{% static 'js/personal-report.js' %}?v=20260925.3" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>{% endif %}

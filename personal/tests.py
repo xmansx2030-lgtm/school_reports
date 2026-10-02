@@ -325,8 +325,8 @@ class PersonalWorkspaceJourneyTests(TestCase):
     def test_landing_promotes_personal_path_separately_from_school_pricing(self):
         response = self.client.get(reverse("reports:landing"))
         self.assertContains(response, reverse("personal:register"))
-        self.assertContains(response, "حتى إن لم تشترك مدرسته")
-        self.assertContains(response, "اسم مدرستك ومديرها للتعريف")
+        self.assertContains(response, "حتى إن لم تشترك مدرستك")
+        self.assertContains(response, "المستندات الشخصية من إعداد المعلم أو المعلمة")
 
     def test_paid_landing_card_guides_anonymous_teacher_to_selected_plan(self):
         plan = PersonalPlan.objects.create(

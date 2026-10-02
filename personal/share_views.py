@@ -9,6 +9,7 @@ from pathlib import Path
 import secrets
 
 from django.contrib import messages
+from .access import subscription_can_write
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch, Q
 from django.http import FileResponse, Http404, HttpResponseBadRequest, HttpResponseNotFound
@@ -65,7 +66,7 @@ def _manage(request, *, kind, report=None, year=None):
             raw_days = request.POST.get("expiry_days", "")
             if raw_days not in {str(days) for days in EXPIRY_CHOICES}:
                 return HttpResponseBadRequest("مدة صلاحية غير صالحة")
-            if not request.personal_subscription.is_current:
+            if not subscription_can_write(request.personal_subscription):
                 messages.error(request, "يلزم اشتراك شخصي نشط لإنشاء رابط مشاركة.")
                 return redirect(target_url)
             days = int(raw_days)
@@ -74,7 +75,7 @@ def _manage(request, *, kind, report=None, year=None):
             locked = PersonalWorkspace.objects.select_for_update().get(pk=workspace.pk)
             if action == "enable":
                 subscription = PersonalSubscription.objects.select_for_update().filter(workspace=locked).first()
-                if subscription is None or not subscription.is_current:
+                if subscription is None or not subscription_can_write(subscription):
                     messages.error(request, "يلزم اشتراك شخصي نشط لإنشاء رابط مشاركة.")
                     return redirect(target_url)
             if kind == "report":
@@ -126,7 +127,7 @@ def _manage(request, *, kind, report=None, year=None):
         "active_link": active_link,
         "public_url": public_url,
         "expiry_choices": EXPIRY_CHOICES,
-        "can_create": request.personal_subscription.is_current,
+        "can_create": subscription_can_write(request.personal_subscription),
     })
 
 

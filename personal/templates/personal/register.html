@@ -13,6 +13,7 @@
     <section class="twq-section" aria-labelledby="personalRegisterHeading">
       <div class="twq-section__header"><div><span class="twq-section__kicker">التسجيل الشخصي</span><h2 class="twq-section__title" id="personalRegisterHeading">بيانات حسابك</h2><p class="twq-section__description">لديك حساب توثيق؟ <a href="{% url 'reports:login' %}{% if selected_plan %}?next={% url 'personal:checkout_start' selected_plan.pk %}{% endif %}">سجّل الدخول بحسابك الحالي</a>.</p></div></div>
       {% if selected_plan %}<div class="twq-alert twq-alert--info" role="status"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>اخترت {{ selected_plan.name }} بقيمة {{ selected_plan.price|floatformat:"-2" }} ريال. ستنتقل إلى تأكيد الاشتراك بعد إنشاء الحساب.</span></div>{% endif %}
+      {% if selected_plan %}{% include "personal/_plan_assistants.html" with plan=selected_plan %}{% endif %}
       <form method="post" class="personal-registration__form" novalidate>{% csrf_token %}
         {% if form.errors %}<div class="twq-alert twq-alert--danger" role="alert"><div><strong>راجع بيانات التسجيل</strong><ul>{% for field in form %}{% if field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ field.errors.0 }}</a></li>{% endif %}{% endfor %}{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul></div></div>{% endif %}
         <div class="personal-registration__fields">{% for field in form %}{% include "personal/_field.html" with field=field %}{% endfor %}</div>

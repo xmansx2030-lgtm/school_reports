@@ -31,6 +31,7 @@ from reports.models import Teacher
 from reports.report_review import normalise_draft, review_draft
 
 from .assistant_views import personal_assistant_template_context
+from .access import subscription_can_write, support_access_for_workspace
 from .billing import (
     PersonalPaymentError,
     create_personal_checkout,
@@ -112,7 +113,7 @@ def register(request):
             if selected_plan:
                 messages.success(request, "أُنشئ حسابك. تُفعّل الباقة المدفوعة بعد تأكيد نجاح الدفع.")
                 return redirect("personal:checkout_start", plan_id=selected_plan.pk)
-            if subscription.is_current:
+            if subscription_can_write(subscription):
                 messages.success(request, "أُنشئت مساحتك الشخصية وفُعّلت باقتك المجانية. يمكنك الآن توثيق أول عمل.")
             else:
                 messages.info(request, "أُنشئت مساحتك الشخصية. يمكنك اختيار باقة متاحة لتفعيل الاشتراك وبدء التوثيق.")
@@ -255,6 +256,7 @@ def billing(request):
         "plans": PersonalPlan.objects.filter(is_active=True, is_published=True).order_by("display_order", "price", "id"),
         "paid_plans": PersonalPlan.objects.filter(is_active=True, is_published=True, price__gt=0).order_by("display_order", "price", "id"),
         "moyasar_enabled": moyasar_is_enabled(),
+        **personal_assistant_template_context(request.user, request.personal_subscription),
     })
 
 
@@ -321,10 +323,28 @@ def dashboard(request):
         "initiatives": ws.initiatives.count(),
         "unread_notices": ws.notices.filter(read_at__isnull=True).count(),
     }
+    getting_started = [
+        {"title": "أكمل بيانات مستنداتك", "hint": "اسم المدرسة والمدير للتعريف في الطباعة فقط.",
+         "route": "personal:setup", "done": bool(ws.school_name and request.user.email)},
+        {"title": "وثّق أول تقرير", "hint": "اكتب ما نفذته، ثم حسّن الصياغة إن شملتها باقتك.",
+         "route": "personal:report_create" if subscription_can_write(quota_subscription) else "personal:billing",
+         "done": bool(stats["reports"])},
+        {"title": "أضف شاهدًا لعملك", "hint": "صورة أو مستند أو رابط يدعم التوثيق.",
+         "route": "personal:evidence_create" if subscription_can_write(quota_subscription) else "personal:billing",
+         "done": bool(stats["evidence"])},
+        {"title": "نظّم ملف إنجازك", "hint": "اربط أعمالك بمحاور الملف ثم اطبعه أو شاركه.",
+         "route": "personal:portfolio", "done": ws.portfolio_sections.filter(
+             Q(linked_reports__report__trashed_at__isnull=True, linked_reports__isnull=False)
+             | Q(linked_evidence__isnull=False)
+         ).exists()},
+    ]
     return render(request, "reports/home.html", {
         "workspace": ws, "recent_reports": recent_reports,
         "recent_evidence": recent_evidence, "stats": stats, "quota": quota,
         "subscription": quota_subscription,
+        "getting_started": getting_started,
+        "getting_started_done": sum(step["done"] for step in getting_started),
+        **personal_assistant_template_context(request.user, quota_subscription),
         "personal_mode": True, "teacher_base_template": "personal/base.html",
     })
 
@@ -357,7 +377,7 @@ def report_list(request):
         "reports": page, "query": query, "q": query, "year": year, "status": status,
         "stats": stats, "personal_mode": True, "teacher_base_template": "personal/base.html",
         "years": years, "statuses": PersonalReport.Status.choices,
-        "subscription_active": request.personal_subscription.is_current,
+        "subscription_active": subscription_can_write(request.personal_subscription),
         "archived_years": set(request.personal_workspace.academic_years.filter(
             archived_at__isnull=False
         ).values_list("value", flat=True)),
@@ -416,7 +436,7 @@ def _inline_evidence_capacity_error(workspace, subscription, formset, report=Non
         return "الحد الأعلى لكل تقرير 8 شواهد. أزل شاهدًا قبل إضافة المزيد."
     used = workspace.evidence.aggregate(total=Sum("file_size"))["total"] or 0
     added = sum(row["file"].size for row in new_rows if row.get("file"))
-    if used + added > subscription.plan.storage_limit_mb * 1024 * 1024:
+    if not support_access_for_workspace(workspace) and used + added > subscription.plan.storage_limit_mb * 1024 * 1024:
         return "تجاوزت الملفات سعة باقتك الحالية."
     return ""
 
@@ -483,7 +503,7 @@ def _school_image_capacity_error(workspace, subscription, formset, report=None):
     if current_report_count + new_count - removed_from_report > 8:
         return "الحد الأعلى لكل تقرير 8 شواهد. أزل شاهدًا قبل إضافة المزيد."
     used = workspace.evidence.aggregate(total=Sum("file_size"))["total"] or 0
-    if used + added_bytes - released_bytes > subscription.plan.storage_limit_mb * 1024 * 1024:
+    if not support_access_for_workspace(workspace) and used + added_bytes - released_bytes > subscription.plan.storage_limit_mb * 1024 * 1024:
         return "تجاوزت الملفات سعة باقتك الحالية."
     return ""
 
@@ -563,7 +583,7 @@ def _save_school_image_evidence(formset, workspace, report):
 @require_POST
 def review_report_readiness(request):
     """Run the shared free structural review for an unsaved personal draft."""
-    if not request.personal_subscription.is_current:
+    if not subscription_can_write(request.personal_subscription):
         return JsonResponse({"ok": False, "message": "اشتراك المساحة الشخصية غير نشط حاليًا."}, status=403)
     if request.content_type != "application/json":
         return JsonResponse({"ok": False, "message": "صيغة الطلب غير صحيحة."}, status=415)
@@ -596,13 +616,24 @@ def review_report_readiness(request):
     return response
 
 
+def _report_saved_response(request, report):
+    destination = reverse("personal:report_trash") if report.trashed_at else reverse(
+        "personal:report_detail", args=[report.pk],
+    )
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        response = JsonResponse({"ok": True, "redirect_url": destination})
+        response["Cache-Control"] = "no-store"
+        return response
+    return redirect(destination)
+
+
 @workspace_required
 @ratelimit(key="user", rate="30/h", method="POST", block=True)
 @require_http_methods(["GET", "POST"])
 def report_create(request):
     ws = request.personal_workspace
     subscription = request.personal_subscription
-    if not subscription.is_current:
+    if not subscription_can_write(subscription):
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": False, "message": "اشتراك المساحة الشخصية غير نشط حاليًا."}, status=403)
         messages.error(request, "اشتراك المساحة الشخصية غير نشط حاليًا. أعمالك المحفوظة متاحة للقراءة.")
@@ -616,11 +647,9 @@ def report_create(request):
             existing = ws.reports.filter(client_submission_id=retry_id).first()
             if existing:
                 messages.info(request, "حُفظ هذا التقرير مسبقًا.")
-                return redirect("personal:report_trash") if existing.trashed_at else redirect(
-                    "personal:report_detail", pk=existing.pk,
-                )
+                return _report_saved_response(request, existing)
     _current_subscription, reports_used, _evidence_used = personal_quota_usage(ws)
-    if reports_used >= subscription.plan.max_reports:
+    if not support_access_for_workspace(ws) and reports_used >= subscription.plan.max_reports:
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": False, "message": "وصلت إلى حد التقارير الشخصية في باقتك."}, status=422)
         messages.error(request, "وصلت إلى الحد الحالي للتقارير الشخصية. تواصل مع الدعم لزيادة السعة.")
@@ -655,9 +684,7 @@ def report_create(request):
                 existing = locked.reports.filter(client_submission_id=submission_id).first() if submission_id else None
                 if existing:
                     messages.info(request, "حُفظ هذا التقرير مسبقًا.")
-                    return redirect("personal:report_trash") if existing.trashed_at else redirect(
-                        "personal:report_detail", pk=existing.pk,
-                    )
+                    return _report_saved_response(request, existing)
                 ensure_writable_personal_year(locked, form.cleaned_data["academic_year"])
                 capacity_error = (
                     _school_image_capacity_error(locked, current_subscription, evidence_formset)
@@ -681,13 +708,11 @@ def report_create(request):
             existing = ws.reports.filter(client_submission_id=submission_id).first() if submission_id else None
             if existing:
                 messages.info(request, "حُفظ هذا التقرير مسبقًا.")
-                return redirect("personal:report_trash") if existing.trashed_at else redirect(
-                    "personal:report_detail", pk=existing.pk,
-                )
+                return _report_saved_response(request, existing)
             raise
         else:
             messages.success(request, "حُفظ التقرير وشواهده في مساحتك الشخصية.")
-            return redirect("personal:report_detail", pk=report.pk)
+            return _report_saved_response(request, report)
     return render(request, "reports/teacher_report_form.html", {
         "form": form, "evidence_formset": evidence_formset, "editing": False,
         "personal_mode": True, "teacher_base_template": "personal/base.html",
@@ -710,7 +735,7 @@ def report_edit(request, pk):
             return JsonResponse({"ok": False, "message": "السنة الأصلية مؤرشفة. أعد فتحها قبل تعديل التقرير."}, status=403)
         messages.error(request, "السنة الأصلية مؤرشفة. أعد فتحها قبل تعديل التقرير.")
         return redirect("personal:report_detail", pk=pk)
-    if not request.personal_subscription.is_current:
+    if not subscription_can_write(request.personal_subscription):
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": False, "message": "اشتراك المساحة الشخصية غير نشط حاليًا."}, status=403)
         messages.error(request, "اشتراك المساحة الشخصية غير نشط حاليًا.")
@@ -750,7 +775,7 @@ def report_edit(request, pk):
             form.add_error(None, exc)
         else:
             messages.success(request, "حُفظت التعديلات والشواهد.")
-            return redirect("personal:report_detail", pk=report.pk)
+            return _report_saved_response(request, report)
     return render(request, "reports/teacher_report_form.html", {
         "form": form, "evidence_formset": evidence_formset, "editing": True, "report": report,
         "personal_mode": True, "teacher_base_template": "personal/base.html",
@@ -769,7 +794,7 @@ def report_detail(request, pk):
     report = get_object_or_404(
         PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
     )
-    can_modify = request.personal_subscription.is_current and not PersonalAcademicYear.objects.filter(
+    can_modify = subscription_can_write(request.personal_subscription) and not PersonalAcademicYear.objects.filter(
         workspace=request.personal_workspace, value=report.academic_year, archived_at__isnull=False
     ).exists()
     return render(request, "personal/report_detail.html", {
@@ -786,7 +811,7 @@ def report_mark_complete(request, pk):
             PersonalReport.objects.select_for_update(),
             pk=pk, workspace=workspace, trashed_at__isnull=True,
         )
-        if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+        if not subscription_can_write(request.personal_subscription) or PersonalAcademicYear.objects.filter(
             workspace=workspace, value=report.academic_year, archived_at__isnull=False,
         ).exists():
             messages.error(request, "لا يمكن إكمال تقرير من سنة مؤرشفة أو اشتراك غير نشط.")
@@ -803,12 +828,12 @@ def report_delete(request, pk):
     with transaction.atomic():
         locked = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
         report = get_object_or_404(PersonalReport, pk=pk, workspace=locked, trashed_at__isnull=True)
-        if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+        if not subscription_can_write(request.personal_subscription) or PersonalAcademicYear.objects.filter(
             workspace=locked, value=report.academic_year, archived_at__isnull=False
         ).exists():
             messages.error(request, "لا يمكن نقل تقرير من سنة مؤرشفة أو اشتراك غير نشط.")
             return redirect("personal:report_detail", pk=pk)
-        report.move_to_trash(by=request.user)
+        report.move_to_trash(by=getattr(request, "support_actor", request.user))
     messages.success(request, "نُقل التقرير إلى السلة. بقيت شواهده وروابط ملف الإنجاز محفوظة للاستعادة.")
     return redirect("personal:reports")
 
@@ -824,7 +849,7 @@ def report_trash(request):
         archived_at__isnull=False
     ).values_list("value", flat=True))
     return render(request, "reports/report_trash.html", {
-        "reports": page, "subscription_active": request.personal_subscription.is_current,
+        "reports": page, "subscription_active": subscription_can_write(request.personal_subscription),
         "archived_years": archived_years,
         "personal_mode": True, "teacher_base_template": "personal/base.html",
     })
@@ -836,7 +861,7 @@ def report_restore(request, pk):
     with transaction.atomic():
         locked = PersonalWorkspace.objects.select_for_update().get(pk=request.personal_workspace.pk)
         report = get_object_or_404(PersonalReport, pk=pk, workspace=locked, trashed_at__isnull=False)
-        if not request.personal_subscription.is_current:
+        if not subscription_can_write(request.personal_subscription):
             messages.error(request, "يلزم اشتراك نشط لاستعادة التقرير.")
             return redirect("personal:report_trash")
         if PersonalAcademicYear.objects.filter(
@@ -898,7 +923,7 @@ def evidence_list(request):
     page = Paginator(qs, 20).get_page(request.GET.get("page"))
     return render(request, "personal/evidence_list.html", {
         "evidence": page, "year": year, "years": years,
-        "subscription_active": request.personal_subscription.is_current,
+        "subscription_active": subscription_can_write(request.personal_subscription),
         "archived_years": set(request.personal_workspace.academic_years.filter(
             archived_at__isnull=False
         ).values_list("value", flat=True)),
@@ -911,11 +936,11 @@ def evidence_list(request):
 def evidence_create(request):
     ws = request.personal_workspace
     subscription = request.personal_subscription
-    if not subscription.is_current:
+    if not subscription_can_write(subscription):
         messages.error(request, "اشتراك المساحة الشخصية غير نشط حاليًا. شواهدك المحفوظة متاحة للقراءة.")
         return redirect("personal:dashboard")
     _current_subscription, _reports_used, evidence_used = personal_quota_usage(ws)
-    if evidence_used >= subscription.plan.max_evidence:
+    if not support_access_for_workspace(ws) and evidence_used >= subscription.plan.max_evidence:
         messages.error(request, "وصلت إلى الحد الحالي للشواهد الشخصية. تواصل مع الدعم لزيادة السعة.")
         return redirect("personal:evidence")
     initial = {}
@@ -951,7 +976,7 @@ def evidence_create(request):
                 report=form.cleaned_data["report"]
             ).count() >= 8:
                 form.add_error("report", "الحد الأعلى للتقرير 8 شواهد.")
-            elif used + new_size > current_subscription.plan.storage_limit_mb * 1024 * 1024:
+            elif not support_access_for_workspace(locked) and used + new_size > current_subscription.plan.storage_limit_mb * 1024 * 1024:
                 form.add_error("file", f"تجاوزت الملفات سعة باقتك الحالية ({current_subscription.plan.storage_limit_mb} ميجابايت).")
             else:
                 try:
@@ -978,7 +1003,7 @@ def evidence_create(request):
 def evidence_edit(request, pk):
     ws = request.personal_workspace
     evidence = get_object_or_404(PersonalEvidence, pk=pk, workspace=ws)
-    if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+    if not subscription_can_write(request.personal_subscription) or PersonalAcademicYear.objects.filter(
         workspace=ws, value=evidence.academic_year, archived_at__isnull=False
     ).exists():
         messages.error(request, "لا يمكن تعديل شاهد من سنة مؤرشفة أو اشتراك غير نشط.")
@@ -996,7 +1021,7 @@ def evidence_edit(request, pk):
                 uploaded.size if isinstance(uploaded, UploadedFile)
                 else current.file_size if uploaded else 0
             )
-            if not current_subscription.is_current:
+            if not subscription_can_write(current_subscription):
                 form.add_error(None, "اشتراك المساحة الشخصية غير نشط حاليًا.")
             try:
                 ensure_writable_personal_year(locked, current.academic_year)
@@ -1007,7 +1032,7 @@ def evidence_edit(request, pk):
                 if current.portfolio_links.exists():
                     form.add_error("academic_year", "لا يمكن تغيير سنة شاهد مرتبط بمحور ملف الإنجاز.")
             used = locked.evidence.aggregate(total=Sum("file_size"))["total"] or 0
-            if not form.errors and used - current.file_size + new_size > current_subscription.plan.storage_limit_mb * 1024 * 1024:
+            if not form.errors and not support_access_for_workspace(locked) and used - current.file_size + new_size > current_subscription.plan.storage_limit_mb * 1024 * 1024:
                 form.add_error("file", "تجاوزت الملفات سعة باقتك الحالية.")
             target_report = form.cleaned_data.get("report")
             if not form.errors and target_report and locked.evidence.filter(
@@ -1040,7 +1065,7 @@ def report_evidence_move(request, pk):
     report = get_object_or_404(
         PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
     )
-    if not request.personal_subscription.is_current or PersonalAcademicYear.objects.filter(
+    if not subscription_can_write(request.personal_subscription) or PersonalAcademicYear.objects.filter(
         workspace=request.personal_workspace, value=report.academic_year, archived_at__isnull=False
     ).exists():
         messages.error(request, "لا يمكن ترتيب شواهد سنة مؤرشفة أو اشتراك غير نشط.")
@@ -1110,7 +1135,7 @@ def evidence_delete(request, pk):
         evidence = get_object_or_404(
             PersonalEvidence.objects.select_for_update(), pk=pk, workspace=workspace,
         )
-        if not subscription.is_current or PersonalAcademicYear.objects.filter(
+        if not subscription_can_write(subscription) or PersonalAcademicYear.objects.filter(
             workspace=workspace, value=evidence.academic_year, archived_at__isnull=False
         ).exists():
             messages.error(request, "لا يمكن حذف شاهد من سنة مؤرشفة أو اشتراك غير نشط.")

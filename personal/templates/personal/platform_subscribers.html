@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}المشتركون الأفراد | إدارة المنصة{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-platform.css' %}?v=20261002.1">{% endblock %}
+{% block content %}
+<div class="twq-page teacher-plans">
+  <header class="twq-page-header"><div class="twq-page-header__heading"><p class="twq-page-header__eyebrow">مدير النظام · المساحات الشخصية</p><h1 class="twq-page-header__title">المشتركون الأفراد</h1><p class="twq-page-header__lead">تابع الباقة والاستخدام والدفع وأدوات AI لكل حساب مستقل عن المدارس.</p></div><div class="twq-page-header__aside"><a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_personal_plans' %}">إدارة الباقات</a><a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_notice_compose' %}">إشعارات الأفراد</a></div></header>
+  <div class="teacher-plans__summary"><div><span>جميع الأفراد</span><strong>{{ stats.total }}</strong></div><div><span>اشتراكات نشطة</span><strong>{{ stats.active }}</strong></div><div><span>نتائج التصفية</span><strong>{{ page_obj.paginator.count }}</strong></div></div>
+  <section class="twq-section" aria-label="البحث والتصفية">
+    <form method="get" class="personal-subscribers__filters">
+      <div><label for="subscriberQuery">اسم أو جوال أو بريد أو مدرسة تعريفية</label><input class="twq-control" id="subscriberQuery" name="q" value="{{ q }}" type="search" maxlength="150"></div>
+      <div><label for="subscriberStatus">حالة الاشتراك</label><select class="twq-control" id="subscriberStatus" name="status"><option value="">جميع الحالات</option value="active"{% if status == 'active' %} selected{% endif %}>نشط</option><option value="inactive"{% if status == 'inactive' %} selected{% endif %}>غير نشط</option></select></div>
+      <div><label for="subscriberPlan">الباقة الشخصية</label><select class="twq-control" id="subscriberPlan" name="plan"><option value="">جميع الباقات</option>{% for plan in plans %}<option value="{{ plan.pk }}"{% if plan_id == plan.pk|stringformat:'s' %} selected{% endif %}>{{ plan.name }}</option>{% endfor %}</select></div>
+      <button class="twq-btn twq-btn--primary" type="submit">بحث وتصفية</button>{% if q or status or plan_id %}<a class="twq-btn twq-btn--ghost" href="{% url 'personal:platform_subscribers' %}">مسح التصفية</a>{% endif %}
+    </form>
+  </section>
+  <section class="twq-section" aria-labelledby="subscribersResultsTitle"><div class="twq-section__header"><h2 class="twq-section__title" id="subscribersResultsTitle">حسابات المعلمين والمعلمات</h2></div>
+    <div class="twq-table-wrap" role="region" aria-label="جدول المشتركين الأفراد" tabindex="0"><table class="twq-table"><thead><tr><th scope="col">المشترك</th><th scope="col">الباقة</th><th scope="col">الحالة والمدة</th><th scope="col">المتابعة</th></tr></thead><tbody>{% for sub in subscriptions %}<tr><td><strong>{{ sub.workspace.owner.name }}</strong><div><bdi>{{ sub.workspace.owner.phone }}</bdi></div><small>{{ sub.workspace.school_name|default:'دون مدرسة تعريفية' }}</small></td><td>{{ sub.plan.name }}<div><small>تحسين الصياغة {{ sub.plan.report_ai_daily_limit }} · صوت {{ sub.plan.voice_report_daily_limit }} يوميًا</small></div></td><td><span class="twq-status {% if sub.is_current %}twq-status--success{% else %}twq-status--warning{% endif %}">{% if sub.is_current %}نشط{% elif not sub.is_active %}متوقف / ينتظر التفعيل{% elif sub.start_date > today %}لم يبدأ بعد{% else %}غير ساري{% endif %}</span><div><bdi>{{ sub.end_date|date:'Y-m-d'|default:'مستمرة' }}</bdi></div></td><td><div class="platform-support-actions"><form method="post" action="{% url 'reports:platform_support_personal' sub.workspace_id %}" class="platform-support-entry">{% csrf_token %}<button type="submit" class="twq-btn twq-btn--primary" aria-label="إدارة وصيانة مساحة {{ sub.workspace.owner.name }}"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> إدارة وصيانة</button></form><a class="twq-btn twq-btn--secondary" href="{% url 'personal:platform_subscriber_detail' sub.workspace_id %}" aria-label="متابعة اشتراك {{ sub.workspace.owner.name }}">تفاصيل الاشتراك</a></div></td></tr>{% empty %}<tr><td colspan="4"><div class="twq-empty twq-empty--local"><h3 class="twq-empty__title">لا توجد حسابات مطابقة</h3><p class="twq-empty__message">غيّر البحث أو عوامل التصفية.</p></div></td></tr>{% endfor %}</tbody></table></div>
+    {% include "reports/_pagination.html" %}
+  </section>
+</div>
+{% endblock %}

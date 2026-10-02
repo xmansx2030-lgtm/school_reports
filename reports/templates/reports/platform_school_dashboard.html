@@ -157,6 +157,9 @@
     </div>
 
     <div class="action-row">
+        <form method="post" action="{% url 'reports:platform_support_school' school.id %}" class="platform-support-entry">
+            {% csrf_token %}<button type="submit" class="twq-btn twq-btn--primary"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> إدارة وصيانة المدرسة</button>
+        </form>
         <a href="{% url 'reports:platform_school_reports' %}" class="btn-sup primary">
             <i class="fas fa-file-alt"></i> استعراض التقارير
         </a>
