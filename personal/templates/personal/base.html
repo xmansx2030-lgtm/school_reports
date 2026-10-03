@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
   <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1">
-  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20260925.4">
+  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20261003.1">
   <link rel="stylesheet" href="{% static 'css/personal-journey.css' %}?v=20261002.1">
   {% block head %}{% endblock %}
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
@@ -70,6 +70,7 @@
         {% if request.user.is_authenticated %}<a class="icon-btn" href="{% url 'personal:notices' %}" aria-label="إشعارات المنصة{% if personal_unread_count %}، {{ personal_unread_count }} غير مقروء{% endif %}" title="إشعارات المنصة"><i class="fa-solid fa-bell" aria-hidden="true"></i>{% if personal_unread_count %}<span class="dot" aria-hidden="true">{% if personal_unread_count > 99 %}99+{% else %}{{ personal_unread_count }}{% endif %}</span>{% endif %}</a>{% endif %}
         <button class="icon-btn theme-toggle" type="button" aria-label="تفعيل الوضع الليلي" title="تفعيل الوضع الليلي"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
         {% if request.user.is_authenticated %}<a class="avatar personal-account-avatar" href="{% url 'personal:account' %}" aria-label="حسابي" title="حسابي">{{ personal_owner.name|default:'ح'|slice:':1' }}</a>{% endif %}
+        {% if request.user.is_authenticated %}<a class="twq-btn twq-btn--secondary personal-header-logout" href="{% url 'reports:logout' %}"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>تسجيل الخروج</span></a>{% endif %}
       </div>
     </div>
   </header>
