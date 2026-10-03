@@ -52,6 +52,13 @@ body.personal-page .drawer-footer { border-color: var(--twq-border); }
 
 .personal-logout-link:hover { color: var(--twq-primary); }
 
+.personal-header-logout {
+  flex: 0 0 auto;
+  padding-inline: var(--twq-space-3);
+  font-size: var(--twq-font-size-sm);
+  white-space: nowrap;
+}
+
 @media (min-width: 1280px) {
   body.personal-page .hdr-nav { display: flex; }
   body.personal-page .hamburger { display: none; }
