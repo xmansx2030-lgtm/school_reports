@@ -2,6 +2,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from datetime import date
+from urllib.parse import unquote
 
 from django.utils import timezone
 
@@ -97,7 +98,7 @@ class SchoolDataExportTests(_BaseSchoolFixture):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/zip")
         self.assertIn("attachment", response["Content-Disposition"])
-        self.assertIn("school-files", response["Content-Disposition"])
+        self.assertIn(f"{self.school.name}.zip", unquote(response["Content-Disposition"]))
         content = b"".join(response.streaming_content)
         zf = zipfile.ZipFile(io.BytesIO(content))
         names = zf.namelist()

@@ -785,7 +785,7 @@
 
 /* Teacher Daily Work Home
    The shared header follows Design Language V1 for all school roles.
-   Daily and supervisory work sections retain their role-specific composition. */
+   Daily and management work sections retain their role-specific composition. */
 .teacher-home--daily {
   --twq-page-padding-start: var(--twq-space-5);
   max-inline-size: var(--twq-content-max);
@@ -793,7 +793,7 @@
   color: var(--twq-text);
 }
 
-/* The supervisory workspaces share the formal header and calm institutional
+/* The management workspaces share the formal header and calm institutional
    surfaces while retaining their permission-backed actions and scope. */
 .teacher-home .th-context {
   flex-wrap: wrap;

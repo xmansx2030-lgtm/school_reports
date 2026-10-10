@@ -11,6 +11,7 @@ from datetime import timedelta
 from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.utils import timezone
+from reports.academic_years import school_current_academic_year
 
 from reports.models import (
     Notification,
@@ -81,8 +82,9 @@ class ReclaimableStorageTests(TestCase):
         self.assertEqual(reclaimable_storage_by_year(self.school), [])
 
     def test_the_current_year_is_never_suggested_even_with_a_snapshot(self):
-        self._snapshot("1447")
-        self._report("1447", 500 * MB)
+        current_year = school_current_academic_year(self.school)
+        self._snapshot(current_year)
+        self._report(current_year, 500 * MB)
 
         self.assertEqual(reclaimable_storage_by_year(self.school), [])
 
