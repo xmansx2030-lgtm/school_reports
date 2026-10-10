@@ -115,6 +115,9 @@
             <a class="tab {% if active == 'platform_tickets_list' %}is-active{% endif %}" href="{% url 'reports:platform_tickets_list' %}">الدعم</a>
             <a class="tab {% if active == 'platform_complaints_list' or active == 'platform_complaint_detail' %}is-active{% endif %}" href="{% url 'reports:platform_complaints_list' %}">الشكاوى</a>
             <a class="tab {% if active == 'platform_email_inbox' or active == 'platform_email_detail' or active == 'platform_email_compose' or active == 'platform_email_settings' %}is-active{% endif %}" href="{% url 'reports:platform_email_inbox' %}">البريد</a>
+            {% if request.user.is_superuser %}
+            <a class="tab {% if active == 'platform_academic_years' %}is-active{% endif %}" href="{% url 'reports:platform_academic_years' %}">التقويم الدراسي</a>
+            {% endif %}
             <a class="tab {% if active == 'platform_settings' or active == 'platform_archive_addons_list' or active == 'platform_plans_list' or active == 'platform_personal_plans' or active == 'platform_personal_plan_add' or active == 'platform_personal_plan_edit' or active == 'platform_mansour_content' %}is-active{% endif %}" href="{% url 'reports:platform_settings' %}">الإعدادات</a>
           {% else %}
             <a class="tab {% if active == 'home' or IS_SCHOOL_MANAGER and active == 'admin_dashboard' or IS_EXECUTIVE_DIRECTOR and active == 'executive_dashboard' %}is-active{% endif %}" href="{% if IS_SCHOOL_MANAGER %}{% url 'reports:admin_dashboard' %}{% elif IS_EXECUTIVE_DIRECTOR and not SCHOOL_NAME %}{% url 'reports:executive_dashboard' %}{% else %}{% url 'reports:home' %}{% endif %}">الرئيسية</a>
@@ -782,6 +785,12 @@
             <span>مركز إرشاد دوري</span>
             <i class="fa-solid fa-route"></i>
           </a>
+          {% if request.user.is_superuser %}
+          <a class="{% if active == 'platform_academic_years' %}is-active{% endif %}" href="{% url 'reports:platform_academic_years' %}">
+            <span>التقويم الدراسي</span>
+            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+          </a>
+          {% endif %}
           <a class="{% if active == 'platform_settings' or active == 'platform_plans_list' %}is-active{% endif %}" href="{% url 'reports:platform_settings' %}">
             <span>الإعدادات</span>
             <i class="fa-solid fa-sliders"></i>
@@ -1112,6 +1121,18 @@
         {% elif IS_SCHOOL_MANAGER and not HAS_REPORT_TYPES %}
           <a href="{% url 'reports:reporttypes_list' %}" class="mobile-tabbar__primary" aria-label="إعداد أنواع التقارير">
             <i class="fa-solid fa-tags" aria-hidden="true"></i><span>إعداد التقارير</span>
+          </a>
+        {% elif IS_LAB_TECHNICIAN and SHOW_LAB_NAV %}
+          <a href="{% url 'reports:lab_dashboard' %}" class="mobile-tabbar__primary {% if active == 'lab_dashboard' or active == 'lab_assets' or active == 'lab_experiments' %}is-active{% endif %}" {% if active == 'lab_dashboard' %}aria-current="page"{% endif %} aria-label="إدارة المختبر">
+            <i class="fa-solid fa-flask-vial" aria-hidden="true"></i><span>المختبر</span>
+          </a>
+        {% elif IS_ADMIN_STAFF %}
+          <a href="{% url 'reports:my_assignments' %}" class="mobile-tabbar__primary {% if active == 'my_assignments' %}is-active{% endif %}" {% if active == 'my_assignments' %}aria-current="page"{% endif %} aria-label="متابعة تكليفاتي">
+            <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span>تكليفاتي</span>
+          </a>
+        {% elif CAN_VIEW_SCHOOL_DASHBOARD and not IS_SCHOOL_MANAGER %}
+          <a href="{% url 'reports:staff_dashboard' %}" class="mobile-tabbar__primary {% if active == 'staff_dashboard' %}is-active{% endif %}" {% if active == 'staff_dashboard' %}aria-current="page"{% endif %} aria-label="متابعة نطاقي">
+            <i class="fa-solid fa-list-check" aria-hidden="true"></i><span>نطاقي</span>
           </a>
         {% elif not IS_GROUP_ONLY_DIRECTOR %}
           <a href="{% url 'reports:add_report' %}" class="mobile-tabbar__primary {% if active == 'add_report' %}is-active{% endif %}" {% if active == 'add_report' %}aria-current="page"{% endif %} aria-label="إضافة تقرير">
@@ -1925,7 +1946,7 @@
   </script>
   {% if request.user.is_authenticated %}
   <script src="{% static 'js/notifications-ws-manager.js' %}" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
-  <script src="{% static 'js/pwa-form-draft.js' %}?v=20260813.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+  <script src="{% static 'js/pwa-form-draft.js' %}?v=20261010.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   <script src="{% static 'js/pwa-runtime.js' %}?v=20260813.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   <script src="{% static 'js/ui-runtime.js' %}?v=20260911.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   {% if request.user.is_authenticated and AI_INTERNAL_HELP_ENABLED %}

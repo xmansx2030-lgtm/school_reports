@@ -4,6 +4,8 @@
 import json
 import shutil
 from itertools import islice
+from types import SimpleNamespace
+from urllib.parse import urlsplit
 from tempfile import SpooledTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -14,10 +16,12 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
-from django.http import FileResponse
+from django.db.models import Count
+from django.http import FileResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
@@ -26,13 +30,13 @@ from reports.forms import MyPasswordChangeForm, MyProfilePhoneForm
 from reports.middleware import clear_force_password_change_flag, is_force_password_change_required
 from reports.model_parts.schools import normalize_sa_mobile_identity
 
-from .forms import PersonalAccountForm, PersonalInitiativeForm, PersonalNoticeForm, PersonalYearForm
+from .forms import PersonalAccountForm, PersonalInitiativeForm, PersonalNoticeForm
 from .access import subscription_can_write, workspace_owner
 from .models import (
     PersonalAcademicYear, PersonalInitiative,
     PersonalNotice, PersonalNoticeRecipient, PersonalWorkspace,
 )
-from .services import ensure_writable_personal_year
+from .services import ensure_writable_personal_year, personal_year_context, personal_year_values, personal_year_is_writable
 from .views import workspace_required
 
 
@@ -41,67 +45,47 @@ from .views import workspace_required
 @require_http_methods(["GET", "POST"])
 def years(request):
     ws = request.personal_workspace
-    form = PersonalYearForm(request.POST or None, initial={"value": ws.current_academic_year})
     if request.method == "POST":
-        if not subscription_can_write(request.personal_subscription):
-            messages.error(request, "يلزم اشتراك نشط لتعديل السنوات الدراسية.")
-            return redirect("personal:years")
         action = (request.POST.get("action") or "").strip()
-        if action == "add" and form.is_valid():
-            try:
-                with transaction.atomic():
-                    year = ensure_writable_personal_year(ws, form.cleaned_data["value"])
-                    if request.POST.get("make_current") == "on":
-                        PersonalWorkspace.objects.filter(pk=ws.pk).update(current_academic_year=year.value)
-            except ValidationError as exc:
-                form.add_error("value", exc)
-            else:
-                messages.success(request, "حُفظت السنة الدراسية.")
-                return redirect("personal:years")
-        if action in {"select", "archive", "reopen"}:
-            value = (request.POST.get("year") or "").strip()
-            with transaction.atomic():
-                locked = PersonalWorkspace.objects.select_for_update().get(pk=ws.pk)
-                year = get_object_or_404(PersonalAcademicYear.objects.select_for_update(), workspace=locked, value=value)
-                if action == "select":
-                    if year.archived_at:
-                        messages.error(request, "أعد فتح السنة المؤرشفة قبل جعلها الحالية.")
-                    else:
-                        locked.current_academic_year = year.value
-                        locked.save(update_fields=["current_academic_year", "updated_at"])
-                        messages.success(request, "تغيّرت السنة الدراسية الحالية.")
-                elif action == "archive":
-                    if year.value == locked.current_academic_year:
-                        messages.error(request, "اختر سنة حالية أخرى قبل أرشفة هذه السنة.")
-                    elif request.POST.get("confirm_year") != year.value:
-                        messages.error(request, "تأكيد السنة غير مطابق.")
-                    elif not year.archived_at:
-                        year.archived_at = timezone.now()
-                        year.save(update_fields=["archived_at"])
-                        messages.success(request, "أُرشفت السنة؛ بقيت أعمالها متاحة للقراءة والتصدير.")
-                elif year.archived_at:
-                    year.archived_at = None
-                    year.save(update_fields=["archived_at"])
-                    messages.success(request, "أُعيد فتح السنة الدراسية.")
-            return redirect("personal:years")
-    years_list = list(ws.academic_years.all())
+        if action != "select":
+            return HttpResponseBadRequest("تدير إدارة المنصة السنوات الدراسية؛ يمكنك اختيار سنة للتصفح فقط.")
+        value = (request.POST.get("year") or "").strip()
+        if value not in personal_year_values(ws):
+            raise Http404
+        request.session[f"personal_academic_year:{ws.pk}"] = value
+        next_url = (request.POST.get("next") or "").strip()
+        target = reverse("personal:dashboard")
+        if url_has_allowed_host_and_scheme(next_url, {request.get_host()}, require_https=request.is_secure()):
+            path = urlsplit(next_url).path
+            personal_root = reverse("personal:dashboard")
+            if path.startswith(personal_root):
+                target = path
+                for prefix, route in (("reports/", "reports"), ("evidence/", "evidence"), ("initiatives/", "initiatives"), ("courses/", "courses"), ("portfolio/", "portfolio")):
+                    if path.startswith(f"{personal_root}{prefix}"):
+                        target = reverse(f"personal:{route}")
+                        break
+        messages.success(request, f"تعرض الآن أعمال السنة الدراسية \u2066{value}\u2069.")
+        return redirect(target)
+    context = personal_year_context(request)
+    from .portfolio_views import _sections
+
+    years_list = [SimpleNamespace(**row) for row in context["personal_year_options"]]
     counters = {
         "reports": ws.reports.values("academic_year").annotate(total=Count("id")),
         "evidence": ws.evidence.values("academic_year").annotate(total=Count("id")),
         "initiatives": ws.initiatives.values("academic_year").annotate(total=Count("id")),
-        "portfolio": ws.portfolio_sections.filter(
-            Q(linked_reports__isnull=False) | Q(linked_evidence__isnull=False) | ~Q(teacher_notes="")
-        ).values("academic_year").annotate(total=Count("id", distinct=True)),
     }
     counts = {kind: {row["academic_year"]: row["total"] for row in rows} for kind, rows in counters.items()}
+    course_counts = dict(ws.courses.values("academic_year").annotate(total=Count("id")).values_list("academic_year", "total")) if hasattr(ws, "courses") else {}
     for year in years_list:
         year.report_count = counts["reports"].get(year.value, 0)
         year.evidence_count = counts["evidence"].get(year.value, 0)
         year.initiative_count = counts["initiatives"].get(year.value, 0)
-        year.portfolio_count = counts["portfolio"].get(year.value, 0)
+        year.portfolio_count = sum(section["documented"] for section in _sections(ws, year.value))
+        year.course_count = course_counts.get(year.value, 0)
+        year.read_only = year.is_historical or year.is_archived
     return render(request, "personal/years.html", {
-        "form": form, "years": years_list, "current_year": ws.current_academic_year,
-        "can_edit": subscription_can_write(request.personal_subscription),
+        "years": years_list, "current_year": context["central_current_year"], **context,
     })
 
 
@@ -110,10 +94,16 @@ def years(request):
 @require_GET
 def year_export(request, value):
     ws = request.personal_workspace
-    year_record = get_object_or_404(PersonalAcademicYear, workspace=ws, value=value)
+    if value not in personal_year_values(ws):
+        raise Http404
+    year_record = PersonalAcademicYear.objects.filter(workspace=ws, value=value).first() or PersonalAcademicYear(workspace=ws, value=value)
     reports = list(ws.reports.filter(academic_year=value).order_by("id"))
     initiatives = list(ws.initiatives.filter(academic_year=value).order_by("id"))
+    courses = list(ws.courses.filter(academic_year=value).order_by("id"))
     evidence = list(ws.evidence.filter(academic_year=value).order_by("id"))
+    report_ids = {row.pk for row in reports}
+    initiative_ids = {row.pk for row in initiatives}
+    evidence_ids = {row.pk for row in evidence}
     sections = list(ws.portfolio_sections.filter(academic_year=value).prefetch_related(
         "linked_reports", "linked_evidence"
     ))
@@ -148,12 +138,19 @@ def year_export(request, value):
             "impact": row.impact, "status": row.status,
             "is_best_practice": row.is_best_practice,
         } for row in initiatives],
+        "courses": [{
+            "id": row.pk, "title": row.title, "provider": row.provider,
+            "start_date": row.start_date.isoformat(),
+            "completion_date": row.completion_date.isoformat() if row.completion_date else None,
+            "hours": str(row.hours), "description": row.description,
+            "certificate_evidence_id": row.certificate_id if row.certificate_id in evidence_ids else None,
+        } for row in courses],
         "evidence": [],
         "portfolio_sections": [{
             "code": section.code, "title": section.get_code_display(),
             "teacher_notes": section.teacher_notes,
-            "report_ids": [link.report_id for link in section.linked_reports.all()],
-            "evidence_ids": [link.evidence_id for link in section.linked_evidence.all()],
+            "report_ids": [link.report_id for link in section.linked_reports.all() if link.report_id in report_ids],
+            "evidence_ids": [link.evidence_id for link in section.linked_evidence.all() if link.evidence_id in evidence_ids],
         } for section in sections],
     }
     archive = SpooledTemporaryFile(max_size=8 * 1024 * 1024)
@@ -161,14 +158,15 @@ def year_export(request, value):
         for item in evidence:
             entry = {
                 "id": item.pk, "title": item.title, "description": item.description,
-                "report_id": item.report_id, "initiative_id": item.initiative_id,
+                "report_id": item.report_id if item.report_id in report_ids else None,
+                "initiative_id": item.initiative_id if item.initiative_id in initiative_ids else None,
                 "source_url": item.source_url,
                 "order": item.order, "display_size": item.display_size,
                 "fit_mode": item.fit_mode, "show_in_print": item.show_in_print,
             }
             if item.file:
                 suffix = item.file.name.rsplit(".", 1)[-1].lower()
-                suffix = suffix if suffix in {"pdf", "jpg", "jpeg", "png"} else "bin"
+                suffix = suffix if suffix in {"pdf", "jpg", "jpeg", "png", "webp"} else "bin"
                 filename = f"evidence/{item.pk}.{suffix}"
                 try:
                     with item.file.open("rb") as source, bundle.open(filename, "w") as target:
@@ -193,8 +191,10 @@ def initiatives(request, pk=None):
     ws = request.personal_workspace
     initiative = get_object_or_404(PersonalInitiative, pk=pk, workspace=ws) if pk else None
     original_academic_year = initiative.academic_year if initiative else None
-    initial = {"academic_year": ws.current_academic_year} if not initiative else None
-    form = PersonalInitiativeForm(request.POST or None, instance=initiative, initial=initial)
+    year = initiative.academic_year if initiative else request.personal_academic_year
+    request.personal_academic_year = year
+    initial = {"academic_year": year} if not initiative else None
+    form = PersonalInitiativeForm(request.POST or None, workspace=ws, instance=initiative, initial=initial)
     if request.method == "POST":
         if not subscription_can_write(request.personal_subscription):
             messages.error(request, "يلزم اشتراك نشط لتعديل المبادرات.")
@@ -216,16 +216,15 @@ def initiatives(request, pk=None):
                         saved = form.save(commit=False)
                         saved.workspace = locked
                         saved.save()
+                        if original_academic_year is None:
+                            request.session[f"personal_academic_year:{ws.pk}"] = saved.academic_year
+                            request.personal_academic_year = saved.academic_year
                         messages.success(request, "حُفظت المبادرة في مساحتك الشخصية.")
                         return redirect("personal:initiatives")
-    query = ws.initiatives.all()
-    year = (request.GET.get("year") or "").strip()[:20]
-    if year:
-        query = query.filter(academic_year=year)
+    query = ws.initiatives.filter(academic_year=year)
     initiatives_list = list(query)
-    archived_years = set(ws.academic_years.filter(archived_at__isnull=False).values_list("value", flat=True))
     for item in initiatives_list:
-        item.can_edit_personal = subscription_can_write(request.personal_subscription) and item.academic_year not in archived_years
+        item.can_edit_personal = subscription_can_write(request.personal_subscription) and personal_year_is_writable(ws, item.academic_year)
         item.status_tone = {
             PersonalInitiative.Status.COMPLETE: "completed",
             PersonalInitiative.Status.ARCHIVED: "info",
@@ -233,12 +232,8 @@ def initiatives(request, pk=None):
     return render(request, "reports/initiative_list.html", {
         "personal_mode": True, "teacher_base_template": "personal/base.html",
         "form": form, "initiative": initiative, "initiatives": initiatives_list,
-        "years": ws.academic_years.all(), "year": year,
-        "can_edit": subscription_can_write(request.personal_subscription) and not (
-            initiative and PersonalAcademicYear.objects.filter(
-                workspace=ws, value=initiative.academic_year, archived_at__isnull=False
-            ).exists()
-        ),
+        "years": [SimpleNamespace(value=value) for value in personal_year_values(ws)], "year": year,
+        "can_edit": subscription_can_write(request.personal_subscription) and personal_year_is_writable(ws, year),
     })
 
 

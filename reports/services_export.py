@@ -8,6 +8,8 @@
 """
 from __future__ import annotations
 
+from .academic_years import school_current_academic_year
+
 import json
 from io import BytesIO
 
@@ -65,7 +67,7 @@ def _membership_role_label(role_type: str, labels: dict) -> str:
 
 def _counts(school) -> dict:
     return {
-        "reports": Report.objects.filter(school=school).count(),
+        "reports": Report.all_objects.filter(school=school).count(),
         "achievements": TeacherAchievementFile.objects.filter(school=school).count(),
         "leadership": SchoolLeadershipPortfolio.objects.filter(school=school).count(),
         "tickets": Ticket.objects.filter(school=school).count(),
@@ -161,7 +163,7 @@ def build_school_export_workbook(school):
         ("المدينة", getattr(school, "city", "") or "—"),
         ("المرحلة", getattr(school, "get_stage_display", lambda: "")() or "—"),
         ("النوع", getattr(school, "get_gender_display", lambda: "")() or "—"),
-        ("السنة الدراسية الحالية", getattr(school, "current_academic_year", "") or "—"),
+        ("السنة الدراسية الحالية", school_current_academic_year(school) or "—"),
         ("عدد التقارير", counts["reports"]),
         ("عدد ملفات الإنجاز", counts["achievements"]),
         ("عدد ملفات الأداء القيادي", counts["leadership"]),
@@ -187,7 +189,7 @@ def build_school_export_workbook(school):
     _style_sheet_rtl(ws_reports)
     report_rows = []
     reports_qs = (
-        Report.objects.filter(school=school)
+        Report.all_objects.filter(school=school)
         .select_related("teacher", "category")
         .prefetch_related("evidences")
         .order_by("-report_date", "-id")
@@ -1084,14 +1086,16 @@ import tempfile
 
 
 def export_zip_filename(school) -> str:
-    code = (getattr(school, "code", "") or "school").strip() or "school"
-    stamp = timezone.localtime().strftime("%Y%m%d-%H%M")
-    return f"school-files-{code}-{stamp}.zip"
+    # FileResponse emits RFC 5987 filename* for Arabic names. Do not transliterate
+    # the school's name or interpolate it into a raw HTTP header.
+    name = _safe_segment(getattr(school, "name", ""), fallback="المدرسة", maxlen=120)
+    return f"{name}.zip"
 
 
 def _safe_segment(text, *, fallback: str = "ملف", maxlen: int = 60) -> str:
     """يُنظّف نصًّا ليصلح كاسم مجلد/ملف داخل الأرشيف (يدعم العربية)."""
     text = (str(text) if text is not None else "").strip()
+    text = re.sub(r"[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]", " ", text)
     text = re.sub(r'[\\/:*?"<>|\r\n\t]+', " ", text)
     text = re.sub(r"\s+", " ", text).strip(" .")
     if not text:
@@ -1103,8 +1107,9 @@ def _reports_qs(school, *, academic_year=None, teacher=None, school_wide=True):
     """قائمة تقارير المدرسة ضمن النطاق المطلوب (مدرسة/سنة/معلّم)."""
     from .services_archive import UNCLASSIFIED_YEAR
 
+    manager = Report.all_objects if school_wide and not academic_year else Report.objects
     qs = (
-        Report.objects.filter(school=school)
+        manager.filter(school=school)
         .select_related("teacher", "category")
         .prefetch_related("evidences")
         .order_by("-report_date", "-id")
@@ -1792,7 +1797,7 @@ def _file_fields_for_school(school, *, academic_year=None, teacher=None, school_
     if school_wide:
         for experiment in _lab_experiments_qs(school):
             report = getattr(experiment, "report", None)
-            if report is None:
+            if report is None or report.school_id != school.pk:
                 continue
             experiment_folder = _safe_segment(
                 f"{experiment.experiment_date or 'بدون-تاريخ'} - "
@@ -1868,12 +1873,26 @@ def build_school_export_zip_file(
     """
     import hashlib
     from .services_archive import UNCLASSIFIED_YEAR, archive_year_label
+    from .school_export_snapshot import (
+        EXCLUDED_CONTENT,
+        field_identity,
+        missing_file_details,
+        school_original_file_fields,
+        school_record_json_chunks,
+        school_record_querysets,
+    )
 
     is_year_archive = bool(academic_year)
     is_unclassified = academic_year == UNCLASSIFIED_YEAR
     generated_at = timezone.localtime().strftime("%Y-%m-%d %H:%M:%S %Z")
     manifest_lines = []  # (sha256, size, path)
     missing_file_count = 0
+    missing_files = []
+    included_originals = {}
+    attempted_originals = set()
+    record_counts = {}
+    index_failed = False
+    complete_school_export = bool(school_wide and not academic_year)
     report_count = _reports_qs(
         school,
         academic_year=academic_year,
@@ -1935,9 +1954,55 @@ def build_school_export_zip_file(
 
         def write_bytes(archive_path: str, data: bytes) -> None:
             nonlocal added
+            archive_path = unique_path(archive_path)
             zf.writestr(archive_path, data)
             manifest_lines.append((hashlib.sha256(data).hexdigest(), len(data), archive_path))
             added += 1
+
+        used_paths = set()
+
+        def unique_path(path):
+            # Two teachers may have the same display name. Never silently write
+            # duplicate ZIP entries that overwrite one another on extraction.
+            candidate = path
+            suffix = 2
+            root, extension = os.path.splitext(path)
+            while candidate in used_paths:
+                candidate = f"{root}-{suffix}{extension}"
+                suffix += 1
+            used_paths.add(candidate)
+            return candidate
+
+        def write_chunks(archive_path, chunks):
+            nonlocal added
+            archive_path = unique_path(archive_path)
+            digest = hashlib.sha256()
+            size = 0
+            with zf.open(archive_path, "w", force_zip64=True) as destination:
+                for chunk in chunks:
+                    destination.write(chunk)
+                    digest.update(chunk)
+                    size += len(chunk)
+            manifest_lines.append((digest.hexdigest(), size, archive_path))
+            added += 1
+            return archive_path
+
+        def write_original(archive_path, field):
+            nonlocal missing_file_count
+            identity = field_identity(field)
+            if complete_school_export and identity in attempted_originals:
+                return
+            attempted_originals.add(identity)
+            try:
+                field.open("rb")
+                try:
+                    path = write_chunks(archive_path, iter(lambda: field.read(1024 * 1024), b""))
+                finally:
+                    field.close()
+                included_originals[identity] = path
+            except Exception:
+                missing_file_count += 1
+                missing_files.append(missing_file_details(archive_path, field))
 
         try:
             if is_year_archive:
@@ -1952,39 +2017,34 @@ def build_school_export_zip_file(
                 write_bytes("ملخص-البيانات.xlsx", build_school_export_bytes(school))
         except Exception:
             missing_file_count += 1
+            index_failed = True
+
+        if complete_school_export:
+            # Every child record and every state is retained in machine-readable
+            # JSON; the presentation workbook remains a convenient index.
+            # An error here fails the export instead of falsely claiming that a
+            # school-wide metadata snapshot is complete.
+            for model_name, queryset in school_record_querysets(school):
+                record_counts[model_name] = queryset.count()
+                write_chunks(
+                    f"البيانات/{model_name}.json",
+                    school_record_json_chunks(queryset, school),
+                )
 
         for arc_path, field in _file_fields_for_school(
             school, academic_year=academic_year, teacher=teacher, school_wide=school_wide
         ):
-            try:
-                field.open("rb")
-                try:
-                    data = field.read()
-                finally:
-                    try:
-                        field.close()
-                    except Exception:
-                        pass
-                write_bytes(arc_path, data)
-            except Exception:
-                missing_file_count += 1
+            write_original(arc_path, field)
+
+        if complete_school_export:
+            for arc_path, field in school_original_file_fields(school):
+                write_original(arc_path, field)
 
         # السجلات الإدارية غير مرتبطة بسنة دراسية في قاعدة البيانات. في النسخة
         # السنوية للمدرسة نحفظ حالتها كاملة حتى لحظة إنشاء النسخة.
         if is_year_archive and school_wide:
             for arc_path, field in _administrative_file_fields(school):
-                try:
-                    field.open("rb")
-                    try:
-                        data = field.read()
-                    finally:
-                        try:
-                            field.close()
-                        except Exception:
-                            pass
-                    write_bytes(arc_path, data)
-                except Exception:
-                    missing_file_count += 1
+                write_original(arc_path, field)
 
         weasy_unavailable = False
         gen_ok = 0
@@ -2336,7 +2396,7 @@ def build_school_export_zip_file(
             f"المدرسة      : {getattr(school, 'name', '') or ''} ({getattr(school, 'code', '') or ''})",
             f"النطاق       : {scope}",
             f"تاريخ الإنشاء: {generated_at}",
-            f"عدد الملفات  : {added}",
+            f"عدد الملفات  : {added + 1}",
             "خوارزمية البصمة: SHA-256",
             "ملاحظة: هذا الأرشيف نسخة للقراءة فقط؛ يمكن التحقق من سلامة كل ملف عبر بصمته أدناه.",
             "=" * 60,
@@ -2345,6 +2405,34 @@ def build_school_export_zip_file(
             "البصمة (SHA-256)".ljust(66) + "الحجم(بايت)".ljust(14) + "المسار",
         ]
         body = [f"{h}  {str(size).ljust(12)}  {path}" for (h, size, path) in manifest_lines]
+        # A machine-readable completion report lets the school verify both
+        # record coverage and the actual original files independently of Excel.
+        failed_pdf_total = (
+            rep_failed + gen_failed + ticket_pdf_failed + notification_pdf_failed
+            + leadership_pdf_failed + meeting_pdf_failed + assignment_pdf_failed
+            + plan_pdf_failed + initiative_pdf_failed + lab_inventory_pdf_failed
+            + lab_experiment_pdf_failed
+        )
+        package_manifest = {
+            "schema_version": 1,
+            "school": {"id": school.pk, "name": school.name, "code": school.code},
+            "scope": "all_school_years" if complete_school_export else scope,
+            "generated_at": generated_at,
+            "is_partial": bool(missing_file_count or failed_pdf_total),
+            "records": record_counts,
+            "files": [{"sha256": h, "size_bytes": size, "path": path} for h, size, path in manifest_lines],
+            "original_files": [{"stored_name": identity[1], "path": path} for identity, path in included_originals.items()],
+            "missing_files": missing_files,
+            "index_failed": index_failed,
+            "failed_pdf_count": failed_pdf_total,
+            "exclusions": EXCLUDED_CONTENT if complete_school_export else [],
+            "restore_supported": False,
+        }
+        write_bytes(
+            "تقرير-الاكتمال.json",
+            json.dumps(package_manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+        )
+        body.append(f"{manifest_lines[-1][0]}  {str(manifest_lines[-1][1]).ljust(12)}  {manifest_lines[-1][2]}")
         zf.writestr("الفهرس-والتحقق.txt", "\n".join(header + body) + "\n")
 
         if (
@@ -2382,6 +2470,8 @@ def build_school_export_zip_file(
         "generated_at": generated_at,
         "file_count": added,
         "missing_file_count": missing_file_count,
+        "missing_files": missing_files,
+        "record_counts": record_counts,
         "failed_pdf_count": (
             rep_failed
             + gen_failed

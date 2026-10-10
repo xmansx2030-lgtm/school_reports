@@ -1,0 +1,128 @@
+<section class="section plans-section" id="plans" data-switch-group aria-labelledby="plansTitle">
+  <div class="shell">
+    <header class="section-heading section-heading--center">
+      <span class="section-kicker">اشتراك يناسبك · أسعار واضحة</span>
+      <h2 id="plansTitle">اختر مساحتك. وابدأ أثرًا يبقى.</h2>
+      <p>للمدرسة اشتراك بحجم فريقها، وللمعلم والمعلمة باقات شخصية بحجم أعمالهم.</p>
+    </header>
+    {% if personal_plan_cards %}
+    <div class="switch-tabs pricing-tabs" role="tablist" aria-label="نوع الاشتراك" data-switch-tabs hidden>
+      <button type="button" role="tab" id="schoolPlanTab" aria-controls="pricing" aria-selected="true" data-switch-tab><i class="fa-solid fa-school" aria-hidden="true"></i> اشتراك المدارس</button>
+      <button type="button" role="tab" id="teacherPlanTab" aria-controls="teacher-plans" aria-selected="false" tabindex="-1" data-switch-tab><i class="fa-solid fa-user-pen" aria-hidden="true"></i> اشتراك المعلمين والمعلمات</button>
+    </div>
+    {% endif %}
+    <div class="pricing-panel" id="pricing" data-switch-panel aria-labelledby="schoolPricingTitle">
+      <div class="pricing-panel-heading"><div><span class="section-kicker">للمدرسة وفريقها</span><h2 id="schoolPricingTitle">اشتراك المدرسة وفريقها</h2><p>أدخل عدد معلمي المدرسة واعرف السعر فورًا. اختر المدة المناسبة، وانطلق مع فريقك.</p></div><span class="trial-note"><i class="fa-solid fa-gift" aria-hidden="true"></i> تجربة مجانية {{ trial_days|default:30 }} يومًا</span></div>
+        {% if flexible_pricing_catalog %}
+          <noscript><p class="pricing-note">فعّل JavaScript في متصفحك لحساب السعر بحسب عدد المعلمين. ويمكنك بدء تجربة المدرسة المجانية من الرابط أدناه.</p></noscript>
+          {{ flexible_pricing_json|json_script:"landingFlexiblePricingData" }}
+          <section class="flex-pricing-shell" data-flex-pricing data-flex-pricing-source="landingFlexiblePricingData" data-initial-period="{{ pricing_initial_period|default:'1y' }}" data-flex-summary-target="#landingIncludesSummary" data-min-teacher-count="1" aria-label="حاسبة اشتراك المدرسة">
+            <div class="flex-pricing-controls">
+              <span class="flex-pricing-eyebrow"><i class="fa-solid fa-calculator"></i> احسب اشتراك مدرستك</span>
+              <h3 class="flex-pricing-title">كم معلماً سيستخدم اشتراك المدرسة؟</h3>
+              <label class="flex-count-label" for="landingTeacherCount">عدد معلمي المدرسة</label>
+              <div class="flex-count-control">
+                <button type="button" data-flex-decrease aria-label="إنقاص عدد المعلمين"><i class="fa-solid fa-minus"></i></button>
+                <input id="landingTeacherCount" data-flex-teacher-count type="number" value="27" min="1" max="150" inputmode="numeric" aria-describedby="landingPricingStatus">
+                <button type="button" data-flex-increase aria-label="زيادة عدد المعلمين"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <div class="flex-periods" role="group" aria-label="مدة الاشتراك">
+                {% for period in pricing_periods %}{% if period.available %}<button type="button" data-flex-period="{{ period.key }}" data-period="{{ period.key }}" class="{% if period.active %}is-active{% endif %}" aria-pressed="{% if period.active %}true{% else %}false{% endif %}">{{ period.label }}</button>{% endif %}{% endfor %}
+              </div>
+            </div>
+            <div class="flex-pricing-result" data-flex-result>
+              <span class="flex-result-label">السعة الأنسب لمدرستك</span>
+              <strong class="flex-result-capacity">حتى <span data-flex-capacity>—</span> معلماً</strong>
+              <div class="flex-result-price"><strong data-flex-price>—</strong><span>ريال</span></div>
+              <span class="flex-result-monthly" data-flex-monthly>يُحتسب السعر فوراً</span>
+              <div class="flex-result-proof">
+                <div><small>عدد فريقك</small><strong><span data-flex-count-output>27</span> معلماً</strong></div>
+                <div><small>مقاعد للنمو</small><strong><span data-flex-spare>—</span> مقاعد</strong></div>
+                <div><small>مساحة التخزين</small><strong data-flex-storage>—</strong></div>
+              </div>
+              <p class="flex-result-status" id="landingPricingStatus" role="status" aria-live="polite"><i class="fa-solid fa-circle-check"></i><span data-flex-status>نختار لك السعة الأقل تكلفة تلقائياً.</span></p>
+            </div>
+          </section>
+
+          {% if subscription_included_features %}
+            <section class="sub-includes" aria-labelledby="landingIncludesTitle">
+              <div class="sub-includes-head">
+                <h3 id="landingIncludesTitle"><i class="fa-solid fa-circle-check"></i> ما الذي يشمله اشتراك المدرسة؟</h3>
+                <p id="landingIncludesSummary">المزايا نفسها لكل السعات؛ السعر وحده يتغير.</p>
+              </div>
+              <ul class="sub-includes-grid">
+                {% for feature in subscription_included_features %}
+                  <li class="sub-include"><span class="sub-include-icon" aria-hidden="true"><i class="fa-solid {{ feature.icon }}"></i></span><div><strong>{{ feature.title }}</strong></div></li>
+                {% endfor %}
+              </ul>
+            </section>
+          {% endif %}
+        {% else %}
+          <div class="period-switch" role="group" aria-label="مدة الاشتراك">
+            {% for period in pricing_periods %}{% if period.available %}<button type="button" data-period="{{ period.key }}" class="{% if period.active %}active{% endif %}">{{ period.label }}</button>{% endif %}{% endfor %}
+          </div>
+          <div class="pricing-grid">
+            {% for card in pricing_cards %}
+              <article class="price-card paid-card {% if card.is_featured %}recommended{% endif %}" data-price-card>
+                {% if card.badge %}<div class="price-badge">{{ card.badge }}</div>{% endif %}
+                <div class="price-head"><span class="price-icon"><i class="fa-solid fa-users"></i></span><div><h3>{{ card.name }}</h3><p>{{ card.fit_text }}</p></div></div>
+                {% if card.period_1m %}<div class="period-content {% if pricing_initial_period == '1m' %}active{% endif %}" data-period-content="1m"><div class="price-value"><strong>{{ card.period_1m.price_display }}</strong><span>ريال</span></div><div class="price-duration">{{ card.period_1m.duration_label }} · {{ card.capacity_label }}</div></div>{% endif %}
+                {% if card.period_6m %}<div class="period-content {% if pricing_initial_period == '6m' %}active{% endif %}" data-period-content="6m"><div class="price-value"><strong>{{ card.period_6m.price_display }}</strong><span>ريال</span></div><div class="price-duration">{{ card.period_6m.duration_label }} · {{ card.capacity_label }}</div></div>{% endif %}
+                {% if card.period_1y %}<div class="period-content {% if pricing_initial_period == '1y' or not card.period_6m %}active{% endif %}" data-period-content="1y"><div class="price-value"><strong>{{ card.period_1y.price_display }}</strong><span>ريال</span></div><div class="price-duration">{{ card.period_1y.duration_label }} · {{ card.capacity_label }}</div></div>{% endif %}
+                <a class="button {% if card.is_featured %}button-primary{% else %}button-quiet{% endif %}" href="{% url 'reports:register_school' %}">ابدأ تجربة المدرسة</a>
+              </article>
+            {% empty %}
+              <article class="price-card"><div class="price-head"><span class="price-icon"><i class="fa-solid fa-headset"></i></span><div><h3>سعر مدرستك</h3><p>ابدأ مجانًا وسنساعدك في اختيار السعة المناسبة.</p></div></div></article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if subscription_addon_notes %}
+          <details class="pricing-addons" open><summary>خدمات اختيارية تُسعّر بشكل مستقل <i class="fa-solid fa-minus" aria-hidden="true"></i></summary><ul>{% for note in subscription_addon_notes %}<li>{{ note }}</li>{% endfor %}</ul></details>
+        {% endif %}
+        <div class="pricing-disclosures">
+          <p class="pricing-note pricing-note-emphasis"><i class="fa-solid fa-circle-check"></i> تجربة مجانية {{ trial_days|default:30 }} يومًا للمدرسة دون بطاقة ائتمانية.</p>
+          <p class="pricing-note"><i class="fa-solid fa-school"></i> كل اشتراك يخص مدرسة واحدة، ويمكن إدارة عدة مدارس من الحساب نفسه.</p>
+          <p class="pricing-note"><i class="fa-solid fa-circle-info"></i> الأسعار نهائية دون ضريبة قيمة مضافة أو رسوم خفية، والدعم الفني مشمول.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="button button-primary button-large" href="{% url 'reports:register_school' %}">ابدأ تجربة مدرستك المجانية <i class="fa-solid fa-arrow-left"></i></a>
+        </div>
+
+    </div>
+    {% if personal_plan_cards %}
+    <div class="pricing-panel" id="teacher-plans" data-switch-panel aria-labelledby="personalPlanCatalogTitle">
+      <div class="pricing-panel-heading"><div><span class="section-kicker">للمعلم والمعلمة · مساحة مستقلة</span><h2 id="personalPlanCatalogTitle">باقات المعلمين والمعلمات</h2><p>اختر ما يناسب تقاريرك وشواهدك، حتى إن لم تشترك مدرستك. السعر والمدة وحدود الاستخدام أمامك.</p></div></div>
+          <div class="personal-plan-catalog__grid">
+            {% for plan in personal_plan_cards %}
+              <article class="personal-plan-card">
+                <div class="personal-plan-card__top"><span>للمعلم والمعلمة · {% if plan.is_basic %}الباقة الأساسية{% else %}باقة شخصية{% endif %}</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></div>
+                <h3>{{ plan.name }}</h3>
+                <p class="personal-plan-card__fit">{% if plan.is_free %}للبداية وتوثيق أعمالك الأساسية{% elif plan.report_ai_daily_limit or plan.voice_report_daily_limit %}لتوثيق أعمالك بمساعدة أدوات AI المشمولة{% else %}للتوسع في تقاريرك وشواهدك المهنية{% endif %}</p>
+                {% if plan.description %}<p class="personal-plan-card__description">{{ plan.description }}</p>{% endif %}
+                <p class="personal-plan-card__price">{% if plan.is_free %}<strong>مجانية</strong>{% else %}<strong dir="ltr">{{ plan.price_display }}</strong><span> ريال</span>{% endif %}<small> · {{ plan.duration_label }}</small></p>
+                <ul>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> إنشاء حتى {{ plan.max_reports }} تقريرًا خلال الاشتراك</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> إنشاء حتى {{ plan.max_evidence }} شاهدًا خلال الاشتراك</li>
+                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> {{ plan.storage_limit_mb }} ميجابايت للملفات</li>
+                  <li><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> تحسين الصياغة: {% if plan.report_ai_daily_limit %}{{ plan.report_ai_daily_limit }} يوميًا{% else %}غير مشمول{% endif %}</li>
+                  <li><i class="fa-solid fa-microphone" aria-hidden="true"></i> الإملاء الصوتي: {% if plan.voice_report_daily_limit %}{{ plan.voice_report_daily_limit }} يوميًا من التطبيق المثبّت{% else %}غير مشمول{% endif %}</li>
+                </ul>
+                {% if plan.is_free %}
+                  <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مجانًا كمعلم أو معلمة</a>
+                {% elif moyasar_enabled %}
+                  <a class="button button-quiet" href="{% url 'personal:checkout_start' plan.id %}">اشترك في الباقة الفردية</a>
+                {% elif BUSINESS.support_email %}
+                  <a class="button button-quiet" href="mailto:{{ BUSINESS.support_email }}?subject={{ plan.name|urlencode }}">اطلب تفعيل باقتك الفردية</a>
+                {% else %}
+                  <a class="button button-quiet" href="{% url 'personal:register' %}">أنشئ حساب المعلم أولًا</a>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+          {% if has_paid_personal_plans %}<p class="personal-plan-catalog__note">{% if moyasar_enabled %}بعد إتمام الدفع وتأكيد العملية، تُفعّل الباقة تلقائيًا وتصل الفاتورة إلى بريدك الإلكتروني.{% else %}الدفع الإلكتروني غير متاح حاليًا؛ تواصل مع الدعم لطلب تفعيل الباقة.{% endif %}</p>{% endif %}
+
+    </div>
+    {% endif %}
+  </div>
+</section>

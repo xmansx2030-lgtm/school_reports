@@ -41,6 +41,9 @@ class PersonalCreationQuotaTests(TestCase):
         self.plan.save(update_fields=["max_reports", "max_evidence"])
         PersonalAcademicYear.objects.create(workspace=self.workspace, value=self.YEAR)
         self.client.force_login(self.owner)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = self.YEAR
+        session.save()
 
     def report_payload(self, **changes):
         payload = {

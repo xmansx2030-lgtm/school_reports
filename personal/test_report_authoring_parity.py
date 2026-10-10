@@ -61,6 +61,9 @@ class PersonalSchoolReportAuthoringParityTests(TestCase):
         )
         self.subscription = ensure_personal_subscription(self.workspace)
         self.client.force_login(self.owner)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = self.YEAR
+        session.save()
 
     def enable_paid_assistance(self, *, limit=3):
         paid = PersonalPlan.objects.create(
@@ -254,7 +257,7 @@ class PersonalSchoolReportAuthoringParityTests(TestCase):
 
     def test_school_style_submission_creates_only_personal_report_and_image(self):
         response = self.client.post(reverse("personal:report_create"), self.editor_payload(**{
-            "academic_year": "1448-1449",  # The active personal year is server owned.
+            "academic_year": "1448-1449",  # Choose a centrally published year from the dropdown.
             "status": "archived",  # The editor must keep this server owned.
             "evidence-0-image": image_upload(),
             "evidence-0-order": "1",
@@ -270,11 +273,11 @@ class PersonalSchoolReportAuthoringParityTests(TestCase):
             "تحسين تعلم الطالبات", "نُفذ النشاط وسُجلت نتائجه.",
         ))
         self.assertEqual(report.teacher_name, self.owner.name)
-        self.assertEqual(report.academic_year, self.YEAR)
+        self.assertEqual(report.academic_year, "1448-1449")
         self.assertEqual(report.status, PersonalReport.Status.COMPLETE)
         evidence = PersonalEvidence.objects.get(report=report)
         self.assertEqual(evidence.workspace_id, self.workspace.pk)
-        self.assertEqual(evidence.academic_year, self.YEAR)
+        self.assertEqual(evidence.academic_year, "1448-1449")
         self.assertEqual(evidence.title, "صورة من التنفيذ")
         self.assertEqual((evidence.display_size, evidence.fit_mode), ("large", "cover"))
         self.assertTrue(evidence.is_image)
@@ -282,13 +285,16 @@ class PersonalSchoolReportAuthoringParityTests(TestCase):
         preview = self.client.get(reverse("personal:evidence_preview", args=[evidence.pk]))
         self.assertEqual(preview.status_code, 200)
         self.assertEqual(preview["Content-Type"], "image/webp")
-        preview.close()
+        self.assertTrue(b"".join(preview.streaming_content))
         self.assertEqual(Report.objects.count(), 0)
         self.assertEqual(ReportEvidence.objects.count(), 0)
 
     def test_newly_registered_teacher_receives_a_savable_academic_year(self):
         self.workspace.current_academic_year = ""
         self.workspace.save(update_fields=["current_academic_year"])
+        session = self.client.session
+        session.pop(f"personal_academic_year:{self.workspace.pk}", None)
+        session.save()
 
         editor = self.client.get(reverse("personal:report_create"))
         self.assertEqual(editor.status_code, 200)

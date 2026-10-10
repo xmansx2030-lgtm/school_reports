@@ -249,11 +249,9 @@ class Report(ApprovalMixin):
                 self.academic_year = _normalize_academic_year_hijri(self.academic_year)
         elif getattr(self, "school_id", None):
             try:
-                current_year = (getattr(self.school, "current_academic_year", "") or "").strip()
-                if not current_year:
-                    years = getattr(self.school, "allowed_academic_years", None) or []
-                    if years:
-                        current_year = str(sorted(years)[-1])
+                from ..academic_years import school_current_academic_year
+
+                current_year = school_current_academic_year(self.school)
                 if current_year:
                     self.academic_year = _normalize_academic_year_hijri(current_year)
             except Exception:

@@ -479,6 +479,25 @@ class ActiveSchoolGuardMiddleware:
         except Exception:
             return False
 
+    def _apply_platform_academic_year(self, school) -> None:
+        """Refresh only the authorized school's operational context.
+
+        A future published calendar takes effect on its start date, even when
+        no administrator happened to run the synchronization command that day.
+        Historical work retains its own academic_year unchanged.
+        """
+        if school is None:
+            return
+        from .academic_years import current_academic_year_value
+        from .models import School
+
+        value = current_academic_year_value()
+        if value and school.current_academic_year != value:
+            School.objects.filter(pk=school.pk).exclude(current_academic_year=value).update(
+                current_academic_year=value,
+            )
+            school.current_academic_year = value
+
     def __call__(self, request):
         # Allow static/media without touching session
         if request.path.startswith("/static/") or request.path.startswith("/media/"):
@@ -501,6 +520,7 @@ class ActiveSchoolGuardMiddleware:
                         support_school if support_school is not None and support_school.pk == int(sid_raw)
                         else _School.objects.filter(pk=int(sid_raw), is_active=True).first()
                     )
+                    self._apply_platform_academic_year(request.active_school)
                 else:
                     request.active_school = None
             except Exception:
@@ -575,6 +595,8 @@ class ActiveSchoolGuardMiddleware:
             return self._deny(request, reason="active_school_membership_forbidden")
 
         # Cache membership for SubscriptionMiddleware downstream
+        self._apply_platform_academic_year(school_obj)
+        membership.school = school_obj
         request._active_membership = membership
 
         # ── Cache the resolved school on the request for downstream reuse ──

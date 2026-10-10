@@ -23,6 +23,7 @@ from django_ratelimit.decorators import ratelimit
 
 from core.observability import soft_fail
 
+from ._helpers import _safe_login_next_url
 from ..models import TeacherTotpDevice, TotpRecoveryCode
 from ..totp import (
     decrypt_secret,
@@ -172,7 +173,7 @@ def totp_disable(request: HttpRequest) -> HttpResponse:
 def start_totp_challenge(request: HttpRequest, user, *, next_url: str = "") -> None:
     """يضع المستخدم في حالة «ما بين العاملين» دون إنشاء جلسة مصادَق عليها."""
     request.session[PENDING_USER_SESSION_KEY] = user.pk
-    request.session[PENDING_NEXT_SESSION_KEY] = next_url or ""
+    request.session[PENDING_NEXT_SESSION_KEY] = _safe_login_next_url(next_url) or ""
 
 
 def _pending_user(request: HttpRequest):
@@ -214,7 +215,7 @@ def totp_challenge(request: HttpRequest) -> HttpResponse:
 
     submitted = (request.POST.get("code") or "").strip()
     if _consume_code(device, submitted) or _consume_recovery_code(device, submitted):
-        next_url = request.session.get(PENDING_NEXT_SESSION_KEY) or ""
+        next_url = _safe_login_next_url(request.session.get(PENDING_NEXT_SESSION_KEY))
         _clear_pending(request)
         login(request, user)
         return redirect(next_url or "reports:home")

@@ -1,0 +1,20 @@
+.school-export{max-inline-size:72rem;margin-inline:auto;overflow-wrap:anywhere}
+.school-export__back{margin-block-end:var(--twq-space-4,1rem)}
+.school-export__back a{display:inline-flex;align-items:center;gap:.5rem;min-block-size:2.75rem;color:var(--twq-primary)}
+.school-export__context{display:flex;flex-wrap:wrap;gap:1rem 2rem}
+.school-export__context div{min-inline-size:0}
+.school-export__context dd{margin:0;font-weight:600}
+.school-export__actions{display:flex;flex-direction:column;align-items:stretch;gap:.75rem;min-inline-size:15rem}
+.school-export__actions .twq-btn{min-block-size:2.75rem;text-align:center;justify-content:center;white-space:normal}
+.school-export__inventory{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 2rem}
+.school-export__inventory>div{padding-block:1rem;border-block-end:1px solid var(--twq-border,#dce5df);min-inline-size:0}
+.school-export__inventory dt{font-weight:600;color:var(--twq-text,#1d3328)}
+.school-export__inventory dd{margin:0;margin-block-start:.5rem;line-height:1.8;color:var(--twq-text-muted,#53695b)}
+.school-export__verification p,.school-export__limits li{line-height:1.9}
+.school-export__verification a{color:var(--twq-primary);text-decoration:underline;text-underline-offset:.2em}
+.school-export__limits{border-block-start:1px solid var(--twq-border,#dce5df);margin-block-start:1.25rem;padding-block-start:.5rem}
+.school-export__limits summary{cursor:pointer;min-block-size:2.75rem;align-content:center;font-weight:600}
+.school-export__limits ul{padding-inline-start:1.5rem}
+.school-export a:focus-visible,.school-export summary:focus-visible{outline:3px solid var(--twq-focus);outline-offset:3px}
+@media(max-width:63.999rem){.school-export .twq-page-header{flex-direction:column}.school-export__actions{min-inline-size:0;inline-size:100%;flex-direction:row;flex-wrap:wrap}.school-export__actions .twq-btn{flex:1 1 14rem}}
+@media(max-width:39.999rem){.school-export__inventory{grid-template-columns:1fr}.school-export__actions{flex-direction:column}.school-export__actions .twq-btn{flex:auto;inline-size:100%}.school-export__context{flex-direction:column;gap:.75rem}}

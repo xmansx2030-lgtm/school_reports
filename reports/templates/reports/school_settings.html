@@ -18,7 +18,7 @@
     <div class="twq-page-header__heading">
       <span class="twq-page-header__eyebrow">إدارة المدرسة</span>
       <h1 class="twq-page-header__title">إعدادات المدرسة</h1>
-      <p class="twq-page-header__lead">راجع سياق المدرسة، ثم اضبط السنة الدراسية والتواصل والمشاركة ودورة اعتماد التقارير.</p>
+      <p class="twq-page-header__lead">راجع السنة الدراسية المعتمدة مركزيًا، ثم حدّث التواصل والمشاركة ودورة اعتماد التقارير.</p>
       <dl class="twq-page-header__context school-settings__context">
         <div><dt>المدرسة الحالية</dt><dd>{{ school.name }}</dd></div>
       </dl>
@@ -49,17 +49,17 @@
         <div>
           <span class="twq-section__kicker">التهيئة التشغيلية</span>
           <h2 class="twq-section__title" id="school-year-title">السنة الدراسية</h2>
-          <p class="twq-section__description">تُستخدم السنة المختارة عند إنشاء ملفات الإنجاز وتصنيف التقارير والأرشفة.</p>
+          <p class="twq-section__description">تحدّد إدارة المنصة الأعوام لجميع المدارس والمعلمين وفق تقويم وزارة التعليم المعتمد.</p>
         </div>
       </div>
       {% if not school.current_academic_year %}
         <div class="twq-alert twq-alert--info school-settings__onboarding" role="status">
-          <strong>ابدأ بالسنة الدراسية الحالية</strong>
-          <p>اخترها ثم احفظ؛ فهي أول خطوة تشغيلية للمدرسة الجديدة.</p>
+          <strong>التقويم الدراسي تديره المنصة</strong>
+          <p>تظهر السنة الحالية تلقائيًا عند نشر تقويمها المعتمد. لا تحتاج المدرسة إلى ضبط الأعوام يدويًا.</p>
         </div>
       {% endif %}
       <div class="twq-field{% if form.current_academic_year.errors %} twq-field--error{% endif %}">
-        <label class="twq-label" for="{{ form.current_academic_year.id_for_label }}">السنة الدراسية الحالية (هجري) <span class="school-settings__required">مطلوب</span></label>
+        <label class="twq-label" for="{{ form.current_academic_year.id_for_label }}">السنة الدراسية الحالية (هجري) <span class="school-settings__optional">تُحدّث مركزيًا</span></label>
         {{ form.current_academic_year }}
         <p class="twq-field__help" id="id_current_academic_year_helptext">{{ form.current_academic_year.help_text }}</p>
         <p class="twq-field__message" id="id_current_academic_year_error">{% for error in form.current_academic_year.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>

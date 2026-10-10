@@ -36,3 +36,16 @@
     </div>
   {% endfor %}
 {% endif %}
+{% if courses %}
+  <div class="page page-break chapter-page"><div class="brand-rail" aria-hidden="true"></div><span class="chapter-label">السجل المهني السنوي</span><h1>الدورات والتطوير المهني</h1><p>دورات صاحب الملف وساعاتها التدريبية خلال العام الدراسي.</p><div class="chapter-rule" aria-hidden="true"></div></div>
+  {% for course in courses %}
+    <div class="page page-break criterion-page">
+      <header class="document-header">{% include "reports/pdf/partials/achievement_print_brand.html" %}<div class="document-meta">التطوير المهني<br /><bdi dir="ltr">{{ file.academic_year }}</bdi> هـ</div></header>
+      <h2 class="criterion-title">{{ course.title }}</h2>
+      <table class="meta-table"><tbody><tr><th>الجهة المقدمة</th><td>{{ course.provider }}</td></tr><tr><th>الساعات التدريبية</th><td>{{ course.hours|floatformat:"-2" }} ساعة</td></tr><tr><th>تاريخ البدء</th><td><bdi dir="ltr">{{ course.start_date|date:'Y/m/d' }}</bdi></td></tr><tr><th>تاريخ الإكمال</th><td>{% if course.completion_date %}<bdi dir="ltr">{{ course.completion_date|date:'Y/m/d' }}</bdi>{% else %}لم يُسجل بعد{% endif %}</td></tr></tbody></table>
+      {% if course.description %}<section class="section"><div class="section-h">المحتوى والأثر المهني</div><div class="section-body">{{ course.description }}</div></section>{% endif %}
+      {% if course.certificate and course.certificate.show_in_print %}<section class="section"><div class="section-h">شهادة الدورة</div><div class="section-body">{{ course.certificate.title }}{% if course.certificate.is_image %}<div class="images-grid"><div class="img-box"><img src="{% url 'personal:evidence_preview' course.certificate.pk %}" alt="{{ course.certificate.title }}"></div></div>{% elif course.certificate.file %}<p><a class="personal-link" href="{% url 'personal:evidence_download' course.certificate.pk %}">تنزيل الشهادة</a></p>{% elif course.certificate.source_url %}<p><a class="personal-link" href="{{ course.certificate.source_url }}" target="_blank" rel="noopener noreferrer">عرض الشهادة</a></p>{% endif %}</div></section>{% endif %}
+      <div class="document-footer"><span>{{ file.teacher_name }}</span><span>سجل دورة شخصية</span></div>
+    </div>
+  {% endfor %}
+{% endif %}

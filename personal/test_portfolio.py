@@ -37,6 +37,9 @@ class PersonalPortfolioTests(TestCase):
             owner=self.other, school_name="مدرسة أخرى", current_academic_year=self.YEAR
         )
         self.client.force_login(self.teacher)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = self.YEAR
+        session.save()
 
     def post_axis(self, action, code=1, **data):
         return self.client.post(reverse("personal:portfolio"), {
@@ -97,7 +100,6 @@ class PersonalPortfolioTests(TestCase):
         export = self.client.get(reverse("personal:year_export", args=[self.YEAR]))
         with ZipFile(BytesIO(b"".join(export.streaming_content))) as bundle:
             manifest = bundle.read("manifest.json").decode("utf-8")
-        export.close()
         self.assertIn("أثر موثق في الصف", manifest)
         self.assertIn("بكالوريوس تربية", manifest)
         self.assertIn("report_ids", manifest)
@@ -135,7 +137,7 @@ class PersonalPortfolioTests(TestCase):
             "show_details": "on", "selection_enabled": "on", "status": "complete",
         })
         self.assertEqual(edited.status_code, 200)
-        self.assertContains(edited, "لا يمكن تغيير سنة التقرير وهو مرتبط بمحور ملف الإنجاز")
+        self.assertIn("academic_year", edited.context["form"].errors)
         report.refresh_from_db()
         self.assertEqual(report.academic_year, self.YEAR)
         self.assertTrue(PersonalPortfolioReport.objects.filter(pk=link.pk, report=report).exists())
@@ -145,11 +147,13 @@ class PersonalPortfolioTests(TestCase):
             workspace=self.workspace, academic_year=self.YEAR, code=1
         )
         response = self.client.get(reverse("personal:years"))
-        self.assertEqual(response.context["years"][0].portfolio_count, 0)
+        year = next(row for row in response.context["years"] if row.value == self.YEAR)
+        self.assertEqual(year.portfolio_count, 0)
         section.teacher_notes = "ممارسة موثقة"
         section.save(update_fields=["teacher_notes"])
         response = self.client.get(reverse("personal:years"))
-        self.assertEqual(response.context["years"][0].portfolio_count, 1)
+        year = next(row for row in response.context["years"] if row.value == self.YEAR)
+        self.assertEqual(year.portfolio_count, 1)
 
     def test_successful_practice_stays_personal_across_portfolio_and_exports(self):
         response = self.client.post(reverse("personal:initiatives"), {
@@ -168,7 +172,6 @@ class PersonalPortfolioTests(TestCase):
         export = self.client.get(reverse("personal:year_export", args=[self.YEAR]))
         with ZipFile(BytesIO(b"".join(export.streaming_content))) as bundle:
             manifest = bundle.read("manifest.json").decode("utf-8")
-        export.close()
         self.assertIn('"is_best_practice": true', manifest)
         personal_export = build_personal_data_export(self.teacher)["sections"]["personal_workspace"]
         self.assertTrue(personal_export["initiatives"][0]["is_best_practice"])

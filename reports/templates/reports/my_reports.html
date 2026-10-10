@@ -82,7 +82,7 @@
       </div>
 
       {% if personal_mode %}
-      <div class="my-reports-filter__field twq-toolbar__field twq-field"><label class="twq-label" for="mrYear">السنة الدراسية</label><select id="mrYear" name="year" class="twq-control"><option value="">كل السنوات</option>{% for option in years %}<option value="{{ option }}"{% if year == option %} selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+      <input type="hidden" name="year" value="{{ year }}">
       <div class="my-reports-filter__field twq-toolbar__field twq-field"><label class="twq-label" for="mrStatus">الحالة</label><select id="mrStatus" name="status" class="twq-control"><option value="">كل الحالات</option>{% for value, label in statuses %}<option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
       {% else %}
       <div class="my-reports-filter__field twq-toolbar__field twq-field">

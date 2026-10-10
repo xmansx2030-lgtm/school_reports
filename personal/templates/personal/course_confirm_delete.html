@@ -1,0 +1,13 @@
+{% extends "personal/base.html" %}
+{% load static %}
+{% block title %}حذف الدورة{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-courses.css' %}?v=20261010.1">{% endblock %}
+{% block content %}
+<div class="twq-page personal-courses personal-courses--confirm">
+  <header class="twq-page-header"><div class="twq-page-header__heading"><p class="twq-page-header__eyebrow">سجل الدورات</p><h1 class="twq-page-header__title">حذف الدورة</h1><p class="twq-page-header__lead">راجع بيانات الدورة قبل تأكيد حذفها من سجل السنة الدراسية.</p></div></header>
+  <section class="twq-section"><h2 class="twq-section__title">{{ course.title }}</h2><p>{{ course.provider }} · السنة <bdi dir="ltr">{{ year }}</bdi></p><div class="twq-alert twq-alert--warning" role="note">يُحذف سجل الدورة نهائيًا. تبقى الشهادة المرتبطة محفوظة في مكتبة الشواهد وملف الإنجاز.</div>
+    {% if confirmation_error %}<div class="twq-alert twq-alert--danger" role="alert">{{ confirmation_error }}</div>{% endif %}
+    {% if can_edit %}<form method="post">{% csrf_token %}<label class="personal-courses__confirm"><input type="checkbox" name="confirm_delete" value="yes" required><span>أؤكد حذف هذه الدورة من سجل السنة الدراسية.</span></label><div class="personal-courses__confirm-actions"><button class="twq-btn twq-btn--danger" type="submit">حذف الدورة نهائيًا</button><a class="twq-btn twq-btn--secondary" href="{{ list_url }}">الاحتفاظ بالدورة</a></div></form>{% else %}<p class="personal-courses__hint">يلزم اشتراك نشط وسنة مفتوحة لحذف الدورة.</p><a class="twq-btn twq-btn--secondary" href="{{ list_url }}">العودة إلى سجل الدورات</a>{% endif %}
+  </section>
+</div>
+{% endblock %}

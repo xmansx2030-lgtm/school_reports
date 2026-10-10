@@ -29,7 +29,9 @@ def export_creation_is_limited(request, *, group: str, rate: str) -> bool:
     )
 
 
-def generated_export_job_response(request, *, job_id, fallback_url: str) -> HttpResponse:
+def generated_export_job_response(
+    request, *, job_id, fallback_url: str, expected_school=None, expected_kind=None,
+) -> HttpResponse:
     """Authorised status/download response reused by existing export URLs."""
     try:
         job = GeneratedExportJob.objects.select_related("archive", "school").get(
@@ -38,6 +40,23 @@ def generated_export_job_response(request, *, job_id, fallback_url: str) -> Http
         )
     except (GeneratedExportJob.DoesNotExist, TypeError, ValueError):
         raise Http404("مهمة التصدير غير موجودة") from None
+
+    if (
+        (expected_school is not None and job.school_id != expected_school.pk)
+        or (expected_kind is not None and job.kind != expected_kind)
+    ):
+        raise Http404("مهمة التصدير غير موجودة")
+
+    if job.kind == GeneratedExportJob.Kind.SCHOOL_ZIP:
+        from ..permissions import is_school_manager
+        from ._helpers import _get_active_school
+
+        active_school = expected_school or _get_active_school(request)
+        if active_school is None or active_school.pk != job.school_id or not (
+            request.user.is_superuser
+            or is_school_manager(request.user, active_school=job.school)
+        ):
+            raise Http404("مهمة التصدير غير موجودة")
 
     if (
         job.status == GeneratedExportJob.Status.READY
@@ -63,12 +82,14 @@ def generated_export_job_response(request, *, job_id, fallback_url: str) -> Http
         if getattr(job.artifact_file, "name", ""):
             try:
                 job.artifact_file.open("rb")
-                return FileResponse(
+                response = FileResponse(
                     job.artifact_file,
                     as_attachment=True,
                     filename=job.filename or "export.zip",
                     content_type=job.content_type or "application/zip",
                 )
+                response["Cache-Control"] = "private, no-store"
+                return response
             except Exception:
                 logger.exception("Generated export download failed job=%s", job.pk)
                 messages.error(request, "تعذر فتح الملف الجاهز. أعد إنشاء التصدير.")

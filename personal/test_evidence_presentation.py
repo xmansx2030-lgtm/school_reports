@@ -44,6 +44,9 @@ class PersonalEvidencePresentationTests(TestCase):
             academic_year=self.report.academic_year, source_url="https://example.org/two", order=2,
         )
         self.client.force_login(self.owner)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = self.report.academic_year
+        session.save()
 
     def test_owner_edits_print_options_and_reorders_report_evidence(self):
         edit_url = reverse("personal:evidence_edit", args=[self.second.pk])
@@ -214,7 +217,7 @@ class PersonalEvidencePresentationTests(TestCase):
             "source_url": axis_evidence.source_url,
         })
         self.assertEqual(changed.status_code, 200)
-        self.assertContains(changed, "لا يمكن تغيير سنة شاهد مرتبط بمحور ملف الإنجاز")
+        self.assertIn("academic_year", changed.context["form"].errors)
         axis_evidence.refresh_from_db()
         self.assertEqual(axis_evidence.academic_year, self.report.academic_year)
         self.assertTrue(axis_evidence.show_in_print)
@@ -295,7 +298,6 @@ class PersonalEvidencePresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         with ZipFile(BytesIO(b"".join(response.streaming_content))) as bundle:
             manifest = json.loads(bundle.read("manifest.json"))
-        response.close()
         exported = next(item for item in manifest["evidence"] if item["id"] == self.first.pk)
         self.assertEqual([exported[key] for key in ("order", "display_size", "fit_mode", "show_in_print")], [
             1, "medium", "cover", False,

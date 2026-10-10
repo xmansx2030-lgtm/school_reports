@@ -29,8 +29,8 @@
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
   <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20260923.1">
-  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20261003.1">
-  <link rel="stylesheet" href="{% static 'css/personal-journey.css' %}?v=20261002.1">
+  <link rel="stylesheet" href="{% static 'css/personal-workspace.css' %}?v=20261010.1">
+  <link rel="stylesheet" href="{% static 'css/personal-journey.css' %}?v=20261010.2">
   {% block head %}{% endblock %}
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
   <script src="{% static 'js/personal-workspace-shell.js' %}?v=20260925.2" defer></script>
@@ -58,6 +58,7 @@
           <a class="tab {% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %} aria-current="page"{% endif %}>الشواهد</a>
           <a class="tab {% if active == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}>ملف الإنجاز</a>
           <a class="tab {% if active == 'initiatives' or active == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}"{% if active == 'initiatives' or active == 'initiative_edit' %} aria-current="page"{% endif %}>المبادرات</a>
+          <a class="tab {% if active == 'courses' or active == 'course_create' or active == 'course_edit' %}is-active{% endif %}" href="{% url 'personal:courses' %}"{% if active == 'courses' or active == 'course_create' or active == 'course_edit' %} aria-current="page"{% endif %}>الدورات</a>
           <a class="tab {% if active == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}"{% if active == 'years' %} aria-current="page"{% endif %}>الأرشيف</a>
           <a class="tab {% if active == 'billing' or active == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}"{% if active == 'billing' or active == 'checkout_start' %} aria-current="page"{% endif %}>الاشتراك</a>
         {% else %}
@@ -90,6 +91,7 @@
         <a class="{% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %}is-active{% endif %}" href="{% url 'personal:evidence' %}"{% if active == 'evidence' or active == 'evidence_create' or active == 'evidence_edit' %} aria-current="page"{% endif %}><span>الشواهد</span><i class="fa-solid fa-paperclip" aria-hidden="true"></i></a>
         <a class="{% if active == 'portfolio' %}is-active{% endif %}" href="{% url 'personal:portfolio' %}"{% if active == 'portfolio' %} aria-current="page"{% endif %}><span>ملف الإنجاز</span><i class="fa-solid fa-briefcase" aria-hidden="true"></i></a>
         <a class="{% if active == 'initiatives' or active == 'initiative_edit' %}is-active{% endif %}" href="{% url 'personal:initiatives' %}"{% if active == 'initiatives' or active == 'initiative_edit' %} aria-current="page"{% endif %}><span>المبادرات</span><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></a>
+        <a class="{% if active == 'courses' or active == 'course_create' or active == 'course_edit' %}is-active{% endif %}" href="{% url 'personal:courses' %}"{% if active == 'courses' or active == 'course_create' or active == 'course_edit' %} aria-current="page"{% endif %}><span>الدورات والتطوير المهني</span><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i></a>
         <a class="{% if active == 'years' %}is-active{% endif %}" href="{% url 'personal:years' %}"{% if active == 'years' %} aria-current="page"{% endif %}><span>السنوات والأرشيف</span><i class="fa-solid fa-box-archive" aria-hidden="true"></i></a>
         <a class="{% if active == 'notices' or active == 'notice_detail' %}is-active{% endif %}" href="{% url 'personal:notices' %}"{% if active == 'notices' or active == 'notice_detail' %} aria-current="page"{% endif %}><span>إشعارات المنصة</span><i class="fa-solid fa-bell" aria-hidden="true"></i></a>
         <a class="{% if active == 'billing' or active == 'checkout_start' %}is-active{% endif %}" href="{% url 'personal:billing' %}"{% if active == 'billing' or active == 'checkout_start' %} aria-current="page"{% endif %}><span>الاشتراك والفواتير</span><i class="fa-solid fa-credit-card" aria-hidden="true"></i></a>
@@ -130,6 +132,7 @@
   <main class="container page-main personal-main" id="mainContent">
     {% include "reports/partials/platform_support_banner.html" %}
     {% if messages %}<div class="personal-messages" aria-live="polite">{% for message in messages %}<p class="personal-message personal-message--{{ message.tags|default:'info' }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% include "personal/_academic_year_switcher.html" %}
     {% block content %}{% endblock %}
   </main>
   <footer class="personal-footer container">

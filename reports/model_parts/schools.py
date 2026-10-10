@@ -282,6 +282,10 @@ class School(models.Model):
         return self.name or self.code
 
     def save(self, *args, **kwargs):
+        if self._state.adding and not self.current_academic_year:
+            from ..academic_years import current_academic_year_value
+
+            self.current_academic_year = current_academic_year_value()
         if self.name:
             self.name = " ".join(self.name.split())
         self.normalized_name = normalize_school_name_identity(self.name)
@@ -320,7 +324,10 @@ class AcademicYear(models.Model):
     """
 
     value = models.CharField("السنة الدراسية (هجري)", max_length=9, unique=True, db_index=True)
-    is_active = models.BooleanField("نشطة (تظهر للمدارس)", default=True)
+    is_active = models.BooleanField("منشورة للمدارس والمعلمين", default=False)
+    start_date = models.DateField("بداية الدراسة المعتمدة", null=True, blank=True)
+    end_date = models.DateField("نهاية العام الدراسي المعتمدة", null=True, blank=True)
+    source_url = models.URLField("مصدر تقويم وزارة التعليم", max_length=500, blank=True, default="")
     order = models.PositiveIntegerField("الترتيب", default=0)
     created_at = models.DateTimeField("أُضيفت في", auto_now_add=True)
 
@@ -336,6 +343,34 @@ class AcademicYear(models.Model):
         super().clean()
         self.value = _normalize_academic_year_hijri(self.value or "")
         _validate_academic_year_hijri(self.value)
+        errors = {}
+        if self.pk:
+            from ..academic_years import academic_year_is_used, current_academic_year_value
+
+            previous = type(self).objects.filter(pk=self.pk).first()
+            if previous and previous.value != self.value and academic_year_is_used(previous.value):
+                errors["value"] = "اسم السنة مرتبط بأعمال محفوظة ولا يمكن تغييره."
+            if previous and previous.is_active and not self.is_active and previous.value == current_academic_year_value():
+                errors["is_active"] = "السنة التشغيلية الحالية يجب أن تبقى منشورة."
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            errors["end_date"] = "نهاية السنة يجب أن تكون بعد تاريخ بدايتها."
+        if self.is_active:
+            from ..academic_years import is_ministry_calendar_source
+
+            if not self.start_date:
+                errors["start_date"] = "تاريخ بداية الدراسة المعتمد مطلوب قبل النشر."
+            if not self.end_date:
+                errors["end_date"] = "تاريخ نهاية العام المعتمد مطلوب قبل النشر."
+            if not is_ministry_calendar_source(self.source_url):
+                errors["source_url"] = "أضف رابطًا رسميًا آمنًا من موقع وزارة التعليم قبل النشر."
+            if self.start_date and self.end_date:
+                overlaps = type(self).objects.filter(
+                    is_active=True, start_date__lte=self.end_date, end_date__gte=self.start_date,
+                ).exclude(pk=self.pk)
+                if overlaps.exists():
+                    errors["start_date"] = "الفترة تتداخل مع سنة دراسية منشورة. راجع التقويم قبل النشر."
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         if self.value:

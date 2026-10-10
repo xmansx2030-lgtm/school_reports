@@ -784,9 +784,8 @@
   }
 
 /* Teacher Daily Work Home
-   The role-specific layer intentionally follows the legacy shared rules so the
-   teacher surface can adopt Design Language V1 without changing staff/deputy
-   workspaces that still use this template. */
+   The shared header follows Design Language V1 for all school roles.
+   Daily and supervisory work sections retain their role-specific composition. */
 .teacher-home--daily {
   --twq-page-padding-start: var(--twq-space-5);
   max-inline-size: var(--twq-content-max);
@@ -794,7 +793,101 @@
   color: var(--twq-text);
 }
 
-.teacher-home--daily .teacher-daily-header {
+/* The supervisory workspaces share the formal header and calm institutional
+   surfaces while retaining their permission-backed actions and scope. */
+.teacher-home .th-context {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  gap: var(--twq-space-2) var(--twq-space-3);
+  border-radius: var(--twq-radius-md);
+}
+
+.teacher-home--staff .th-deputy-hub {
+  padding: var(--twq-space-5);
+  border-color: var(--twq-border);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+  box-shadow: var(--twq-shadow-xs);
+  scroll-margin-block-start: calc(var(--header-bottom, 72px) + var(--twq-space-4));
+}
+
+.teacher-home--staff .th-deputy-hub::before {
+  background: var(--twq-accent);
+}
+
+.teacher-home--staff :is(.th-deputy-badge, .th-deputy-action, .th-deputy-step) {
+  border-color: var(--twq-border);
+  border-radius: var(--twq-radius-md);
+  background: var(--twq-surface-secondary);
+}
+
+.teacher-home--staff .th-deputy-badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--twq-text-secondary);
+}
+
+.teacher-home--staff .th-deputy-action__icon {
+  color: var(--twq-primary);
+  background: var(--twq-primary-soft);
+}
+
+.teacher-home--staff .th-role-context {
+  border-color: var(--twq-border);
+  color: var(--twq-text);
+  background: var(--twq-surface-secondary);
+}
+
+.teacher-home--staff .th-deputy-capabilities summary {
+  min-block-size: var(--twq-tap-target);
+  align-content: center;
+}
+
+.teacher-home :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--twq-focus);
+  outline-offset: 3px;
+}
+
+@media (max-width: 40rem) {
+  .teacher-home .teacher-daily-header .th-context {
+    display: grid;
+    inline-size: 100%;
+    gap: var(--twq-space-1);
+    text-align: start;
+    border-radius: var(--twq-radius-md);
+  }
+
+  .teacher-home .teacher-daily-header .th-context > [aria-hidden="true"] {
+    display: none;
+  }
+
+  .teacher-home .teacher-daily-header .th-hero-side {
+    display: none;
+  }
+
+  .teacher-home--staff {
+    padding-inline: var(--twq-space-3);
+    padding-block-start: var(--twq-space-3);
+  }
+
+  .teacher-home--staff .th-deputy-hub {
+    padding: var(--twq-space-4);
+  }
+
+  .teacher-home--staff :is(.th-deputy-head, .th-card-head) {
+    flex-wrap: wrap;
+  }
+
+  .teacher-home--staff .th-deputy-badges {
+    justify-content: flex-start;
+  }
+
+  .teacher-home--staff :is(.th-deputy-actions, .th-deputy-steps) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.teacher-home .teacher-daily-header {
   grid-template-columns: minmax(0, 1fr) minmax(14rem, 19rem);
   min-block-size: 0;
   gap: var(--twq-space-6);
@@ -807,11 +900,11 @@
   box-shadow: var(--twq-shadow-md);
 }
 
-.teacher-home--daily .teacher-daily-header::before {
+.teacher-home .teacher-daily-header::before {
   display: none;
 }
 
-.teacher-home--daily .teacher-daily-header::after {
+.teacher-home .teacher-daily-header::after {
   inset-block: 0;
   inset-inline: auto 0;
   display: block;
@@ -823,7 +916,7 @@
   background: color-mix(in srgb, var(--twq-hero-text) 4%, transparent);
 }
 
-.teacher-home--daily .teacher-daily-header .th-eyebrow {
+.teacher-home .teacher-daily-header .th-eyebrow {
   margin-block-end: var(--twq-space-2);
   padding: 0;
   border: 0;
@@ -834,7 +927,7 @@
   letter-spacing: normal;
 }
 
-body.page .teacher-home--daily .teacher-daily-header .th-title {
+body.page .teacher-home .teacher-daily-header .th-title {
   max-inline-size: 44rem;
   margin-block: var(--twq-space-2);
   margin-inline: 0;
@@ -848,7 +941,7 @@ body.page .teacher-home--daily .teacher-daily-header .th-title {
   -webkit-text-fill-color: currentColor;
 }
 
-body.page .teacher-home--daily .teacher-daily-header .th-lead {
+body.page .teacher-home .teacher-daily-header .th-lead {
   max-inline-size: 42rem;
   margin-block: 0 var(--twq-space-4);
   color: var(--twq-hero-text-muted);
@@ -856,24 +949,24 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
   line-height: var(--twq-line-height-relaxed);
 }
 
-.teacher-home--daily .teacher-daily-header .th-context {
+.teacher-home .teacher-daily-header .th-context {
   inline-size: fit-content;
   margin-block: 0 var(--twq-space-4);
   margin-inline: 0;
   padding-block: var(--twq-space-2);
   padding-inline: var(--twq-space-3);
   border: 1px solid color-mix(in srgb, var(--twq-hero-text) 18%, transparent);
-  border-radius: var(--twq-radius-pill);
+  border-radius: var(--twq-radius-md);
   color: var(--twq-hero-text-muted);
   background: color-mix(in srgb, var(--twq-hero-text) 7%, transparent);
   font-size: var(--twq-font-size-xs);
 }
 
-.teacher-home--daily .teacher-daily-header .th-hero-actions {
+.teacher-home .teacher-daily-header .th-hero-actions {
   gap: var(--twq-space-2);
 }
 
-.teacher-home--daily .teacher-daily-header .th-btn {
+.teacher-home .teacher-daily-header .th-btn {
   min-block-size: var(--twq-tap-target);
   padding-block: var(--twq-space-2);
   padding-inline: var(--twq-space-4);
@@ -885,24 +978,24 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
     transform var(--twq-duration-fast) var(--twq-ease-out);
 }
 
-.teacher-home--daily .teacher-daily-header .th-btn-primary {
+.teacher-home .teacher-daily-header .th-btn-primary {
   border-color: var(--twq-accent);
   color: var(--twq-green-950);
   background: var(--twq-gold-400);
   box-shadow: none;
 }
 
-.teacher-home--daily .teacher-daily-header .th-btn-primary:hover {
+.teacher-home .teacher-daily-header .th-btn-primary:hover {
   background: var(--twq-gold-300);
 }
 
-.teacher-home--daily .teacher-daily-header .th-btn-secondary {
+.teacher-home .teacher-daily-header .th-btn-secondary {
   border-color: color-mix(in srgb, var(--twq-hero-text) 30%, transparent);
   color: var(--twq-hero-text);
   background: color-mix(in srgb, var(--twq-hero-text) 8%, transparent);
 }
 
-.teacher-home--daily .teacher-daily-header .th-hero-side {
+.teacher-home .teacher-daily-header .th-hero-side {
   z-index: 1;
   align-self: stretch;
   justify-content: center;
@@ -915,17 +1008,17 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
   -webkit-backdrop-filter: none;
 }
 
-.teacher-home--daily .teacher-daily-header .th-side-label {
+.teacher-home .teacher-daily-header .th-side-label {
   color: var(--twq-hero-text-muted);
   font-size: var(--twq-font-size-xs);
 }
 
-.teacher-home--daily .teacher-daily-header .th-side-value {
+.teacher-home .teacher-daily-header .th-side-value {
   color: var(--twq-hero-text);
   font-size: var(--twq-font-size-sm);
 }
 
-.teacher-home--daily .teacher-daily-header .th-side-separator {
+.teacher-home .teacher-daily-header .th-side-separator {
   margin-block: var(--twq-space-4);
   background: color-mix(in srgb, var(--twq-hero-text) 16%, transparent);
 }
@@ -1149,21 +1242,21 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
 }
 
 @media (max-width: 48rem) {
-  .teacher-home--daily .teacher-daily-header {
+  .teacher-home .teacher-daily-header {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .teacher-home--daily .teacher-daily-header::after {
+  .teacher-home .teacher-daily-header::after {
     display: none;
   }
 
-  .teacher-home--daily .teacher-daily-header .th-hero-side {
+  .teacher-home .teacher-daily-header .th-hero-side {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
   }
 
-  .teacher-home--daily .teacher-daily-header .th-side-separator {
+  .teacher-home .teacher-daily-header .th-side-separator {
     inline-size: 1px;
     block-size: 3rem;
     margin-block: 0;
@@ -1177,32 +1270,35 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
     padding-inline: var(--twq-space-3);
   }
 
-  .teacher-home--daily .teacher-daily-header {
+  .teacher-home .teacher-daily-header {
     gap: var(--twq-space-4);
     padding: var(--twq-space-5);
     border-radius: var(--twq-radius-lg);
   }
 
-  body.page .teacher-home--daily .teacher-daily-header .th-title {
+  body.page .teacher-home .teacher-daily-header .th-title {
     font-size: 1.5rem;
   }
 
-  .teacher-home--daily .teacher-daily-header .th-hero-actions {
+  .teacher-home .teacher-daily-header .th-hero-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .teacher-home--daily .teacher-daily-header .th-btn {
+  .teacher-home .teacher-daily-header .th-btn {
     inline-size: 100%;
   }
 
-  .teacher-home--daily .teacher-daily-header .th-hero-side {
-    display: block;
-    padding: var(--twq-space-4);
+  .teacher-home .teacher-daily-header .th-context {
+    inline-size: 100%;
   }
 
-  .teacher-home--daily .teacher-daily-header .th-hero-side > .th-side-separator,
-  .teacher-home--daily .teacher-daily-header .th-hero-side > div:last-child {
+  .teacher-home .teacher-daily-header .th-hero-side {
+    display: none;
+  }
+
+  .teacher-home .teacher-daily-header .th-hero-side > .th-side-separator,
+  .teacher-home .teacher-daily-header .th-hero-side > div:last-child {
     display: none;
   }
 
@@ -1256,11 +1352,11 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
     padding-inline: var(--twq-space-2);
   }
 
-  .teacher-home--daily .teacher-daily-header .th-hero-side {
+  .teacher-home .teacher-daily-header .th-hero-side {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .teacher-home--daily .teacher-daily-header .th-side-separator {
+  .teacher-home .teacher-daily-header .th-side-separator {
     inline-size: 100%;
     block-size: 1px;
     margin-block: var(--twq-space-3);
@@ -1269,7 +1365,7 @@ body.page .teacher-home--daily .teacher-daily-header .th-lead {
 }
 
 @media (max-width: 22.5rem) {
-  .teacher-home--daily .teacher-daily-header .th-hero-actions,
+  .teacher-home .teacher-daily-header .th-hero-actions,
   .teacher-daily-action-grid {
     grid-template-columns: minmax(0, 1fr);
   }

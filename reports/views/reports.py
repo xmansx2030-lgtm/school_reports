@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from ..academic_years import school_current_academic_year
+
 from datetime import timedelta
 import hashlib
 import json
@@ -178,7 +180,7 @@ def _leadership_section_for_new_report(request, active_school):
         LeadershipPortfolioSection.objects.select_related("portfolio"),
         pk=raw_section_id,
         portfolio__school=active_school,
-        portfolio__academic_year=(active_school.current_academic_year or "").strip(),
+        portfolio__academic_year=school_current_academic_year(active_school),
     )
 
 
@@ -1113,7 +1115,7 @@ def school_archive(request: HttpRequest) -> HttpResponse:
             "pending_archive_payment": pending_archive_payment,
             "archive_price": archive_price,
             "archive_included_storage_gb": included_storage,
-            "current_academic_year": (getattr(active_school, "current_academic_year", "") or "").strip(),
+            "current_academic_year": school_current_academic_year(active_school),
             "school_wide": school_wide,
             "years": years,
             "selected_year": selected_year,

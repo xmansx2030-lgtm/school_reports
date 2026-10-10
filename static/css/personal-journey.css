@@ -12,7 +12,14 @@
 .personal-assistants__tool p { margin-block: var(--twq-space-3) var(--twq-space-2); }
 .personal-assistants__tool small, .personal-assistants__note, .personal-plan-assistants { color: var(--twq-text-secondary); line-height: 1.8; }
 .personal-assistants__note { margin-block: var(--twq-space-4) 0; font-size: var(--twq-font-size-sm); }
-.personal-start__steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; margin: 0; gap: var(--twq-space-4); list-style: none; }
+.personal-start__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; margin: 0; gap: var(--twq-space-4); list-style: none; }
+.personal-start__steps li { min-inline-size: 0; border-block-start: 1px solid var(--twq-border); }
+.personal-start__steps li.is-done { border-block-start-color: var(--twq-primary); }
+.personal-start__progress { margin-block-end: var(--twq-space-5); }
+.personal-start__progress::-webkit-progress-value { background: var(--twq-primary); border-radius: var(--twq-radius-pill); }
+.personal-start__progress::-moz-progress-bar { background: var(--twq-primary); border-radius: var(--twq-radius-pill); }
+.personal-start__disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--twq-space-3); min-block-size: var(--twq-tap-target); padding: var(--twq-space-3); }
+.personal-start__disclosure .personal-start__steps { padding: var(--twq-space-4); }
 .personal-start__steps a { display: flex; gap: var(--twq-space-3); min-block-size: var(--twq-tap-target); padding-block: var(--twq-space-3); color: var(--twq-text); text-decoration: none; }
 .personal-start__steps small, .personal-start__state { display: block; margin-block-start: var(--twq-space-2); font-size: var(--twq-font-size-sm); color: var(--twq-text-secondary); line-height: 1.8; }
 .personal-start__state { color: var(--twq-primary); }

@@ -30,6 +30,9 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.workspace = PersonalWorkspace.objects.create(
             owner=self.teacher, school_name="مدرسة الأفق", principal_name="مدير الأفق"
         )
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = "1447-1448"
+        session.save()
 
     def report_payload(self, **changes):
         data = {
@@ -54,8 +57,10 @@ class PersonalWorkspaceJourneyTests(TestCase):
         new_user = Teacher.objects.get(phone="0557000002")
         self.assertEqual(new_user.gender, Teacher.Gender.FEMALE)
         self.assertEqual(new_user.personal_workspace.school_name, "مدرسة أخرى")
-        self.assertContains(self.client.get(reverse("personal:dashboard")), "مساحة المعلمة المهنية")
-        self.assertContains(self.client.get(reverse("personal:dashboard")), "مرحبًا بكِ")
+        dashboard = self.client.get(reverse("personal:dashboard"))
+        self.assertContains(dashboard, "مساحة المعلمة المهنية")
+        self.assertContains(dashboard, "مساحة المعلمة الشخصية")
+        self.assertContains(dashboard, new_user.name)
         subscription = PersonalSubscription.objects.get(workspace__owner=new_user)
         self.assertEqual(subscription.plan.price, 0)
         self.assertTrue(subscription.is_active)
@@ -250,7 +255,7 @@ class PersonalWorkspaceJourneyTests(TestCase):
             download = self.client.get(reverse("personal:evidence_download", args=[evidence.pk]))
             self.assertEqual(download.status_code, 200)
             self.assertIn("attachment", download["Content-Disposition"])
-            download.close()
+            self.assertTrue(b"".join(download.streaming_content))
             outsider = Teacher.objects.create_user(
                 phone="0557000003", name="معلم ثان", password="Personal#2026"  # noqa: S106
             )
@@ -489,7 +494,7 @@ class PersonalWorkspaceJourneyTests(TestCase):
         self.assertEqual(invoice.status_code, 200)
         self.assertEqual(invoice["Content-Type"], "application/pdf")
         self.assertIn("no-store", invoice["Cache-Control"])
-        invoice.close()
+        self.assertTrue(b"".join(invoice.streaming_content))
 
         end_date = subscription.end_date
         self.client.logout()
@@ -783,28 +788,32 @@ class PersonalSelfServiceTests(TestCase):
         )
         self.other_workspace = PersonalWorkspace.objects.create(owner=self.other, school_name="مدرسة أخرى")
         self.client.force_login(self.teacher)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = "1447-1448"
+        session.save()
 
-    def test_year_archive_blocks_mutation_but_keeps_export_and_read_access(self):
+    def test_platform_manages_years_and_preserves_read_only_archived_data(self):
         for value in ("1447-1448", "1448/1449"):
             response = self.client.post(reverse("personal:years"), {
                 "action": "add", "value": value, "make_current": "on",
             })
-            self.assertRedirects(response, reverse("personal:years"))
-        self.assertEqual(PersonalAcademicYear.objects.filter(workspace=self.workspace).count(), 2)
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(PersonalAcademicYear.objects.filter(workspace=self.workspace).exists())
+        year = PersonalAcademicYear.objects.create(workspace=self.workspace, value="1447-1448", archived_at=timezone.now())
         report = PersonalReport.objects.create(
             workspace=self.workspace, title="عمل محفوظ", report_date=date.today(),
             academic_year="1447-1448", description="سجل سابق", teacher_name=self.teacher.name,
             school_name=self.workspace.school_name,
         )
-        self.client.post(reverse("personal:years"), {
+        archive_result = self.client.post(reverse("personal:years"), {
             "action": "archive", "year": "1447-1448", "confirm_year": "1447-1448",
         })
-        self.assertIsNotNone(PersonalAcademicYear.objects.get(
-            workspace=self.workspace, value="1447-1448"
-        ).archived_at)
-        self.assertContains(self.client.post(reverse("personal:years"), {
+        self.assertEqual(archive_result.status_code, 400)
+        year.refresh_from_db()
+        self.assertIsNotNone(year.archived_at)
+        self.assertEqual(self.client.post(reverse("personal:years"), {
             "action": "add", "value": "1447-1448", "make_current": "on",
-        }), "هذه السنة مؤرشفة")
+        }).status_code, 400)
         denied = self.client.post(reverse("personal:report_edit", args=[report.pk]), {
             "title": "تغيير غير مسموح", "category": "نشاط", "report_date": "2026-09-24",
             "academic_year": "1448-1449", "description": "تغيير", "status": "complete",
@@ -816,14 +825,16 @@ class PersonalSelfServiceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         with ZipFile(BytesIO(b"".join(response.streaming_content))) as bundle:
             self.assertIn("عمل محفوظ", bundle.read("manifest.json").decode("utf-8"))
-        response.close()
         self.assertEqual(self.client.get(reverse("personal:report_detail", args=[report.pk])).status_code, 200)
         subscription = PersonalSubscription.objects.get(workspace=self.workspace)
         subscription.is_active = False
         subscription.save(update_fields=["is_active"])
         self.assertEqual(self.client.get(reverse("personal:year_export", args=["1447-1448"])).status_code, 200)
         self.client.force_login(self.other)
-        self.assertEqual(self.client.get(reverse("personal:year_export", args=["1447-1448"])).status_code, 404)
+        foreign_export = self.client.get(reverse("personal:year_export", args=["1447-1448"]))
+        self.assertEqual(foreign_export.status_code, 200)
+        with ZipFile(BytesIO(b"".join(foreign_export.streaming_content))) as bundle:
+            self.assertNotIn("عمل محفوظ", bundle.read("manifest.json").decode("utf-8"))
 
     def test_report_authoring_saves_evidence_together_and_stays_out_of_school_report(self):
         payload = {
@@ -916,7 +927,7 @@ class PersonalSelfServiceTests(TestCase):
             "summary": initiative.summary, "impact": "", "status": "draft",
         }
         response = self.client.post(reverse("personal:initiative_edit", args=[initiative.pk]), payload)
-        self.assertContains(response, "لا يمكن تغيير سنة المبادرة وهي مرتبطة بشواهد")
+        self.assertIn("academic_year", response.context["form"].errors)
         initiative.refresh_from_db()
         self.assertEqual(initiative.academic_year, "1447-1448")
         PersonalAcademicYear.objects.create(

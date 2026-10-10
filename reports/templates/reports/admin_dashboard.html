@@ -1915,13 +1915,13 @@
         <div class="manager-subscription-alert is-critical" role="status">
           <i class="fa-regular fa-calendar-xmark" aria-hidden="true"></i>
           <div class="manager-subscription-alert__content">
-            <strong>السنة الدراسية الحالية غير محددة</strong>
+            <strong>لم تُنشر السنة الدراسية الحالية</strong>
             <span>
-              لا يستطيع {{ SCHOOL_TEACHERS_LABEL|default:"المعلمون" }} إنشاء ملفات الإنجاز قبل تحديدها.
+              تعتمد إدارة المنصة التقويم الدراسي لجميع المدارس. يبدأ إنشاء ملفات الإنجاز بعد نشر العام الحالي.
               {% if academic_year_suggestion %}السنة الجارية بحسب التقويم: <b>{{ academic_year_suggestion }} هـ</b>.{% endif %}
             </span>
           </div>
-          <a href="{% url 'reports:school_settings' %}">تحديد السنة</a>
+          <a href="{% url 'reports:support_ticket_create' %}">التواصل مع إدارة المنصة</a>
         </div>
       {% endif %}
     </div>

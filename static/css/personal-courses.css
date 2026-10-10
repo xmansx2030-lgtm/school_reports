@@ -1,0 +1,44 @@
+.personal-courses .twq-page-header__context { display: flex; flex-wrap: wrap; gap: 1rem 2rem; }
+.personal-courses__search { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; margin-block-end: 1.5rem; }
+.personal-courses__search .twq-field { flex: 1 1 18rem; margin: 0; }
+.personal-courses__list { display: grid; gap: 1rem; }
+.personal-courses__item { display: flex; align-items: start; gap: 1.5rem; padding: 1.5rem; }
+.personal-courses__body { flex: 1; min-inline-size: 0; }
+.personal-courses__heading { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.personal-courses__heading h3 { margin-block: .25rem 0; font-size: 1.125rem; color: var(--twq-text); overflow-wrap: anywhere; }
+.personal-courses__provider { margin: 0; color: var(--twq-accent); font-size: .875rem; overflow-wrap: anywhere; }
+.personal-courses__facts { display: flex; flex-wrap: wrap; gap: .75rem 2rem; margin-block: 1rem 0; }
+.personal-courses__facts div { min-inline-size: 7rem; }
+.personal-courses__facts dt { color: var(--twq-text-muted); font-size: .8rem; }
+.personal-courses__facts dd { margin: .25rem 0 0; font-weight: 600; color: var(--twq-text); }
+.personal-courses__description { margin-block: 1rem 0; color: var(--twq-text-secondary); overflow-wrap: anywhere; line-height: 1.85; }
+.personal-courses__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; max-inline-size: 16rem; }
+.personal-courses__no-certificate { color: var(--twq-text-muted); font-size: .875rem; padding-block: .65rem; }
+.personal-courses__delete { color: var(--twq-danger); }
+.personal-courses__form { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 2rem; align-items: start; }
+.personal-courses__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.25rem; margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+.personal-courses__fields .twq-field { margin: 0; min-inline-size: 0; }
+.personal-courses__wide { grid-column: 1 / -1; min-inline-size: 0; }
+.personal-courses__fields select, .personal-courses__fields input { max-inline-size: 100%; }
+.personal-courses__side { padding-inline-start: 1.5rem; border-inline-start: 1px solid var(--twq-border); }
+.personal-courses__side p { color: var(--twq-text-secondary); line-height: 1.9; }
+.personal-courses__side .twq-btn { display: flex; justify-content: center; inline-size: 100%; margin-block: .75rem; }
+.personal-courses__hint { color: var(--twq-text-muted); font-size: .875rem; }
+.personal-courses__pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 1rem; margin-block-start: 1.5rem; }
+.personal-courses--confirm { max-inline-size: 48rem; }
+.personal-courses__confirm { display: flex; gap: .75rem; align-items: start; padding-block: 1rem; }
+.personal-courses__confirm input { inline-size: 1.125rem; block-size: 1.125rem; margin-block-start: .4rem; flex: 0 0 auto; }
+.personal-courses__confirm-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+@media (max-width: 63.999rem) {
+  .personal-courses__form { grid-template-columns: 1fr; }
+  .personal-courses__side { padding-inline-start: 0; border-inline-start: 0; padding-block-start: 1.5rem; border-block-start: 1px solid var(--twq-border); }
+  .personal-courses__item { flex-direction: column; }
+  .personal-courses__body, .personal-courses__actions { inline-size: 100%; max-inline-size: none; }
+}
+@media (max-width: 39.999rem) {
+  .personal-courses__fields { grid-template-columns: 1fr; }
+  .personal-courses__item { padding: 1rem; gap: 1rem; }
+  .personal-courses__heading { flex-wrap: wrap; }
+  .personal-courses__search .twq-field { flex-basis: 100%; }
+  .personal-courses__actions .twq-btn, .personal-courses__confirm-actions .twq-btn { flex: 1 1 auto; justify-content: center; }
+}

@@ -17,19 +17,13 @@
     </div>
   </header>
 
-  {% if years %}<form class="twq-toolbar personal-portfolio__year" method="get" aria-label="اختيار سنة ملف الإنجاز">
-    <div class="twq-field"><label class="twq-label" for="portfolioYear">السنة الدراسية</label><select class="twq-control" id="portfolioYear" name="year">{% for item in years %}<option value="{{ item }}" {% if item == year %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
-    <button class="twq-btn twq-btn--primary" type="submit">عرض الملف</button>
-    <a class="twq-btn twq-btn--ghost" href="{% url 'personal:years' %}">إدارة السنوات</a>
-  </form>{% endif %}
-
   {% if year %}
     <section class="achievement-overview" aria-labelledby="personalProgressTitle">
       <div class="achievement-overview__copy"><span class="twq-section__kicker">تقدم التوثيق</span><h2 id="personalProgressTitle">محاور ملف الإنجاز</h2><p>يحتسب المحور موثقًا إذا احتوى وصفًا أو تقريرًا أو شاهدًا مرتبطًا. هذا المؤشر يصف أعمالك ولا يمثل اعتمادًا من مدرسة.</p></div>
       <div class="twq-progress achievement-overview__progress"><div class="twq-progress__label"><span>{{ documented_count }} من 11 محورًا موثقًا</span><strong><bdi>{{ progress_percent }}%</bdi></strong></div><progress class="twq-progress__bar" value="{{ progress_percent }}" max="100" aria-label="تقدم ملف الإنجاز: {{ progress_percent }} بالمئة">{{ progress_percent }}%</progress></div>
       <dl class="twq-metrics achievement-overview__metrics"><div><dt>التقارير</dt><dd>{{ reports.count }}</dd></div><div><dt>الشواهد</dt><dd>{{ evidence.count }}</dd></div><div><dt>المبادرات</dt><dd>{{ initiatives.count }}</dd></div></dl>
     </section>
-    {% if is_archived %}<div class="twq-alert twq-alert--info" role="status"><i class="fa-solid fa-box-archive" aria-hidden="true"></i><p>السنة مؤرشفة وتبقى أعمالها للقراءة والطباعة والتصدير. أعد فتحها من إدارة السنوات إذا احتجت إلى تعديلها.</p></div>{% elif not can_edit %}<div class="twq-alert twq-alert--warning" role="status"><i class="fa-solid fa-lock" aria-hidden="true"></i><p>اشتراكك غير نشط حاليًا؛ ملفك المحفوظ متاح للقراءة والطباعة.</p></div>{% endif %}
+    {% if is_archived %}<div class="twq-alert twq-alert--info" role="status"><i class="fa-solid fa-box-archive" aria-hidden="true"></i><p>أعمال هذا العام محفوظة للقراءة والطباعة والتصدير. إدارة الأعوام متاحة لإدارة المنصة.</p></div>{% elif not can_edit and not personal_year_read_only %}<div class="twq-alert twq-alert--warning" role="status"><i class="fa-solid fa-lock" aria-hidden="true"></i><p>اشتراكك غير نشط حاليًا؛ ملفك المحفوظ متاح للقراءة والطباعة.</p></div>{% endif %}
     <nav class="achievement-workspace-nav" aria-label="أقسام ملف الإنجاز"><a href="#personalIdentity">البيانات العامة</a><a href="#personalAxes">المحاور والشواهد</a><a href="#personalWorks">أعمال السنة</a></nav>
 
     <section class="twq-section achievement-identity" id="personalIdentity" aria-labelledby="personalIdentityTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">هوية الملف</span><h2 class="twq-section__title" id="personalIdentityTitle">البيانات المهنية العامة</h2><p class="twq-section__description">بياناتك الخاصة بسنة هذا الملف؛ يمكنك تعديلها دون إجراء اعتماد مدرسي.</p></div><span class="twq-section__meta">6 حقول تعريفية</span></div>
@@ -63,8 +57,9 @@
       </div>
     </section>
 
-    <section class="twq-section" id="personalWorks" aria-labelledby="personalWorksTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">أعمال السنة</span><h2 class="twq-section__title" id="personalWorksTitle">التقارير والمبادرات</h2><p class="twq-section__description">تظهر أعمالك الشخصية لهذه السنة هنا حتى إن لم تربطها بمحور بعد.</p></div></div>
+    <section class="twq-section" id="personalWorks" aria-labelledby="personalWorksTitle"><div class="twq-section__header"><div><span class="twq-section__kicker">أعمال السنة</span><h2 class="twq-section__title" id="personalWorksTitle">التقارير والمبادرات والتطوير المهني</h2><p class="twq-section__description">تظهر أعمالك الشخصية لهذه السنة هنا حتى إن لم تربطها بمحور بعد.</p></div></div>
       <div class="personal-portfolio__works"><div><h3>التقارير</h3>{% for report in reports %}<a class="personal-portfolio__work" href="{% url 'personal:report_detail' report.pk %}"><strong>{{ report.title }}</strong><small>{{ report.report_date }} · {{ report.get_status_display }}</small></a>{% empty %}<p class="twq-empty twq-empty--local">لا توجد تقارير لهذه السنة.</p>{% endfor %}</div><div><h3>المبادرات</h3>{% for initiative in initiatives %}<a class="personal-portfolio__work" href="{% url 'personal:initiative_edit' initiative.pk %}"><strong>{{ initiative.title }}</strong><small>{{ initiative.get_status_display }}{% if initiative.is_best_practice %} · ممارسة ناجحة{% endif %}</small></a>{% empty %}<p class="twq-empty twq-empty--local">لا توجد مبادرات لهذه السنة.</p>{% endfor %}</div></div>
+      <div class="personal-portfolio__courses"><h3>الدورات والتطوير المهني</h3>{% for course in courses %}<a class="personal-portfolio__work" href="{% url 'personal:course_edit' course.pk %}"><strong>{{ course.title }}</strong><small>{{ course.provider }}{% if course.hours %} · {{ course.hours }} ساعة{% endif %}{% if course.completion_date %} · {{ course.completion_date|date:'Y/m/d' }}{% endif %}</small></a>{% empty %}<p class="twq-empty twq-empty--local">لا توجد دورات لهذا العام. <a href="{% url 'personal:courses' %}">سجل التطوير المهني</a></p>{% endfor %}</div>
     </section>
-  {% else %}<div class="twq-empty twq-empty--page"><h2 class="twq-empty__title">ابدأ بسنة دراسية</h2><p class="twq-empty__message">أضف سنة دراسية إلى مساحتك لتبدأ توثيق محاور ملف الإنجاز.</p><a class="twq-btn twq-btn--primary" href="{% url 'personal:years' %}">إدارة السنوات</a></div>{% endif %}
+  {% else %}<div class="twq-empty twq-empty--page"><h2 class="twq-empty__title">بانتظار نشر العام الدراسي</h2><p class="twq-empty__message">يظهر ملف الإنجاز تلقائيًا عند اختيار عام معتمد من القائمة المنسدلة.</p><a class="twq-btn twq-btn--secondary" href="{% url 'personal:years' %}">الأرشيف السنوي</a></div>{% endif %}
 </div>

@@ -2,12 +2,24 @@ from __future__ import annotations
 
 import json
 import re
+from html.parser import HTMLParser
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from personal.models import PersonalPlan
 from reports.models import SubscriptionPlan
+from reports.pricing import SUBSCRIPTION_ADDON_NOTES
+
+
+class _LandingElements(HTMLParser):
+    def __init__(self, markup):
+        super().__init__()
+        self.elements = []
+        self.feed(markup)
+
+    def handle_starttag(self, tag, attrs):
+        self.elements.append((tag, dict(attrs)))
 
 
 @override_settings(
@@ -21,13 +33,12 @@ class LandingPageTests(TestCase):
         response = self.client.get(reverse("reports:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "للمعلمين والمعلمات.")
-        self.assertContains(response, "ولمدارسهم.")
-        self.assertContains(response, "إدارة التقارير والطلبات والخطط والاعتمادات من مكان واحد.")
+        self.assertContains(response, "كل إنجاز يستحق")
+        self.assertContains(response, "أن يُوثّق.")
         self.assertContains(response, "التعاميم")
         self.assertContains(response, "الأرشيف")
-        self.assertContains(response, "ابدأ بمدرستك 30 يومًا مجانًا")
-        self.assertNotContains(response, "ابدأ بمدرستك 14 يومًا مجانًا")
+        self.assertContains(response, "تجربة مجانية 30 يومًا")
+        self.assertNotContains(response, "تجربة مجانية 14 يومًا")
         self.assertContains(response, "أدخل عدد معلمي المدرسة واعرف السعر فورًا")
         self.assertContains(response, reverse("reports:register_school"))
         self.assertContains(response, "img/landing/dashboard-system.png")
@@ -46,9 +57,10 @@ class LandingPageTests(TestCase):
 
         header = html[html.index("<header"): html.index("</header>")]
         mobile_menu = html[html.index('id="mobileMenu"'): html.index("<main")]
-        self.assertIn('href="#pricing">باقات المدارس</a>', header)
+        self.assertIn('href="#plans">الاشتراكات</a>', header)
+        self.assertIn('href="#features">للمدارس</a>', header)
+        self.assertIn('href="#teacher-personal">للمعلم والمعلمة</a>', header)
         self.assertIn('href="#pricing">باقات المدارس</a>', mobile_menu)
-        self.assertIn('href="#teacher-plans">باقات المعلمين والمعلمات</a>', header)
         self.assertIn('href="#teacher-plans">باقات المعلمين والمعلمات</a>', mobile_menu)
         self.assertContains(response, "سعر مدرستك")
 
@@ -58,7 +70,7 @@ class LandingPageTests(TestCase):
 
         school_path = html.split('class="audience-path audience-path--school"', 1)[1].split("</article>", 1)[0]
         teacher_path = html.split('class="audience-path audience-path--teacher"', 1)[1].split("</article>", 1)[0]
-        school_pricing = html.split('class="section pricing-section"', 1)[1].split("</section>", 1)[0]
+        school_pricing = html.split('id="pricing"', 1)[1].split('id="teacher-plans"', 1)[0]
 
         self.assertIn('href="' + reverse("reports:register_school") + '"', school_path)
         self.assertIn('href="#pricing"', school_path)
@@ -66,13 +78,16 @@ class LandingPageTests(TestCase):
         self.assertIn('href="' + reverse("personal:register") + '"', teacher_path)
         self.assertIn('href="#teacher-plans"', teacher_path)
         self.assertNotIn('href="' + reverse("reports:register_school") + '"', teacher_path)
-        self.assertIn("حتى لو لم تشترك مدرستك", teacher_path)
+        # Both audiences get the same primary action treatment; neither path
+        # can accidentally register a visitor for the other account type.
+        for path, route in ((school_path, "reports:register_school"), (teacher_path, "personal:register")):
+            self.assertIn(f'class="button button-primary" href="{reverse(route)}"', path)
+        self.assertIn("حتى إن لم تشترك مدرستك", html)
+        self.assertIn("المستندات الشخصية من إعداد المعلم أو المعلمة", html)
         self.assertIn('id="teacher-plans"', html)
         self.assertIn("باقات المعلمين والمعلمات", html)
         self.assertIn("اشتراك المدرسة وفريقها", school_pricing)
         self.assertIn("عدد معلمي المدرسة", school_pricing)
-        self.assertLess(html.index('class="audience-path audience-path--teacher"'), html.index('class="audience-path audience-path--school"'))
-        self.assertLess(html.index('id="teacher-personal"'), html.index('id="features"'))
 
     @override_settings(LANDING_PRICING_CACHE_TTL_SECONDS=0)
     def test_unpublished_teacher_plans_do_not_leave_a_dead_pricing_link(self):
@@ -81,6 +96,9 @@ class LandingPageTests(TestCase):
         html = self.client.get(reverse("reports:landing")).content.decode("utf-8")
 
         self.assertNotIn('id="teacher-plans"', html)
+        self.assertNotIn('href="#teacher-plans"', html)
+        self.assertNotIn('id="teacherPlanTab"', html)
+        self.assertNotIn('id="schoolPlanTab"', html)
         self.assertIn('href="#teacher-personal">للمعلم والمعلمة</a>', html)
         self.assertIn('href="#teacher-personal">تعرف على المساحة الشخصية</a>', html)
 
@@ -88,11 +106,12 @@ class LandingPageTests(TestCase):
         response = self.client.get(reverse("reports:landing"))
         html = response.content.decode("utf-8")
 
-        for section_id in ("features", "pricing", "product", "faq"):
+        for section_id in ("features", "teacher-personal", "plans", "pricing", "teacher-plans", "product", "faq"):
             self.assertEqual(html.count(f'id="{section_id}"'), 1)
-        self.assertLess(html.index('id="features"'), html.index('id="pricing"'))
-        self.assertLess(html.index('id="pricing"'), html.index('id="product"'))
-        self.assertLess(html.index('id="product"'), html.index('id="faq"'))
+        self.assertLess(html.index('id="features"'), html.index('id="product"'))
+        self.assertLess(html.index('id="teacher-personal"'), html.index('id="product"'))
+        self.assertLess(html.index('id="product"'), html.index('id="plans"'))
+        self.assertLess(html.index('id="plans"'), html.index('id="faq"'))
         for removed_section_id in (
             "roles",
             "start",
@@ -113,27 +132,58 @@ class LandingPageTests(TestCase):
             "<title>منصة توثيق | اشتراكات للمعلمين والمعلمات وباقات للمدارس</title>",
             html=True,
         )
-        for audience in ("مدير المدرسة", "المعلم", "المدير التنفيذي", "الموظف الإداري"):
+        for audience in ("مدير المدرسة", "المعلم", "التنفيذي", "الموظف الإداري"):
             self.assertContains(response, audience)
 
-    def test_landing_backs_each_feature_headline_with_concrete_capabilities(self):
+    def test_landing_explains_concrete_capabilities_for_both_audiences(self):
         response = self.client.get(reverse("reports:landing"))
         html = response.content.decode("utf-8")
 
-        # Tied to the card count rather than a number: a headline added without
-        # its proof list is exactly the regression this guards against, and a
-        # literal count only catches it until someone bumps the literal.
-        self.assertEqual(
-            html.count('class="feature-proof"'),
-            html.count('class="feature-card'),
-        )
-        self.assertGreaterEqual(html.count('class="feature-proof"'), 6)
-        self.assertContains(response, "PDF بهوية المدرسة")
-        self.assertContains(response, "كتابة التقرير بالصوت")
-        self.assertContains(response, "تحسين بالذكاء الاصطناعي")
-        self.assertContains(response, "إدخال المحضر بالصوت")
-        self.assertContains(response, "بصمة تحقق SHA-256")
-        self.assertContains(response, "سجل اطلاع وتوقيع")
+        school = html.split('id="features"', 1)[1].split("</article>", 1)[0]
+        personal = html.split('id="teacher-personal"', 1)[1].split("</article>", 1)[0]
+        for capability in ("لوحة مدير المدرسة", "الاعتمادات", "تعاميم", "اجتماعات", "PDF", "التنفيذي"):
+            self.assertIn(capability, school)
+        for capability in ("تقارير", "شواهد", "مبادرات", "ملف إنجاز", "طباعة ومشاركة", "المستقلة"):
+            self.assertIn(capability, personal)
+        self.assertContains(response, "الباقة الشخصية المجانية لا تشمل AI")
+        self.assertContains(response, "التطبيق المثبّت")
+
+    def test_audience_tabs_keep_valid_deep_links_and_readable_no_script_content(self):
+        html = self.client.get(reverse("reports:landing")).content.decode("utf-8")
+        elements = _LandingElements(html).elements
+        by_id = {attrs["id"]: attrs for _tag, attrs in elements if attrs.get("id")}
+        expected_targets = {
+            "schoolPreviewTab": "preview-school",
+            "teacherPreviewTab": "preview-teacher",
+            "schoolPlanTab": "pricing",
+            "teacherPlanTab": "teacher-plans",
+        }
+        for tab_id, panel_id in expected_targets.items():
+            with self.subTest(tab=tab_id):
+                tab = by_id[tab_id]
+                panel = by_id[panel_id]
+                self.assertEqual(tab["role"], "tab")
+                self.assertEqual(tab["aria-controls"], panel_id)
+                self.assertIn("data-switch-tab", tab)
+                self.assertIn("data-switch-panel", panel)
+                self.assertIn(panel["aria-labelledby"], by_id)
+                # Panels remain readable and their anchors usable without JS;
+                # the script enables tabs and hides inactive panels together.
+                self.assertNotIn("hidden", panel)
+        tablists = [attrs for _tag, attrs in elements if attrs.get("role") == "tablist"]
+        self.assertEqual(len(tablists), 2)
+        for tablist in tablists:
+            self.assertIn("data-switch-tabs", tablist)
+            self.assertIn("hidden", tablist)
+        for panel_id in ("pricing", "teacher-plans"):
+            self.assertIn(f'href="#{panel_id}"', html)
+
+    def test_school_subscription_discloses_separately_priced_services(self):
+        html = self.client.get(reverse("reports:landing")).content.decode("utf-8")
+        school_pricing = html.split('id="pricing"', 1)[1].split('id="teacher-plans"', 1)[0]
+        self.assertIn("خدمات اختيارية تُسعّر بشكل مستقل", school_pricing)
+        for note in SUBSCRIPTION_ADDON_NOTES:
+            self.assertIn(note, school_pricing)
 
     def test_landing_has_accessible_navigation_and_single_main_heading(self):
         response = self.client.get(reverse("reports:landing"))
@@ -158,7 +208,7 @@ class LandingPageTests(TestCase):
         self.assertNotIn("هوية مقدم الخدمة", html)
         self.assertNotIn('href="#business"', html)
         self.assertIn('<span>دخول</span>', html)
-        self.assertIn('src="/static/js/landing.js?v=20260826.1"', html)
+        self.assertRegex(html, r'src="/static/js/landing\.js\?v=[^\"]+"')
         self.assertNotIn("var periodButtons", html)
         self.assertIn("no-store", response.headers["Cache-Control"])
         self.assertEqual(response.headers["CDN-Cache-Control"], "no-store")

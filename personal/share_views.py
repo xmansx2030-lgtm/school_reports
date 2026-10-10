@@ -139,6 +139,7 @@ def report_share_manage(request, pk):
     report = get_object_or_404(
         PersonalReport, pk=pk, workspace=request.personal_workspace, trashed_at__isnull=True,
     )
+    request.personal_academic_year = report.academic_year
     return _manage(request, kind="report", report=report)
 
 
@@ -185,6 +186,8 @@ def _published_evidence_queryset(link):
     workspace, year = link.workspace, link.academic_year
     evidence = PersonalEvidence.objects.filter(
         workspace=workspace, academic_year=year, show_in_print=True,
+    ).filter(
+        Q(initiative__isnull=True) | Q(initiative__workspace=workspace, initiative__academic_year=year),
     )
     if link.kind == "report":
         return evidence.filter(report=link.report)
@@ -268,6 +271,7 @@ def _visible_scope(link):
         "sections": sections,
         "documented_count": sum(section["documented"] for section in sections),
         "report_entries": report_entries,
+        "courses": workspace.courses.filter(academic_year=year).select_related("certificate"),
         "visible_evidence_count": len({item.pk for item in visible_evidence}),
     }
     return context

@@ -26,7 +26,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from reports.academic_years import hijri_academic_year_options
+from reports.academic_years import hijri_academic_year_options, current_academic_year_value
 from reports.form_widgets import DATETIME_LOCAL_FORMAT, DateTimeLocalInput
 from reports.forms_documents import DocumentUploadForm
 from reports.models import (
@@ -156,7 +156,7 @@ class AcademicYearOptionsTests(TestCase):
         self.school = School.objects.create(name="مدرسة جديدة", code="fresh-school")
 
     def test_a_brand_new_school_still_gets_years_to_choose_from(self):
-        self.assertEqual(self.school.current_academic_year, "")
+        self.assertEqual(self.school.current_academic_year, current_academic_year_value())
         self.assertEqual(list(self.school.allowed_academic_years or []), [])
         self.assertTrue(hijri_academic_year_options(self.school))
 

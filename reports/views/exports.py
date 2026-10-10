@@ -23,7 +23,7 @@ from .export_jobs import export_creation_is_limited, generated_export_job_respon
 _XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
-def _require_manager_school(request: HttpRequest):
+def _require_manager_school(request: HttpRequest, *, require_addon=True):
     active_school = _get_active_school(request)
     if School.objects.filter(is_active=True).exists():
         if active_school is None:
@@ -36,7 +36,7 @@ def _require_manager_school(request: HttpRequest):
         messages.error(request, "لا توجد مدرسة نشطة للتصدير.")
         return active_school, redirect("reports:admin_dashboard")
     # التصدير الكامل مرتبط باشتراك الأرشفة: غير مفعّل للمدارس غير المشتركة.
-    if not school_archive_enabled(active_school):
+    if require_addon and not school_archive_enabled(active_school):
         messages.error(request, "ميزة التصدير مرتبطة باشتراك الأرشفة وغير مفعّلة لهذه المدرسة. فعّل الاشتراك أولاً.")
         return active_school, redirect("reports:my_subscription")
     return active_school, None
@@ -52,10 +52,20 @@ def school_data_export(request: HttpRequest) -> HttpResponse:
         return redirect_resp
 
     counts = export_summary_counts(active_school)
+    from ..school_export_snapshot import EXCLUDED_CONTENT, school_record_querysets
+
+    record_counts = {name: queryset.count() for name, queryset in school_record_querysets(active_school)}
     return render(
         request,
         "reports/school_data_export.html",
-        {"active_school": active_school, "counts": counts},
+        {
+            "active_school": active_school,
+            "counts": counts,
+            "record_total": sum(record_counts.values()),
+            "record_model_count": len(record_counts),
+            "archive_filename": export_zip_filename(active_school),
+            "archive_exclusions": EXCLUDED_CONTENT,
+        },
     )
 
 
@@ -96,10 +106,15 @@ def school_data_export_zip(request: HttpRequest) -> HttpResponse:
     """تنزيل أرشيف ZIP يحوي ملفات المدرسة الفعلية + ملف Excel فهرس."""
     job_id = request.GET.get("job")
     if job_id:
+        active_school, redirect_resp = _require_manager_school(request, require_addon=False)
+        if redirect_resp is not None:
+            return redirect_resp
         return generated_export_job_response(
             request,
             job_id=job_id,
             fallback_url=reverse("reports:school_data_export"),
+            expected_school=active_school,
+            expected_kind=GeneratedExportJob.Kind.SCHOOL_ZIP,
         )
     if export_creation_is_limited(
         request, group="school-data-export-create", rate="6/h"
@@ -123,7 +138,9 @@ def school_data_export_zip(request: HttpRequest) -> HttpResponse:
         return redirect(f"{reverse('reports:school_data_export_zip')}?job={job.pk}")
 
     try:
-        zip_file = build_school_export_zip_file(active_school, request=request)
+        zip_file, metadata = build_school_export_zip_file(
+            active_school, request=request, return_metadata=True,
+        )
     except Exception:
         logger.exception("school_data_export_zip failed school_id=%s", getattr(active_school, "id", None))
         messages.error(request, "تعذّر إنشاء أرشيف التصدير. حاول لاحقًا.")
@@ -135,9 +152,12 @@ def school_data_export_zip(request: HttpRequest) -> HttpResponse:
         getattr(request.user, "id", None),
     )
     # FileResponse يبثّ الملف ويغلقه تلقائيًا (يدعم الأرشيفات الكبيرة المسكوبة للقرص)
-    return FileResponse(
+    response = FileResponse(
         zip_file,
         as_attachment=True,
         filename=export_zip_filename(active_school),
         content_type="application/zip",
     )
+    response["Cache-Control"] = "private, no-store"
+    response["X-Archive-Status"] = "partial" if metadata["is_partial"] else "complete"
+    return response

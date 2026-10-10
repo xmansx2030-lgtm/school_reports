@@ -6,7 +6,7 @@ from django.core.cache import cache
 from core.observability import soft_call
 
 from .models import (
-    PersonalAcademicYear, PersonalEvidence, PersonalInitiative, PersonalPlan,
+    PersonalAcademicYear, PersonalCourse, PersonalEvidence, PersonalInitiative, PersonalPlan,
     PersonalPortfolioSection, PersonalPortfolioReport, PersonalPortfolioEvidence,
     PersonalReport, PersonalShareLink, PersonalSubscription, PersonalWorkspace,
 )
@@ -63,7 +63,7 @@ def audit_personal_maintenance(sender, instance, **kwargs):
 
 for _model in (
     PersonalWorkspace, PersonalSubscription, PersonalReport, PersonalEvidence,
-    PersonalAcademicYear, PersonalInitiative, PersonalPortfolioSection, PersonalPortfolioReport,
+    PersonalAcademicYear, PersonalCourse, PersonalInitiative, PersonalPortfolioSection, PersonalPortfolioReport,
     PersonalPortfolioEvidence, PersonalShareLink,
 ):
     post_save.connect(audit_personal_maintenance, sender=_model, dispatch_uid=f"personal_support_save:{_model.__name__}")

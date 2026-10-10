@@ -1,0 +1,44 @@
+{% extends "personal/base.html" %}
+{% load static %}
+{% block title %}التطوير المهني والدورات{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-courses.css' %}?v=20261010.1">{% endblock %}
+{% block content %}
+<div class="twq-page personal-courses" aria-labelledby="coursesTitle">
+  <header class="twq-page-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> النمو والتطوير المهني</p>
+      <h1 class="twq-page-header__title" id="coursesTitle">سجل الدورات</h1>
+      <p class="twq-page-header__lead">مسار تطويرك المهني، موثق بالساعات والشهادات ضمن سجل مستقل لكل سنة دراسية.</p>
+      <dl class="twq-page-header__context">
+        <div><dt>السنة الدراسية</dt><dd><bdi dir="ltr">{{ year }}</bdi></dd></div>
+        <div><dt>الدورات المسجلة</dt><dd>{{ total_count }}</dd></div>
+        <div><dt>الدورات المكتملة</dt><dd>{{ completed_count }}</dd></div>
+        <div><dt>ساعات مكتملة</dt><dd>{{ completed_hours|floatformat:"-2" }}</dd></div>
+      </dl>
+    </div>
+    {% if can_edit %}<div class="twq-page-header__aside"><a class="twq-btn twq-btn--primary" href="{% url 'personal:course_create' %}?year={{ year|urlencode }}"><i class="fa-solid fa-plus" aria-hidden="true"></i> إضافة دورة</a></div>{% endif %}
+  </header>
+
+  {% if is_archived %}<div class="twq-alert twq-alert--info" role="note">هذه السنة مؤرشفة. سجل دوراتك وشهاداتك متاح للقراءة ضمن أعمال السنة.</div>{% elif personal_year_read_only %}<div class="twq-alert twq-alert--info" role="note">هذه السنة محفوظة للقراءة؛ لم تُنشر ضمن تقويم المنصة المعتمد. تبقى دوراتك وشهاداتك في سجلها الأصلي.</div>{% elif not can_edit %}<div class="twq-alert twq-alert--info" role="note">سجل الدورات متاح للقراءة. يلزم اشتراك نشط لإضافة الدورات أو تعديلها.</div>{% endif %}
+
+  <section class="twq-section" aria-labelledby="coursesListTitle">
+    <header class="twq-section__header"><div><span class="twq-section__kicker">التعلم المستمر</span><h2 class="twq-section__title" id="coursesListTitle">دورات السنة الدراسية</h2><p class="twq-section__description">تظهر هنا الدورات الخاصة بالسنة المختارة. تبقى الشهادات قابلة للاستخدام في ملف الإنجاز.</p></div></header>
+    <form method="get" class="personal-courses__search" role="search"><input type="hidden" name="year" value="{{ year }}"><div class="twq-field"><label class="twq-label" for="courseSearch">بحث في الدورات والجهات</label><input class="twq-control" id="courseSearch" type="search" name="q" value="{{ query }}" maxlength="200" placeholder="عنوان الدورة أو الجهة المقدمة"></div><button type="submit" class="twq-btn twq-btn--secondary"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> بحث</button>{% if query %}<a class="twq-btn twq-btn--ghost" href="{% url 'personal:courses' %}?year={{ year|urlencode }}">مسح البحث</a>{% endif %}</form>
+    {% if page_obj %}<div class="personal-courses__list">
+      {% for course in page_obj %}<article class="twq-card personal-courses__item" aria-labelledby="courseTitle{{ course.pk }}">
+        <div class="personal-courses__body">
+          <div class="personal-courses__heading"><div><p class="personal-courses__provider">{{ course.provider }}</p><h3 id="courseTitle{{ course.pk }}">{{ course.title }}</h3></div><span class="twq-status" data-status="{% if course.completion_date %}completed{% else %}draft{% endif %}">{% if course.completion_date %}مكتملة{% else %}قيد التوثيق{% endif %}</span></div>
+          <dl class="personal-courses__facts"><div><dt>الساعات التدريبية</dt><dd>{{ course.hours|floatformat:"-2" }} ساعة</dd></div><div><dt>تاريخ البدء</dt><dd><time datetime="{{ course.start_date|date:'Y-m-d' }}"><bdi dir="ltr">{{ course.start_date|date:"Y/m/d" }}</bdi></time></dd></div><div><dt>تاريخ الإكمال</dt><dd>{% if course.completion_date %}<time datetime="{{ course.completion_date|date:'Y-m-d' }}"><bdi dir="ltr">{{ course.completion_date|date:"Y/m/d" }}</bdi></time>{% else %}لم يُسجل بعد{% endif %}</dd></div></dl>
+          {% if course.description %}<p class="personal-courses__description">{{ course.description|linebreaksbr }}</p>{% endif %}
+        </div>
+        <div class="personal-courses__actions">
+          {% if course.certificate %}{% if course.certificate.file %}<a class="twq-btn twq-btn--secondary" href="{% url 'personal:evidence_download' course.certificate.pk %}"><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> تنزيل الشهادة</a>{% elif course.certificate.source_url %}<a class="twq-btn twq-btn--secondary" href="{{ course.certificate.source_url }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> عرض الشهادة</a>{% endif %}{% else %}<span class="personal-courses__no-certificate"><i class="fa-regular fa-file" aria-hidden="true"></i> دون شهادة مرفقة</span>{% endif %}
+          {% if can_edit %}<a class="twq-btn twq-btn--ghost" href="{% url 'personal:course_edit' course.pk %}">تعديل<span class="sr-only"> {{ course.title }}</span></a><a class="twq-btn twq-btn--ghost personal-courses__delete" href="{% url 'personal:course_delete' course.pk %}">حذف<span class="sr-only"> {{ course.title }}</span></a>{% endif %}
+        </div>
+      </article>{% endfor %}
+    </div>
+    {% if page_obj.has_other_pages %}<nav class="personal-courses__pagination" aria-label="صفحات الدورات">{% if page_obj.has_previous %}<a class="twq-btn twq-btn--secondary" href="?year={{ year|urlencode }}&amp;q={{ query|urlencode }}&amp;page={{ page_obj.previous_page_number }}">السابق</a>{% endif %}<span>صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="twq-btn twq-btn--secondary" href="?year={{ year|urlencode }}&amp;q={{ query|urlencode }}&amp;page={{ page_obj.next_page_number }}">التالي</a>{% endif %}</nav>{% endif %}
+    {% else %}<div class="twq-empty twq-empty--page"><span class="twq-empty__icon" aria-hidden="true"><i class="fa-solid fa-graduation-cap"></i></span><h3 class="twq-empty__title">{% if query %}لا توجد دورات تطابق البحث{% else %}ابدأ سجل تطويرك المهني{% endif %}</h3><p class="twq-empty__message">{% if query %}جرّب عنوانًا أو جهة مختلفة ضمن هذه السنة الدراسية.{% else %}أضف أول دورة، ودوّن ساعاتها وأثرها المهني. يمكنك إرفاق شهادتها عند توفرها.{% endif %}</p>{% if can_edit and not query %}<a class="twq-btn twq-btn--primary" href="{% url 'personal:course_create' %}?year={{ year|urlencode }}">إضافة أول دورة</a>{% endif %}</div>{% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -7,14 +7,14 @@
 {% block title %}{% if personal_mode %}مساحة {{ personal_owner.personal_teacher_label }} الشخصية{% else %}مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}{% endif %}{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'css/teacher-home.css' %}?v=20260922.2">
+<link rel="stylesheet" href="{% static 'css/teacher-home.css' %}?v=20261010.3">
 {% endblock %}
 
 {% block content %}
 {% if personal_mode %}
 {% include "reports/partials/personal_home.html" %}
 {% else %}
-<div class="twq-page teacher-home{% if not is_deputy_workspace and not is_admin_staff_workspace %} teacher-home--daily{% endif %}" dir="rtl">
+<div class="twq-page teacher-home{% if not is_deputy_workspace and not is_admin_staff_workspace %} teacher-home--daily{% else %} teacher-home--staff{% endif %}" dir="rtl">
   {% if home_notification and is_deputy_workspace or home_notification and is_admin_staff_workspace %}
     <div class="th-notification-overlay" id="homeNotification" role="region" aria-labelledby="homeNotificationTitle">
       <section class="th-notification">
@@ -58,14 +58,14 @@
     </div>
   {% endif %}
 
-  <section class="th-hero{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header teacher-daily-header{% endif %}" aria-labelledby="teacherHomeTitle">
-    <div class="th-hero-main{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__heading{% endif %}">
-      <div class="th-eyebrow{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__eyebrow{% endif %}">
+  <section class="th-hero twq-page-header teacher-daily-header" aria-labelledby="teacherHomeTitle">
+    <div class="th-hero-main twq-page-header__heading">
+      <div class="th-eyebrow twq-page-header__eyebrow">
         <i class="fa-solid {% if is_deputy_workspace %}fa-user-tie{% elif is_lab_technician_workspace %}fa-flask-vial{% elif is_admin_staff_workspace %}fa-user-gear{% else %}fa-chalkboard-user{% endif %}" aria-hidden="true"></i>
         مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}
       </div>
-      <h1 class="th-title{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__title{% endif %}" id="teacherHomeTitle">مرحبًا، {{ request.user.name|default:USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL }}</h1>
-      <p class="th-lead{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__lead{% endif %}">
+      <h1 class="th-title twq-page-header__title" id="teacherHomeTitle">مساحة عمل {{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}</h1>
+      <p class="th-lead twq-page-header__lead">
         {% if is_deputy_workspace %}
           تابع ما ينتظر قرارك ضمن نطاقك، وأدر مهامك الإشرافية وعملك الشخصي من مساحة واحدة واضحة.
         {% elif is_lab_technician_workspace %}
@@ -76,9 +76,11 @@
           وثّق عملك، تابع طلباتك، واحتفظ بإنجازاتك من مكان واحد واضح.
         {% endif %}
       </p>
-      <div class="th-context{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__context{% endif %}" aria-label="سياق العمل الحالي">
-        <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
-        <span>{% if active_school_role_labels %}{{ active_school_role_labels|join:" • " }}{% else %}{{ USER_ROLE_LABEL|default:SCHOOL_TEACHER_LABEL|default:"المعلم" }}{% endif %}</span>
+      <div class="th-context twq-page-header__context" aria-label="سياق العمل الحالي">
+        <span class="th-context-identity"><bdi>{{ request.user.name|default:USER_ROLE_LABEL }}</bdi></span>
+        <span class="th-context-school">{{ SCHOOL_NAME|default:"لم تُحدد المدرسة" }}</span>
+        {% if request.active_school.current_academic_year %}<span>العام <bdi>{{ request.active_school.current_academic_year }}</bdi></span>{% endif %}
+        {% if has_multiple_active_school_roles %}<span>{{ active_school_role_labels|join:" • " }}</span>{% endif %}
         {% if is_deputy_workspace and deputy_domain_label %}<span aria-hidden="true">•</span><span>{{ deputy_domain_label }}</span>{% endif %}
         {% if is_admin_staff_workspace and admin_staff_template_label and not is_lab_technician_workspace %}<span aria-hidden="true">•</span><span>{{ admin_staff_template_label }}</span>{% endif %}
         {% if teacher_scope_label %}<span aria-hidden="true">•</span><span>{{ teacher_scope_label }}</span>{% endif %}
@@ -88,6 +90,11 @@
           <a href="#deputyCommandCenter" class="th-btn th-btn-primary">
             <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
             إدارة نطاقي
+          </a>
+        {% elif is_lab_technician_workspace %}
+          <a href="{% url 'reports:lab_dashboard' %}" class="th-btn th-btn-primary">
+            <i class="fa-solid fa-flask-vial" aria-hidden="true"></i>
+            إدارة المختبر
           </a>
         {% elif is_admin_staff_workspace %}
           <a href="#adminStaffCommandCenter" class="th-btn th-btn-primary">
@@ -106,7 +113,7 @@
         </a>
       </div>
     </div>
-    <aside class="th-hero-side{% if not is_deputy_workspace and not is_admin_staff_workspace %} twq-page-header__aside{% endif %}" aria-label="{% if is_deputy_workspace %}ملخص نطاق الوكيل{% elif is_lab_technician_workspace %}ملخص عمل محضّر المختبر{% elif is_admin_staff_workspace %}ملخص عمل الموظف الإداري{% else %}ملخص المدرسة وآخر توثيق{% endif %}">
+    <aside class="th-hero-side twq-page-header__aside" aria-label="{% if is_deputy_workspace %}ملخص نطاق الوكيل{% elif is_lab_technician_workspace %}ملخص عمل محضّر المختبر{% elif is_admin_staff_workspace %}ملخص عمل الموظف الإداري{% else %}ملخص المدرسة وآخر توثيق{% endif %}">
       <div>
         <div class="th-side-label">{% if is_deputy_workspace %}نطاق الإشراف{% elif is_lab_technician_workspace %}مسؤولية المختبر{% elif is_admin_staff_workspace %}نطاق العمل{% else %}المدرسة الحالية{% endif %}</div>
         <div class="th-side-value">

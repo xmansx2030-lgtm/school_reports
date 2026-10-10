@@ -15,6 +15,9 @@ class PersonalTeacherReportInterfaceTests(TestCase):
         )
         self.workspace = PersonalWorkspace.objects.create(owner=self.teacher)
         self.client.force_login(self.teacher)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = "1447-1448"
+        session.save()
 
     def test_personal_print_uses_school_image_layout_with_mixed_documents(self):
         report = PersonalReport.objects.create(

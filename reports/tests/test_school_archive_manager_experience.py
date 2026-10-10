@@ -70,6 +70,11 @@ from reports.services_export import (
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class SchoolArchiveManagerExperienceTests(TestCase):
     def setUp(self):
+        # Preserve TestCase's transaction when explicit FileResponse.close()
+        # triggers request-finished cleanup on a file-backed test database.
+        connection_cleanup = patch("django.db.backends.base.base.BaseDatabaseWrapper.close_if_unusable_or_obsolete")
+        connection_cleanup.start()
+        self.addCleanup(connection_cleanup.stop)
         self.media_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.media_dir.cleanup)
         self.settings_override = override_settings(MEDIA_ROOT=self.media_dir.name)

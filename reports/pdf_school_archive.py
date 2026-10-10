@@ -9,6 +9,7 @@ print-only dependency is unavailable.
 """
 
 from io import BytesIO
+from unicodedata import category
 
 from django.utils import timezone
 
@@ -66,7 +67,10 @@ class _ArchivePdf:
         self._new_page()
 
     def rtl(self, value) -> str:
-        return self._bidi(self._reshape(str(value or "—")), base_dir="R")
+        text = str(value or "—")
+        # A wrapped Latin identifier may end in punctuation. Keep its logical
+        # order instead of moving that punctuation to the opposite line edge.
+        return text if text.isascii() else self._bidi(self._reshape(text), base_dir="R")
 
     def _draw_right(self, value, x, y, *, size=9, bold=False, color=None) -> None:
         font = self._bold if bold else self._regular
@@ -78,20 +82,45 @@ class _ArchivePdf:
 
     def _wrap(self, value, width, *, size=9, bold=False) -> list[str]:
         font = self._bold if bold else self._regular
+
+        def fits(text: str) -> bool:
+            return self._pdfmetrics.stringWidth(self.rtl(text), font, size) <= width
+
         result: list[str] = []
         for paragraph in str(value or "—").splitlines() or ["—"]:
             words = paragraph.split()
             if not words:
                 result.append("")
                 continue
-            current = words[0]
-            for word in words[1:]:
-                candidate = f"{current} {word}"
-                if self._pdfmetrics.stringWidth(self.rtl(candidate), font, size) <= width:
+            current = ""
+            for word in words:
+                candidate = f"{current} {word}" if current else word
+                if fits(candidate):
                     current = candidate
-                else:
+                    continue
+                if current:
                     result.append(current)
+                if fits(word):
                     current = word
+                    continue
+
+                # Whitespace-only wrapping leaves codes, URLs and unspaced
+                # Arabic text outside table borders. Split oversized tokens
+                # using the exact rendered font width, retaining their marks.
+                clusters: list[str] = []
+                for character in word:
+                    if clusters and category(character) in {"Mn", "Mc", "Me"}:
+                        clusters[-1] += character
+                    else:
+                        clusters.append(character)
+                current = ""
+                for cluster in clusters:
+                    candidate = current + cluster
+                    if current and not fits(candidate):
+                        result.append(current)
+                        current = cluster
+                    else:
+                        current = candidate
             result.append(current)
         return result or ["—"]
 
@@ -145,23 +174,37 @@ class _ArchivePdf:
     def field(self, label: str, value) -> None:
         lines = self._wrap(value, self.content_width - 125, size=8.5)
         height = max(24, 10 + len(lines) * 13)
-        self._ensure(height + 5)
-        self.pdf.setFillColor(self._pale)
-        self.pdf.setStrokeColor(self._line)
-        self.pdf.roundRect(self.margin, self.y - height + 5, self.content_width, height, 3, fill=1, stroke=1)
-        self._draw_right(label, self.right - 8, self.y - 10, size=8.5, bold=True, color=self._green)
-        text_right = self.right - 118
-        line_y = self.y - 10
-        for line in lines:
-            self._draw_right(line or " ", text_right, line_y, size=8.5)
-            line_y -= 13
-        self.y -= height + 6
+        if height + 5 <= self.height - 146 - self.bottom:
+            self._ensure(height + 5)
+        offset = 0
+        while offset < len(lines):
+            self._ensure(29)
+            capacity = max(1, int((self.y - self.bottom - 15) / 13))
+            page_lines = lines[offset:offset + capacity]
+            height = max(24, 10 + len(page_lines) * 13)
+            self.pdf.setFillColor(self._pale)
+            self.pdf.setStrokeColor(self._line)
+            self.pdf.roundRect(self.margin, self.y - height + 5, self.content_width, height, 3, fill=1, stroke=1)
+            self._draw_right(label, self.right - 8, self.y - 10, size=8.5, bold=True, color=self._green)
+            text_right = self.right - 118
+            line_y = self.y - 10
+            for line in page_lines:
+                self._draw_right(line or " ", text_right, line_y, size=8.5)
+                line_y -= 13
+            self.y -= height + 6
+            offset += len(page_lines)
+            if offset < len(lines):
+                self._new_page()
 
     def paragraph(self, value, *, size=9) -> None:
         lines = self._wrap(value, self.content_width - 16, size=size)
         needed = 12 + len(lines) * 14
-        self._ensure(needed)
+        # Keep short paragraphs together; a paragraph taller than one page
+        # must continue on subsequent pages instead of drawing below the footer.
+        if needed <= self.height - 146 - self.bottom:
+            self._ensure(needed)
         for line in lines:
+            self._ensure(14)
             self._draw_right(line or " ", self.right - 8, self.y, size=size)
             self.y -= 14
         self.y -= 5
@@ -173,13 +216,14 @@ class _ArchivePdf:
         total = sum(widths)
         scaled = [self.content_width * value / total for value in widths]
 
-        def draw_row(values, *, header=False) -> None:
-            wrapped = [self._wrap(value, scaled[i] - 10, size=7.2, bold=header) for i, value in enumerate(values)]
+        wrapped_headers = [
+            self._wrap(value, scaled[i] - 10, size=7.2, bold=True)
+            for i, value in enumerate(headers)
+        ]
+        header_height = max(22, 8 + max(len(lines) for lines in wrapped_headers) * 10)
+
+        def draw_fragment(wrapped, *, header=False) -> None:
             row_height = max(22, 8 + max(len(lines) for lines in wrapped) * 10)
-            if self.y - (row_height + 2) < self.bottom:
-                self._new_page()
-                if not header:
-                    draw_row(headers, header=True)
             x = self.right
             for index, lines in enumerate(wrapped):
                 width = scaled[index]
@@ -200,9 +244,31 @@ class _ArchivePdf:
                 x -= width
             self.y -= row_height
 
-        draw_row(headers, header=True)
+        def continue_table_page() -> None:
+            self._new_page()
+            draw_fragment(wrapped_headers, header=True)
+
+        self._ensure(header_height + 24)
+        draw_fragment(wrapped_headers, header=True)
         for row in rows:
-            draw_row(row)
+            wrapped = [self._wrap(value, scaled[i] - 10, size=7.2) for i, value in enumerate(row)]
+            line_count = max(len(lines) for lines in wrapped)
+            row_height = max(22, 8 + line_count * 10)
+            page_row_space = self.height - 146 - header_height - self.bottom
+            # Keep ordinary rows together. Oversized rows continue as aligned
+            # column fragments with a repeated table header on every new page.
+            if row_height + 2 <= page_row_space and self.y - (row_height + 2) < self.bottom:
+                continue_table_page()
+            offset = 0
+            while offset < line_count:
+                if self.y - 24 < self.bottom:
+                    continue_table_page()
+                capacity = max(1, int((self.y - self.bottom - 10) / 10))
+                count = min(line_count - offset, capacity)
+                draw_fragment([lines[offset:offset + count] for lines in wrapped])
+                offset += count
+                if offset < line_count:
+                    continue_table_page()
         self.y -= 8
 
     def finish(self) -> bytes:
@@ -381,7 +447,7 @@ def generate_lab_inventory_archive_pdf(*, school, assets, handovers) -> bytes:
 
 
 def generate_lab_experiment_archive_pdf(experiment) -> bytes:
-    assets = list(experiment.assets.all())
+    assets = list(experiment.assets.filter(school=experiment.school))
     document = _ArchivePdf(
         school=experiment.school,
         title=f"تجربة مختبر: {experiment.title or 'بلا عنوان'}",

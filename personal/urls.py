@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import assistant_views, platform_views, portfolio_views, share_views, views, workspace_views
 from . import support_views
+from . import course_views
 
 app_name = "personal"
 
@@ -45,6 +46,10 @@ urlpatterns = [
     path("years/<str:value>/export/", workspace_views.year_export, name="year_export"),
     path("initiatives/", workspace_views.initiatives, name="initiatives"),
     path("initiatives/<int:pk>/edit/", workspace_views.initiatives, name="initiative_edit"),
+    path("courses/", course_views.courses, name="courses"),
+    path("courses/new/", course_views.course_create, name="course_create"),
+    path("courses/<int:pk>/edit/", course_views.course_edit, name="course_edit"),
+    path("courses/<int:pk>/delete/", course_views.course_delete, name="course_delete"),
     path("notices/", workspace_views.notice_list, name="notices"),
     path("notices/<int:pk>/", workspace_views.notice_detail, name="notice_detail"),
     path("notices/<int:pk>/read/", workspace_views.notice_mark_read, name="notice_mark_read"),

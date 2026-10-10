@@ -54,6 +54,7 @@ from .models import (
     Notification,
     NotificationRecipient,
     School,
+    AcademicYear,
     SchoolAdditionRequest,
     SchoolMembership,
     PlatformSettings,
@@ -72,6 +73,32 @@ from .lab_kinds import LabKind
 from .permissions import is_school_manager
 
 logger = logging.getLogger(__name__)
+
+
+class PlatformAcademicYearForm(forms.ModelForm):
+    """Only platform owners publish verified Ministry calendars."""
+
+    class Meta:
+        model = AcademicYear
+        fields = ("value", "start_date", "end_date", "source_url", "is_active")
+        widgets = {
+            "value": forms.TextInput(attrs={"dir": "ltr", "placeholder": "1448-1449"}),
+            "start_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "dir": "ltr"}),
+            "end_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "dir": "ltr"}),
+            "source_url": forms.URLInput(attrs={"dir": "ltr", "placeholder": "https://www.moe.gov.sa/…"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if name != "is_active":
+                field.widget.attrs["class"] = "twq-control"
+            field.widget.attrs["aria-describedby"] = f"id_{name}_helptext id_{name}_error"
+        self.fields["value"].help_text = "اسم السنة الهجرية بفارق سنة واحدة، كما يظهر في التقويم الرسمي."
+        self.fields["start_date"].help_text = "تاريخ بداية الدراسة للطلاب وفق تقويم الوزارة؛ بالتاريخ الميلادي."
+        self.fields["end_date"].help_text = "آخر يوم دراسي معتمد؛ بالتاريخ الميلادي."
+        self.fields["source_url"].help_text = "رابط التقويم أو الإعلان الرسمي من موقع وزارة التعليم؛ مطلوب للنشر."
+        self.fields["is_active"].help_text = "النشر يتيح السنة لجميع المدارس والمعلمين. يبدأ الانتقال إليها في تاريخ بدايتها."
 
 # Avoid repeating the same warning on every request when broker is not configured.
 _NOTIF_CELERY_FALLBACK_WARNED = False
@@ -3274,12 +3301,6 @@ class ArchiveStorageOptionForm(forms.ModelForm):
 class AchievementCreateYearForm(forms.Form):
     """اختيار سنة دراسية من قائمة لتفادي أخطاء الكتابة."""
 
-    BASE_HIJRI_YEARS: List[str] = [
-        "1447-1448",
-        "1448-1449",
-        "1449-1450",
-    ]
-
     academic_year = forms.ChoiceField(
         label="السنة الدراسية (هجري)",
         choices=[],
@@ -3323,14 +3344,9 @@ class AchievementCreateYearForm(forms.Form):
             # القائمة المحددة للإنشاء لا تختلط بالسنوات التاريخية للملفات السابقة.
             all_years = base_set
         else:
-            all_years = set([_norm(y) for y in self.BASE_HIJRI_YEARS] + existing)
-            # توليد سنوات مستقبلية تلقائيًا في الحالة الافتراضية
-            parsed = [_parse(y) for y in all_years]
-            parsed_ok = [p for p in parsed if p is not None]
-            max_end = max([e for _, e in parsed_ok], default=1450)
-            for i in range(0, 2):
-                s = max_end + i
-                all_years.add(f"{s}-{s + 1}")
+            from .academic_years import approved_academic_year_options
+
+            all_years = set(approved_academic_year_options()) | set(existing)
 
         valid = sorted(
             [y for y in all_years if _parse(y) is not None],

@@ -21,7 +21,7 @@ from ._helpers import (
     _get_active_school, _user_manager_schools,
     _clean_query_params, _clean_query_value, _parse_date_safe,
 )
-from ..academic_years import hijri_academic_year_options
+from ..academic_years import hijri_academic_year_options, school_current_academic_year
 from ..hijri_utils import hijri_date
 from ..context_processors import nav_context
 from ..cache_utils import get_school_dashboard_payload
@@ -908,16 +908,18 @@ class _SchoolSettingsForm(forms.ModelForm):
         # السنة الحالية: قائمة منسدلة بدل الإدخال اليدوي
         self.fields["current_academic_year"] = forms.ChoiceField(
             label="السنة الدراسية الحالية (هجري)",
-            required=True,
+            required=False,
+            disabled=True,
             choices=[("", "— اختر السنة —")] + choices,
             widget=forms.Select(),
         )
         self.fields["current_academic_year"].initial = (
-            getattr(self.instance, "current_academic_year", "") or ""
+            school_current_academic_year(self.instance)
         ).strip()
+        self.initial["current_academic_year"] = self.fields["current_academic_year"].initial
         self.fields["current_academic_year"].help_text = (
-            "اختر السنة الحالية مرة واحدة؛ ستظهر للفريق عند إنشاء ملف الإنجاز، "
-            "وتُستخدم أيضًا لتصنيف التقارير والأرشفة."
+            "تحدّد إدارة المنصة السنة الحالية من تقويم وزارة التعليم. "
+            "تنتقل تلقائيًا في تاريخ البداية المعتمد، وتبقى الأعمال السابقة في سنواتها."
         )
         self.fields["email"].help_text = "البريد الرسمي المستخدم للتواصل مع المدرسة."
         self.fields["phone"].help_text = "استخدم 05XXXXXXXX أو الصيغة الدولية +9665XXXXXXXX."
@@ -1519,11 +1521,9 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
         # ولا يملك تحديدها، والمدير لا يرى شيئاً ولا يعلم أن مساراً كاملاً
         # متوقّف عنده. فيُرفع التنبيه هنا حيث تُرفع بقية العوائق، ومعه السنةُ
         # المقترحة من التقويم حتى يكون الضبط نظرةً لا بحثاً.
-        if not (getattr(active_school, "current_academic_year", "") or "").strip():
-            from ..hijri_utils import current_academic_year as _suggested_year
-
+        if not school_current_academic_year(active_school):
             ctx['academic_year_unset'] = True
-            ctx['academic_year_suggestion'] = _suggested_year()
+            ctx['academic_year_suggestion'] = ""
 
         # الاستهلاك الثلاثي معروضاً دائماً لا عند الخطر فقط: التنبيه وحده يخبر
         # المدير أنه اقترب من الحدّ، ولا يخبره أين هو منه قبل ذلك.
