@@ -1,0 +1,20 @@
+{% extends "personal/base.html" %}
+{% load static %}
+{% block title %}{% if editing %}تعديل الدورة{% else %}إضافة دورة{% endif %}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/personal-courses.css' %}?v=20261010.1">{% endblock %}
+{% block content %}
+<div class="twq-page personal-courses">
+  <header class="twq-page-header"><div class="twq-page-header__heading"><p class="twq-page-header__eyebrow"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> التطوير المهني</p><h1 class="twq-page-header__title">{% if editing %}تعديل الدورة{% else %}إضافة دورة{% endif %}</h1><p class="twq-page-header__lead">وثّق رحلة التعلم، واحفظ أثرها ضمن أعمال السنة الدراسية.</p></div><div class="twq-page-header__aside"><a class="twq-btn twq-btn--secondary" href="{{ list_url }}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> سجل الدورات</a></div></header>
+  {% if not can_edit %}<div class="twq-alert twq-alert--info" role="note">يلزم اشتراك نشط وسنة مفتوحة لحفظ بيانات الدورة.</div>{% endif %}
+  <form method="post" class="personal-courses__form" novalidate>{% csrf_token %}
+    <section class="twq-section" aria-labelledby="courseDetailsTitle"><header class="twq-section__header"><div><span class="twq-section__kicker">السجل المهني</span><h2 class="twq-section__title" id="courseDetailsTitle">بيانات الدورة</h2><p class="twq-section__description">السنة الدراسية تحدد السجل الذي تُحفظ فيه هذه الدورة.</p></div></header>
+      {% if form.non_field_errors %}<div class="twq-alert twq-alert--danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      <fieldset class="personal-courses__fields"{% if not can_edit %} disabled{% endif %}><legend class="sr-only">بيانات الدورة وشهادتها</legend>
+        {% include "personal/_field.html" with field=form.title %}{% include "personal/_field.html" with field=form.provider %}{% include "personal/_field.html" with field=form.academic_year %}{% include "personal/_field.html" with field=form.hours %}{% include "personal/_field.html" with field=form.start_date %}{% include "personal/_field.html" with field=form.completion_date %}
+        <div class="personal-courses__wide">{% include "personal/_field.html" with field=form.description %}</div><div class="personal-courses__wide">{% include "personal/_field.html" with field=form.certificate %}</div>
+      </fieldset>
+    </section>
+    <aside class="twq-section personal-courses__side"><span class="twq-section__kicker">شهادة الدورة</span><h2 class="twq-section__title">من التعلم إلى الإنجاز</h2><p>احفظ الشهادة في مكتبة الشواهد للسنة نفسها، ثم اربطها بالدورة. يمكنك إضافة الشاهد إلى محور التطوير المهني في ملف الإنجاز.</p>{% if can_edit %}<a class="twq-btn twq-btn--secondary" href="{% url 'personal:evidence_create' %}?year={{ year|urlencode }}" target="_blank" rel="noopener">إضافة شهادة إلى الشواهد <span class="sr-only">في علامة تبويب جديدة</span></a><p class="personal-courses__hint">بعد إضافة الشهادة، حدّث هذه الصفحة لاختيارها قبل تعبئة البيانات.</p><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> {% if editing %}حفظ التعديلات{% else %}حفظ الدورة{% endif %}</button>{% endif %}<a class="twq-btn twq-btn--ghost" href="{{ list_url }}">إلغاء</a></aside>
+  </form>
+</div>
+{% endblock %}

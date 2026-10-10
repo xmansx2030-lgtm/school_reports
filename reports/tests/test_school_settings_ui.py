@@ -147,12 +147,12 @@ class SchoolSettingsUITests(TestCase):
         self.assertContains(response, 'id="id_phone_error"')
         self.assertContains(response, 'aria-invalid="true"')
         for field in (
-            "current_academic_year",
             "email",
             "phone",
             "share_link_default_days",
         ):
             self.assertIn(field, response.context["form"].errors)
+        self.assertNotIn("current_academic_year", response.context["form"].errors)
         self.school.refresh_from_db()
         self.assertEqual(self.school.email, "")
         self.assertFalse(self.school.report_approval_enabled)

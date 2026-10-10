@@ -9,14 +9,14 @@ from django.forms.models import BaseInlineFormSet
 from django.utils import timezone
 
 from reports.forms import _compress_image_upload
-from reports.hijri_utils import current_academic_year
+from reports.academic_years import approved_academic_year_options, current_academic_year_value
 from reports.model_parts.schools import normalize_sa_mobile_identity
 from reports.models import Teacher
 from reports.report_limits import REPORT_DETAILS_MAX_LENGTH, REPORT_DETAILS_RECOMMENDED_LENGTH, report_details_length_error
 from reports.validators import validate_circular_attachment_file, validate_image_file
 
 from .models import PersonalEvidence, PersonalInitiative, PersonalNotice, PersonalPlan, PersonalReport, PersonalWorkspace
-from .services import current_school_membership_for
+from .services import current_school_membership_for, personal_year_choices
 
 
 class PersonalFormStyleMixin:
@@ -213,10 +213,36 @@ def clean_academic_year(value):
     return value
 
 
-class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
+class PersonalAcademicYearFormMixin:
+    """A platform dropdown and immutable year for every saved annual record."""
+
+    def __init__(self, *args, workspace=None, **kwargs):
+        instance = kwargs.get("instance")
+        self.original_academic_year = instance.academic_year if instance and instance.pk else None
+        self.workspace = workspace or (getattr(instance, "workspace", None) if instance and instance.pk else None)
+        super().__init__(*args, **kwargs)
+        choices = personal_year_choices(self.workspace) if self.workspace else [(value, value) for value in approved_academic_year_options()]
+        if self.original_academic_year and self.original_academic_year not in dict(choices):
+            choices.append((self.original_academic_year, self.original_academic_year))
+        self.fields["academic_year"].choices = [("", "— اختر السنة الدراسية المعتمدة —"), *choices]
+        self.fields["academic_year"].help_text = (
+            "سنة هذا السجل محفوظة ولا تتغير عند تعديل محتواه." if self.original_academic_year
+            else "تعتمد إدارة المنصة السنوات وفق تقويم وزارة التعليم؛ يُحفظ العمل في السنة المختارة."
+        )
+
+    def clean_academic_year(self):
+        value = self.cleaned_data["academic_year"]
+        if self.original_academic_year and value != self.original_academic_year:
+            raise ValidationError("لا يمكن نقل السجل إلى سنة أخرى؛ يبقى كل عمل محفوظًا في سنته الدراسية.")
+        if value not in approved_academic_year_options():
+            raise ValidationError("هذه السنة التاريخية متاحة للقراءة والتصدير فقط حتى تعتمدها إدارة المنصة.")
+        return value
+
+
+class PersonalReportForm(PersonalFormStyleMixin, PersonalAcademicYearFormMixin, forms.ModelForm):
     selection_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
     client_submission_id = forms.UUIDField(required=False, widget=forms.HiddenInput)
-    academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+    academic_year = forms.ChoiceField(label="السنة الدراسية", choices=())
 
     def __init__(self, *args, **kwargs):
         bound = args[0] if args else kwargs.get("data")
@@ -256,7 +282,7 @@ class PersonalReportForm(PersonalFormStyleMixin, forms.ModelForm):
         }
 
     def clean_academic_year(self):
-        return clean_academic_year(self.cleaned_data["academic_year"])
+        return super().clean_academic_year()
 
     def clean(self):
         data = super().clean()
@@ -297,7 +323,7 @@ PERSONAL_REPORT_CATEGORY_CHOICES = (
 )
 
 
-class PersonalSchoolParityReportForm(PersonalFormStyleMixin, forms.ModelForm):
+class PersonalSchoolParityReportForm(PersonalFormStyleMixin, PersonalAcademicYearFormMixin, forms.ModelForm):
     """The school report editor contract, saved into an owned personal report."""
 
     section_selection_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
@@ -321,7 +347,7 @@ class PersonalSchoolParityReportForm(PersonalFormStyleMixin, forms.ModelForm):
         "class": "textarea", "rows": 4,
         "placeholder": "وضح الخطوات والإجراءات وطريقة تنفيذ النشاط",
     }))
-    academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+    academic_year = forms.ChoiceField(label="السنة الدراسية", choices=())
     category = forms.ChoiceField(label="نوع التقرير", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
 
     class Meta:
@@ -347,12 +373,11 @@ class PersonalSchoolParityReportForm(PersonalFormStyleMixin, forms.ModelForm):
             "status": forms.HiddenInput(),
         }
 
-    def __init__(self, *args, workspace=None, **kwargs):
-        self.workspace = workspace
+    def __init__(self, *args, workspace=None, selected_year=None, **kwargs):
         instance = kwargs.get("instance")
         assigned_year = (
             instance.academic_year if instance and instance.pk
-            else (getattr(workspace, "current_academic_year", "") or current_academic_year())
+            else (selected_year or kwargs.get("initial", {}).get("academic_year") or current_academic_year_value())
         )
         bound_data = args[0] if args else kwargs.get("data")
         if bound_data is not None:
@@ -360,12 +385,12 @@ class PersonalSchoolParityReportForm(PersonalFormStyleMixin, forms.ModelForm):
             # server-owned even if the hidden input is changed by a client.
             data = bound_data.copy()
             data["status"] = instance.status if instance and instance.pk else PersonalReport.Status.COMPLETE
-            data["academic_year"] = assigned_year
+            data.setdefault("academic_year", assigned_year)
             if args:
                 args = (data, *args[1:])
             else:
                 kwargs["data"] = data
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, workspace=workspace, **kwargs)
         if not self.is_bound:
             self.initial["academic_year"] = assigned_year
             self.initial["status"] = instance.status if instance and instance.pk else PersonalReport.Status.COMPLETE
@@ -404,13 +429,7 @@ class PersonalSchoolParityReportForm(PersonalFormStyleMixin, forms.ModelForm):
         return value
 
     def clean_academic_year(self):
-        value = clean_academic_year(self.cleaned_data["academic_year"])
-        if self.instance.pk and value != self.instance.academic_year:
-            if self.instance.evidence.exists():
-                raise ValidationError("لا يمكن تغيير سنة التقرير وهو مرتبط بشواهد.")
-            if self.instance.portfolio_links.exists():
-                raise ValidationError("لا يمكن تغيير سنة التقرير وهو مرتبط بمحور ملف الإنجاز.")
-        return value
+        return super().clean_academic_year()
 
     def clean(self):
         data = super().clean()
@@ -566,8 +585,8 @@ def personal_report_evidence_formset(max_images=8):
 PersonalReportEvidenceFormSet = personal_report_evidence_formset()
 
 
-class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
-    academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+class PersonalEvidenceForm(PersonalFormStyleMixin, PersonalAcademicYearFormMixin, forms.ModelForm):
+    academic_year = forms.ChoiceField(label="السنة الدراسية", choices=())
     presentation_enabled = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
 
     class Meta:
@@ -579,21 +598,23 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
     def __init__(self, *args, workspace, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.workspace = workspace
+        super().__init__(*args, workspace=workspace, **kwargs)
+        year = self.original_academic_year or (
+            self.data.get("academic_year") if self.is_bound else self.initial.get("academic_year")
+        ) or current_academic_year_value()
         self.fields["report"].queryset = PersonalReport.objects.filter(
-            workspace=workspace, trashed_at__isnull=True,
+            workspace=workspace, academic_year=year, trashed_at__isnull=True,
         )
         self.fields["report"].label = "التقرير المرتبط"
         self.fields["report"].required = False
-        self.fields["initiative"].queryset = PersonalInitiative.objects.filter(workspace=workspace)
+        self.fields["initiative"].queryset = PersonalInitiative.objects.filter(workspace=workspace, academic_year=year)
         self.fields["initiative"].label = "المبادرة المرتبطة"
         self.fields["initiative"].required = False
         self.fields["display_size"].required = False
         self.fields["fit_mode"].required = False
 
     def clean_academic_year(self):
-        return clean_academic_year(self.cleaned_data["academic_year"])
+        return super().clean_academic_year()
 
     def clean(self):
         data = super().clean()
@@ -625,14 +646,18 @@ class PersonalEvidenceForm(PersonalFormStyleMixin, forms.ModelForm):
 
 
 class PersonalYearForm(PersonalFormStyleMixin, forms.Form):
-    value = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year], max_length=20)
+    value = forms.ChoiceField(label="السنة الدراسية", choices=())
+
+    def __init__(self, *args, workspace=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["value"].choices = personal_year_choices(workspace) if workspace else [(value, value) for value in approved_academic_year_options()]
 
     def clean_value(self):
         return clean_academic_year(self.cleaned_data["value"])
 
 
-class PersonalInitiativeForm(PersonalFormStyleMixin, forms.ModelForm):
-    academic_year = forms.CharField(label="السنة الدراسية", validators=[clean_academic_year])
+class PersonalInitiativeForm(PersonalFormStyleMixin, PersonalAcademicYearFormMixin, forms.ModelForm):
+    academic_year = forms.ChoiceField(label="السنة الدراسية", choices=())
 
     def __init__(self, *args, **kwargs):
         instance = kwargs.get("instance")
@@ -645,7 +670,7 @@ class PersonalInitiativeForm(PersonalFormStyleMixin, forms.ModelForm):
         widgets = {"summary": forms.Textarea(attrs={"rows": 5}), "impact": forms.Textarea(attrs={"rows": 3})}
 
     def clean_academic_year(self):
-        return clean_academic_year(self.cleaned_data["academic_year"])
+        return super().clean_academic_year()
 
     def clean(self):
         data = super().clean()

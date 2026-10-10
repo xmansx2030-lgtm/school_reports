@@ -15,6 +15,7 @@ from __future__ import annotations
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -50,17 +51,28 @@ _STATE_ORDER = {
 }
 
 
-def _reviewable_reports(user, school):
+def _reviewable_reports(user, school, *, include_review_history=False):
     """التقارير التي يحقّ لهذا المستخدم رؤيتها في الصندوق.
 
     المدير يرى كل ما ينتظر في مدرسته. وغيره يرى ما يقع في نطاقه وحده — والنطاق
     الفارغ يعني لا شيء، لا كل شيء.
     """
     base = (
-        Report.objects.filter(school=school, approval_state__in=PENDING_REVIEW_STATES)
+        Report.objects.filter(school=school)
         .select_related("teacher", "category", "reviewed_by")
         .order_by("-submitted_at", "-id")
     )
+    if include_review_history:
+        # An action changes the state before redirecting to its detail page.
+        # Keep the actor's receipt readable after a return/request/approval,
+        # without opening other reviewers' historical records or private drafts.
+        base = base.filter(
+            Q(approval_state__in=PENDING_REVIEW_STATES)
+            | Q(reviewed_by=user)
+            | Q(decided_by=user)
+        ).exclude(approval_state=ApprovalState.DRAFT)
+    else:
+        base = base.filter(approval_state__in=PENDING_REVIEW_STATES)
 
     if is_school_manager(user, active_school=school):
         return base
@@ -242,7 +254,9 @@ def _report_for_review(request, pk: int, school):
     is_owner = report.teacher_id == request.user.pk
     if is_owner or is_school_manager(request.user, active_school=school):
         return report
-    if _reviewable_reports(request.user, school).filter(pk=pk).exists():
+    if _reviewable_reports(
+        request.user, school, include_review_history=True
+    ).filter(pk=pk).exists():
         return report
     # سجل خارج النطاق يُعامَل كغير موجود: تمييز «ممنوع» عن «غير موجود» يكشف
     # وجود التقرير لمن لا يحق له معرفة أنه موجود أصلاً.

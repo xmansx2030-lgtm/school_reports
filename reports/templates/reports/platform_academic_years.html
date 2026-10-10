@@ -1,127 +1,67 @@
 {% extends "base.html" %}
-{% block title %}السنوات الدراسية{% endblock %}
-{% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  body { background: linear-gradient(120deg, #e0e7ff 0%, #f0fdfa 100%); min-height: 100vh; }
-  .ay-card {
-    max-width: 980px; margin: 40px auto 24px auto; background: #fff; border-radius: 28px;
-    box-shadow: 0 22px 60px -28px rgba(10,92,51,.5); border: 1px solid rgba(185,151,91,.2);
-    overflow: hidden; direction: rtl;
-  }
-  .ay-head {
-    position: relative; overflow: hidden; color: #fff; padding: 30px 30px 26px;
-    background:
-      radial-gradient(120% 160% at 92% -30%, rgba(212,177,109,.24), transparent 50%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%);
-    border-bottom: 1px solid rgba(212,177,109,.4);
-  }
-  .ay-head::after { content:""; position:absolute; top:0; right:0; left:0; height:4px;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent); }
-  .ay-bc { font-weight:800; opacity:.9; font-size:.95rem; margin-bottom:8px; }
-  .ay-bc a { color:#e6cf9a; text-decoration:none; }
-  .ay-title { margin:0; font-size:1.9rem; font-weight:950; display:flex; align-items:center; gap:12px;
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-  .ay-sub { margin:8px 0 0; color:rgba(255,255,255,.82); font-weight:700; }
-  .ay-body { padding: 26px 30px 30px; }
-
-  .ay-bar { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:22px; }
-  .ay-add { flex:1 1 280px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
-  .ay-add .fld { flex:1 1 200px; }
-  .ay-add label { display:block; font-weight:900; color:#0a5c33; margin-bottom:6px; font-size:.9rem; }
-  .ay-input { width:100%; min-height:46px; border:1.5px solid #e6e2d6; border-radius:12px; padding:10px 13px; font-weight:800; }
-  .ay-input:focus { outline:none; border-color:rgba(185,151,91,.7); box-shadow:0 0 0 3px rgba(212,177,109,.2); }
-  .ay-btn { min-height:46px; border:none; border-radius:12px; padding:11px 20px; font-weight:900; cursor:pointer;
-    display:inline-flex; align-items:center; gap:8px; text-decoration:none; white-space:nowrap; }
-  .ay-btn.primary { background:linear-gradient(135deg,#0a5c33,#074426); color:#fff; box-shadow:0 10px 22px -12px rgba(10,92,51,.6); }
-  .ay-btn.gold { background:rgba(212,177,109,.16); color:#7a5c1e; border:1.5px solid rgba(185,151,91,.45); }
-  .ay-btn.ghost { background:#fff; color:#0a5c33; border:1.5px solid rgba(185,151,91,.4); }
-  .ay-stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
-  .ay-pill { font-weight:900; font-size:.9rem; padding:6px 14px; border-radius:999px; border:1px solid #ece7da; background:#faf7ef; color:#475569; }
-
-  .ay-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
-  .ay-item { border:1.5px solid #ece7da; border-radius:16px; padding:14px 16px; background:#fff;
-    display:flex; flex-direction:column; gap:10px; transition:box-shadow .15s, transform .15s; }
-  .ay-item:hover { box-shadow:0 12px 28px -18px rgba(10,92,51,.4); transform:translateY(-2px); }
-  .ay-item.off { background:#faf7ef; opacity:.85; }
-  .ay-yv { font-weight:950; font-size:1.25rem; color:#0f172a; display:flex; align-items:center; gap:8px; }
-  .ay-yv i { color:#b9975b; }
-  .ay-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-  .ay-state { display:inline-flex; align-items:center; gap:6px; font-weight:900; font-size:.85rem; padding:4px 11px; border-radius:999px; }
-  .ay-state.on { color:#16a34a; background:#f0fdf4; border:1px solid #bbf7d0; }
-  .ay-state.off2 { color:#b45309; background:#fff7ed; border:1px solid #fed7aa; }
-  .ay-use { font-size:.82rem; font-weight:800; color:#64748b; }
-  .ay-actions { display:flex; gap:7px; }
-  .ay-mini { border:1.5px solid #ece7da; background:#fff; border-radius:10px; padding:7px 11px; font-weight:800; font-size:.85rem;
-    cursor:pointer; display:inline-flex; align-items:center; gap:6px; color:#334155; }
-  .ay-mini:hover { border-color:rgba(185,151,91,.6); }
-  .ay-mini.danger { color:#dc2626; border-color:#fecaca; }
-  .ay-mini.danger:hover { background:#dc2626; color:#fff; border-color:#dc2626; }
-  .ay-empty { text-align:center; color:#64748b; font-weight:800; padding:40px 16px; }
-  @media(max-width:560px){ .ay-card,.ay-head,.ay-body{ padding-left:16px; padding-right:16px; } }
-</style>
-{% endblock head %}
-
+{% load static %}
+{% block title %}التقويم الدراسي المركزي{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/platform-academic-years.css' %}?v=20261010.1">{% endblock %}
 {% block content %}
-<div class="ay-card">
-  <div class="ay-head">
-    <div class="ay-bc"><a href="{% url 'reports:platform_admin_dashboard' %}"><i class="fa-solid fa-gauge-high"></i> لوحة الآدمن</a> › السنوات الدراسية</div>
-    <h1 class="ay-title"><i class="fa-solid fa-calendar-days xs-platform-academic-years-1"></i> السنوات الدراسية</h1>
-    <p class="ay-sub">المصدر المركزي للسنوات الهجرية التي تظهر للمدارس في إعداداتها. أضف السنوات القادمة، وفعّل أو عطّل أيّها.</p>
-  </div>
-
-  <div class="ay-body">
-    <div class="ay-bar">
-      <form method="post" class="ay-add">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add">
-        <div class="fld">
-          <label for="ayValue">إضافة سنة (هجري)</label>
-          <input class="ay-input" id="ayValue" name="value" placeholder="مثال: 1449-1450" required pattern="\d{4}-\d{4}" inputmode="numeric">
-        </div>
-        <button class="ay-btn primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
-      </form>
-      <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="generate">
-        <button class="ay-btn gold" type="submit" title="توليد السنوات القادمة تلقائيًا"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد السنوات القادمة</button>
-      </form>
+<div class="twq-page academic-calendar" dir="rtl">
+  <a class="academic-calendar__back" href="{% url 'reports:platform_admin_dashboard' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> العودة إلى إدارة المنصة</a>
+  <header class="twq-page-header academic-calendar__header">
+    <div class="twq-page-header__heading">
+      <span class="twq-page-header__eyebrow">إدارة المنصة · مرجع موحّد</span>
+      <h1 class="twq-page-header__title">التقويم الدراسي المركزي</h1>
+      <p class="twq-page-header__lead">انشر الأعوام وفق تقويم وزارة التعليم. تظهر في القوائم المنسدلة لجميع المدارس والمعلمين، وتبقى أعمال كل عام محفوظة بصورة مستقلة.</p>
+      <dl class="twq-page-header__context academic-calendar__context">
+        <div><dt>السنة التشغيلية الحالية</dt><dd><bdi>{{ current_year|default:"لم يُنشر تقويم بدأ بعد" }}</bdi></dd></div>
+        <div><dt>السنوات المنشورة</dt><dd>{{ active_count }} من {{ total }}</dd></div>
+      </dl>
     </div>
+    <div class="twq-page-header__actions"><a class="twq-btn twq-btn--secondary" href="{{ ministry_calendar_url }}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> تقويم وزارة التعليم</a></div>
+  </header>
 
-    <div class="ay-stats">
-      <span class="ay-pill"><i class="fa-solid fa-list"></i> الإجمالي: {{ total }}</span>
-      <span class="ay-pill"><i class="fa-solid fa-circle-check"></i> النشطة: {{ active_count }}</span>
+  <section class="twq-section academic-calendar__section" aria-labelledby="academic-calendar-form-title">
+    <div class="twq-section__header">
+      <div><span class="twq-section__kicker">التوثيق والنشر</span><h2 class="twq-section__title" id="academic-calendar-form-title">{% if editing %}تحديث تقويم <bdi>{{ editing.value }}</bdi>{% else %}إضافة تقويم دراسي{% endif %}</h2><p class="twq-section__description">احفظ مسودة عند انتظار الاعتماد. يتطلب النشر تاريخَي البداية والنهاية ورابط المصدر الرسمي.</p></div>
     </div>
-
-    {% if items %}
-    <div class="ay-grid">
-      {% for it in items %}
-      <div class="ay-item {% if not it.obj.is_active %}off{% endif %}">
-        <div class="ay-yv"><i class="fa-solid fa-calendar-check"></i> {{ it.obj.value }} هـ</div>
-        <div class="ay-meta">
-          {% if it.obj.is_active %}<span class="ay-state on"><i class="fa-solid fa-circle-check"></i> نشطة</span>
-          {% else %}<span class="ay-state off2"><i class="fa-solid fa-circle-pause"></i> معطّلة</span>{% endif %}
-          {% if it.schools %}<span class="ay-use"><i class="fa-solid fa-school"></i> {{ it.schools }} مدرسة</span>{% endif %}
-        </div>
-        <div class="ay-actions">
-          <form method="post" class="u-inline">{% csrf_token %}
-            <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ it.obj.pk }}">
-            <button class="ay-mini" type="submit">{% if it.obj.is_active %}<i class="fa-solid fa-toggle-off"></i> تعطيل{% else %}<i class="fa-solid fa-toggle-on"></i> تفعيل{% endif %}</button>
-          </form>
-          <form method="post" data-confirm="حذف السنة «{{ it.obj.value }}» نهائيًا؟" class="u-inline">{% csrf_token %}
-            <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ it.obj.pk }}">
-            <button class="ay-mini danger" type="submit"><i class="fa-solid fa-trash-can"></i></button>
-          </form>
-        </div>
+    <form method="post" novalidate class="academic-calendar__form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      {% if editing %}<input type="hidden" name="id" value="{{ editing.pk }}">{% endif %}
+      {% if form.errors %}<div class="twq-alert twq-alert--danger" role="alert"><strong>تعذّر حفظ التقويم.</strong><p>راجع الحقول الموضحة ثم أعد المحاولة.</p>{{ form.non_field_errors }}</div>{% endif %}
+      <div class="academic-calendar__fields">
+        {% for field in form %}{% if field.name != 'is_active' %}
+          <div class="twq-field{% if field.errors %} twq-field--error{% endif %}{% if field.name == 'source_url' %} academic-calendar__source{% endif %}">
+            <label class="twq-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="مطلوب">*</span>{% endif %}</label>
+            {{ field }}
+            <p class="twq-field__help" id="id_{{ field.name }}_helptext">{{ field.help_text }}</p>
+            <div class="twq-field__message" id="id_{{ field.name }}_error">{% for error in field.errors %}{{ error }}{% endfor %}</div>
+          </div>
+        {% endif %}{% endfor %}
       </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="ay-empty">
-      <i class="fa-solid fa-calendar-days xs-platform-academic-years-2"></i>
-      لا توجد سنوات بعد. أضف سنة يدويًا أو استخدم «توليد السنوات القادمة».
-    </div>
-    {% endif %}
-  </div>
-</div>
+      <div class="twq-field academic-calendar__publish">
+        <label class="twq-choice" for="{{ form.is_active.id_for_label }}">{{ form.is_active }}<span>نشر السنة لجميع المدارس والمعلمين</span></label>
+        <p class="twq-field__help" id="id_is_active_helptext">{{ form.is_active.help_text }}</p>
+        <div class="twq-field__message" id="id_is_active_error">{% for error in form.is_active.errors %}{{ error }}{% endfor %}</div>
+      </div>
+      <div class="academic-calendar__actions"><button class="twq-btn twq-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> حفظ التقويم</button>{% if editing %}<a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_academic_years' %}">إلغاء التعديل</a>{% endif %}</div>
+    </form>
+  </section>
 
-{% endblock content %}
+  <section class="twq-section academic-calendar__section" aria-labelledby="academic-calendar-list-title">
+    <div class="twq-section__header"><div><span class="twq-section__kicker">الأعوام المحفوظة</span><h2 class="twq-section__title" id="academic-calendar-list-title">سجل التقويم الدراسي</h2><p class="twq-section__description">الانتقال إلى السنة الجديدة يحدّث سياق العمل فقط. التقارير والشواهد وملفات الإنجاز السابقة تبقى في سنواتها.</p></div></div>
+    {% if items %}<div class="academic-calendar__years">
+      {% for it in items %}<article class="twq-card academic-calendar__year">
+        <div class="academic-calendar__year-head"><h3><bdi>{{ it.obj.value }}</bdi> هـ</h3><span class="twq-status" data-status="{% if it.obj.is_active %}approved{% else %}draft{% endif %}">{% if it.obj.is_active %}منشورة{% else %}مسودة · غير منشورة{% endif %}</span></div>
+        {% if it.obj.value == current_year %}<p class="academic-calendar__current">السنة التشغيلية الحالية</p>{% endif %}
+        <dl class="academic-calendar__dates"><div><dt>بداية الدراسة</dt><dd><bdi>{{ it.obj.start_date|date:"Y/m/d"|default:"بانتظار الاعتماد" }}</bdi></dd></div><div><dt>نهاية العام</dt><dd><bdi>{{ it.obj.end_date|date:"Y/m/d"|default:"بانتظار الاعتماد" }}</bdi></dd></div></dl>
+        <p class="twq-field__help">السنة الحالية لـ {{ it.schools }} مدرسة</p>
+        {% if it.obj.source_url %}<a class="academic-calendar__reference" href="{{ it.obj.source_url }}" target="_blank" rel="noopener noreferrer">المصدر الرسمي <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>{% endif %}
+        <div class="academic-calendar__actions academic-calendar__year-actions">
+          <a class="twq-btn twq-btn--secondary" href="{% url 'reports:platform_academic_years' %}?edit={{ it.obj.pk }}">تعديل التقويم</a>
+          {% if it.obj.value != current_year %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ it.obj.pk }}"><button class="twq-btn twq-btn--secondary" type="submit">{% if it.obj.is_active %}إيقاف النشر{% else %}نشر السنة{% endif %}</button></form>{% endif %}
+          {% if not it.obj.is_active %}<form method="post" data-confirm="حذف مسودة السنة {{ it.obj.value }}؟ لا يمكن حذف سنة مرتبطة بأعمال محفوظة.">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ it.obj.pk }}"><button class="twq-btn twq-btn--danger" type="submit">حذف المسودة</button></form>{% endif %}
+        </div>
+      </article>{% endfor %}
+    </div>{% else %}<div class="twq-empty twq-empty--local"><h3>لا توجد تقاويم دراسية بعد</h3><p>أضف العام من تقويم الوزارة المعتمد، ثم انشره ليظهر للجميع.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

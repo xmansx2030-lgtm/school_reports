@@ -1780,3 +1780,11 @@ def recover_stale_generated_exports_task() -> int:
     recovered = recover_stale_generated_exports(limit=1)
     opmetrics.increment("generated_export.recovered", recovered)
     return recovered
+
+
+@shared_task(ignore_result=True, soft_time_limit=60, time_limit=120)
+def sync_academic_years_task() -> dict:
+    """Advance current context only; historical work remains in its own year."""
+    from .academic_years import sync_academic_years
+
+    return sync_academic_years()

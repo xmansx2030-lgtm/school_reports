@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from reports.forms import NotificationCreateForm
+from reports.academic_years import MINISTRY_CALENDAR_URL
 from reports.models import (
     AcademicYear,
     Department,
@@ -34,6 +35,11 @@ class ManagerExperienceTests(TestCase):
     def setUp(self):
         cache.clear()
         self.addCleanup(cache.clear)
+        AcademicYear.objects.update(is_active=False)
+        AcademicYear.objects.update_or_create(value="1447-1448", defaults={
+            "is_active": True, "start_date": timezone.localdate() - timedelta(days=14),
+            "end_date": timezone.localdate() + timedelta(days=200), "source_url": MINISTRY_CALENDAR_URL,
+        })
         self.school = School.objects.create(
             name="مدرسة تجربة المدير",
             code="manager-experience",
@@ -79,10 +85,16 @@ class ManagerExperienceTests(TestCase):
         session["active_school_id"] = self.school.id
         session.save()
 
-    def test_manager_selects_current_year_and_achievement_view_defaults_to_it(self):
+    def test_platform_current_year_is_protected_and_achievement_view_defaults_to_it(self):
         AcademicYear.objects.update(is_active=False)
-        AcademicYear.objects.update_or_create(value="1447-1448", defaults={"is_active": True})
-        AcademicYear.objects.update_or_create(value="1448-1449", defaults={"is_active": True})
+        AcademicYear.objects.update_or_create(value="1447-1448", defaults={
+            "is_active": True, "start_date": timezone.localdate() - timedelta(days=400),
+            "end_date": timezone.localdate() - timedelta(days=200), "source_url": MINISTRY_CALENDAR_URL,
+        })
+        AcademicYear.objects.update_or_create(value="1448-1449", defaults={
+            "is_active": True, "start_date": timezone.localdate() - timedelta(days=14),
+            "end_date": timezone.localdate() + timedelta(days=200), "source_url": MINISTRY_CALENDAR_URL,
+        })
         TeacherAchievementFile.objects.create(
             teacher=self.teacher,
             school=self.school,
@@ -94,12 +106,14 @@ class ManagerExperienceTests(TestCase):
         year_field = settings_response.context["form"].fields["current_academic_year"]
         self.assertEqual(
             [value for value, _label in year_field.choices],
-            ["", "1447-1448", "1448-1449"],
+            ["", "1446-1447", "1447-1448", "1448-1449"],
         )
+        self.assertTrue(year_field.disabled)
+        self.assertEqual(settings_response.context["form"].initial["current_academic_year"], "1448-1449")
 
         update_response = self.client.post(
             reverse("reports:school_settings"),
-            {"current_academic_year": "1448-1449", "share_link_default_days": 7},
+            {"current_academic_year": "1447-1448", "share_link_default_days": 7},
         )
         self.assertEqual(update_response.status_code, 302)
         self.school.refresh_from_db()
@@ -428,7 +442,7 @@ class ManagerExperienceTests(TestCase):
         self.assertEqual(response.context["setup_total"], 6)
         self.assertEqual(response.context["setup_percent"], 50)
         self.assertContains(response, "إعداد المدرسة خطوة بخطوة")
-        self.assertContains(response, "بيانات المدرسة والسنة الحالية")
+        self.assertContains(response, "بيانات المدرسة والسنة المعتمدة")
         self.assertContains(response, "الأقسام")
 
     def test_manager_department_does_not_offer_impossible_officer_assignment(self):

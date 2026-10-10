@@ -4,19 +4,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#eafaf3">
+  <meta name="theme-color" content="#f5f7f6">
   <meta name="color-scheme" content="light dark">
   {% include "reports/partials/theme_bootstrap.html" %}
   <meta name="domain-verification" content="044a91f3309b001cf46a66e8ee43e60ad827a8f7dadc1ba694212035d9f099a5">
   <title>منصة توثيق | اشتراكات للمعلمين والمعلمات وباقات للمدارس</title>
-  <meta name="description" content="اشتراكات شخصية للمعلمين والمعلمات لتوثيق التقارير والشواهد وملف الإنجاز، مع أدوات AI حسب الباقة، حتى إن لم تشترك المدرسة. وباقات مدرسية تجمع مدير المدرسة والمعلم والمدير التنفيذي والموظف الإداري في إدارة أعمال الفريق واعتمادها.">
+  <meta name="description" content="كل إنجاز يستحق أن يُوثّق. منصة توثيق تجمع إدارة المدرسة وتقارير فريقها واعتماداته، وتمنح المعلمين والمعلمات مساحة مستقلة للتقارير والشواهد وملف الإنجاز. اختر الاشتراك المناسب لك.">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta name="author" content="منصة توثيق">
   <meta property="og:locale" content="ar_SA">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="منصة توثيق">
   <meta property="og:title" content="توثيق | اشتراكات للمعلمين والمعلمات وباقات للمدارس">
-  <meta property="og:description" content="مساحة شخصية لتقاريرك وشواهدك وملف إنجازك، وأدوات AI حسب الباقة. اختر الاشتراك المناسب لك حتى إن لم تكن مدرستك مشتركة.">
+  <meta property="og:description" content="للمدارس إدارة تجمع الفريق، وللمعلمين والمعلمات مساحة تحفظ الإنجاز. تقارير وشواهد وملفات إنجاز في منصة عربية واحدة.">
   <meta property="og:url" content="{{ SITE_URL }}/">
   <meta property="og:image" content="{{ SITE_URL }}{% static 'img/landing/dashboard-system.png' %}">
   <meta property="og:image:secure_url" content="{{ SITE_URL }}{% static 'img/landing/dashboard-system.png' %}">
@@ -26,7 +26,7 @@
   <meta property="og:image:alt" content="لوحة إدارة المدرسة في منصة توثيق">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="توثيق | اشتراكات للمعلمين والمعلمات وباقات للمدارس">
-  <meta name="twitter:description" content="وثّق تقاريرك وشواهدك وملف إنجازك باشتراك شخصي يناسب احتياجك، حتى إن لم تشترك مدرستك. وباقات مستقلة لإدارة المدارس.">
+  <meta name="twitter:description" content="للمدارس إدارة تجمع الفريق، وللمعلمين والمعلمات مساحة تحفظ الإنجاز. اكتشف منصة توثيق واختر مساحتك.">
   <meta name="twitter:image" content="{{ SITE_URL }}{% static 'img/landing/dashboard-system.png' %}">
   <meta name="twitter:image:alt" content="لوحة إدارة المدرسة في منصة توثيق">
   <link rel="canonical" href="{{ SITE_URL }}/">
@@ -38,16 +38,15 @@
   <link rel="preload" href="{% static 'vendor/fonts/cairo/cairo-arabic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/fonts.css' %}?v=20260812.1">
   <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
-  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=20260925.1">
   <link rel="stylesheet" href="{% static 'css/flexible-pricing.css' %}?v=20260813.2">
   {% if AI_MANSOUR_PUBLIC_ENABLED %}
     <link rel="stylesheet" href="{% static 'css/mansour-assistant.css' %}?v=20260801.2">
   {% endif %}
   <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20260919.1">
   <link rel="stylesheet" href="{% static 'css/tokens.css' %}?v=20260918.1">
-  <link rel="stylesheet" href="{% static 'css/landing-refresh.css' %}?v=20261002.2">
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=20261010.1">
   <script src="{% static 'js/theme-manager.js' %}?v=20260802.1" defer></script>
-  <noscript><style nonce="{{ CSP_NONCE }}">.reveal{opacity:1!important;transform:none!important}</style></noscript>
+  <noscript><style nonce="{{ CSP_NONCE }}">.menu-toggle,.flex-pricing-shell{display:none!important}</style></noscript>
   <script type="application/ld+json" nonce="{{ CSP_NONCE }}" data-cfasync="false">
   {
     "@context": "https://schema.org",
@@ -130,321 +129,133 @@
 </head>
 <body class="landing-page">
   <a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
-
   <header class="site-header" id="top">
-    <div class="shell">
-      <nav class="main-nav" aria-label="التنقل الرئيسي">
-        <a class="brand" href="#top" aria-label="منصة توثيق — الرئيسية">
-          <span class="brand-mark"><img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44"></span>
-          <span class="brand-text"><strong>منصة توثيق</strong><small>للمعلمين والمعلمات والمدارس</small></span>
-        </a>
-
-        <div class="nav-links" id="navLinks">
-          <a href="#features">المزايا</a>
-          <a href="{% if personal_plan_cards %}#teacher-plans{% else %}#teacher-personal{% endif %}">{% if personal_plan_cards %}باقات المعلمين والمعلمات{% else %}للمعلم والمعلمة{% endif %}</a>
-          <a href="#product">شاهد المنصة</a>
-          <a href="#pricing">باقات المدارس</a>
-          <a href="#faq">الأسئلة</a>
-        </div>
-
-        <div class="nav-actions">
-          <a class="text-link desktop-login" href="{% url 'reports:login' %}">تسجيل الدخول</a>
-          <a class="button button-primary nav-cta" href="{% url 'personal:register' %}">
-            ابدأ مساحتك الشخصية
-            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-          </a>
-          <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="mobileMenu" aria-label="فتح القائمة">
-            <i class="fa-solid fa-bars-staggered" aria-hidden="true"></i>
-          </button>
-        </div>
-      </nav>
-    </div>
+    <nav class="shell main-nav" aria-label="التنقل الرئيسي">
+      <a class="brand" href="#top" aria-label="منصة توثيق — الرئيسية">
+        <img src="{% static 'img/brand-mark.svg' %}" alt="" width="44" height="44">
+        <span class="brand-text"><strong>توثيق</strong><small>إنجازك يستحق أن يبقى</small></span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="#features">للمدارس</a>
+        <a href="#teacher-personal">للمعلم والمعلمة</a>
+        <a href="#product">شاهد المنصة</a>
+        <a href="#plans">الاشتراكات</a>
+      </div>
+      <div class="nav-actions">
+        <a class="text-link desktop-login" href="{% url 'reports:login' %}">تسجيل الدخول</a>
+        <a class="button button-primary nav-cta" href="#plans">اختر اشتراكك <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+        <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="mobileMenu" aria-label="فتح القائمة"><i class="fa-solid fa-bars-staggered" aria-hidden="true"></i></button>
+      </div>
+    </nav>
   </header>
-
   <div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="قائمة التنقل" hidden>
     <div class="mobile-menu-panel">
-      <div class="mobile-menu-head">
-        <span>منصة توثيق</span>
-        <button id="menuClose" type="button" aria-label="إغلاق القائمة"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <a href="#features">المزايا</a>
-      <a href="{% if personal_plan_cards %}#teacher-plans{% else %}#teacher-personal{% endif %}">{% if personal_plan_cards %}باقات المعلمين والمعلمات{% else %}للمعلم والمعلمة{% endif %}</a>
-      <a href="#product">شاهد المنصة</a>
+      <div class="mobile-menu-head"><span>منصة توثيق</span><button id="menuClose" type="button" aria-label="إغلاق القائمة"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+      <a href="#features">للمدارس</a><a href="#teacher-personal">للمعلم والمعلمة</a><a href="#product">شاهد المنصة</a>
       <a href="#pricing">باقات المدارس</a>
+      <a href="{% if personal_plan_cards %}#teacher-plans{% else %}#teacher-personal{% endif %}">{% if personal_plan_cards %}باقات المعلمين والمعلمات{% else %}المساحة الشخصية{% endif %}</a>
       <a href="#faq">الأسئلة الشائعة</a>
-      <div class="mobile-menu-actions">
-        <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ كمعلم أو معلمة</a>
-        <a class="button button-quiet" href="{% url 'reports:register_school' %}">ابدأ بمدرستك</a>
-        <a class="button button-quiet" href="{% url 'reports:login' %}">تسجيل الدخول</a>
-      </div>
+      <div class="mobile-menu-actions"><a class="button button-primary" href="{% url 'reports:register_school' %}">ابدأ بمدرستك</a><a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مساحتك الشخصية</a><a class="text-link" href="{% url 'reports:login' %}">تسجيل الدخول</a></div>
     </div>
   </div>
-
-  <main id="mainContent">
-    <section class="hero hero-refresh" aria-labelledby="landingHeroTitle">
-      <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
-      <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
+  <main id="mainContent" tabindex="-1">
+    <section class="hero" aria-labelledby="landingHeroTitle">
       <div class="shell hero-stage">
-        <div class="hero-intro reveal">
-          <div class="overline"><span aria-hidden="true"></span> اشتراكات شخصية · وباقات للمدارس</div>
-          <h1 id="landingHeroTitle">للمعلمين والمعلمات.<span>ولمدارسهم.</span></h1>
-          <p class="hero-lead">
-            وثّق تقاريرك وشواهدك وملف إنجازك باشتراك شخصي يناسب احتياجك، حتى إن لم تشترك مدرستك. وللمدارس باقات لإدارة أعمال الفريق واعتمادها.
-          </p>
-          <div class="audience-paths" role="group" aria-label="اختر طريقة استخدام منصة توثيق">
-            <article class="audience-path audience-path--teacher">
-              <div class="audience-path__heading"><span class="audience-path__icon"><i class="fa-solid fa-user-pen" aria-hidden="true"></i></span><div><span class="audience-path__eyebrow">اشتراك شخصي يناسب احتياجك</span><h2>للمعلم والمعلمة</h2></div></div>
-              <p>تقارير وشواهد ومبادرات وملف إنجاز باسمك، حتى لو لم تشترك مدرستك. وأدوات AI حسب الباقة.</p>
-              <div class="audience-path__actions">
-                <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ كمعلم أو معلمة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
-                <a class="audience-path__plans" href="{% if personal_plan_cards %}#teacher-plans{% else %}#teacher-personal{% endif %}">{% if personal_plan_cards %}قارن الباقات الشخصية{% else %}تعرف على المساحة الشخصية{% endif %}</a>
-              </div>
-            </article>
+        <div class="hero-intro">
+          <span class="overline"><span aria-hidden="true"></span> من العمل اليومي… إلى أثر يبقى</span>
+          <h1 id="landingHeroTitle">كل إنجاز يستحق<br><span>أن يُوثّق.</span></h1>
+          <p class="hero-lead">وراء كل تقرير جهد. ووراء كل شاهد إنجاز.<br>اجمعها في توثيق؛ لتقود مدرستك بوضوح، أو تبني ملفك المهني بثقة.</p>
+          <div class="hero-audiences" role="group" aria-label="اختر طريقة استخدام منصة توثيق">
             <article class="audience-path audience-path--school">
-              <div class="audience-path__heading"><span class="audience-path__icon"><i class="fa-solid fa-school" aria-hidden="true"></i></span><div><span class="audience-path__eyebrow">اشتراك المدرسة</span><h2>للمدرسة وفريقها</h2></div></div>
-              <p>إدارة التقارير والطلبات والخطط والاعتمادات من مكان واحد.</p>
-              <div class="audience-path__actions">
-                <a class="button button-quiet" href="{% url 'reports:register_school' %}">ابدأ بمدرستك {{ trial_days|default:30 }} يومًا مجانًا <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
-                <a class="audience-path__plans" href="#pricing">عرض باقات المدارس</a>
-              </div>
+              <span class="audience-path__label"><i class="fa-solid fa-school" aria-hidden="true"></i> للمدارس</span>
+              <p>فريق متكامل. إدارة أوضح.</p>
+              <a class="button button-primary" href="{% url 'reports:register_school' %}">ابدأ بمدرستك <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+              <a class="audience-path__plans" href="#pricing">{{ trial_days|default:30 }} يومًا مجانًا · باقات المدارس</a>
+            </article>
+            <article class="audience-path audience-path--teacher">
+              <span class="audience-path__label"><i class="fa-solid fa-user-pen" aria-hidden="true"></i> للمعلم والمعلمة</span>
+              <p>مساحة باسمك. إنجاز يحكي عنك.</p>
+              <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مساحتك <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+              <a class="audience-path__plans" href="{% if personal_plan_cards %}#teacher-plans{% else %}#teacher-personal{% endif %}">{% if personal_plan_cards %}باقات المعلمين والمعلمات{% else %}تعرف على المساحة الشخصية{% endif %}</a>
             </article>
           </div>
+          <a class="hero-tour" href="#product"><span><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span> خذ جولة داخل توثيق <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
         </div>
-
-        <figure class="hero-product hero-product--personal reveal">
-          <div class="hero-product__top"><span><i class="fa-solid fa-circle" aria-hidden="true"></i> مساحتك الشخصية</span><strong>إنجازك باسمك</strong></div>
-          <div class="personal-preview-ui" aria-label="تصور توضيحي لمساحة المعلم والمعلمة">
-            <div class="personal-preview-ui__top"><span><i class="fa-solid fa-file-circle-check" aria-hidden="true"></i> منصة توثيق</span><span>الرئيسية &nbsp; التقارير &nbsp; ملف الإنجاز</span></div>
-            <div class="personal-preview-ui__hero"><small>مساحة المعلم والمعلمة المهنية</small><strong>كل عمل تنجزه، يستحق أن يُوثّق.</strong><span>تقاريرك وشواهدك وملف إنجازك، لكل سنة دراسية.</span><b>لا يتطلب اشتراك مدرستك</b></div>
-            <div class="personal-preview-ui__metrics"><span><i class="fa-solid fa-file-lines" aria-hidden="true"></i><strong>التقارير</strong></span><span><i class="fa-solid fa-paperclip" aria-hidden="true"></i><strong>الشواهد</strong></span><span><i class="fa-solid fa-briefcase" aria-hidden="true"></i><strong>ملف الإنجاز</strong></span></div>
-            <div class="personal-preview-ui__axis"><span><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> مساعدك في إعداد التقرير</span><strong>تحسين الصياغة والإملاء الصوتي</strong><p>تراجع النتيجة قبل اعتمادها · ضمن الباقات المشمولة.</p></div>
-            <div class="personal-preview-ui__axis"><span>ملف إنجازك السنوي</span><strong>11 محورًا تجمع ممارساتك وشواهدك</strong><p>من أول تقرير إلى ملف مرتب للطباعة والمشاركة.</p></div>
-          </div>
-          <figcaption><span>عرض توضيحي · مساحة شخصية مستقلة</span><a href="#teacher-personal">اكتشف اشتراكك الشخصي <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></figcaption>
-        </figure>
-      </div>
-
-    </section>
-
-    {% comment %}قسم «الأثر الإداري» حُذف: بطاقاته الثلاث (قرار أسرع، تشغيل منضبط،
-    جاهزية دائمة) كانت تعيد صياغة ما يقوله قسم «للمدير والمالك» بعده مباشرةً وما
-    تثبته المقارنة قبله. الرسالة نفسها ثلاث مرات تُضعفها ولا تؤكدها.{% endcomment %}
-
-    {% comment %}الصوت والذكاء الاصطناعي كانا chips صغيرة داخل بطاقتين وسط إحدى عشرة
-    بطاقة. هما أوضح ما يفرّق المنصة عن أي بديل، فاستحقا قسمًا يراه الزائر لا سطرًا
-    يمر عليه.{% endcomment %}
-
-    <section class="section personal-offer-section" id="teacher-personal" aria-labelledby="personalOfferTitle">
-      <div class="shell personal-offer personal-offer--focused">
-        <div class="personal-offer__content">
-          <span class="section-kicker">للمعلم والمعلمة · حتى إن لم تشترك المدرسة</span>
-          <h2 id="personalOfferTitle">اشتراكات تناسب المعلمين والمعلمات.</h2>
-          <p>اختر الباقة المناسبة لحجم أعمالك: تقارير مع شواهدها، ومبادرات، وملف إنجاز لكل سنة دراسية، وطباعة ومشاركة وأرشيف يمكنك الرجوع إليه. مساحتك مستقلة عن اشتراك المدرسة، وتعرف السعر والمدة وحدود الاستخدام قبل الاشتراك.</p>
-          <div class="personal-offer__features" aria-label="مزايا مساحة المعلم الشخصية">
-            <span><i class="fa-solid fa-file-lines" aria-hidden="true"></i> تقارير مع الشواهد</span>
-            <span><i class="fa-solid fa-book-open" aria-hidden="true"></i> ملف إنجاز سنوي</span>
-            <span><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> مبادرات شخصية</span>
-            <span><i class="fa-solid fa-box-archive" aria-hidden="true"></i> أرشيف سنواتك</span>
-            <span><i class="fa-solid fa-print" aria-hidden="true"></i> طباعة ومشاركة</span>
-            <span><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> AI حسب الباقة</span>
-          </div>
-          <div class="personal-offer__actions">
-            <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مساحتك الشخصية <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
-          </div>
-          <p class="personal-offer__clarity"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> المستندات الشخصية من إعداد المعلم أو المعلمة، ولا تمثل اعتمادًا من المدرسة. الاعتماد المدرسي ضمن اشتراك المدرسة.</p>
-          <p class="personal-offer__clarity"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> الباقات التي تشمل AI تتيح تحسين صياغة التقرير والإملاء الصوتي بحسب حدودها اليومية وإتاحة الخدمة. الإملاء الصوتي من تطبيق توثيق المثبّت، والباقة المجانية لا تشمل AI.</p>
-        </div>
-      </div>
-      {% if personal_plan_cards %}
-        <div class="shell personal-plan-catalog" id="teacher-plans" aria-labelledby="personalPlanCatalogTitle">
-          <div class="personal-plan-catalog__heading">
-            <div><span class="section-kicker">قارن واختر ما يناسبك</span><h3 id="personalPlanCatalogTitle">باقات المعلمين والمعلمات</h3><p>قارن السعر والمدة وسعة التقارير والشواهد وأدوات AI، واختر الباقة المناسبة لأعمالك.</p></div>
-          </div>
-          <div class="personal-plan-catalog__grid">
-            {% for plan in personal_plan_cards %}
-              <article class="personal-plan-card">
-                <div class="personal-plan-card__top"><span>للمعلم والمعلمة · {% if plan.is_basic %}الباقة الأساسية{% else %}باقة شخصية{% endif %}</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></div>
-                <h4>{{ plan.name }}</h4>
-                <p class="personal-plan-card__fit">{% if plan.is_free %}للبداية وتوثيق أعمالك الأساسية{% elif plan.report_ai_daily_limit or plan.voice_report_daily_limit %}لتوثيق أعمالك بمساعدة أدوات AI المشمولة{% else %}للتوسع في تقاريرك وشواهدك المهنية{% endif %}</p>
-                {% if plan.description %}<p class="personal-plan-card__description">{{ plan.description }}</p>{% endif %}
-                <p class="personal-plan-card__price">{% if plan.is_free %}<strong>مجانية</strong>{% else %}<strong dir="ltr">{{ plan.price_display }}</strong><span> ريال</span>{% endif %}<small> · {{ plan.duration_label }}</small></p>
-                <ul>
-                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> إنشاء حتى {{ plan.max_reports }} تقريرًا خلال الاشتراك</li>
-                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> إنشاء حتى {{ plan.max_evidence }} شاهدًا خلال الاشتراك</li>
-                  <li><i class="fa-solid fa-check" aria-hidden="true"></i> {{ plan.storage_limit_mb }} ميجابايت للملفات</li>
-                  <li><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> تحسين الصياغة: {% if plan.report_ai_daily_limit %}{{ plan.report_ai_daily_limit }} يوميًا{% else %}غير مشمول{% endif %}</li>
-                  <li><i class="fa-solid fa-microphone" aria-hidden="true"></i> الإملاء الصوتي: {% if plan.voice_report_daily_limit %}{{ plan.voice_report_daily_limit }} يوميًا من التطبيق المثبّت{% else %}غير مشمول{% endif %}</li>
-                </ul>
-                {% if plan.is_free %}
-                  <a class="button button-primary" href="{% url 'personal:register' %}">ابدأ مجانًا كمعلم أو معلمة</a>
-                {% elif moyasar_enabled %}
-                  <a class="button button-quiet" href="{% url 'personal:checkout_start' plan.id %}">اشترك في الباقة الفردية</a>
-                {% elif BUSINESS.support_email %}
-                  <a class="button button-quiet" href="mailto:{{ BUSINESS.support_email }}?subject={{ plan.name|urlencode }}">اطلب تفعيل باقتك الفردية</a>
-                {% else %}
-                  <a class="button button-quiet" href="{% url 'personal:register' %}">أنشئ حساب المعلم أولًا</a>
-                {% endif %}
-              </article>
-            {% endfor %}
-          </div>
-          {% if has_paid_personal_plans %}<p class="personal-plan-catalog__note">{% if moyasar_enabled %}بعد إتمام الدفع وتأكيد العملية، تُفعّل الباقة تلقائيًا وتصل الفاتورة إلى بريدك الإلكتروني.{% else %}الدفع الإلكتروني غير متاح حاليًا؛ تواصل مع الدعم لطلب تفعيل الباقة.{% endif %}</p>{% endif %}
-        </div>
-      {% endif %}
-    </section>
-
-    <section class="section features-section" id="features">
-      <div class="shell">
-        <header class="section-heading section-heading-light reveal">
-          <span class="section-kicker">كل ما تحتاجه المدرسة</span>
-          <h2>عمل أقل تشتتًا، ومتابعة أكثر وضوحًا</h2>
-          <p>ستة مسارات أساسية تجمع العمل اليومي وتحوّله إلى سجل منظم يمكن متابعته والرجوع إليه.</p>
-        </header>
-
-        <div class="feature-grid">
-          <article class="feature-card feature-card-wide reveal">
-            <div class="feature-icon"><i class="fa-solid fa-gauge-high"></i></div>
-            <div>
-              <span class="feature-label">للإدارة</span>
-              <h3>لوحة قيادة واحدة</h3>
-              <p>الأولويات والمؤشرات والاعتمادات أمام المدير، مع انتقال مباشر إلى الإجراء المطلوب.</p>
-              <ul class="feature-proof"><li>متابعة لحظية</li><li>اعتمادات موثّقة</li><li>تقرير أسبوعي</li></ul>
+        <div class="hero-visual" id="previewSwitch" data-switch-group>
+          <div class="visual-caption"><span>مساحتان. رؤية واحدة.</span><span class="visual-caption__en" lang="en" dir="ltr">MADE FOR YOUR IMPACT</span></div>
+          <div class="workspace-preview">
+            <div class="preview-topbar"><span><img src="{% static 'img/brand-mark.svg' %}" alt="" width="25" height="25"> توثيق</span><span>كل عمل في مكانه</span><i class="fa-regular fa-bell" aria-hidden="true"></i></div>
+            <div class="switch-tabs preview-tabs" role="tablist" aria-label="معاينة مساحات توثيق" data-switch-tabs hidden>
+              <button type="button" role="tab" id="schoolPreviewTab" aria-controls="preview-school" aria-selected="true" data-switch-tab>مساحة المدرسة</button>
+              <button type="button" role="tab" id="teacherPreviewTab" aria-controls="preview-teacher" aria-selected="false" tabindex="-1" data-switch-tab>مساحة المعلم والمعلمة</button>
             </div>
+            <div class="preview-content" id="preview-school" data-switch-panel aria-labelledby="schoolPreviewTitle">
+              <span class="preview-eyebrow">من أول مهمة… إلى اكتمال العمل</span>
+              <h2 id="schoolPreviewTitle">صورة واضحة ليوم مدرستك.</h2>
+              <p>التقارير والفريق والقرارات، في مساحة واحدة.</p>
+              <div class="preview-modules"><span><i class="fa-regular fa-file-lines" aria-hidden="true"></i> التقارير</span><span><i class="fa-solid fa-list-check" aria-hidden="true"></i> التكليفات</span><span><i class="fa-solid fa-stamp" aria-hidden="true"></i> الاعتمادات</span></div>
+              <div class="preview-document">
+                <div class="document-heading"><span class="document-icon"><i class="fa-regular fa-file-lines" aria-hidden="true"></i></span><div><small>تقرير نشاط مدرسي</small><strong>التعلّم الذي نرى أثره</strong></div><span class="preview-status">مع الشواهد</span></div>
+                <p>من وصف النشاط وأهدافه إلى الشواهد والنتائج، كل التفاصيل تجتمع في تقرير منظم.</p>
+                <div class="document-evidence"><span><i class="fa-regular fa-image" aria-hidden="true"></i> شواهد النشاط</span><span><i class="fa-regular fa-file-pdf" aria-hidden="true"></i> نسخة للطباعة</span></div>
+                <ol class="document-flow"><li><i class="fa-solid fa-check" aria-hidden="true"></i> توثيق</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> مراجعة</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> اعتماد</li></ol>
+              </div>
+              <div class="preview-bottom"><i class="fa-solid fa-users" aria-hidden="true"></i><span>كل عضو يعرف دوره. وكل عمل له مساره.</span></div>
+            </div>
+            <div class="preview-content" id="preview-teacher" data-switch-panel aria-labelledby="teacherPreviewTitle">
+              <span class="preview-eyebrow">من أول شاهد… إلى ملف إنجازك</span>
+              <h2 id="teacherPreviewTitle">عام من العطاء. في ملف يحكيه.</h2>
+              <p>مساحتك المهنية المستقلة، حتى لو لم تشترك مدرستك.</p>
+              <div class="preview-modules"><span><i class="fa-regular fa-file-lines" aria-hidden="true"></i> تقاريري</span><span><i class="fa-solid fa-paperclip" aria-hidden="true"></i> شواهدي</span><span><i class="fa-solid fa-book-open" aria-hidden="true"></i> ملف إنجازي</span></div>
+              <div class="preview-document">
+                <div class="document-heading"><span class="document-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span><div><small>ملف الإنجاز السنوي</small><strong>جهدك حاضر في كل صفحة</strong></div><span class="preview-status">مساحة شخصية</span></div>
+                <p>رتّب ممارساتك وتقاريرك وشواهدك في محاور ملفك، ثم جهّزه للطباعة أو المشاركة.</p>
+                <div class="document-evidence"><span><i class="fa-solid fa-layer-group" aria-hidden="true"></i> محاور منظمة</span><span><i class="fa-solid fa-link" aria-hidden="true"></i> مشاركة تتحكم بها</span></div>
+                <ol class="document-flow"><li><i class="fa-solid fa-check" aria-hidden="true"></i> أضف</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> رتّب</li><li><i class="fa-solid fa-check" aria-hidden="true"></i> شارك</li></ol>
+              </div>
+              <div class="preview-bottom"><i class="fa-solid fa-user-shield" aria-hidden="true"></i><span>أعمالك باسمك، واشتراكك مستقل عن المدرسة.</span></div>
+            </div>
+          </div>
+          <div class="visual-footnote"><span><i class="fa-solid fa-circle-check" aria-hidden="true"></i> تجربة عربية، صُممت لطبيعة عملك</span><small>معاينة توضيحية للمزايا</small></div>
+        </div>
+      </div>
+    </section>
+    <div class="benefit-strip"><div class="shell"><span><i class="fa-solid fa-language" aria-hidden="true"></i> عربية من أول شاشة</span><span><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> مخرجات جاهزة للطباعة</span><span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> مساحات وصلاحيات مستقلة</span><span><i class="fa-solid fa-laptop-mobile" aria-hidden="true"></i> معك على الجوال والكمبيوتر</span></div></div>
+
+    <section class="section solutions-section" aria-labelledby="solutionsTitle">
+      <div class="shell">
+        <header class="section-heading section-heading--center"><span class="section-kicker">صُممت لتناسب دورك</span><h2 id="solutionsTitle">للمدرسة قوة الفريق.<br>وللمعلم قيمة الإنجاز.</h2><p>اختر المساحة التي تخدم عملك. لكل مسار أدواته واشتراكه واستقلاليته.</p></header>
+        <div class="solutions-grid">
+          <article class="solution-card" id="features" aria-labelledby="schoolSolutionTitle">
+            <div class="solution-card__top"><span class="solution-icon"><i class="fa-solid fa-school" aria-hidden="true"></i></span><span class="section-kicker">توثيق للمدارس</span><span class="solution-index" aria-hidden="true">01</span></div>
+            <h3 id="schoolSolutionTitle">مدرستك تعمل بتناغم.<br><span>وأنت ترى الصورة كاملة.</span></h3>
+            <p>اجمع عمل الفريق في مسار واضح، من التكليف إلى التقرير والاعتماد. وقت أقل في متابعة الرسائل، ووضوح أكبر في متابعة الإنجاز.</p>
+            <ul class="solution-list"><li><i class="fa-solid fa-check" aria-hidden="true"></i><div><strong>إدارة تعرف ما يحتاج انتباهها</strong><span>لوحة مدير المدرسة، مؤشرات العمل، والاعتمادات المطلوبة.</span></div></li><li><i class="fa-solid fa-check" aria-hidden="true"></i><div><strong>فريق يعرف الخطوة التالية</strong><span>طلبات وتكليفات وتعاميم واجتماعات وخطط، بمسؤوليات واضحة.</span></div></li><li><i class="fa-solid fa-check" aria-hidden="true"></i><div><strong>مخرجات تحمل هوية مدرستك</strong><span>تقارير مصورة، ملفات إنجاز، ومخرجات PDF جاهزة للطباعة.</span></div></li></ul>
+            <div class="solution-note">للمدير والمعلمين والموظف الإداري. وللمدير التنفيذي متابعة مدارس مستقلة من حسابه.</div>
+            <a class="text-arrow" href="#pricing">اكتشف اشتراك مدرستك <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
           </article>
-          <article class="feature-card reveal">
-            <div class="feature-icon"><i class="fa-solid fa-camera-retro"></i></div>
-            <span class="feature-label">التقارير والإنجاز</span>
-            <h3>وثّق من الجوال</h3>
-            <p>أضف الصور أو اكتب بالصوت، ثم أخرج تقريرًا وملف إنجاز بهوية المدرسة.</p>
-            <ul class="feature-proof"><li>كتابة التقرير بالصوت</li><li>تحسين بالذكاء الاصطناعي</li><li>PDF بهوية المدرسة</li></ul>
-          </article>
-          <article class="feature-card reveal">
-            <div class="feature-icon"><i class="fa-solid fa-ticket"></i></div>
-            <span class="feature-label">الطلبات والتكليفات</span>
-            <h3>مسؤول وموعد وحالة</h3>
-            <p>كل طلب أو مهمة يصل إلى صاحبه ويظل قابلًا للمتابعة حتى الإغلاق.</p>
-            <ul class="feature-proof"><li>إسناد واضح</li><li>تنبيهات وملاحظات</li><li>سجل كامل</li></ul>
-          </article>
-          <article class="feature-card reveal">
-            <div class="feature-icon"><i class="fa-solid fa-signature"></i></div>
-            <span class="feature-label">التعاميم والاجتماعات</span>
-            <h3>وصول وقرار موثّقان</h3>
-            <p>تابع الاطلاع والتوقيع، واحفظ المحاضر والقرارات في مكانها الصحيح.</p>
-            <ul class="feature-proof"><li>سجل اطلاع وتوقيع</li><li>إدخال المحضر بالصوت</li><li>مخرجات جاهزة للطباعة</li></ul>
-          </article>
-          <article class="feature-card reveal">
-            <div class="feature-icon"><i class="fa-solid fa-bullseye"></i></div>
-            <span class="feature-label">الخطط والمبادرات</span>
-            <h3>الخطة تتحول إلى تنفيذ</h3>
-            <p>أهداف ومسؤولون ونسب تقدم تربط الخطة بما يحدث فعليًا في المدرسة.</p>
-            <ul class="feature-proof"><li>مبادرات مرتبطة</li><li>تحديث التقدم</li><li>اعتماد الإدارة</li></ul>
-          </article>
-          <article class="feature-card reveal">
-            <div class="feature-icon"><i class="fa-solid fa-box-archive"></i></div>
-            <span class="feature-label">الأرشيف والصلاحيات</span>
-            <h3>بيانات محفوظة ووصول منضبط</h3>
-            <p>صلاحيات حسب الدور، وسجل عمليات، وأرشيف سنوي قابل للتنزيل.</p>
-            <ul class="feature-proof"><li>عزل بيانات المدارس</li><li>تصدير كامل</li><li>بصمة تحقق SHA-256</li></ul>
+          <article class="solution-card solution-card--personal" id="teacher-personal" aria-labelledby="personalOfferTitle">
+            <div class="solution-card__top"><span class="solution-icon"><i class="fa-solid fa-user-pen" aria-hidden="true"></i></span><span class="section-kicker">توثيق للمعلم والمعلمة</span><span class="solution-index" aria-hidden="true">02</span></div>
+            <h3 id="personalOfferTitle">أعمال كثيرة تستحق أن تُرى.<br><span>امنحها ملفًا يليق بها.</span></h3>
+            <p>لا تنتظر نهاية العام لتجمع أثره. وثّق تقاريرك وشواهدك أولًا بأول، وابنِ ملف إنجازك في مساحة باسمك، حتى إن لم تشترك مدرستك.</p>
+            <ul class="solution-list"><li><i class="fa-solid fa-check" aria-hidden="true"></i><div><strong>كل شاهد في مكانه</strong><span>تقارير وشواهد ومبادرات منظمة، يسهل الرجوع إليها.</span></div></li><li><i class="fa-solid fa-check" aria-hidden="true"></i><div><strong>ملف إنجاز ينمو مع عملك</strong><span>ملف لكل سنة دراسية، يجمع ممارساتك وشواهدك في محاور واضحة.</span></div></li><li><i class="fa-solid fa-check" aria-hidden="true"></i><div><strong>جاهز حين تحتاجه</strong><span>طباعة ومشاركة وأرشيف سنواتك، من مساحتك المهنية المستقلة.</span></div></li></ul>
+            <div class="solution-note">المستندات الشخصية من إعداد المعلم أو المعلمة؛ الاعتماد المدرسي ضمن اشتراك المدرسة.</div>
+            <a class="text-arrow" href="{% if personal_plan_cards %}#teacher-plans{% else %}{% url 'personal:register' %}{% endif %}">{% if personal_plan_cards %}اكتشف اشتراكك الشخصي{% else %}ابدأ مساحتك الشخصية{% endif %} <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="section pricing-section" id="pricing">
-      <div class="shell">
-        <header class="section-heading reveal">
-          <span class="section-kicker">باقات المدارس · أسعار واضحة</span>
-          <h2>اشتراك المدرسة وفريقها</h2>
-          <p>أدخل عدد معلمي المدرسة واعرف السعر فورًا. هذه الباقات لإدارة العمل المدرسي، ويعتمد سعرها على حجم الفريق ومدة الاشتراك.</p>
-        </header>
+    <section class="section workflow-section" aria-labelledby="workflowTitle"><div class="shell">
+      <div class="workflow-heading"><div><span class="section-kicker">من يوم عملك إلى حصاد عامك</span><h2 id="workflowTitle">أنجزه اليوم.<br>واحتفظ بقيمته للغد.</h2></div><p>حين يصبح التوثيق جزءًا من العمل، تكون تقاريرك وشواهدك جاهزة حين تحتاج إليها.</p></div>
+      <ol class="workflow-steps"><li><span class="step-number">01</span><h3>وثّق لحظة الإنجاز</h3><p>أضف تقريرك وشواهده من الجوال أو الكمبيوتر، قبل أن تضيع التفاصيل.</p></li><li><span class="step-number">02</span><h3>رتّب ما صنعت</h3><p>اجمع أعمالك في ملفات واضحة؛ إنجاز مهني للمعلم، ومتابعة منظمة للمدرسة.</p></li><li><span class="step-number">03</span><h3>أظهر أثر عملك</h3><p>جهّز مخرجاتك للطباعة والمشاركة، أو استكمل مسار اعتمادها داخل المدرسة.</p></li></ol>
+      <div class="writing-assist"><span class="writing-assist__icon"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span><div><span class="section-kicker">مساعدة ذكية. والكلمة الأخيرة لك.</span><h3>ركّز على الفكرة. ودع الصياغة تبدأ بسهولة.</h3><p>تحسين صياغة التقارير والإملاء الصوتي ضمن الباقات المشمولة وحدودها وإتاحة الخدمة. الإملاء من تطبيق توثيق المثبّت، وتراجع النص قبل حفظه. الباقة الشخصية المجانية لا تشمل AI.</p></div><a class="text-arrow" href="#plans">استعرض الباقات <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></div>
+    </div></section>
 
-        {% if flexible_pricing_catalog %}
-          {{ flexible_pricing_json|json_script:"landingFlexiblePricingData" }}
-          <section class="flex-pricing-shell reveal" data-flex-pricing data-flex-pricing-source="landingFlexiblePricingData" data-initial-period="{{ pricing_initial_period|default:'1y' }}" data-flex-summary-target="#landingIncludesSummary" data-min-teacher-count="1" aria-label="حاسبة اشتراك المدرسة">
-            <div class="flex-pricing-controls">
-              <span class="flex-pricing-eyebrow"><i class="fa-solid fa-calculator"></i> احسب اشتراك مدرستك</span>
-              <h3 class="flex-pricing-title">كم معلماً سيستخدم اشتراك المدرسة؟</h3>
-              <label class="flex-count-label" for="landingTeacherCount">عدد معلمي المدرسة</label>
-              <div class="flex-count-control">
-                <button type="button" data-flex-decrease aria-label="إنقاص عدد المعلمين"><i class="fa-solid fa-minus"></i></button>
-                <input id="landingTeacherCount" data-flex-teacher-count type="number" value="27" min="1" max="150" inputmode="numeric" aria-describedby="landingPricingStatus">
-                <button type="button" data-flex-increase aria-label="زيادة عدد المعلمين"><i class="fa-solid fa-plus"></i></button>
-              </div>
-              <div class="flex-periods" role="group" aria-label="مدة الاشتراك">
-                {% for period in pricing_periods %}{% if period.available %}<button type="button" data-flex-period="{{ period.key }}" data-period="{{ period.key }}" class="{% if period.active %}is-active{% endif %}" aria-pressed="{% if period.active %}true{% else %}false{% endif %}">{{ period.label }}</button>{% endif %}{% endfor %}
-              </div>
-            </div>
-            <div class="flex-pricing-result" data-flex-result>
-              <span class="flex-result-label">السعة الأنسب لمدرستك</span>
-              <strong class="flex-result-capacity">حتى <span data-flex-capacity>—</span> معلماً</strong>
-              <div class="flex-result-price"><strong data-flex-price>—</strong><span>ريال</span></div>
-              <span class="flex-result-monthly" data-flex-monthly>يُحتسب السعر فوراً</span>
-              <div class="flex-result-proof">
-                <div><small>عدد فريقك</small><strong><span data-flex-count-output>27</span> معلماً</strong></div>
-                <div><small>مقاعد للنمو</small><strong><span data-flex-spare>—</span> مقاعد</strong></div>
-                <div><small>مساحة التخزين</small><strong data-flex-storage>—</strong></div>
-              </div>
-              <p class="flex-result-status" id="landingPricingStatus"><i class="fa-solid fa-circle-check"></i><span data-flex-status>نختار لك السعة الأقل تكلفة تلقائياً.</span></p>
-            </div>
-          </section>
-
-          {% if subscription_included_features %}
-            <section class="sub-includes reveal" aria-labelledby="landingIncludesTitle">
-              <div class="sub-includes-head">
-                <h4 id="landingIncludesTitle"><i class="fa-solid fa-circle-check"></i> ما الذي يشمله اشتراك المدرسة؟</h4>
-                <p id="landingIncludesSummary">المزايا نفسها لكل السعات؛ السعر وحده يتغير.</p>
-              </div>
-              <ul class="sub-includes-grid">
-                {% for feature in subscription_included_features %}
-                  <li class="sub-include"><span class="sub-include-icon" aria-hidden="true"><i class="fa-solid {{ feature.icon }}"></i></span><div><strong>{{ feature.title }}</strong></div></li>
-                {% endfor %}
-              </ul>
-            </section>
-          {% endif %}
-        {% else %}
-          <div class="period-switch reveal" role="group" aria-label="مدة الاشتراك">
-            {% for period in pricing_periods %}{% if period.available %}<button type="button" data-period="{{ period.key }}" class="{% if period.active %}active{% endif %}">{{ period.label }}</button>{% endif %}{% endfor %}
-          </div>
-          <div class="pricing-grid">
-            {% for card in pricing_cards %}
-              <article class="price-card paid-card {% if card.is_featured %}recommended{% endif %} reveal" data-price-card>
-                {% if card.badge %}<div class="price-badge">{{ card.badge }}</div>{% endif %}
-                <div class="price-head"><span class="price-icon"><i class="fa-solid fa-users"></i></span><div><h3>{{ card.name }}</h3><p>{{ card.fit_text }}</p></div></div>
-                {% if card.period_1m %}<div class="period-content {% if pricing_initial_period == '1m' %}active{% endif %}" data-period-content="1m"><div class="price-value"><strong>{{ card.period_1m.price_display }}</strong><span>ريال</span></div><div class="price-duration">{{ card.period_1m.duration_label }} · {{ card.capacity_label }}</div></div>{% endif %}
-                {% if card.period_6m %}<div class="period-content {% if pricing_initial_period == '6m' %}active{% endif %}" data-period-content="6m"><div class="price-value"><strong>{{ card.period_6m.price_display }}</strong><span>ريال</span></div><div class="price-duration">{{ card.period_6m.duration_label }} · {{ card.capacity_label }}</div></div>{% endif %}
-                {% if card.period_1y %}<div class="period-content {% if pricing_initial_period == '1y' or not card.period_6m %}active{% endif %}" data-period-content="1y"><div class="price-value"><strong>{{ card.period_1y.price_display }}</strong><span>ريال</span></div><div class="price-duration">{{ card.period_1y.duration_label }} · {{ card.capacity_label }}</div></div>{% endif %}
-                <a class="button {% if card.is_featured %}button-primary{% else %}button-quiet{% endif %}" href="{% url 'reports:register_school' %}">ابدأ تجربة المدرسة</a>
-              </article>
-            {% empty %}
-              <article class="price-card reveal"><div class="price-head"><span class="price-icon"><i class="fa-solid fa-headset"></i></span><div><h3>سعر مدرستك</h3><p>ابدأ مجانًا وسنساعدك في اختيار السعة المناسبة.</p></div></div></article>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        <div class="pricing-disclosures">
-          <p class="pricing-note pricing-note-emphasis"><i class="fa-solid fa-circle-check"></i> تجربة مجانية {{ trial_days|default:30 }} يومًا للمدرسة دون بطاقة ائتمانية.</p>
-          <p class="pricing-note"><i class="fa-solid fa-school"></i> كل اشتراك يخص مدرسة واحدة، ويمكن إدارة عدة مدارس من الحساب نفسه.</p>
-          <p class="pricing-note"><i class="fa-solid fa-circle-info"></i> الأسعار نهائية دون ضريبة قيمة مضافة أو رسوم خفية، والدعم الفني مشمول.</p>
-        </div>
-        <div class="hero-actions">
-          <a class="button button-primary button-large" href="{% url 'reports:register_school' %}">ابدأ تجربة مدرستك المجانية <i class="fa-solid fa-arrow-left"></i></a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section product-section" id="product">
-      <div class="shell">
-        <header class="section-heading reveal">
-          <span class="section-kicker">دليل المنتج أمامك</span>
-          <h2>تعرّف إلى يوم العمل داخل المدرسة</h2>
-          <p>من لوحة القيادة إلى التقرير والطلبات والأرشيف؛ هذه لقطات فعلية من المنصة ببيانات تجريبية.</p>
-        </header>
-
-        <div class="product-proof reveal">
-          <span class="product-proof-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span>
-          <div><strong>شاشات فعلية وبيانات تجريبية</strong><p>اضغط على أي صورة لمعاينتها بوضوح واتخذ قرارك بناءً على المنتج نفسه.</p></div>
-        </div>
-        <div class="showcase">
-          <article class="showcase-card showcase-dashboard reveal">
+    <section class="section product-section" id="product" aria-labelledby="productTitle"><div class="shell">
+      <header class="section-heading"><span class="section-kicker">من داخل توثيق</span><h2 id="productTitle">الفكرة واضحة.<br>والتجربة أمامك.</h2><p>جولة في مساحة المدرسة: شاشات فعلية ببيانات تجريبية. اضغط على الصور لتشاهد التفاصيل.</p></header>
+              <div class="showcase">
+          <article class="showcase-card showcase-dashboard">
             <div class="showcase-copy">
               <span>01 · لوحة المدير</span>
               <h3>ابدأ يومك من الأولوية، لا من البحث</h3>
@@ -459,7 +270,7 @@
             </button>
           </article>
 
-          <article class="showcase-card showcase-flip reveal">
+          <article class="showcase-card showcase-flip">
             <div class="showcase-copy">
               <span>02 · المخرجات</span>
               <h3>من إدخال بسيط إلى وثيقة رسمية</h3>
@@ -473,86 +284,44 @@
               <span class="image-zoom"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> عرض واضح</span>
             </button>
           </article>
-          <article class="showcase-card showcase-secondary reveal">
+          <article class="showcase-card showcase-secondary">
             <div class="showcase-copy"><span>03 · المتابعة</span><h3>الطلب واضح حتى إغلاقه</h3><p>المسؤول والحالة والتفاصيل في شاشة تجمع مسار الطلب للمدرسة.</p></div>
             <button class="showcase-image" type="button" data-product-image="{% static 'img/landing/tickets-system.png' %}" data-product-caption="شاشة الطلبات المدرسية في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة الطلبات المدرسية بالحجم الكامل">
               <span class="showcase-frame"><span class="showcase-frame-bar" aria-hidden="true"></span><img src="{% static 'img/landing/tickets-system.png' %}" alt="لقطة فعلية من شاشة الطلبات المدرسية" width="1920" height="799" loading="lazy" decoding="async"></span>
               <span class="image-zoom"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> عرض واضح</span>
             </button>
           </article>
-          <article class="showcase-card showcase-secondary reveal">
-            <div class="showcase-copy"><span>04 · الحفظ</span><h3>أعمال المدرسة قابلة للرجوع</h3><p>أرشيف سنوي مرتب يساعد الإدارة على الوصول إلى الوثائق عند الحاجة.</p></div>
+          <article class="showcase-card showcase-secondary">
+            <div class="showcase-copy"><span>04 · الحفظ</span><h3>أعمال المدرسة قابلة للرجوع</h3><p>خدمة أرشيف سنوي مستقلة تحفظ أعمال المدرسة للرجوع إليها عند الحاجة.</p></div>
             <button class="showcase-image" type="button" data-product-image="{% static 'img/landing/archive-system.png' %}" data-product-caption="الأرشيف السنوي للمدرسة في منصة توثيق، ببيانات عرض تجريبية." aria-label="عرض لقطة أرشيف المدرسة بالحجم الكامل">
               <span class="showcase-frame"><span class="showcase-frame-bar" aria-hidden="true"></span><img src="{% static 'img/landing/archive-system.png' %}" alt="لقطة فعلية من شاشة أرشيف المدرسة" width="1920" height="799" loading="lazy" decoding="async"></span>
               <span class="image-zoom"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> عرض واضح</span>
             </button>
           </article>
         </div>
-      </div>
-    </section>
 
-    <section class="section faq-section" id="faq">
-      <div class="shell faq-layout">
-        <div class="faq-intro reveal">
-          <span class="section-kicker">أسئلة قبل البدء</span>
-          <h2>إجابات مختصرة وواضحة</h2>
-          <p>لمزيد من التفاصيل يمكنك زيارة مركز الأسئلة أو دليل المستخدم.</p>
-          <div class="faq-links">
-            <a href="{% url 'reports:faq' %}"><i class="fa-solid fa-circle-question" aria-hidden="true"></i><span><strong>مركز الأسئلة</strong><small>إجابات بتفصيل أوسع</small></span></a>
-            <a href="{% url 'reports:user_guide' %}"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span><strong>دليل المستخدم</strong><small>شرح خطوة بخطوة</small></span></a>
-          </div>
-        </div>
-        <div class="faq-list">
-          <details class="reveal">
-            <summary>هل توجد اشتراكات مناسبة للمعلمين والمعلمات؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary>
-            <p>نعم. توفر توثيق باقات شخصية للتقارير والشواهد وملف الإنجاز والمبادرات والأرشيف، حتى إن لم تشترك مدرستك. قارن أسعار الباقات ومددها وحدودها من قسم باقات المعلمين والمعلمات، ثم ابدأ بحسابك الشخصي.</p>
-          </details>
-          <details class="reveal">
-            <summary>هل يشمل اشتراكي الشخصي أدوات AI؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary>
-            <p>تعرض كل باقة حد تحسين الصياغة والإملاء الصوتي إن كانا مشمولين. يلزم اشتراك مدفوع ساري وإتاحة الخدمة، والإملاء من التطبيق المثبّت. تراجع النتيجة قبل اعتمادها، والباقة المجانية لا تشمل AI.</p>
-          </details>
-          <details class="reveal">
-            <summary>هل يحتاج اشتراك المدرسة إلى تثبيت أو تدريب طويل؟ <i class="fa-solid fa-plus"></i></summary>
-            <p>لا. يعمل من المتصفح والجوال، ويمكن بدء أول تقرير أو طلب بعد إضافة فريق المدرسة مباشرة.</p>
-          </details>
-          <details class="reveal">
-            <summary>ماذا يحدث بعد انتهاء التجربة؟ <i class="fa-solid fa-plus"></i></summary>
-            <p>يختار مدير المدرسة عدد المعلمين والمدة المناسبة وفق الأسعار المنشورة، ولا تُحذف البيانات بمجرد انتهاء التجربة.</p>
-          </details>
-          <details class="reveal">
-            <summary>هل أستطيع إخراج بيانات المدرسة؟ <i class="fa-solid fa-plus"></i></summary>
-            <p>نعم. تستطيع الإدارة تصدير بيانات المدرسة وملفاتها في أي وقت، مع مخرجات PDF وأرشيف قابل للتنزيل.</p>
-          </details>
-          <details class="reveal">
-            <summary>هل يمكن إدارة أكثر من مدرسة؟ <i class="fa-solid fa-plus"></i></summary>
-            <p>نعم، مع التبديل بينها من الحساب نفسه وبقاء بيانات واشتراك كل مدرسة مستقلين.</p>
-          </details>
-          <details class="reveal">
-            <summary>مدرستي غير مشتركة؛ هل أستطيع إنشاء حساب شخصي؟ <i class="fa-solid fa-plus"></i></summary>
-            <p>نعم. يمكنك توثيق أعمالك وشواهدك باسمك وإضافة اسم المدرسة والمدير للتعريف، ثم إعداد ملف إنجاز سنوي. هذه مساحة شخصية، ولا تُنشئ اعتمادًا أو صلاحيات باسم المدرسة.</p>
-          </details>
-        </div>
-      </div>
-    </section>
+    </div></section>
 
-    <section class="final-cta">
-      <div class="shell">
-        <div class="final-panel reveal">
-          <div class="final-pattern" aria-hidden="true"></div>
-          <div class="final-copy">
-            <span>اختر مسارك وابدأ اليوم</span>
-            <h2>وثّق إنجازك كمعلم أو معلمة. وابدأ بالباقة التي تناسبك.</h2>
-            <p>مساحة شخصية لتقاريرك وشواهدك وملف إنجازك. وللمدارس تجربة مجانية {{ trial_days|default:30 }} يومًا دون بطاقة ائتمانية.</p>
-          </div>
-          <div class="final-actions">
-            <a class="button button-gold button-large" href="{% url 'personal:register' %}">أنشئ مساحتك كمعلم أو معلمة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
-            <a class="button button-dark-quiet" href="{% url 'reports:register_school' %}">أنشئ حساب المدرسة</a>
-          </div>
-        </div>
+    {% include "reports/partials/landing_plans.html" %}
+
+    <section class="section faq-section" id="faq" aria-labelledby="faqTitle"><div class="shell faq-layout">
+      <div class="faq-intro"><span class="section-kicker">لنبدأ على وضوح</span><h2 id="faqTitle">قد تتساءل…</h2><p>إجابات تساعدك على اختيار المساحة المناسبة، والانطلاق بثقة.</p><div class="faq-links"><a href="{% url 'reports:faq' %}">مركز الأسئلة <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a><a href="{% url 'reports:user_guide' %}">دليل المستخدم <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></div></div>
+      <div class="faq-list">
+        <details><summary>ما الفرق بين اشتراك المدرسة والاشتراك الشخصي؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>اشتراك المدرسة يجمع الفريق والتقارير والطلبات والخطط والاعتمادات بصلاحيات كل دور. الاشتراك الشخصي مساحة مستقلة للمعلم والمعلمة، للتقارير والشواهد والمبادرات وملف الإنجاز؛ ولا يمنح اعتمادًا أو صلاحيات باسم المدرسة.</p></details>
+        <details><summary>مدرستي غير مشتركة؛ هل يمكنني الاشتراك بمفردي؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>نعم. يمكنك إنشاء حسابك الشخصي واختيار باقتك وتوثيق أعمالك، دون الحاجة إلى اشتراك المدرسة. تبقى مساحتك الشخصية مستقلة عن مساحة العمل المدرسية.</p></details>
+        <details><summary>كيف تبدأ المدرسة؟ وهل توجد تجربة مجانية؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>أنشئ حساب المدرسة وابدأ تجربة مجانية {{ trial_days|default:30 }} يومًا دون بطاقة ائتمانية. بعد التجربة تختار الاشتراك بحسب عدد المعلمين والمدة، ولا تُحذف البيانات بمجرد انتهاء التجربة.</p></details>
+        <details><summary>هل تشمل كل الباقات أدوات الذكاء الاصطناعي؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>تعرض كل باقة شخصية حدود تحسين الصياغة والإملاء الصوتي اليومية. تتطلب الأدوات اشتراكًا مدفوعًا ساريًا يشملها وإتاحة الخدمة، والإملاء الصوتي من التطبيق المثبّت. الباقة الشخصية المجانية لا تشمل AI.</p></details>
+        <details><summary>هل تعمل المنصة على الجوال؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>نعم، تعمل على المتصفح من الجوال والكمبيوتر، ويمكن إضافة توثيق إلى شاشة الجوال الرئيسية. لا تحتاج إلى تنزيل تطبيق منفصل من المتجر.</p></details>
+        <details><summary>هل يمكن إدارة عدة مدارس من الحساب نفسه؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>نعم. يمكن إدارة عدة مدارس من الحساب نفسه، مع بقاء بيانات واشتراك كل مدرسة مستقلين. كل اشتراك يخص مدرسة واحدة.</p></details>
+        <details><summary>هل أستطيع طباعة أعمالي أو تصديرها؟ <i class="fa-solid fa-plus" aria-hidden="true"></i></summary><p>يمكنك تجهيز تقاريرك وملف إنجازك للطباعة والمشاركة من مساحتك. ولإدارة المدرسة مخرجات PDF وتصدير بيانات المدرسة؛ أما أرشيف السنة الدراسية فهو خدمة سنوية مستقلة موضّحة مع الاشتراك.</p></details>
       </div>
-    </section>
+    </div></section>
+
+    <section class="final-cta" aria-labelledby="finalTitle"><div class="shell final-panel">
+      <div class="final-copy"><span class="section-kicker">ابدأ اليوم. وشاهد أثره غدًا.</span><h2 id="finalTitle">جهدك يستحق أكثر<br>من أن يبقى في الذاكرة.</h2><p>امنح إنجازك مكانه، وابدأ رحلتك مع توثيق.</p></div>
+      <div class="final-actions"><a class="final-choice" href="{% url 'reports:register_school' %}"><i class="fa-solid fa-school" aria-hidden="true"></i><span><strong>ابدأ بمدرستك</strong><small>{{ trial_days|default:30 }} يومًا مجانًا دون بطاقة ائتمانية</small></span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a><a class="final-choice" href="{% url 'personal:register' %}"><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span><strong>ابدأ مساحتك كمعلم أو معلمة</strong><small>اشتراك شخصي. وملف إنجاز باسمك.</small></span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></div>
+    </div></section>
   </main>
-
   <footer class="site-footer">
     <div class="shell">
       <div class="footer-main">
@@ -628,8 +397,8 @@
   </footer>
 
   <div class="mobile-sticky" aria-label="ابدأ الآن">
+    <a class="button button-primary" href="{% url 'reports:register_school' %}">للمدارس</a>
     <a class="button button-primary" href="{% url 'personal:register' %}">للمعلم والمعلمة</a>
-    <a class="mobile-login" href="{% url 'reports:register_school' %}"><i class="fa-solid fa-school" aria-hidden="true"></i><span>للمدرسة</span></a>
     <a class="mobile-login" href="{% url 'reports:login' %}">
       <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
       <span>دخول</span>
@@ -641,7 +410,7 @@
       <p id="productLightboxCaption"></p>
       <button class="lightbox-close" id="productLightboxClose" type="button" aria-label="إغلاق الصورة"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </div>
-    <img id="productLightboxImage" src="" alt="">
+    <img id="productLightboxImage" alt="">
   </dialog>
 
   {% if AI_MANSOUR_PUBLIC_ENABLED %}
@@ -655,7 +424,7 @@
    data-cfasync="false"></script>
   {% include "reports/partials/pwa_install.html" %}
   <script src="{% static 'js/flexible-pricing.js' %}?v=20260804.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
-  <script src="{% static 'js/landing.js' %}?v=20260826.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
+  <script src="{% static 'js/landing.js' %}?v=20261010.1" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   {% if AI_MANSOUR_PUBLIC_ENABLED %}
     <script src="{% static 'js/mansour-assistant.js' %}?v=20260801.2" nonce="{{ CSP_NONCE }}" data-cfasync="false" defer></script>
   {% endif %}

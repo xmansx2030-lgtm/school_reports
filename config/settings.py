@@ -835,6 +835,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "reports.context_processors.nav_context",
+                "personal.context_processors.academic_year_navigation",
                 "reports.platform_support.workspace_navigation",
                 "reports.ai_features.ai_feature_flags",
                 "reports.context_processors.csp",
@@ -1434,6 +1435,10 @@ except Exception:  # pragma: no cover
 
 CELERY_BEAT_SCHEDULE: dict[str, dict] = {}
 if crontab is not None:
+    CELERY_BEAT_SCHEDULE["sync-official-academic-year-hourly"] = {
+        "task": "reports.tasks.sync_academic_years_task",
+        "schedule": crontab(minute=0),
+    }
     if AUDIT_LOG_CLEANUP_ENABLED:
         CELERY_BEAT_SCHEDULE["cleanup-audit-logs-daily"] = {
             "task": "reports.tasks.cleanup_audit_logs_task",

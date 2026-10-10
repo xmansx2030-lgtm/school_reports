@@ -1,38 +1,71 @@
 # -*- coding: utf-8 -*-
-"""مصدر واحد لقائمة السنوات الدراسية الهجرية المعروضة للاختيار.
+"""Published Ministry calendars and preserved historical year choices.
 
-**لماذا مركزيّاً؟** لأن القائمة كانت تُبنى في موضعين بمنطقين مختلفين: شاشة
-«بيانات المدرسة» تقرأ السنوات المركزية التي يديرها مالك المنصة، ونموذج رفع
-الوثائق يقرأ حقلَي المدرسة وحدهما. والمدرسة الجديدة تُنشأ وحقلاها فارغان، فكان
-حقلُ السنة في نموذج الوثائق **إلزامياً وبلا خيار واحد**: كل رفع يفشل برسالة
-«السنة الدراسية أول ما يُقلَّب به الأرشيف» التي تصف الحقل ولا تدلّ على السبب،
-وأرشيف الوثائق معطّل من أول يوم في كل مدرسة لم يمرّ مديرها على الإعدادات.
-
-الترتيب هنا: ما تحفظه المدرسة، ثم ما يديره مالك المنصة، ثم نطاقٌ محسوب لا
-يترك القائمة فارغة أبداً.
+Only the platform publishes academic years. Calendar dates, never an estimated
+Hijri conversion, determine the operational year for schools and teachers.
 """
 from __future__ import annotations
 
 import datetime
 import re
+from urllib.parse import urlsplit
+
+from django.db.models import F
+from django.utils import timezone
 
 __all__ = [
     "ACADEMIC_YEAR_RE",
-    "approx_current_hijri_year",
     "hijri_academic_year_options",
+    "approved_academic_year_options", "current_academic_year_value",
+    "published_academic_years", "school_current_academic_year",
+    "sync_academic_years", "MINISTRY_CALENDAR_URL", "is_ministry_calendar_source",
 ]
 
-ACADEMIC_YEAR_RE = re.compile(r"^\d{4}-\d{4}$")
+ACADEMIC_YEAR_RE = re.compile(r"^[0-9]{4}-[0-9]{4}$")
+MINISTRY_CALENDAR_URL = "https://www.moe.gov.sa/ar/education/generaleducation/Pages/AcademicCalendar.aspx"
 
 
-def approx_current_hijri_year() -> int:
-    """تقدير السنة الهجرية الحالية (يكفي لتوليد نطاق اختيار واسع)."""
-    today = datetime.date.today()
-    g = today.year + (today.month - 1) / 12.0
+def is_ministry_calendar_source(value: str) -> bool:
     try:
-        return int(round((g - 622) * 33.0 / 32.0))
-    except (TypeError, ValueError, OverflowError):
-        return 1447
+        parsed = urlsplit(value or "")
+        host = (parsed.hostname or "").lower()
+    except ValueError:
+        return False
+    return parsed.scheme == "https" and (host == "moe.gov.sa" or host.endswith(".moe.gov.sa"))
+
+
+def _is_valid_year_value(value: str) -> bool:
+    return bool(ACADEMIC_YEAR_RE.fullmatch(value)) and int(value[5:]) == int(value[:4]) + 1
+
+
+def published_academic_years():
+    """Complete, published calendars in platform display order."""
+    from .models import AcademicYear
+
+    return AcademicYear.objects.filter(
+        is_active=True, start_date__isnull=False, end_date__isnull=False,
+        end_date__gte=F("start_date"),
+    ).exclude(source_url="").order_by("-value", "order", "pk")
+
+
+def approved_academic_year_options() -> list[str]:
+    return [
+        year.value for year in published_academic_years()
+        if _is_valid_year_value(year.value) and is_ministry_calendar_source(year.source_url)
+    ]
+
+
+def current_academic_year_value(today: datetime.date | None = None) -> str:
+    """Latest published year that has started, including its summer break.
+
+    The following year becomes current on its approved start date. Publishing a
+    future calendar never changes today's operational year prematurely.
+    """
+    today = today or timezone.localdate()
+    for year in published_academic_years().filter(start_date__lte=today).order_by("-start_date", "-value"):
+        if _is_valid_year_value(year.value) and is_ministry_calendar_source(year.source_url):
+            return year.value
+    return ""
 
 
 def _saved_years(instance) -> set[str]:
@@ -45,47 +78,67 @@ def _saved_years(instance) -> set[str]:
         value = str(year).strip()
         if ACADEMIC_YEAR_RE.match(value):
             saved.add(value)
+    # A historical label must remain selectable after an operational rollover,
+    # including when its central calendar is later unpublished.
+    if getattr(instance, "pk", None):
+        from django.apps import apps
+        from django.db.models import CharField
+
+        for model in apps.get_app_config("reports").get_models():
+            fields = {field.name: field for field in model._meta.fields}
+            if "school" in fields and isinstance(fields.get("academic_year"), CharField):
+                saved.update(
+                    value for value in model.objects.filter(school_id=instance.pk)
+                    .exclude(academic_year="").values_list("academic_year", flat=True).distinct()
+                    if ACADEMIC_YEAR_RE.fullmatch(value)
+                )
     return saved
 
 
-def _central_years() -> list[str]:
-    """السنوات النشطة التي يديرها مالك المنصة."""
-    try:
-        from .models import AcademicYear
+def academic_year_is_used(value: str) -> bool:
+    """Protect string-based historical references as well as personal year rows."""
+    from django.apps import apps
+    from django.db.models import CharField
+    from .models import School
+    from personal.models import PersonalAcademicYear, PersonalWorkspace
 
-        return [
-            str(value)
-            for value in AcademicYear.objects.filter(is_active=True).values_list("value", flat=True)
-        ]
-    except Exception:
-        # القائمة المركزية وسيلةُ راحة لا شرطُ عمل: تعذُّر قراءتها يسقطنا إلى
-        # النطاق المحسوب أدناه، ولا يُعطّل الشاشة التي تطلبها.
-        return []
+    if School.objects.filter(current_academic_year=value).exists():
+        return True
+    if any(value in (years or []) for years in School.objects.values_list("allowed_academic_years", flat=True)):
+        return True
+    if PersonalAcademicYear.objects.filter(value=value).exists() or PersonalWorkspace.objects.filter(current_academic_year=value).exists():
+        return True
+    for model in apps.get_models():
+        fields = {field.name: field for field in model._meta.fields}
+        if isinstance(fields.get("academic_year"), CharField) and model.objects.filter(academic_year=value).exists():
+            return True
+    return False
 
 
 def hijri_academic_year_options(instance=None) -> list[str]:
-    """قائمة سنوات دراسية هجرية صالحة للعرض، مرتَّبة ولا تكون فارغة.
-
-    ``instance`` مدرسةٌ اختيارية: قيمها المحفوظة تُضمّ إلى القائمة حتى لو
-    خرجت من القائمة المركزية.
-    """
+    """Published choices plus the school's own historical labels; no guesses."""
     saved = _saved_years(instance) if instance is not None else set()
+    return sorted(set(approved_academic_year_options()) | saved)
 
-    central = [value for value in _central_years() if ACADEMIC_YEAR_RE.match(value)]
-    if central:
-        return sorted(set(central) | saved)
 
-    # ── تراجع: نطاق محسوب حول أحدث سنة معروفة ──
-    starts: set[int] = set()
-    candidates: list[int] = [approx_current_hijri_year()]
-    for value in saved:
-        start = int(value.split("-")[0])
-        starts.add(start)
-        candidates.append(start)
+def school_current_academic_year(school=None, today: datetime.date | None = None) -> str:
+    """Read central context, retaining a legacy value if no calendar exists."""
+    return current_academic_year_value(today) or (
+        (getattr(school, "current_academic_year", "") or "").strip() if school is not None else ""
+    )
 
-    # المرتكز أحدثُ قيمة: يضمن ظهور السنوات القادمة ولو كانت المحفوظة قديمة.
-    anchor = max(candidates)
-    for start in range(anchor - 3, anchor + 6):
-        starts.add(start)
 
-    return [f"{start}-{start + 1}" for start in sorted(starts)]
+def sync_academic_years(today: datetime.date | None = None) -> dict:
+    """Idempotent rollover of current context only; never move or delete work."""
+    from django.db import transaction
+    from .models import School
+    from personal.models import PersonalWorkspace
+
+    value = current_academic_year_value(today)
+    result = {"value": value, "schools": 0, "teachers": 0}
+    if not value:
+        return result
+    with transaction.atomic():
+        result["schools"] = School.objects.exclude(current_academic_year=value).update(current_academic_year=value)
+        result["teachers"] = PersonalWorkspace.objects.exclude(current_academic_year=value).update(current_academic_year=value)
+    return result

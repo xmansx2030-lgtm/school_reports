@@ -91,7 +91,17 @@ class IndependentTeacherJourneyTests(TestCase):
         self.teacher.save(update_fields=["email"])
         page = self.client.get(reverse("personal:dashboard"))
         self.assertEqual(page.context["getting_started_done"], 1)
-        self.assertContains(page, "المهام والتعاميم والاعتماد المدرسي تتطلب عضوية مدرسة مشتركة")
+        self.assertEqual(page.context["getting_started_total"], 6)
+        self.assertEqual([step["done"] for step in page.context["getting_started"]], [True, False, False, False, False, False])
+        self.assertEqual([step["route"] for step in page.context["getting_started"]], [
+            "personal:setup", "personal:report_create", "personal:evidence_create",
+            "personal:initiatives", "personal:courses", "personal:portfolio",
+        ])
+        self.assertFalse(self.workspace.reports.exists())
+        self.assertFalse(self.workspace.evidence.exists())
+        self.assertFalse(self.workspace.initiatives.exists())
+        self.assertFalse(self.workspace.courses.exists())
+        self.assertFalse(self.workspace.portfolio_sections.exists())
 
     def test_admin_routes_reject_teacher_anonymous_and_post_requests(self):
         urls = [reverse("personal:platform_subscribers"), reverse("personal:platform_subscriber_detail", args=[self.workspace.pk])]

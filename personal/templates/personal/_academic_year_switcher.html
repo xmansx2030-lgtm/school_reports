@@ -1,0 +1,29 @@
+{% if request.personal_workspace %}
+<section class="personal-year-context" aria-labelledby="personalYearContextTitle">
+  <div class="personal-year-context__copy">
+    <span class="personal-year-context__icon" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
+    <div>
+      <strong id="personalYearContextTitle">العام الدراسي</strong>
+      <p id="personalYearHelp">تُحدّث إدارة المنصة الأعوام وفق تقويم وزارة التعليم. لكل عام سجل مستقل لأعمالك.</p>
+    </div>
+  </div>
+  {% if personal_year_options %}
+  <form class="personal-year-context__form" method="post" action="{% url 'personal:years' %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="select">
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <label class="visually-hidden" for="personalGlobalYear">اختيار العام الدراسي لعرض أعماله</label>
+    <select class="twq-control" id="personalGlobalYear" name="year" aria-describedby="personalYearHelp">
+      {% for option in personal_year_options %}<option value="{{ option.value }}"{% if option.value == personal_selected_year %} selected{% endif %}>{{ option.label }}{% if option.is_current %} · العام الحالي{% elif option.is_historical %} · سجل سابق{% endif %}</option>{% endfor %}
+    </select>
+    <button class="twq-btn twq-btn--secondary" type="submit">عرض العام</button>
+    <a class="personal-year-context__archive" href="{% url 'personal:years' %}" aria-label="عرض الأرشيف السنوي"><i class="fa-solid fa-box-archive" aria-hidden="true"></i><span>الأرشيف</span></a>
+  </form>
+  {% else %}
+  <span class="twq-status" data-status="pending">بانتظار نشر العام الدراسي من إدارة المنصة</span>
+  {% endif %}
+</section>
+{% if personal_selected_year and not personal_year_can_write %}
+<p class="personal-year-readonly" role="status"><i class="fa-solid fa-lock" aria-hidden="true"></i> أعمال هذا العام محفوظة للاستعراض والطباعة والتصدير. إضافة الأعمال متاحة للأعوام المنشورة والمفتوحة من إدارة المنصة.</p>
+{% endif %}
+{% endif %}

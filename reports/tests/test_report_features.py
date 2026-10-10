@@ -2,6 +2,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from datetime import date
+from urllib.parse import unquote
 
 from django.utils import timezone
 
@@ -59,12 +60,15 @@ class SchoolDataExportTests(_BaseSchoolFixture):
         self._login(self.manager)
         response = self.client.get(reverse("reports:school_data_export"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "تنزيل نسخة كاملة من بيانات المدرسة")
-        self.assertContains(response, "تشمل كل السنوات ولا تُحفظ كنسخة سنوية داخل المنصة")
+        self.assertContains(response, "أرشفة المدرسة كاملة")
+        self.assertContains(response, "جميع السنوات والحالات")
+        self.assertContains(response, "النسخة تُحفظ على جهازك")
         self.assertContains(response, reverse("reports:school_archive"))
-        self.assertContains(response, "أرشيف الملفات")
-        self.assertContains(response, "منصة توثيق · القيادة المدرسية")
-        self.assertContains(response, "ملف الأداء القيادي")
+        self.assertContains(response, "أرشيف السنوات")
+        self.assertContains(response, "حفظ محتويات المدرسة")
+        self.assertContains(response, "التقارير والإنجاز والأداء القيادي")
+        self.assertGreater(response.context["record_total"], 0)
+        self.assertContains(response, str(response.context["record_total"]))
         self.assertContains(response, reverse("reports:school_data_export_zip"))
 
     def test_teacher_cannot_access_export(self):
@@ -94,7 +98,7 @@ class SchoolDataExportTests(_BaseSchoolFixture):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/zip")
         self.assertIn("attachment", response["Content-Disposition"])
-        self.assertIn("school-files", response["Content-Disposition"])
+        self.assertIn(f"{self.school.name}.zip", unquote(response["Content-Disposition"]))
         content = b"".join(response.streaming_content)
         zf = zipfile.ZipFile(io.BytesIO(content))
         names = zf.namelist()

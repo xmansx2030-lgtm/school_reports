@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from .academic_years import school_current_academic_year
+
 from typing import Iterable
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 
 from .models import (
     Assignment,
@@ -840,7 +842,7 @@ def reclaimable_storage_by_year(school: School | None) -> list[dict]:
     if not archived_years:
         return []
 
-    current_year = (getattr(school, "current_academic_year", "") or "").strip()
+    current_year = school_current_academic_year(school)
 
     rows = []
     for year in sorted(archived_years, key=_year_sort_key, reverse=True):
@@ -1009,7 +1011,7 @@ def archive_available_years(*, school: School, teacher=None, school_wide: bool =
             or LabAssetHandover.objects.filter(school=school).exists()
             or LabExperiment.objects.filter(school=school).exists()
         )
-        current_year = (getattr(school, "current_academic_year", "") or "").strip()
+        current_year = school_current_academic_year(school)
         if has_administrative_records and current_year:
             years.add(current_year)
 
@@ -1072,7 +1074,15 @@ def archive_payload(
         total=Count("id"),
         with_images=Count(
             "id",
-            filter=Q(image1__gt="") | Q(image2__gt="") | Q(image3__gt="") | Q(image4__gt=""),
+            filter=(
+                Q(image1__gt="")
+                | Q(image2__gt="")
+                | Q(image3__gt="")
+                | Q(image4__gt="")
+                | Exists(
+                    ReportEvidence.objects.filter(report_id=OuterRef("pk"), image__gt="")
+                )
+            ),
         ),
     )
     achievement_stats = achievements_qs.aggregate(

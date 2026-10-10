@@ -1,190 +1,50 @@
 {% extends "base.html" %}
-{% block title %}تنزيل نسخة كاملة من بيانات المدرسة{% endblock %}
-{% block head %}
-<style nonce="{{ CSP_NONCE }}">
-  body { background: linear-gradient(120deg, #e0e7ff 0%, #f0fdfa 100%); min-height: 100vh; }
-  .smart-card {
-    max-width: 880px; margin: 40px auto 24px auto; background: #fff; border-radius: 32px;
-    box-shadow: 0 8px 48px #006c3522, 0 1.5px 0 #006c3511; padding: 0 0 32px 0;
-    overflow: hidden; border: 1.5px solid #e0e7ff; position: relative; direction: rtl;
-  }
-  .smart-header {
-    background: linear-gradient(90deg, #006c35 0%, #0072bc 100%); color: #fff;
-    padding: 32px 36px 18px 36px; border-bottom-left-radius: 48px 32px; border-bottom-right-radius: 48px 32px;
-    box-shadow: 0 2px 16px #006c3522; position: relative;
-  }
-  .smart-header .icon { font-size: 2.2rem; margin-left: 12px; vertical-align: middle; }
-  .smart-header .breadcrumbs { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; opacity: 0.93; }
-  .smart-header .breadcrumbs a { color: #fff; text-decoration: underline dotted; margin: 0 4px; }
-  .smart-header .breadcrumbs a:hover { color: #d4b16d; }
-  .smart-header .title { font-size: 2.1rem; font-weight: 900; margin: 0 0 6px; letter-spacing: -1px; display: flex; align-items: center; gap: 10px; }
-  .smart-header .desc { font-size: 1.05rem; font-weight: 500; opacity: 0.96; margin-bottom: 0; max-width: 720px; }
-  .smart-header .dashboard-btn {
-    position: absolute; left: 36px; top: 32px; background: #fff; color: #006c35; border-radius: 999px;
-    font-weight: 900; padding: 8px 22px; box-shadow: 0 2px 12px #006c3522; border: none; font-size: 1.08rem;
-    text-decoration: none; transition: background .18s, color .18s; z-index: 2;
-  }
-  .smart-header .dashboard-btn:hover { background: #006c35; color: #fff; }
-  .exp-body { padding: 28px 36px 0; }
-  .exp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 26px; }
-  .exp-stat { background: #f8fafc; border: 1.5px solid #e0e7ff; border-radius: 18px; padding: 18px; text-align: center; transition: transform .18s, box-shadow .18s; }
-  .exp-stat:hover { transform: translateY(-3px); box-shadow: 0 6px 22px #006c3518; }
-  .exp-stat .n { font-size: 2.2rem; font-weight: 900; color: #006c35; line-height: 1; }
-  .exp-stat .l { font-size: .98rem; font-weight: 800; color: #475569; margin-top: 8px; display:flex; align-items:center; justify-content:center; gap:6px; }
-  .exp-stat .l i { color: #0072bc; }
-  .exp-info { background: linear-gradient(135deg,#eff6ff,#f0fdf4); border: 1.5px solid #bbf7d0; border-radius: 18px; padding: 18px 22px; margin-bottom: 24px; }
-  .exp-info h3 { margin: 0 0 10px; color: #006c35; font-size: 1.1rem; font-weight: 900; display:flex; align-items:center; gap:8px; }
-  .exp-info ul { margin: 0; padding-inline-start: 22px; color: #334155; font-weight: 700; line-height: 2; }
-  .exp-scope { display:flex; gap:12px; align-items:flex-start; background:#fff7ed; border:1.5px solid #fed7aa; padding:16px 18px; margin-bottom:20px; color:#7c2d12; }
-  .exp-scope i { margin-top:4px; color:#c2410c; }
-  .exp-scope strong { display:block; margin-bottom:4px; }
-  .exp-scope p { margin:0; line-height:1.7; }
-  .exp-scope a { color:#0a5c33; font-weight:900; }
-  .exp-note { color: #64748b; font-size: .95rem; font-weight: 600; margin-top: 8px; }
-  .exp-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-  .smart-btn {
-    border-radius: 999px; min-width: 120px; font-weight: 900; font-size: 1.12rem; padding: 13px 32px; border: none;
-    background: linear-gradient(90deg, #006c35 0%, #0072bc 100%); color: #fff; box-shadow: 0 4px 16px #006c3530;
-    transition: background .18s, color .18s, transform .18s; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
-  }
-  .smart-btn:hover { background: #fff; color: #006c35; border: 1.5px solid #006c35; transform: translateY(-2px); }
-  .smart-btn.ghost { background: #fff; color: #006c35; border: 1.5px solid #006c35; box-shadow: none; font-size: 1.05rem; padding: 11px 24px; }
-  .smart-btn.ghost:hover { background: #006c35; color: #fff; }
-  .smart-btn[aria-disabled="true"] { opacity: .7; pointer-events: none; }
-  @media (max-width: 600px) {
-    .smart-card, .smart-header, .exp-body { padding-left: 14px !important; padding-right: 14px !important; }
-    .smart-header .dashboard-btn { left: 10px; top: 10px; padding: 6px 12px; font-size: .98rem; }
-  }
-
-  /* ============================================================
-     👑 ROYAL LUXURY — تصدير بيانات المدرسة (زمرّدي + ذهبي)
-     ============================================================ */
-  body { background: linear-gradient(120deg, #eef3ee 0%, #f7f3ea 100%); }
-  .smart-card { border:1px solid rgba(185,151,91,.22); box-shadow:0 26px 60px -28px rgba(10,92,51,.5); }
-  .smart-card::before{ content:""; position:absolute; inset-inline:0; top:0; height:4px; z-index:3;
-    background:linear-gradient(90deg, transparent, #d4b16d 18%, #e6cf9a 50%, #d4b16d 82%, transparent); }
-  .smart-header{
-    background:
-      radial-gradient(120% 160% at 92% -30%, rgba(212,177,109,.26), transparent 50%),
-      linear-gradient(135deg,#0b6238 0%, #074426 55%, #052e1a 100%) !important;
-    border-bottom:none !important;
-  }
-  .smart-header .title{
-    background:linear-gradient(90deg,#fff,#e6cf9a); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  }
-  .smart-header .title .icon{ -webkit-text-fill-color:#e6cf9a; color:#e6cf9a; }
-  .smart-header .dashboard-btn{ background:rgba(212,177,109,.18); color:#fdf6e6; border:1px solid rgba(212,177,109,.5); }
-  .smart-header .dashboard-btn:hover{ background:#d4b16d; color:#063d22; }
-  .exp-stat .n{ color:#0a5c33; }
-  .exp-stat .l i{ color:#b9975b; }
-  .exp-stat{ border-color:rgba(185,151,91,.2); }
-  .exp-stat:hover{ box-shadow:0 12px 26px -14px rgba(10,92,51,.4); border-color:rgba(185,151,91,.4); }
-  .exp-info{ background:linear-gradient(135deg,#f7f3ea,#eef3ee); border-color:rgba(185,151,91,.35); }
-  .exp-info h3{ color:#0a5c33; }
-  .exp-info h3 i{ color:#b9975b; }
-  .smart-btn{ background:linear-gradient(135deg,#0a5c33,#074426); box-shadow:0 10px 22px -12px rgba(10,92,51,.6); }
-  .smart-btn:hover{ background:#fff; color:#0a5c33; border:1.5px solid #0a5c33; }
-  .smart-btn.ghost{ color:#0a5c33; border:1.5px solid rgba(185,151,91,.45); }
-  .smart-btn.ghost:hover{ background:#0a5c33; color:#fff; border-color:#0a5c33; }
-</style>
-{% endblock head %}
-
+{% load static %}
+{% block title %}أرشفة المدرسة كاملة{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/school-data-export.css' %}?v=20261010.1">{% endblock %}
 {% block content %}
-<div class="smart-card" dir="rtl">
-  <div class="smart-header">
-    <a href="{% url 'reports:admin_dashboard' %}" class="dashboard-btn" title="عودة إلى لوحة المدرسة">
-      <i class="fa-solid fa-arrow-right-to-bracket"></i> لوحة المدرسة
-    </a>
-    <div class="breadcrumbs">
-      <a href="{% url 'reports:admin_dashboard' %}"><i class="fa-solid fa-gauge-high"></i> لوحة المدرسة</a>
-      <span>›</span>
-      <span><i class="fa-solid fa-download"></i> تنزيل نسخة كاملة</span>
+<div class="school-export twq-page" aria-labelledby="schoolExportTitle">
+  <nav class="school-export__back" aria-label="العودة">
+    <a href="{% url 'reports:school_archive' %}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> أرشيف السنوات</a>
+  </nav>
+  <header class="twq-page-header">
+    <div class="twq-page-header__heading">
+      <p class="twq-page-header__eyebrow">حفظ محتويات المدرسة</p>
+      <h1 id="schoolExportTitle" class="twq-page-header__title">أرشفة المدرسة كاملة</h1>
+      <p class="twq-page-header__lead">احتفظ بمحتويات <bdi>{{ active_school.name }}</bdi> لكل السنوات في ملف ZIP باسم المدرسة، يضم السجلات والمرفقات الأصلية وفهرسًا للبحث وتقريرًا للتحقق من الاكتمال.</p>
+      <dl class="twq-page-header__context school-export__context">
+        <div><dt>اسم الملف</dt><dd><bdi>{{ archive_filename }}</bdi></dd></div>
+        <div><dt>نطاق النسخة</dt><dd>جميع السنوات والحالات</dd></div>
+      </dl>
     </div>
-    <h1 class="title">
-      <span class="icon"><i class="fa-solid fa-download"></i></span>
-      تنزيل نسخة كاملة من بيانات المدرسة
-    </h1>
-    <div class="desc">
-      نزّل بيانات «{{ active_school.name }}» لكل السنوات في حزمة ZIP تضمّ الملفات الفعلية
-      (صور التقارير، ملفات الإنجاز، «منصة توثيق · القيادة المدرسية — ملف الأداء القيادي»، محاضر الاجتماعات، الوثائق، المبادرات، الخطط، الشواهد، ومرفقات الطلبات والتعاميم) مع فهرس Excel وملف تحقّق سلامة.
+    <div class="twq-page-header__aside school-export__actions">
+      <a class="twq-btn twq-btn--primary" id="downloadBtn" href="{% url 'reports:school_data_export_zip' %}" aria-describedby="exportCompletionNote"><i class="fa-solid fa-file-zipper" aria-hidden="true"></i> تنزيل الأرشيف الكامل</a>
+      <a class="twq-btn twq-btn--secondary" href="{% url 'reports:school_data_export_download' %}"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> تنزيل الملخص Excel</a>
     </div>
-  </div>
+  </header>
 
-  <div class="exp-body">
-    <div class="exp-scope" role="note">
-      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-      <div>
-        <strong>هذه نسخة فورية للاحتفاظ خارج المنصة.</strong>
-        <p>تشمل كل السنوات ولا تُحفظ كنسخة سنوية داخل المنصة. لحفظ سنة ثابتة والرجوع إليها لاحقًا استخدم <a href="{% url 'reports:school_archive' %}">أرشيف السنوات</a>.</p>
-      </div>
+  <section class="twq-section" aria-labelledby="exportScopeTitle">
+    <div class="twq-section__header">
+      <div><h2 id="exportScopeTitle" class="twq-section__title">محتويات النسخة</h2><p class="twq-section__description">{{ record_total }} سجلًا ضمن {{ record_model_count }} نوعًا من سجلات المدرسة، بما يشمل السجلات غير النشطة والتقارير الموجودة في سلة المحذوفات.</p></div>
     </div>
+    <dl class="school-export__inventory">
+      <div><dt>التقارير والإنجاز والأداء القيادي</dt><dd>ملفات PDF، الشواهد الأصلية، أقسام الملفات وصور التقارير المجمدة، لجميع السنوات.</dd></div>
+      <div><dt>الوثائق والطلبات والتعاميم</dt><dd>المرفقات، الملاحظات، حالات القراءة والإقرار وصور التوقيعات، ومسودات التعاميم.</dd></div>
+      <div><dt>الاجتماعات والخطط والتكليفات والمختبر</dt><dd>المحاضر والقرارات والأهداف والمهام وشواهد التنفيذ والعهدة وحركاتها والتجارب.</dd></div>
+      <div><dt>التنظيم والسجلات المدرسية</dt><dd>منسوبو المدرسة والأقسام والصلاحيات والتفويضات وسجل الاعتماد والإجراءات وبيانات الاشتراك والمدفوعات وإيصالاتها والنسخ السنوية المحفوظة.</dd></div>
+      <div><dt>الفهرس والتحقق</dt><dd>ملخص Excel وسجلات JSON قابلة للقراءة وبيان الملفات الأصلية وبصمة SHA-256 لكل ملف وتقرير الاكتمال.</dd></div>
+    </dl>
+  </section>
 
-    <div class="exp-stats">
-      <div class="exp-stat">
-        <div class="n">{{ counts.reports }}</div>
-        <div class="l"><i class="fa-solid fa-file-lines"></i> تقرير</div>
-      </div>
-      <div class="exp-stat">
-        <div class="n">{{ counts.achievements }}</div>
-        <div class="l"><i class="fa-solid fa-award"></i> ملف إنجاز</div>
-      </div>
-      <div class="exp-stat">
-        <div class="n">{{ counts.leadership }}</div>
-        <div class="l"><i class="fa-solid fa-crown"></i> ملف أداء قيادي</div>
-      </div>
-      <div class="exp-stat">
-        <div class="n">{{ counts.teachers }}</div>
-        <div class="l"><i class="fa-solid fa-chalkboard-user"></i> {{ SCHOOL_TEACHER_INDEFINITE_LABEL|default:"معلم" }}</div>
-      </div>
-      <div class="exp-stat">
-        <div class="n">{{ counts.files }}</div>
-        <div class="l"><i class="fa-solid fa-paperclip"></i> ملف مرفق</div>
-      </div>
-    </div>
-
-    <div class="exp-info">
-      <h3><i class="fa-solid fa-folder-tree"></i> يحتوي الأرشيف (ZIP) على</h3>
-      <ul>
-        <li><strong>التقارير/</strong> — لكل تقرير مجلد باسمه يضمّ ملف <strong>التقرير.pdf</strong> الرسمي + صوره الأصلية (يُولَّد PDF تلقائيًا عند التصدير).</li>
-        <li><strong>ملفات-الإنجاز/</strong> — ملف PDF لكل {{ SCHOOL_TEACHER_INDEFINITE_LABEL|default:"معلم" }} حسب السنة (يُولَّد تلقائيًا عند التصدير إن لم يكن جاهزًا).</li>
-        <li><strong>ملفات-الإنجاز/شواهد/</strong> — صور الشواهد منظّمة حسب {{ SCHOOL_TEACHER_LABEL|default:"المعلم" }} والقسم.</li>
-        <li><strong>منصة توثيق · القيادة المدرسية/</strong> — ملف الأداء القيادي PDF لكل سنة مع الشواهد الأصلية مرتبة حسب المحور.</li>
-        <li><strong>الاجتماعات-والمحاضر/</strong> — PDF رسمي لكل محضر اجتماع.</li>
-        <li><strong>الوثائق/</strong> — المستندات المدرسية المرفوعة بصيغتها الأصلية.</li>
-        <li><strong>الخطط</strong> و<strong>المبادرات</strong> — مفهرسة داخل Excel مع حالاتها وبياناتها الأساسية.</li>
-        <li><strong>الطلبات-والتذاكر/</strong> — مرفقات الطلبات والتذاكر (PDF/صور/مستندات).</li>
-        <li><strong>التعاميم/</strong> و<strong>الإشعارات/</strong> — مرفقات التعاميم والإشعارات.</li>
-        <li><strong>ملخص-البيانات.xlsx</strong> — فهرس Excel يربط بين الملفات والبيانات الوصفية.</li>
-        <li><strong>الفهرس-والتحقق.txt</strong> — بيان محتوى وبصمات SHA-256 للتحقّق من سلامة كل ملف.</li>
-      </ul>
-      <div class="exp-note"><i class="fa-solid fa-circle-info"></i> تنزيل الأرشيف الكامل قد يستغرق وقتًا حسب عدد الملفات وحجمها. يمكنك أيضًا تنزيل ملف الملخص (Excel) وحده بسرعة.</div>
-    </div>
-
-    <div class="exp-actions">
-      <a class="smart-btn" id="downloadBtn" href="{% url 'reports:school_data_export_zip' %}">
-        <i class="fa-solid fa-file-zipper"></i> تنزيل أرشيف الملفات (ZIP)
-      </a>
-      <a class="smart-btn ghost" href="{% url 'reports:school_data_export_download' %}">
-        <i class="fa-solid fa-file-excel"></i> الملخص فقط (Excel)
-      </a>
-      <a class="smart-btn ghost" href="{% url 'reports:admin_dashboard' %}"><i class="fa-solid fa-arrow-right"></i> رجوع</a>
-    </div>
-  </div>
+  <section class="twq-section school-export__verification" aria-labelledby="exportCompletionTitle">
+    <h2 id="exportCompletionTitle" class="twq-section__title">بعد تنزيل النسخة</h2>
+    <p id="exportCompletionNote">قد يستغرق التجهيز وقتًا بحسب حجم المدرسة. عند اكتمال التنزيل افتح <bdi>تقرير-الاكتمال.json</bdi> و<bdi>الفهرس-والتحقق.txt</bdi>؛ تُذكر فيهما الملفات التي تعذرت قراءتها أو ملفات PDF التي تعذر توليدها، وتُصنّف الحزمة حينها كنسخة جزئية.</p>
+    <p>النسخة تُحفظ على جهازك. لحفظ نسخة ثابتة لسنة محددة داخل المنصة، استخدم <a href="{% url 'reports:school_archive' %}">أرشيف السنوات</a>.</p>
+    <details class="school-export__limits">
+      <summary>حدود النسخة وحماية بيانات الحسابات</summary>
+      <p>هذه نسخة لمحتويات المدرسة للقراءة والحفظ؛ لا توجد خدمة استعادة تلقائية منها.</p>
+      <ul>{% for exclusion in archive_exclusions %}<li>{{ exclusion }}</li>{% endfor %}</ul>
+    </details>
+  </section>
 </div>
-
-<script nonce="{{ CSP_NONCE }}" data-cfasync="false">
-  (function(){
-    var btn = document.getElementById("downloadBtn");
-    if(!btn) return;
-    btn.addEventListener("click", function(){
-      var original = btn.innerHTML;
-      btn.setAttribute("aria-disabled", "true");
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التحضير...';
-      setTimeout(function(){
-        btn.removeAttribute("aria-disabled");
-        btn.innerHTML = original;
-      }, 4000);
-    });
-  })();
-</script>
-{% endblock content %}
+{% endblock %}

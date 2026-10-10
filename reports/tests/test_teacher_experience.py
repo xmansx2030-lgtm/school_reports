@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from django.conf import settings
@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from reports.forms import TicketCreateForm
+from reports.academic_years import MINISTRY_CALENDAR_URL
 from reports.models import (
     AcademicYear,
     Department,
@@ -26,6 +27,11 @@ from reports.models import (
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class TeacherExperienceTests(TestCase):
     def setUp(self):
+        AcademicYear.objects.update(is_active=False)
+        AcademicYear.objects.update_or_create(value="1447-1448", defaults={
+            "is_active": True, "start_date": timezone.localdate() - timedelta(days=14),
+            "end_date": timezone.localdate() + timedelta(days=200), "source_url": MINISTRY_CALENDAR_URL,
+        })
         self.school = School.objects.create(
             name="مدرسة تجربة المعلم",
             code="teacher-experience",
@@ -57,8 +63,14 @@ class TeacherExperienceTests(TestCase):
 
     def test_achievement_creation_uses_only_school_current_academic_year(self):
         AcademicYear.objects.update(is_active=False)
-        AcademicYear.objects.update_or_create(value="1447-1448", defaults={"is_active": True})
-        AcademicYear.objects.update_or_create(value="1448-1449", defaults={"is_active": True})
+        AcademicYear.objects.update_or_create(value="1447-1448", defaults={
+            "is_active": True, "start_date": timezone.localdate() - timedelta(days=14),
+            "end_date": timezone.localdate() + timedelta(days=200), "source_url": MINISTRY_CALENDAR_URL,
+        })
+        AcademicYear.objects.update_or_create(value="1448-1449", defaults={
+            "is_active": True, "start_date": timezone.localdate() + timedelta(days=201),
+            "end_date": timezone.localdate() + timedelta(days=400), "source_url": MINISTRY_CALENDAR_URL,
+        })
         TeacherAchievementFile.objects.create(
             teacher=self.teacher,
             school=self.school,
@@ -74,7 +86,7 @@ class TeacherExperienceTests(TestCase):
             [("1447-1448", "1447-1448 هـ")],
         )
 
-    def test_achievement_creation_waits_for_manager_to_select_current_year(self):
+    def test_achievement_creation_automatically_uses_published_platform_current_year(self):
         self.school.current_academic_year = ""
         self.school.save(update_fields=["current_academic_year"])
         self._login_teacher()
@@ -84,10 +96,23 @@ class TeacherExperienceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             list(response.context["create_form"].fields["academic_year"].choices),
-            [],
+            [("1447-1448", "1447-1448 هـ")],
         )
-        self.assertContains(response, "لم تُحدد السنة الدراسية الحالية")
-        self.assertContains(response, "مدير المدرسة")
+        self.assertContains(response, "سنة معتمدة من إدارة المنصة")
+        self.assertNotContains(response, "لم تُنشر السنة الدراسية الحالية")
+        self.school.refresh_from_db()
+        self.assertEqual(self.school.current_academic_year, "1447-1448")
+
+    def test_achievement_creation_waits_for_platform_to_publish_a_calendar(self):
+        AcademicYear.objects.update(is_active=False)
+        self.school.current_academic_year = ""
+        self.school.save(update_fields=["current_academic_year"])
+        self._login_teacher()
+        response = self.client.get(reverse("reports:achievement_my_files"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["create_form"].fields["academic_year"].choices), [])
+        self.assertContains(response, "لم تُنشر السنة الدراسية الحالية")
+        self.assertContains(response, "تواصل مع إدارة المنصة")
 
     def test_teacher_cannot_move_achievement_file_outside_school_current_year(self):
         achievement_file = TeacherAchievementFile.objects.create(
@@ -526,14 +551,10 @@ class AchievementFileOwnerLockTests(TestCase):
 
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class UnsetAcademicYearIsSurfacedToTheManagerTests(TestCase):
-    """العائق الصامت يُرفع إلى من يملك رفعه.
-
-    اشتراطُ سنةٍ يحددها المدير مقصود، لكنه كان صامتاً في اتجاهه: المعلّم يقرأ
-    «لم تُحدد السنة» ولا يملك تحديدها، والمدير لا يقرأ شيئاً ولا يعلم أن مساراً
-    كاملاً متوقّف عنده.
-    """
+    """A missing published calendar points managers to platform support."""
 
     def setUp(self):
+        AcademicYear.objects.update(is_active=False)
         self.school = School.objects.create(
             name="مدرسة بلا سنة", code="year-unset", current_academic_year=""
         )
@@ -554,22 +575,16 @@ class UnsetAcademicYearIsSurfacedToTheManagerTests(TestCase):
         session["active_school_id"] = self.school.id
         session.save()
 
-    def test_the_dashboard_tells_the_manager_and_points_at_the_setting(self):
+    def test_the_dashboard_tells_the_manager_and_points_to_platform_support(self):
         response = self.client.get(reverse("reports:admin_dashboard"))
 
-        self.assertContains(response, "السنة الدراسية الحالية غير محددة")
-        self.assertContains(response, reverse("reports:school_settings"))
+        self.assertContains(response, "لم تُنشر السنة الدراسية الحالية")
+        self.assertContains(response, reverse("reports:support_ticket_create"))
 
-    def test_the_alert_carries_the_year_from_the_calendar(self):
-        """الضبط نظرةٌ لا بحث: السنة المقترحة معروضة في التنبيه نفسه."""
-        from reports.hijri_utils import current_academic_year
-
-        suggestion = current_academic_year()
+    def test_missing_publication_does_not_guess_an_academic_year(self):
         response = self.client.get(reverse("reports:admin_dashboard"))
-
-        self.assertEqual(response.context["academic_year_suggestion"], suggestion)
-        if suggestion:
-            self.assertContains(response, suggestion)
+        self.assertEqual(response.context["academic_year_suggestion"], "")
+        self.assertNotContains(response, "السنة الجارية بحسب التقويم")
 
     def test_a_school_with_a_year_shows_no_alert(self):
         self.school.current_academic_year = "1447-1448"
@@ -577,4 +592,4 @@ class UnsetAcademicYearIsSurfacedToTheManagerTests(TestCase):
 
         response = self.client.get(reverse("reports:admin_dashboard"))
 
-        self.assertNotContains(response, "السنة الدراسية الحالية غير محددة")
+        self.assertNotContains(response, "لم تُنشر السنة الدراسية الحالية")

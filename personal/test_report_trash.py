@@ -48,6 +48,9 @@ class PersonalReportTrashTests(TestCase):
         )
         self.link = PersonalPortfolioReport.objects.create(section=self.section, report=self.report)
         self.client.force_login(self.owner)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = self.YEAR
+        session.save()
 
     def _move_to_trash(self):
         response = self.client.post(reverse("personal:report_delete", args=[self.report.pk]))
@@ -133,7 +136,6 @@ class PersonalReportTrashTests(TestCase):
         exported = self.client.get(reverse("personal:year_export", args=[self.YEAR]))
         with ZipFile(BytesIO(b"".join(exported.streaming_content))) as bundle:
             manifest = json.loads(bundle.read("manifest.json"))
-        exported.close()
         self.assertEqual(manifest["reports"][0]["id"], self.report.pk)
         self.assertIsNotNone(manifest["reports"][0]["trashed_at"])
         self.assertEqual(manifest["evidence"][0]["report_id"], self.report.pk)
@@ -200,7 +202,8 @@ class PersonalReportTrashTests(TestCase):
         self.year_record.save(update_fields=["archived_at"])
         archived = self.client.get(reverse("personal:report_trash"))
         self.assertContains(archived, self.report.title)
-        self.assertContains(archived, "أعد فتحها قبل الاستعادة")
+        self.assertIn(self.YEAR, archived.context["archived_years"])
+        self.assertContains(archived, "العام محفوظ للعرض؛ تُدار الأعوام من إدارة المنصة")
         self.assertNotContains(archived, reverse("personal:report_restore", args=[self.report.pk]))
         self.assertRedirects(
             self.client.post(reverse("personal:report_restore", args=[self.report.pk])),

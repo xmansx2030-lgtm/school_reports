@@ -2123,72 +2123,68 @@ def platform_subscription_record_payment(request: HttpRequest, pk: int) -> HttpR
 @user_passes_test(lambda u: getattr(u, "is_superuser", False), login_url="reports:login")
 @require_http_methods(["GET", "POST"])
 def platform_academic_years(request: HttpRequest) -> HttpResponse:
-    """صفحة تحكم مدير النظام في السنوات الدراسية المتاحة للمدارس."""
-    import re
+    """Publish official calendars centrally; never generate estimated years."""
     from ..models import AcademicYear, School
+    from ..forms import PlatformAcademicYearForm
+    from ..academic_years import (
+        MINISTRY_CALENDAR_URL, academic_year_is_used,
+        current_academic_year_value, sync_academic_years,
+    )
+    from django.core.exceptions import ValidationError
 
-    def _norm(v: str) -> str:
-        return (v or "").strip().replace("–", "-").replace("—", "-")
+    edit_id = request.POST.get("id") if request.method == "POST" else request.GET.get("edit")
+    edit_pk = coerce_pk(edit_id)
+    edit_obj = AcademicYear.objects.filter(pk=edit_pk).first() if edit_pk and edit_pk <= 2**63 - 1 else None
+    if edit_id is not None and edit_obj is None:
+        messages.error(request, "لم يُعثر على التقويم المطلوب. أعد فتحه من سجل السنوات.")
+        return redirect("reports:platform_academic_years")
+    form = PlatformAcademicYearForm(instance=edit_obj)
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
-
-        if action == "add":
-            value = _norm(request.POST.get("value"))
-            if not re.match(r"^\d{4}-\d{4}$", value):
-                messages.error(request, "صيغة السنة يجب أن تكون مثل 1447-1448")
+        if action in {"toggle", "delete"} and edit_obj is None:
+            messages.error(request, "اختر التقويم المطلوب من سجل السنوات أولًا.")
+            return redirect("reports:platform_academic_years")
+        if action in {"add", "save"}:
+            previous_value = edit_obj.value if edit_obj else ""
+            form = PlatformAcademicYearForm(request.POST, instance=edit_obj)
+            if form.is_valid():
+                if previous_value and previous_value != form.cleaned_data["value"] and academic_year_is_used(previous_value):
+                    form.add_error("value", "اسم السنة مستخدم في أعمال محفوظة ولا يمكن تغييره. عدّل التواريخ والمصدر فقط.")
+                else:
+                    form.save()
+                    sync_academic_years()
+                    messages.success(request, "تم حفظ التقويم الدراسي. السنوات المنشورة متاحة لجميع المدارس والمعلمين.")
+                    return redirect("reports:platform_academic_years")
+            messages.error(request, "تعذّر حفظ التقويم؛ راجع الحقول الموضحة.")
+        elif action == "toggle" and edit_obj:
+            if edit_obj.is_active and edit_obj.value == current_academic_year_value():
+                messages.error(request, "السنة التشغيلية الحالية يجب أن تبقى منشورة لجميع المدارس والمعلمين.")
             else:
-                start, end = value.split("-", 1)
-                if int(end) != int(start) + 1:
-                    messages.error(request, "السنة يجب أن تكون بفارق سنة واحدة، مثل 1447-1448")
-                else:
-                    _, created = AcademicYear.objects.get_or_create(
-                        value=value, defaults={"is_active": True, "order": int(start)}
-                    )
-                    messages.success(request, "تمت إضافة السنة." if created else "السنة موجودة مسبقًا.")
-            return redirect("reports:platform_academic_years")
-
-        if action == "generate":
-            # توليد السنوات الثلاث القادمة تلقائيًا اعتمادًا على آخر سنة مسجّلة
-            existing = list(AcademicYear.objects.values_list("value", flat=True))
-            anchor = 0
-            for v in existing:
+                edit_obj.is_active = not edit_obj.is_active
                 try:
-                    anchor = max(anchor, int(str(v)[:4]))
-                except (TypeError, ValueError):
-                    # قيمةُ سنةٍ مشوّهة في القاعدة: تُتخطّى ولا تُوقف التوليد.
-                    _degraded("platform.malformed_academic_year", value=str(v)[:16])
-            if anchor == 0:
-                today = timezone.localdate()
-                g = today.year + (today.month - 1) / 12.0
-                anchor = int(round((g - 622) * 33.0 / 32.0))
-            added = 0
-            for st in range(anchor, anchor + 4):
-                _, created = AcademicYear.objects.get_or_create(
-                    value=f"{st}-{st + 1}", defaults={"is_active": True, "order": st}
-                )
-                added += 1 if created else 0
-            messages.success(request, f"تم توليد {added} سنة جديدة." if added else "لا توجد سنوات جديدة لإضافتها.")
+                    edit_obj.full_clean()
+                    edit_obj.save(update_fields=["is_active"])
+                    sync_academic_years()
+                    messages.success(request, "تم تحديث نشر السنة.")
+                except ValidationError as exc:
+                    messages.error(request, " ".join(exc.messages))
+            return redirect("reports:platform_academic_years")
+        elif action == "delete" and edit_obj:
+            if academic_year_is_used(edit_obj.value) or edit_obj.is_active:
+                messages.error(request, "لا يمكن حذف سنة منشورة أو مرتبطة بأعمال محفوظة؛ تبقى البيانات التاريخية مستقلة.")
+            else:
+                edit_obj.delete()
+                messages.success(request, "تم حذف مسودة السنة غير المستخدمة.")
+            return redirect("reports:platform_academic_years")
+        elif action == "generate":
+            messages.error(request, "لا تُولّد الأعوام بالتقدير. أضف التقويم المعتمد من وزارة التعليم وتواريخه ثم انشره.")
             return redirect("reports:platform_academic_years")
 
-        if action == "toggle":
-            obj = AcademicYear.objects.filter(pk=request.POST.get("id")).first()
-            if obj:
-                obj.is_active = not obj.is_active
-                obj.save(update_fields=["is_active"])
-                messages.success(request, "تم تحديث حالة السنة.")
-            return redirect("reports:platform_academic_years")
-
-        if action == "delete":
-            obj = AcademicYear.objects.filter(pk=request.POST.get("id")).first()
-            if obj:
-                used = School.objects.filter(current_academic_year=obj.value).count()
-                if used:
-                    messages.error(request, f"لا يمكن حذف «{obj.value}» لأنها السنة الحالية لـ {used} مدرسة. عطّلها بدلًا من الحذف.")
-                else:
-                    obj.delete()
-                    messages.success(request, "تم حذف السنة.")
-            return redirect("reports:platform_academic_years")
+    if form.is_bound:
+        for field_name in form.errors:
+            if field_name in form.fields:
+                form.fields[field_name].widget.attrs["aria-invalid"] = "true"
 
     years = list(AcademicYear.objects.all().order_by("-value"))
     # عدد المدارس التي تعتمد كل سنة كسنة حالية
@@ -2204,7 +2200,9 @@ def platform_academic_years(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "reports/platform_academic_years.html",
-        {"items": items, "total": len(years), "active_count": active_count},
+        {"items": items, "total": len(years), "active_count": active_count,
+         "form": form, "editing": edit_obj, "current_year": current_academic_year_value(),
+         "ministry_calendar_url": MINISTRY_CALENDAR_URL},
     )
 
 

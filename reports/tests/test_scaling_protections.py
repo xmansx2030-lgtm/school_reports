@@ -154,8 +154,13 @@ class SchoolRateLimitMiddlewareTests(SimpleTestCase):
 
 class GeneratedExportJobTests(TestCase):
     def setUp(self):
-        from reports.models import School, Teacher
+        from reports.models import School, SchoolMembership, Teacher
 
+        # Eager worker lifecycle cleanup must not close TestCase's enclosing
+        # transaction when running against a file-backed SQLite database.
+        connection_cleanup = patch("django.db.backends.base.base.BaseDatabaseWrapper.close_if_unusable_or_obsolete")
+        connection_cleanup.start()
+        self.addCleanup(connection_cleanup.stop)
         self.temp_media = tempfile.TemporaryDirectory()
         self.settings_override = override_settings(MEDIA_ROOT=self.temp_media.name)
         self.settings_override.enable()
@@ -165,6 +170,7 @@ class GeneratedExportJobTests(TestCase):
             name="مدير الاختبار",
             password="Passw0rd!123",
         )
+        SchoolMembership.objects.create(school=self.school, teacher=self.user, role_type="manager")
 
     def tearDown(self):
         self.settings_override.disable()

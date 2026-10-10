@@ -41,7 +41,7 @@
       {% else %}<div class="twq-alert twq-alert--warning" role="status"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><div><strong>الاشتراك الشخصي غير نشط</strong><p>يمكنك مراجعة أعمالك وإيقاف رابط قائم. يتطلب إنشاء رابط جديد اشتراكًا نشطًا.</p><a href="{% url 'personal:billing' %}">إدارة الاشتراك</a></div></div>{% endif %}
     {% endif %}
 
-    <div class="twq-alert twq-alert--info achievement-public-boundary" role="note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div><strong>محتوى النسخة العامة</strong><p>{% if kind == 'report' %}تعرض التقرير وشواهده المرتبطة به والمفعّلة للظهور في الطباعة فقط.{% else %}تعرض المحاور وتقارير السنة المرتبطة بها صراحة وشواهدها المفعّلة للطباعة، إضافة إلى الشواهد المرتبطة بالمحاور. لا تعرض بيانات التواصل أو التقارير والمبادرات غير المختارة أو بقية مكتبة الشواهد.{% endif %} لا تتضمن النسخة العامة أدوات التحرير أو اعتمادًا مدرسيًا.</p></div></div>
+    <div class="twq-alert twq-alert--info achievement-public-boundary" role="note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div><strong>محتوى النسخة العامة</strong><p>{% if kind == 'report' %}تعرض التقرير وشواهده المرتبطة به والمفعّلة للظهور في الطباعة فقط.{% else %}تعرض المحاور وتقارير السنة المرتبطة بها صراحة وشواهدها المفعّلة للطباعة، إضافة إلى الشواهد المرتبطة بالمحاور وسجل الدورات التدريبية لهذا العام. لا تعرض بيانات التواصل أو التقارير والمبادرات غير المختارة أو بقية مكتبة الشواهد، ولا ملفات شهادات الدورات غير المرتبطة بمحور أو تقرير معروض.{% endif %} لا تتضمن النسخة العامة أدوات التحرير أو اعتمادًا مدرسيًا.</p></div></div>
   </section>
 </div>
 {% endblock %}

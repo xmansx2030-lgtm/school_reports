@@ -36,6 +36,14 @@ def build_generated_export_job(job_id: int) -> bool:
         build_school_export_zip_file,
         export_zip_filename,
     )
+    from .permissions import is_school_manager
+
+    def require_school_export_permission(user: Teacher | None, school: School) -> None:
+        if user is None or not (
+            user.is_active
+            and (user.is_superuser or is_school_manager(user, active_school=school))
+        ):
+            raise ValueError("لم تعد صلاحية تصدير المدرسة متاحة لطالب النسخة.")
 
     with redis_cache_lock(
         f"generated-export:build:{int(job_id)}",
@@ -54,6 +62,8 @@ def build_generated_export_job(job_id: int) -> bool:
                 return False
             if job.status == GeneratedExportJob.Status.READY:
                 return True
+            if job.status == GeneratedExportJob.Status.EXPIRED:
+                return False
             job.status = GeneratedExportJob.Status.RUNNING
             job.started_at = timezone.now()
             job.error_message = ""
@@ -68,6 +78,7 @@ def build_generated_export_job(job_id: int) -> bool:
             params = dict(job.parameters or {})
 
             if job.kind == GeneratedExportJob.Kind.SCHOOL_ZIP:
+                require_school_export_permission(requested_by, school)
                 zip_file = build_school_export_zip_file(school, request=None)
                 filename = export_zip_filename(school)
                 metadata = None
@@ -172,6 +183,14 @@ def build_generated_export_job(job_id: int) -> bool:
                     )
                 sync_school_archive_storage_usage(school)
             else:
+                if job.kind == GeneratedExportJob.Kind.SCHOOL_ZIP:
+                    # The IO-heavy build may take minutes. A removed manager
+                    # must not acquire a new durable export after losing access.
+                    requested_by = Teacher.objects.filter(pk=job.requested_by_id).first()
+                    require_school_export_permission(requested_by, school)
+                    current_status = GeneratedExportJob.objects.filter(pk=job.pk).values_list("status", flat=True).first()
+                    if current_status != GeneratedExportJob.Status.RUNNING:
+                        return False
                 job.artifact_file.save(filename, File(zip_file), save=False)
                 job.status = GeneratedExportJob.Status.READY
                 job.filename = filename

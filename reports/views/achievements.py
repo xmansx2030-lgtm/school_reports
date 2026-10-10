@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+from ..academic_years import school_current_academic_year
+
 from ._helpers import *
 from ._helpers import (
     _is_staff, _is_manager_in_school, _private_comment_role_label,
@@ -297,7 +299,7 @@ def achievement_my_files(request: HttpRequest) -> HttpResponse:
     )
     
     # سنة المدرسة الحالية هي الخيار الوحيد لإنشاء ملف جديد.
-    current_year = (getattr(active_school, "current_academic_year", "") or "").strip()
+    current_year = school_current_academic_year(active_school)
     allowed = [current_year] if current_year else []
 
     create_form = AchievementCreateYearForm(
@@ -397,7 +399,7 @@ def achievement_file_update_year(request: HttpRequest, pk: int) -> HttpResponse:
         )
         return redirect("reports:achievement_file_detail", pk=file.pk)
 
-    current_year = (getattr(file.school, "current_academic_year", "") or "").strip()
+    current_year = school_current_academic_year(file.school)
     form = AchievementCreateYearForm(
         request.POST,
         allowed_years=[current_year] if current_year else [],
@@ -458,7 +460,7 @@ def achievement_school_files(request: HttpRequest) -> HttpResponse:
         .values_list("academic_year", flat=True)
         .distinct()
     )
-    current_year = (getattr(active_school, "current_academic_year", "") or "").strip()
+    current_year = school_current_academic_year(active_school)
     year_choices = sorted(set(existing_years) | ({current_year} if current_year else set()))
 
     if not year and year_choices:

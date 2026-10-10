@@ -6,6 +6,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .form_widgets import DateTimeLocalInput
+from .academic_years import school_current_academic_year, hijri_academic_year_options
 
 from .models import (
     Department,
@@ -43,9 +44,19 @@ class PlanForm(forms.ModelForm):
 
         if school is not None and not self.instance.pk:
             self.fields["academic_year"].initial = (
-                getattr(school, "current_academic_year", "") or ""
+                school_current_academic_year(school)
             )
-        self.fields["academic_year"].help_text = "مثال: 1447-1448"
+        years = set(hijri_academic_year_options(school))
+        if self.instance.academic_year:
+            years.add(self.instance.academic_year)
+        self.fields["academic_year"] = forms.ChoiceField(
+            label="السنة الدراسية", required=self.fields["academic_year"].required,
+            choices=[("", "— اختر السنة —")] + [(value, f"{value} هـ") for value in sorted(years, reverse=True)],
+            initial=school_current_academic_year(school) if not self.instance.pk else self.instance.academic_year,
+            help_text="الأعوام المعتمدة مركزيًا مع سنوات هذه المدرسة المحفوظة.",
+        )
+        if not self.instance.pk and not self.initial.get("academic_year"):
+            self.initial["academic_year"] = self.fields["academic_year"].initial
 
 
 class PlanGoalForm(forms.ModelForm):

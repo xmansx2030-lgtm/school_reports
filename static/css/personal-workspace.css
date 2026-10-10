@@ -92,6 +92,36 @@ body.personal-page .drawer-footer { border-color: var(--twq-border); }
 
 .personal-main { padding-block: var(--twq-space-6) var(--twq-space-16); }
 
+.personal-year-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--twq-space-4);
+  padding: var(--twq-space-4) var(--twq-space-5);
+  margin-block-end: var(--twq-space-5);
+  border: 1px solid var(--twq-border);
+  border-inline-start: 3px solid var(--twq-accent);
+  border-radius: var(--twq-radius-lg);
+  background: var(--twq-surface);
+}
+.personal-year-context__copy { display: flex; align-items: center; gap: var(--twq-space-3); flex: 1 1 20rem; min-inline-size: 0; }
+.personal-year-context__icon { display: grid; place-items: center; flex: 0 0 2.75rem; block-size: 2.75rem; color: var(--twq-accent); background: var(--twq-accent-soft); border-radius: var(--twq-radius-md); }
+.personal-year-context__copy strong { font-size: var(--twq-font-size-sm); }
+.personal-year-context__copy p { margin: var(--twq-space-1) 0 0; color: var(--twq-text-secondary); font-size: var(--twq-font-size-xs); line-height: var(--twq-line-height-relaxed); }
+.personal-year-context__form { display: flex; align-items: center; flex-wrap: wrap; gap: var(--twq-space-2); margin: 0; }
+.personal-year-context__form select { inline-size: auto; min-inline-size: 13rem; max-inline-size: 100%; }
+.personal-year-context__archive { display: inline-flex; align-items: center; gap: var(--twq-space-2); min-block-size: var(--twq-tap-target); padding-inline: var(--twq-space-3); color: var(--twq-text-secondary); font-size: var(--twq-font-size-sm); text-decoration: none; }
+.personal-year-context__archive:hover { color: var(--twq-primary); }
+.personal-year-readonly { display: flex; align-items: baseline; gap: var(--twq-space-2); margin: 0 0 var(--twq-space-5); color: var(--twq-text-secondary); font-size: var(--twq-font-size-sm); line-height: var(--twq-line-height-relaxed); }
+@media (max-width: 639px) {
+  .personal-year-context { padding: var(--twq-space-4); gap: var(--twq-space-3); }
+  .personal-year-context__copy { flex-basis: 100%; }
+  .personal-year-context__form { inline-size: 100%; }
+  .personal-year-context__form select { flex: 1 1 9rem; min-inline-size: 0; }
+  .personal-year-context__archive { inline-size: 100%; justify-content: center; }
+}
+
 .personal-footer {
   display: flex;
   justify-content: space-between;

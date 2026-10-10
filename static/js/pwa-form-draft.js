@@ -218,12 +218,15 @@
   document.querySelectorAll("form[data-pwa-draft-key]").forEach(bindForm);
   cleanDrafts(function (draft) { return !draft.savedAt || Date.now() - draft.savedAt > MAX_DRAFT_AGE_MS; });
 
+  var logoutStarted = false;
   document.addEventListener("click", function (event) {
     var logout = event.target.closest && event.target.closest('a[href*="/logout"]');
     if (!logout) return;
     var userId = document.body.getAttribute("data-pwa-user-id");
     if (!userId) return;
     event.preventDefault();
+    if (logoutStarted) return;
+    logoutStarted = true;
     var href = logout.href;
     cleanDrafts(function (draft) {
       return String(draft.key || "").indexOf("-u" + userId) !== -1;

@@ -20,12 +20,12 @@ from .forms import PersonalEvidenceForm, clean_academic_year
 from .access import subscription_can_write, support_access_for_workspace
 from .portfolio_forms import PersonalPortfolioProfileForm
 from .models import (
-    PersonalAcademicYear, PersonalEvidence, PersonalPortfolioEvidence,
+    PersonalAcademicYear, PersonalPortfolioEvidence,
     PersonalPortfolioReport, PersonalPortfolioSection, PersonalReport,
     PersonalWorkspace,
 )
 from .quotas import personal_quota_usage, reserve_personal_quota
-from .services import ensure_writable_personal_year
+from .services import ensure_writable_personal_year, personal_year_values, personal_year_is_writable, personal_evidence_for_year
 from .views import workspace_required
 
 
@@ -37,16 +37,7 @@ def _posted_id(request, name):
 
 
 def _portfolio_years(workspace):
-    values = (
-        set(workspace.academic_years.values_list("value", flat=True))
-        | set(workspace.reports.values_list("academic_year", flat=True))
-        | set(workspace.evidence.values_list("academic_year", flat=True))
-        | set(workspace.initiatives.values_list("academic_year", flat=True))
-        | set(workspace.portfolio_sections.values_list("academic_year", flat=True))
-    )
-    if workspace.current_academic_year:
-        values.add(workspace.current_academic_year)
-    return sorted(filter(None, values), reverse=True)
+    return personal_year_values(workspace)
 
 
 def _sections(workspace, year):
@@ -55,9 +46,11 @@ def _sections(workspace, year):
         workspace=workspace, academic_year=year
     ).prefetch_related(
         Prefetch("linked_reports", queryset=PersonalPortfolioReport.objects.filter(
-            report__trashed_at__isnull=True,
+            report__workspace=workspace, report__academic_year=year, report__trashed_at__isnull=True,
         ).select_related("report")),
-        "linked_evidence__evidence",
+        Prefetch("linked_evidence", queryset=PersonalPortfolioEvidence.objects.filter(
+            evidence__in=personal_evidence_for_year(workspace, year),
+        ).select_related("evidence")),
     )
     by_code = {row.code: row for row in rows}
     sections = []
@@ -84,9 +77,11 @@ def _context(workspace, year):
         "sections": sections, "documented_count": documented,
         "progress_percent": round(documented * 100 / len(AchievementSection.Code.choices)),
         "reports": workspace.reports.filter(academic_year=year, trashed_at__isnull=True) if year else workspace.reports.none(),
-        "evidence": workspace.evidence.filter(academic_year=year) if year else workspace.evidence.none(),
+        "evidence": personal_evidence_for_year(workspace, year) if year else workspace.evidence.none(),
         "initiatives": workspace.initiatives.filter(academic_year=year) if year else workspace.initiatives.none(),
+        "courses": workspace.courses.filter(academic_year=year).select_related("certificate") if year else workspace.courses.none(),
         "is_archived": bool(year_record and year_record.archived_at),
+        "is_historical": not personal_year_is_writable(workspace, year),
     }
 
 
@@ -98,17 +93,15 @@ def portfolio(request):
     workspace = request.personal_workspace
     years = _portfolio_years(workspace)
     selected_year = ((request.POST.get("year") if request.method == "POST" else request.GET.get("year")) or "").strip()
-    year = selected_year if selected_year in years else (workspace.current_academic_year or (years[0] if years else ""))
+    year = request.personal_academic_year
     if request.method == "POST":
         if selected_year not in years:
             raise Http404
         if not subscription_can_write(request.personal_subscription):
             messages.error(request, "يلزم اشتراك نشط لتعديل ملف الإنجاز.")
             return redirect("personal:portfolio")
-        if PersonalAcademicYear.objects.filter(
-            workspace=workspace, value=year, archived_at__isnull=False
-        ).exists():
-            messages.error(request, "هذه السنة مؤرشفة؛ أعد فتحها قبل تعديل ملف الإنجاز.")
+        if not personal_year_is_writable(workspace, year):
+            messages.error(request, "هذه السنة محفوظة للقراءة والتصدير فقط؛ تعتمد إدارة المنصة السنوات المتاحة للتوثيق.")
             return redirect("personal:portfolio")
         try:
             clean_academic_year(year)
@@ -171,7 +164,7 @@ def portfolio(request):
                 link.delete()
                 messages.success(request, "أُزيل ربط التقرير من المحور.")
             elif action == "link_evidence":
-                evidence = get_object_or_404(PersonalEvidence, pk=_posted_id(request, "evidence_id"), workspace=locked, academic_year=year)
+                evidence = get_object_or_404(personal_evidence_for_year(locked, year), pk=_posted_id(request, "evidence_id"))
                 if section.linked_evidence.count() >= 8:
                     messages.error(request, "الحد الأعلى لهذا المحور 8 شواهد.")
                 else:
@@ -219,7 +212,7 @@ def portfolio(request):
         return target
 
     context = _context(workspace, year)
-    context["can_edit"] = bool(year and subscription_can_write(request.personal_subscription) and not context["is_archived"])
+    context["can_edit"] = bool(subscription_can_write(request.personal_subscription) and personal_year_is_writable(workspace, year))
     return render(request, "reports/achievement_file.html", context)
 
 
@@ -228,7 +221,7 @@ def portfolio(request):
 @require_GET
 def portfolio_print(request):
     workspace = request.personal_workspace
-    year = (request.GET.get("year") or "").strip()
+    year = request.personal_academic_year
     if year not in _portfolio_years(workspace):
         raise Http404
     context = _context(workspace, year)

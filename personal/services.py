@@ -2,10 +2,12 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import Q
 from django.utils import timezone
 
 from core.observability import soft_call
 from reports.models import SchoolMembership
+from reports.academic_years import approved_academic_year_options, current_academic_year_value, published_academic_years
 
 from .models import PersonalAcademicYear, PersonalPlan, PersonalSubscription, PersonalWorkspace
 
@@ -32,15 +34,112 @@ def current_school_membership_for(user):
     return memberships.first()
 
 
+def personal_year_values(workspace):
+    """Published calendar years plus this workspace's preserved historical data."""
+    values = set(approved_academic_year_options())
+    for relation, field in (
+        ("academic_years", "value"), ("reports", "academic_year"),
+        ("evidence", "academic_year"), ("initiatives", "academic_year"),
+        ("portfolio_sections", "academic_year"), ("courses", "academic_year"),
+    ):
+        manager = getattr(workspace, relation, None)
+        if manager is not None:
+            values.update(manager.values_list(field, flat=True).distinct())
+    if workspace.current_academic_year:
+        values.add(workspace.current_academic_year)
+    return sorted(filter(None, values), reverse=True)
+
+
+def personal_year_choices(workspace):
+    return [(value, value) for value in personal_year_values(workspace)]
+
+
+def selected_personal_year(request):
+    """Persist a browsing choice per workspace without changing saved work or quotas."""
+    workspace = request.personal_workspace
+    values = personal_year_values(workspace)
+    key = f"personal_academic_year:{workspace.pk}"
+    explicit = ((request.POST.get("year") if request.method == "POST" else request.GET.get("year")) or "").strip()
+    if explicit:
+        if explicit not in values:
+            from django.http import Http404
+            raise Http404("السنة الدراسية غير متاحة في هذه المساحة.")
+        request.session[key] = explicit
+        return explicit
+    selected = request.session.get(key)
+    if selected in values:
+        return selected
+    current = current_academic_year_value()
+    return current if current in values else (values[0] if values else "")
+
+
+def personal_year_is_writable(workspace, value):
+    return bool(value and value in approved_academic_year_options() and not workspace.academic_years.filter(
+        value=value, archived_at__isnull=False,
+    ).exists())
+
+
+def personal_read_only_years(workspace):
+    return (set(personal_year_values(workspace)) - set(approved_academic_year_options())) | set(
+        workspace.academic_years.filter(archived_at__isnull=False).values_list("value", flat=True)
+    )
+
+
+def personal_evidence_for_year(workspace, value):
+    """Hide inconsistent legacy links without altering the preserved source rows."""
+    return workspace.evidence.filter(academic_year=value).filter(
+        Q(report__isnull=True) | Q(report__workspace=workspace, report__academic_year=value),
+    ).filter(
+        Q(initiative__isnull=True) | Q(initiative__workspace=workspace, initiative__academic_year=value),
+    )
+
+
+def personal_year_context(request):
+    workspace = getattr(request, "personal_workspace", None)
+    if workspace is None:
+        return {}
+    selected = getattr(request, "personal_academic_year", None)
+    if selected is None:
+        # Error pages also run context processors. Do not re-raise an invalid
+        # URL's Http404 while Django is rendering its 404 response.
+        return {}
+    current = current_academic_year_value()
+    approved = set(approved_academic_year_options())
+    central = {row.value: row for row in published_academic_years() if row.value in approved}
+    owned = {row.value: row for row in workspace.academic_years.all()}
+    options = []
+    for value in personal_year_values(workspace):
+        calendar, record = central.get(value), owned.get(value)
+        options.append({
+            "value": value, "label": value, "is_current": value == current,
+            "is_selected": value == selected, "is_historical": calendar is None,
+            "is_legacy": calendar is None, "is_archived": bool(record and record.archived_at),
+            "start_date": getattr(calendar, "start_date", None),
+            "end_date": getattr(calendar, "end_date", None),
+            "source_url": getattr(calendar, "source_url", ""),
+        })
+    writable = bool(selected in approved and not (owned.get(selected) and owned[selected].archived_at))
+    return {
+        "personal_selected_year": selected, "selected_year": selected,
+        "personal_official_year": current, "central_current_year": current,
+        "personal_year_options": options, "academic_year_options": options,
+        "selected_year_record": owned.get(selected),
+        "personal_year_read_only": not writable,
+        "personal_year_can_write": writable,
+        "selected_year_start_date": getattr(central.get(selected), "start_date", None),
+        "selected_year_end_date": getattr(central.get(selected), "end_date", None),
+        "selected_year_source_url": getattr(central.get(selected), "source_url", ""),
+    }
+
+
 def ensure_writable_personal_year(workspace, value):
-    """Register an owned year while holding the workspace row during a write."""
+    """Only platform-published calendar years can receive new or edited work."""
+    if value not in approved_academic_year_options():
+        raise ValidationError("هذه السنة محفوظة للقراءة فقط أو لم تعتمدها إدارة المنصة بعد.")
     locked = PersonalWorkspace.objects.select_for_update().get(pk=workspace.pk)
     year, _ = PersonalAcademicYear.objects.get_or_create(workspace=locked, value=value)
     if year.archived_at is not None:
-        raise ValidationError("هذه السنة مؤرشفة. أعد فتحها من إدارة السنوات قبل التعديل.")
-    if not locked.current_academic_year:
-        locked.current_academic_year = value
-        locked.save(update_fields=["current_academic_year", "updated_at"])
+        raise ValidationError("هذه السنة مؤرشفة ومتاحة للقراءة والتصدير فقط.")
     return year
 
 

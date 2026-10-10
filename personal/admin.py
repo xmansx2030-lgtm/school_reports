@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import PersonalEvidence, PersonalPayment, PersonalPlan, PersonalReport, PersonalSubscription, PersonalWorkspace
+from .models import PersonalCourse, PersonalEvidence, PersonalPayment, PersonalPlan, PersonalReport, PersonalSubscription, PersonalWorkspace
 
 
 @admin.register(PersonalPlan)
@@ -70,3 +70,11 @@ class PersonalEvidenceAdmin(admin.ModelAdmin):
     list_display = ("title", "workspace", "academic_year", "file_size", "created_at")
     list_filter = ("academic_year",)
     search_fields = ("title", "workspace__owner__name")
+
+
+@admin.register(PersonalCourse)
+class PersonalCourseAdmin(admin.ModelAdmin):
+    list_display = ("title", "provider", "workspace", "academic_year", "hours", "completion_date")
+    list_filter = ("academic_year",)
+    search_fields = ("title", "provider", "workspace__owner__name")
+    readonly_fields = ("created_at", "updated_at")

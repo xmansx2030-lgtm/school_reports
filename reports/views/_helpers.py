@@ -4,11 +4,12 @@
 from __future__ import annotations
 from datetime import date, timedelta
 from functools import wraps
+from posixpath import normpath
 import logging
 import os
 import traceback
 from typing import Optional, Tuple
-from urllib.parse import quote, urlencode, urlparse
+from urllib.parse import quote, unquote, urlencode, urlparse
 
 import openpyxl
 
@@ -377,6 +378,17 @@ def _safe_next_url(next_url: str | None) -> str | None:
     return None
 
 
+def _safe_login_next_url(next_url: str | None) -> str | None:
+    """Keep an internal login destination from immediately ending the session."""
+    safe_next = _safe_next_url(next_url)
+    if safe_next is None:
+        return None
+    destination = normpath(unquote(urlparse(safe_next).path))
+    if destination == normpath(reverse("reports:logout")):
+        return None
+    return safe_next
+
+
 def _role_display_map(active_school: Optional[School] = None) -> dict:
     """خريطة عرض عربية للأدوار/الأقسام.
 
@@ -556,7 +568,17 @@ def _set_active_school(request: HttpRequest, school: Optional[School]) -> None:
     """تحديث المدرسة المختارة في الجلسة للمستخدم الحالي."""
     if school is None:
         request.session.pop("active_school_id", None)
+        request.active_school = None
     else:
+        from ..academic_years import current_academic_year_value
+
+        current_year = current_academic_year_value()
+        if current_year and school.current_academic_year != current_year:
+            School.objects.filter(pk=school.pk).exclude(current_academic_year=current_year).update(
+                current_academic_year=current_year,
+            )
+            school.current_academic_year = current_year
+        request.active_school = school
         request.session["active_school_id"] = school.pk
 
 

@@ -64,6 +64,9 @@ class PersonalSharingTests(TestCase):
         ensure_personal_subscription(self.other_workspace)
         self.foreign = self._file_evidence("شاهد حساب آخر", workspace=self.other_workspace)
         self.client.force_login(self.owner)
+        session = self.client.session
+        session[f"personal_academic_year:{self.workspace.pk}"] = self.YEAR
+        session.save()
 
     def _file_evidence(self, title, *, report=None, workspace=None, show_in_print=True):
         workspace = workspace or self.workspace
@@ -123,7 +126,7 @@ class PersonalSharingTests(TestCase):
         ]))
         self.assertEqual(preview.status_code, 200)
         self.assertEqual(preview["Content-Type"], "image/png")
-        preview.close()
+        self.assertTrue(b"".join(preview.streaming_content))
         for witness in (self.hidden, self.unrelated, self.foreign):
             self._assert_private_404(reverse("personal:share_evidence", args=[
                 first.token, witness.pk, "download",
@@ -220,7 +223,7 @@ class PersonalSharingTests(TestCase):
             ]))
         self.assertEqual(axis_download.status_code, 200)
         self.assertLess(len(queries), 10)
-        axis_download.close()
+        self.assertTrue(b"".join(axis_download.streaming_content))
 
     def test_other_teacher_cannot_manage_and_expired_subscription_cannot_create(self):
         manage = reverse("personal:report_share_manage", args=[self.report.pk])

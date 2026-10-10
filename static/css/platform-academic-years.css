@@ -1,0 +1,22 @@
+.academic-calendar { display: grid; gap: var(--twq-space-6, 1.5rem); }
+.academic-calendar__back { display: inline-flex; align-items: center; gap: .5rem; justify-self: start; min-block-size: 2.75rem; }
+.academic-calendar__form { display: grid; gap: 1.25rem; max-inline-size: 56rem; }
+.academic-calendar__fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.academic-calendar__source { grid-column: 1 / -1; }
+.academic-calendar__years { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.academic-calendar__year { padding: 1.25rem; display: grid; align-content: start; gap: 1rem; min-inline-size: 0; }
+.academic-calendar__year-head, .academic-calendar__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .625rem; }
+.academic-calendar__year-head h3 { margin: 0; margin-inline-end: auto; font-size: 1.1rem; }
+.academic-calendar__current { margin: 0; color: var(--twq-text-muted); }
+.academic-calendar__dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .875rem; margin: 0; }
+.academic-calendar__dates dt { color: var(--twq-text-muted); font-size: .85rem; }
+.academic-calendar__dates dd { margin: .25rem 0 0; }
+.academic-calendar__reference { min-block-size: 2.75rem; display: inline-flex; align-items: center; gap: .5rem; justify-self: start; }
+.academic-calendar__actions form { margin: 0; }
+@media (max-width: 63.999rem) { .academic-calendar__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 39.999rem) {
+  .academic-calendar__fields, .academic-calendar__years { grid-template-columns: minmax(0, 1fr); }
+  .academic-calendar__year { padding: 1rem; }
+  .academic-calendar__actions > .twq-btn, .academic-calendar__actions > form { flex: 1 1 100%; }
+  .academic-calendar__actions form .twq-btn { inline-size: 100%; }
+}

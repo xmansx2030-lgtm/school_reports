@@ -1,5 +1,6 @@
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
@@ -353,6 +354,14 @@ class PersonalEvidence(models.Model):
             initiative = PersonalInitiative.objects.filter(pk=self.initiative_id, workspace_id=self.workspace_id).first()
             if initiative is None or initiative.academic_year != self.academic_year:
                 raise ValidationError("الشاهد والمبادرة يجب أن يكونا في المساحة الشخصية والسنة نفسها.")
+        if self.pk and self.portfolio_links.exclude(
+            section__workspace_id=self.workspace_id, section__academic_year=self.academic_year,
+        ).exists():
+            raise ValidationError("الشاهد ومحور ملف الإنجاز يجب أن يبقيا في المساحة والسنة الدراسية نفسها.")
+        if self.pk and self.course_certificates.exclude(
+            workspace_id=self.workspace_id, academic_year=self.academic_year,
+        ).exists():
+            raise ValidationError("شهادة الدورة يجب أن تبقى في مساحة الدورة وسنتها الدراسية.")
         return super().save(*args, **kwargs)
 
 
@@ -535,3 +544,55 @@ class PersonalNoticeRecipient(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["notice", "workspace"], name="unique_personal_notice_recipient")]
         indexes = [models.Index(fields=["workspace", "read_at"])]
+
+
+class PersonalCourse(models.Model):
+    """A teacher's professional development record for one academic year."""
+
+    workspace = models.ForeignKey(PersonalWorkspace, on_delete=models.CASCADE, related_name="courses")
+    academic_year = models.CharField("السنة الدراسية", max_length=20)
+    title = models.CharField("عنوان الدورة", max_length=200)
+    provider = models.CharField("الجهة المقدمة", max_length=200)
+    start_date = models.DateField("تاريخ البدء")
+    completion_date = models.DateField("تاريخ الإكمال", null=True, blank=True)
+    hours = models.DecimalField("الساعات التدريبية", max_digits=6, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    description = models.TextField("المحتوى والأثر المهني", blank=True)
+    certificate = models.ForeignKey(
+        PersonalEvidence, on_delete=models.SET_NULL, null=True, blank=True, related_name="course_certificates",
+        verbose_name="شهادة الدورة",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-start_date", "-id"]
+        indexes = [models.Index(fields=["workspace", "academic_year"], name="personal_course_ws_year")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(hours__gt=0), name="personal_course_positive_hours"),
+            models.CheckConstraint(
+                condition=models.Q(completion_date__isnull=True) | models.Q(completion_date__gte=models.F("start_date")),
+                name="personal_course_valid_dates",
+            ),
+        ]
+        verbose_name = "دورة شخصية"
+        verbose_name_plural = "الدورات الشخصية"
+
+    def __str__(self):
+        return self.title
+
+    def clean(self):
+        super().clean()
+        if self.start_date and self.completion_date and self.completion_date < self.start_date:
+            raise ValidationError({"completion_date": "تاريخ الإكمال يجب أن يكون في تاريخ البدء أو بعده."})
+        if self.certificate_id and not PersonalEvidence.objects.filter(
+            pk=self.certificate_id, workspace_id=self.workspace_id, academic_year=self.academic_year,
+        ).exists():
+            raise ValidationError({"certificate": "اختر شهادة من شواهد مساحتك والسنة الدراسية نفسها."})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        if self.pk and PersonalCourse.objects.filter(pk=self.pk).exclude(
+            workspace_id=self.workspace_id, academic_year=self.academic_year,
+        ).exists():
+            raise ValidationError("لا يمكن نقل الدورة إلى مساحة أو سنة أخرى؛ تبقى في سجل سنتها الأصلية.")
+        return super().save(*args, **kwargs)

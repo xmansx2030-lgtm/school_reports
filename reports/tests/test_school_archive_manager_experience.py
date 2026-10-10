@@ -14,6 +14,7 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from maintenance.services import collect_reset_summary
+from reports.academic_years import school_current_academic_year
 from reports.models import (
     Assignment,
     AssignmentEvidence,
@@ -70,6 +71,11 @@ from reports.services_export import (
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class SchoolArchiveManagerExperienceTests(TestCase):
     def setUp(self):
+        # Preserve TestCase's transaction when explicit FileResponse.close()
+        # triggers request-finished cleanup on a file-backed test database.
+        connection_cleanup = patch("django.db.backends.base.base.BaseDatabaseWrapper.close_if_unusable_or_obsolete")
+        connection_cleanup.start()
+        self.addCleanup(connection_cleanup.stop)
         self.media_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.media_dir.cleanup)
         self.settings_override = override_settings(MEDIA_ROOT=self.media_dir.name)
@@ -436,6 +442,7 @@ class SchoolArchiveManagerExperienceTests(TestCase):
 
     def test_school_with_only_administrative_records_can_create_current_year_snapshot(self):
         self.report.delete()
+        current_year = school_current_academic_year(self.school)
         Ticket.objects.create(
             school=self.school,
             creator=self.teacher,
@@ -447,7 +454,7 @@ class SchoolArchiveManagerExperienceTests(TestCase):
             teacher=self.manager,
             school_wide=True,
         )
-        self.assertIn("1447-1448", years)
+        self.assertIn(current_year, years)
 
         with (
             patch(
@@ -461,11 +468,12 @@ class SchoolArchiveManagerExperienceTests(TestCase):
         ):
             response = self.client.post(
                 reverse("reports:school_archive_create"),
-                {"year": "1447-1448"},
+                {"year": current_year},
             )
 
         self.assertEqual(response.status_code, 302)
         archive = SchoolYearArchive.objects.get()
+        self.assertEqual(archive.academic_year, current_year)
         self.assertEqual(archive.report_count, 0)
         self.assertEqual(archive.ticket_count, 1)
 

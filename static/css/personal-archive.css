@@ -2,7 +2,11 @@
 .personal-archive__create .twq-field{flex:1 1 15rem;min-inline-size:0}
 .personal-archive__check{display:inline-flex;align-items:center;gap:.5rem;min-block-size:44px;font-weight:700}
 .personal-archive__check input{inline-size:1.15rem;block-size:1.15rem;accent-color:var(--twq-primary)}
-.personal-archive__year .achievement-file-card__metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+.personal-archive__year .achievement-file-card__metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+.personal-archive__policy{margin-block-end:var(--twq-space-5)}
+.personal-archive__policy p{margin:0;line-height:var(--twq-line-height-relaxed)}
+.personal-archive__dates{display:flex;align-items:center;flex-wrap:wrap;gap:var(--twq-space-2);font-size:var(--twq-font-size-sm);color:var(--twq-text-secondary)}
+.personal-archive__dates a{color:var(--twq-primary);padding-inline-start:var(--twq-space-2);min-block-size:var(--twq-tap-target);display:inline-flex;align-items:center;gap:var(--twq-space-2)}
 .personal-archive__year .achievement-file-card__actions form{margin:0}
 .personal-initiatives__filter{display:flex;align-items:end;flex-wrap:wrap;gap:.75rem;margin-block-end:1.5rem}
 .personal-initiatives__filter .twq-field{min-inline-size:min(100%,14rem)}

@@ -307,11 +307,38 @@ class ReportTypeAdmin(admin.ModelAdmin):
 
 @admin.register(AcademicYear)
 class AcademicYearAdmin(admin.ModelAdmin):
-    list_display = ("value", "is_active", "order", "created_at")
+    list_display = ("value", "start_date", "end_date", "is_active", "order", "created_at")
     list_filter = ("is_active",)
     list_editable = ("is_active", "order")
     search_fields = ("value",)
     ordering = ("-value",)
+
+    def has_view_permission(self, request, obj=None):
+        return bool(getattr(request.user, "is_superuser", False))
+
+    def has_add_permission(self, request):
+        return bool(getattr(request.user, "is_superuser", False))
+
+    def has_change_permission(self, request, obj=None):
+        return bool(getattr(request.user, "is_superuser", False))
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        from .academic_years import sync_academic_years
+
+        sync_academic_years()
+
+    def has_delete_permission(self, request, obj=None):
+        from .academic_years import academic_year_is_used
+
+        return bool(getattr(request.user, "is_superuser", False)) and (
+            obj is None or (not obj.is_active and not academic_year_is_used(obj.value))
+        )
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        actions.pop("delete_selected", None)
+        return actions
 
 
 @admin.register(Department)
@@ -509,6 +536,8 @@ class SchoolAdmin(admin.ModelAdmin):
     search_fields = ("name", "code", "marketing_campaign", "marketing_click_id")
     prepopulated_fields = {"code": ("name",)}
     readonly_fields = (
+        "current_academic_year",
+        "allowed_academic_years",
         "marketing_source",
         "marketing_medium",
         "marketing_campaign",

@@ -7,6 +7,8 @@ still has no department or recipient; these checks cannot drift that way.
 """
 from __future__ import annotations
 
+from .academic_years import school_current_academic_year
+
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -85,9 +87,10 @@ def school_readiness(school: School) -> dict:
         is_active=True,
         end_date__gte=today,
     ).exists()
+    academic_year_ready = bool(school_current_academic_year(school))
     profile_ready = bool(
         (school.phone or "").strip()
-        and (school.current_academic_year or "").strip()
+        and academic_year_ready
     )
     team_count = (
         SchoolMembership.objects.filter(
@@ -152,9 +155,13 @@ def school_readiness(school: School) -> dict:
         ),
         GuidanceStep(
             "profile",
-            "بيانات المدرسة والسنة الحالية",
-            "حدّد السنة الدراسية وراجع رقم الجوال لتظهر بيانات المدرسة الأساسية صحيحة.",
-            reverse("reports:school_settings"),
+            "بيانات المدرسة والسنة المعتمدة" if academic_year_ready else "طلب نشر التقويم الدراسي",
+            (
+                "راجع رقم الجوال والسنة المعتمدة مركزيًا لتظهر بيانات المدرسة الأساسية صحيحة."
+                if academic_year_ready else
+                "اطلب من إدارة المنصة نشر التقويم الدراسي؛ تظهر السنة الحالية تلقائيًا لجميع المدارس."
+            ),
+            reverse("reports:school_settings" if academic_year_ready else "reports:support_ticket_create"),
             profile_ready,
             "تؤثر في الطباعة والتصنيف والتقارير التنفيذية.",
         ),

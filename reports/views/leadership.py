@@ -1,6 +1,8 @@
 # reports/views/leadership.py
 from __future__ import annotations
 
+from ..academic_years import school_current_academic_year
+
 from ._helpers import *
 from ._helpers import _get_active_school
 from ..gender_labels import school_gender_template_context
@@ -77,7 +79,7 @@ def leadership_portfolio_list(request: HttpRequest) -> HttpResponse:
         return HttpResponse(status=403)
 
     if request.method == "POST":
-        year = (active_school.current_academic_year or "").strip()
+        year = school_current_academic_year(active_school)
         if not year:
             messages.error(request, "حدد السنة الدراسية الحالية من إعدادات المدرسة أولاً.")
             return redirect("reports:leadership_portfolio_list")

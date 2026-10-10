@@ -11,7 +11,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from reports.guidance import school_readiness
-from reports.models import School, SchoolSubscription
+from reports.academic_years import MINISTRY_CALENDAR_URL
+from reports.models import AcademicYear, School, SchoolSubscription
 
 
 @override_settings(
@@ -23,6 +24,11 @@ class ManagerFirstRunExperienceTests(TestCase):
     def setUp(self):
         cache.clear()
         self.addCleanup(cache.clear)
+        AcademicYear.objects.update(is_active=False)
+        AcademicYear.objects.update_or_create(value="1448-1449", defaults={
+            "is_active": True, "start_date": timezone.localdate() - timedelta(days=14),
+            "end_date": timezone.localdate() + timedelta(days=200), "source_url": MINISTRY_CALENDAR_URL,
+        })
 
     def _registration_payload(self) -> dict[str, str]:
         return {
@@ -62,14 +68,14 @@ class ManagerFirstRunExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["manager_onboarding"])
-        self.assertEqual(response.context["setup_completed"], 1)
+        self.assertEqual(response.context["setup_completed"], 2)
         self.assertEqual(response.context["setup_total"], 6)
-        self.assertEqual(response.context["setup_percent"], 17)
-        self.assertEqual(response.context["setup_next_step"]["key"], "profile")
+        self.assertEqual(response.context["setup_percent"], 33)
+        self.assertEqual(response.context["setup_next_step"]["key"], "team")
         self.assertFalse(response.context["has_dashboard_activity"])
 
         self.assertContains(response, 'data-manager-mode="setup"')
-        self.assertContains(response, "ابدأ بـ بيانات المدرسة والسنة الحالية")
+        self.assertContains(response, "ابدأ بـ فريق المدرسة")
         self.assertContains(response, "إعداد المدرسة خطوة بخطوة")
         self.assertLess(html.index('id="managerSetup"'), html.index('id="managerToday"'))
         self.assertEqual(html.count('role="progressbar"'), 2)
@@ -118,8 +124,7 @@ class ManagerFirstRunExperienceTests(TestCase):
             fetch_redirect_response=False,
         )
         school = School.objects.get(name="مدرسة رحلة اليوم الأول")
-        school.current_academic_year = "1448-1449"
-        school.save(update_fields=["current_academic_year"])
+        self.assertEqual(school.current_academic_year, "1448-1449")
 
         profile_step = next(
             step for step in school_readiness(school)["steps"] if step["key"] == "profile"
@@ -128,14 +133,16 @@ class ManagerFirstRunExperienceTests(TestCase):
         self.assertTrue(profile_step["complete"])
         self.assertNotIn("المدينة", profile_step["description"])
 
-    def test_school_settings_puts_the_first_editable_blocker_first(self):
+    def test_school_settings_show_central_year_as_read_only_before_contact_fields(self):
         self._register()
 
         response = self.client.get(reverse("reports:school_settings"))
         html = response.content.decode("utf-8")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ابدأ بالسنة الدراسية الحالية")
+        self.assertContains(response, "تُحدّث مركزيًا")
+        self.assertTrue(response.context["form"].fields["current_academic_year"].disabled)
+        self.assertEqual(response.context["form"].initial["current_academic_year"], "1448-1449")
         self.assertLess(
             html.index('id="id_current_academic_year"'),
             html.index('for="id_email"'),

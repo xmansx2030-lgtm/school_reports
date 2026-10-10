@@ -144,6 +144,10 @@
     </div>
   </header>
 
+  {% if can_manage_archive and archive_enabled %}
+    <div class="ar-actions"><a class="ar-btn ar-btn--ghost" href="{% url 'reports:school_data_export' %}"><i class="fa-solid fa-file-zipper" aria-hidden="true"></i> أرشفة المدرسة كاملة · جميع السنوات</a></div>
+  {% endif %}
+
   <div class="ar-alert ar-alert--info">
     <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
     <div>

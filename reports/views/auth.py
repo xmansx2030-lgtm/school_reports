@@ -20,7 +20,7 @@ from core.observability import report_degraded as _degraded, soft_call, soft_fai
 
 from ._helpers import *
 from ._helpers import (
-    _safe_next_url, _set_active_school,
+    _safe_login_next_url, _set_active_school,
     _get_active_school, _user_schools,
 )
 from ..webauthn import (
@@ -375,7 +375,7 @@ def _complete_passkey_login(request: HttpRequest, user: Teacher, *, next_url: st
                     _set_active_school(request, None)
                     return _passkey_response(
                         True,
-                        redirect=_safe_next_url(next_url) or reverse("personal:dashboard"),
+                        redirect=_safe_login_next_url(next_url) or reverse("personal:dashboard"),
                     )
                 if is_any_manager and manager_school is not None:
                     login(request, user)
@@ -423,7 +423,7 @@ def _complete_passkey_login(request: HttpRequest, user: Teacher, *, next_url: st
         messages.warning(request, _force_password_change_notice())
         return _passkey_response(True, redirect=reverse("reports:my_profile"))
 
-    safe_next = _safe_next_url(next_url)
+    safe_next = _safe_login_next_url(next_url)
     if safe_next and _is_owner_only_path(safe_next) and not getattr(user, "is_superuser", False):
         return _passkey_response(
             False,
@@ -719,7 +719,7 @@ def _resolve_login_candidate(identifier: str):
 @require_http_methods(["GET", "POST"])
 def login_view(request: HttpRequest, admin_only: bool = False) -> HttpResponse:
     default_next = reverse("reports:platform_admin_dashboard") if admin_only else ""
-    next_value = _safe_next_url(
+    next_value = _safe_login_next_url(
         request.POST.get("next")
         or request.GET.get("next")
         or default_next
@@ -1380,7 +1380,7 @@ def passkey_login_verify(request: HttpRequest) -> JsonResponse:
         return _passkey_response(False, status=400, error="login_failed", message="تعذر تسجيل الدخول بالبصمة.")
 
 
-@login_required(login_url="reports:login")
+@never_cache
 @require_http_methods(["GET"])
 def logout_view(request: HttpRequest) -> HttpResponse:
     _set_active_school(request, None)
