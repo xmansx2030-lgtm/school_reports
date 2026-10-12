@@ -43,6 +43,22 @@ def timestamp_key(stamp: str) -> str:
     return base + "." + fraction.ljust(9, "0") if stamp else ""
 
 
+def previous_timestamp(stamp: str) -> str:
+    """Keep in sync with operations.log_cursors; this runner is standalone."""
+    match = re.fullmatch(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z", stamp)
+    if match is None:
+        raise ValueError("Invalid log cursor timestamp")
+    second = datetime.fromisoformat(match.group(1)).replace(tzinfo=timezone.utc)
+    nanoseconds = int((match.group(2) or "").ljust(9, "0"))
+    if nanoseconds:
+        nanoseconds -= 1
+    else:
+        second -= timedelta(seconds=1)
+        nanoseconds = 999999999
+    base = second.isoformat(timespec="seconds").removesuffix("+00:00")
+    return f"{base}.{nanoseconds:09d}Z"
+
+
 def _bounded_output(args: tuple[str, ...], *, timeout: int, maximum: int) -> str:
     output = bytearray()
     exceeded = threading.Event()
@@ -181,7 +197,9 @@ def read_logs(selected: list[dict], params: dict) -> dict:
             "requested_tail": tail, "returned_lines": len(chosen),
             "earliest_at": oldest, "latest_at": timestamps[-1] if timestamps else "",
             "has_more": has_more and bool(oldest), "truncated": has_more or bool(omitted_containers),
-            "next_until": oldest if has_more else "",
+            # Docker --until includes its boundary; step back exactly 1ns so
+            # the displayed boundary record cannot repeat on the older page.
+            "next_until": previous_timestamp(oldest) if has_more and oldest else "",
             "boundary_collision": boundary_collision,
             "omitted_container_count": omitted_containers,
             "retention_note": retention_note,

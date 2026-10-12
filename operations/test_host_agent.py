@@ -74,9 +74,43 @@ class HostAgentCommandTests(TestCase):
         with patch.object(self.agent, "run", return_value="\n".join(reversed(lines))):
             result = self.agent.read_logs([{"id": "one", "name": "web"}], {"tail": 50})
         self.assertEqual(result["log_page"]["returned_lines"], 50)
-        self.assertEqual(result["log_page"]["next_until"], "2026-10-12T12:00:00.000000001Z")
+        self.assertEqual(result["log_page"]["next_until"], "2026-10-12T12:00:00.000000000Z")
         self.assertTrue(result["log_page"]["has_more"])
         self.assertLess(self.agent.timestamp_key("2026-10-12T12:00:00Z"), self.agent.timestamp_key("2026-10-12T12:00:00.1Z"))
+
+    def test_nanosecond_cursor_rollover_padding_and_backend_parity(self):
+        from operations.log_cursors import previous_timestamp
+
+        examples = (
+            ("2026-10-12T12:00:00.000000001Z", "2026-10-12T12:00:00.000000000Z"),
+            ("2026-10-12T12:00:00.1Z", "2026-10-12T12:00:00.099999999Z"),
+            ("2026-10-12T12:00:00.123456789Z", "2026-10-12T12:00:00.123456788Z"),
+            ("2026-10-12T12:00:00Z", "2026-10-12T11:59:59.999999999Z"),
+            ("2026-10-12T00:00:00.000000000Z", "2026-10-11T23:59:59.999999999Z"),
+            ("2026-01-01T00:00:00.0Z", "2025-12-31T23:59:59.999999999Z"),
+        )
+        for stamp, expected in examples:
+            with self.subTest(stamp=stamp):
+                self.assertEqual(previous_timestamp(stamp), expected)
+                self.assertEqual(self.agent.previous_timestamp(stamp), expected)
+
+    def test_inclusive_docker_until_pages_do_not_repeat_boundary_line(self):
+        all_lines = [f"2026-10-12T12:00:00.{n:09d}Z event-{n}" for n in range(100)]
+
+        def inclusive_logs(*args, **kwargs):
+            until = args[args.index("--until") + 1]
+            tail = int(args[args.index("--tail") + 1])
+            rows = [line for line in all_lines if self.agent.timestamp_key(line.split()[0]) <= self.agent.timestamp_key(until)]
+            return "\n".join(rows[-tail:])
+
+        selected = [{"id": "one", "name": "backend"}]
+        params = {"tail": 50, "since_at": "2026-10-12T11:00:00Z", "until": "2026-10-12T13:00:00Z"}
+        with patch.object(self.agent, "run", side_effect=inclusive_logs):
+            first = self.agent.read_logs(selected, params)
+            second = self.agent.read_logs(selected, {**params, "until": first["log_page"]["next_until"]})
+        self.assertLess(self.agent.timestamp_key(second["log_page"]["latest_at"]),
+                        self.agent.timestamp_key(first["log_page"]["earliest_at"]))
+        self.assertEqual(len(set(first["log_content"].splitlines()) & set(second["log_content"].splitlines())), 0)
 
     def test_large_raw_log_capture_fails_without_returning_partial_secret(self):
         with patch.object(self.agent, "DEPLOY_PATH", Path.cwd()):

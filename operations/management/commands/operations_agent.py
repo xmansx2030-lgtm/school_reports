@@ -12,6 +12,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from operations.log_analysis import sanitize_and_analyze
+from operations.log_cursors import previous_timestamp
 from operations.models import HostAgentHeartbeat, OperationAction
 
 
@@ -123,7 +124,7 @@ class Command(BaseCommand):
                             # The next page must start at the displayed boundary,
                             # not at lines removed by the storage byte limit.
                             action.log_analysis["page"].update({
-                                "has_more": bool(stamps), "next_until": stamps[0] if stamps else "",
+                                "has_more": bool(stamps), "next_until": previous_timestamp(stamps[0]) if stamps else "",
                                 "earliest_at": stamps[0] if stamps else "",
                             })
                     fields.extend(("log_content", "log_analysis"))

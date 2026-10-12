@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .action_requests import log_parameters
+from .log_cursors import previous_timestamp
 from .models import (
     HostAgentHeartbeat, ManagedProject, ManagedServer, ManagedService,
     MobileAccessToken, OperationAction, OperationsMembership,
@@ -93,7 +94,9 @@ class ActionRequestTests(TestCase):
         self.complete(action, log_content=raw, log_page={"next_until": "2026-10-12T12:00:00.000000000Z", "has_more": False})
         page = action.log_analysis["page"]
         self.assertGreater(action.log_analysis["omitted_lines"], 800)
-        self.assertEqual(page["next_until"], action.log_content.split(" ", 1)[0])
+        first_timestamp = action.log_content.split(" ", 1)[0]
+        self.assertEqual(page["next_until"], previous_timestamp(first_timestamp))
+        self.assertEqual(page["earliest_at"], first_timestamp)
         self.assertTrue(page["has_more"])
         self.assertEqual(page["returned_lines"], len(action.log_content.splitlines()))
 
