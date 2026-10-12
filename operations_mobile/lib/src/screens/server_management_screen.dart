@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart' show DateFormat;
 
 import '../api_client.dart';
 import '../config.dart';
 import '../models.dart';
 import '../state.dart';
+import '../widgets/provider_status.dart';
 import 'emergency_screen.dart';
 import 'analytics_panel.dart';
 
@@ -76,6 +76,7 @@ class _ServerManagementScreenState
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(_actionTitle(action)),
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,10 +101,14 @@ class _ServerManagementScreenState
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('إلغاء'),
           ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, controller.text == requiredText),
-            child: const Text('تنفيذ'),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, child) => FilledButton(
+              onPressed: value.text == requiredText
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+              child: const Text('تنفيذ'),
+            ),
           ),
         ],
       ),
@@ -257,32 +262,9 @@ class _ServerManagementScreenState
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Hetzner: ${provider.status} · ${provider.serverType} · ${provider.location}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'CPU لدى Hetzner: ${provider.latestMetric('cpu')?.toStringAsFixed(1) ?? '—'}% '
-                            '· RAM داخل الخادم: ${currentServer.memory?.toStringAsFixed(1) ?? '—'}% '
-                            '· القرص داخل الخادم: ${currentServer.disk?.toStringAsFixed(1) ?? '—'}%',
-                          ),
-                          Text(
-                            'حماية الحذف: ${provider.deleteProtected ? 'مفعلة' : 'غير مفعلة'} '
-                            '· النسخ التلقائية: ${provider.backupWindow.isEmpty ? 'غير مفعلة' : 'مفعلة'}',
-                          ),
-                          if (provider.fetchedAt != null)
-                            Text(
-                              'آخر قراءة من Hetzner: ${DateFormat('yyyy/MM/dd HH:mm').format(provider.fetchedAt!)}',
-                            ),
-                          if (currentServer.lastCheckedAt != null)
-                            Text(
-                              'آخر جرد من المضيف: ${DateFormat('yyyy/MM/dd HH:mm').format(currentServer.lastCheckedAt!)}',
-                            ),
-                        ],
+                      child: ProviderStatusSummary(
+                        provider: provider,
+                        host: currentServer,
                       ),
                     ),
                   ),
@@ -330,26 +312,7 @@ class _ServerManagementScreenState
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'نسخ Hetzner الأخيرة',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          for (final backup in provider.backups.take(7))
-                            ListTile(
-                              dense: true,
-                              title: Text(
-                                '${backup['description'] ?? 'Backup'}',
-                              ),
-                              subtitle: Text('${backup['created'] ?? ''}'),
-                              trailing: Text('${backup['status'] ?? ''}'),
-                            ),
-                          if (provider.backups.isEmpty)
-                            const Text('لا توجد نسخ معروضة.'),
-                        ],
-                      ),
+                      child: ProviderBackupList(backups: provider.backups),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -367,8 +330,14 @@ class _ServerManagementScreenState
                             ListTile(
                               dense: true,
                               title: Text('${action['command'] ?? ''}'),
-                              subtitle: Text('${action['started'] ?? ''}'),
-                              trailing: Text('${action['status'] ?? ''}'),
+                              subtitle: Text(
+                                providerLocalDate(action['started']),
+                                textDirection: TextDirection.ltr,
+                              ),
+                              trailing: Text(
+                                '${action['status'] ?? ''}',
+                                textDirection: TextDirection.ltr,
+                              ),
                             ),
                         ],
                       ),

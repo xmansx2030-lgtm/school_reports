@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
@@ -6,6 +7,7 @@ import '../api_client.dart';
 import '../design_system.dart';
 import '../models.dart';
 import '../state.dart';
+import '../widgets/deployment_confirmation.dart';
 import '../widgets/status_widgets.dart';
 import 'accounts_screen.dart';
 import 'change_password_screen.dart';
@@ -549,6 +551,7 @@ class _DeploymentPanel extends ConsumerStatefulWidget {
 
 class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
   final Set<int> _deployingProjects = {};
+  final Set<int> _confirmingProjects = {};
 
   @override
   Widget build(BuildContext context) {
@@ -565,7 +568,7 @@ class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 12),
-              Text('جاري فحص توافق المستودع مع الخادم...'),
+              Expanded(child: Text('جاري فحص توافق المستودع مع الخادم...')),
             ],
           ),
         ),
@@ -610,9 +613,12 @@ class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
                   info: info,
                   workflowLabel: _workflowLabel(info),
                   isDeploying: _deployingProjects.contains(info.projectId),
+                  isConfirming: _confirmingProjects.contains(info.projectId),
                   onDeploy:
                       widget.canRunActions &&
                           info.canDeploy &&
+                          info.latestShortSha.isNotEmpty &&
+                          !_confirmingProjects.contains(info.projectId) &&
                           !_deployingProjects.contains(info.projectId)
                       ? () => _deployNow(info)
                       : null,
@@ -633,14 +639,33 @@ class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
   }
 
   Future<void> _deployNow(DeploymentInfo info) async {
-    if (_deployingProjects.contains(info.projectId)) return;
-    setState(() => _deployingProjects.add(info.projectId));
+    if (!widget.canRunActions ||
+        !info.canDeploy ||
+        info.latestShortSha.isEmpty ||
+        _confirmingProjects.contains(info.projectId) ||
+        _deployingProjects.contains(info.projectId)) {
+      return;
+    }
+    // Lock the project before opening the dialog, including the first frame
+    // before the disabled button has rebuilt.
+    setState(() => _confirmingProjects.add(info.projectId));
     try {
+      final confirmation = await confirmDeployment(context, info);
+      if (!mounted ||
+          confirmation == null ||
+          !widget.canRunActions ||
+          confirmation != info.latestShortSha) {
+        return;
+      }
+      setState(() {
+        _confirmingProjects.remove(info.projectId);
+        _deployingProjects.add(info.projectId);
+      });
       await ref
           .read(apiProvider)
           .triggerDeployment(
             projectId: info.projectId,
-            confirmation: info.latestShortSha,
+            confirmation: confirmation,
           );
       ref.invalidate(deploymentProvider);
       if (mounted) {
@@ -648,6 +673,7 @@ class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
           SnackBar(
             content: Text(
               'بدأ نشر ${info.projectName}. ستتحدث الحالة تلقائياً.',
+              style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: OpsColors.forest,
           ),
@@ -666,7 +692,10 @@ class _DeploymentPanelState extends ConsumerState<_DeploymentPanel> {
       }
     } finally {
       if (mounted) {
-        setState(() => _deployingProjects.remove(info.projectId));
+        setState(() {
+          _confirmingProjects.remove(info.projectId);
+          _deployingProjects.remove(info.projectId);
+        });
       }
     }
   }
@@ -677,12 +706,14 @@ class _DeploymentRow extends StatelessWidget {
     required this.info,
     required this.workflowLabel,
     required this.isDeploying,
+    required this.isConfirming,
     required this.onDeploy,
   });
 
   final DeploymentInfo info;
   final String workflowLabel;
   final bool isDeploying;
+  final bool isConfirming;
   final VoidCallback? onDeploy;
 
   Color _workflowColor(OpsPalette ops) {
@@ -749,10 +780,12 @@ class _DeploymentRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // One compact line comparing server ↔ GitHub instead of three chips.
           _ReleaseLine(
             deployedSha: info.deployedShortSha,
             latestSha: info.latestShortSha,
+            deployedFullSha: info.deployedSha,
+            deployedImage: info.deployedImage,
+            latestFullSha: info.latestSha,
             ahead: info.repositoryAhead,
             monitoringMode: info.monitoringMode,
             deployedReference: info.deployedReference,
@@ -784,16 +817,22 @@ class _DeploymentRow extends StatelessWidget {
                   key: ValueKey('deploy-${info.projectId}'),
                   onPressed: onDeploy,
                   icon: isDeploying
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Icon(Icons.rocket_launch_outlined),
-                  label: Text(isDeploying ? 'جاري التشغيل' : 'نشر الآن'),
+                  label: Text(
+                    isDeploying
+                        ? 'جاري التشغيل'
+                        : isConfirming
+                        ? 'بانتظار التأكيد'
+                        : 'نشر الآن',
+                  ),
                 ),
               ],
             ),
@@ -803,17 +842,24 @@ class _DeploymentRow extends StatelessWidget {
   }
 }
 
-/// Compact "server ↔ GitHub" release comparison replacing the old chip stack.
+/// Each release keeps a readable identifier on phones and copies the complete
+/// reference supplied by the API. No full SHA is inferred from a short SHA.
 class _ReleaseLine extends StatelessWidget {
   const _ReleaseLine({
     required this.deployedSha,
     required this.latestSha,
+    required this.deployedFullSha,
+    required this.deployedImage,
+    required this.latestFullSha,
     required this.ahead,
     required this.monitoringMode,
     required this.deployedReference,
   });
   final String deployedSha;
   final String latestSha;
+  final String deployedFullSha;
+  final String deployedImage;
+  final String latestFullSha;
   final bool ahead;
   final String monitoringMode;
   final String deployedReference;
@@ -821,6 +867,32 @@ class _ReleaseLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ops = context.ops;
+    final serverReference = deployedFullSha.isNotEmpty
+        ? deployedFullSha
+        : deployedImage.isNotEmpty
+        ? deployedImage
+        : deployedReference.isNotEmpty
+        ? deployedReference
+        : deployedSha;
+    final repositoryReference = latestFullSha.isNotEmpty
+        ? latestFullSha
+        : latestSha;
+    final server = _sha(
+      context,
+      Icons.dns_outlined,
+      'الخادم',
+      monitoringMode == 'server'
+          ? (deployedReference.isEmpty ? serverReference : deployedReference)
+          : deployedSha,
+      serverReference,
+    );
+    final repository = _sha(
+      context,
+      Icons.commit,
+      'GitHub',
+      latestSha,
+      repositoryReference,
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -828,44 +900,112 @@ class _ReleaseLine extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         color: ops.surface,
       ),
-      child: Row(
-        children: [
-          if (monitoringMode == 'server') ...[
-            _sha(ops, Icons.dns_outlined, 'إصدار الخادم', deployedReference),
-          ] else ...[
-            _sha(ops, Icons.dns_outlined, 'الخادم', deployedSha),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Icon(
-                ahead ? Icons.arrow_back_rounded : Icons.check_rounded,
-                size: 16,
-                color: ahead ? ops.gold : ops.healthy,
-              ),
+      child: monitoringMode == 'server'
+          ? server
+          : LayoutBuilder(
+              builder: (context, box) {
+                final comparison = Icon(
+                  ahead ? Icons.update_rounded : Icons.check_rounded,
+                  size: 18,
+                  color: ahead ? ops.gold : ops.healthy,
+                  semanticLabel: ahead
+                      ? 'يوجد إصدار أحدث'
+                      : 'الإصداران متطابقان',
+                );
+                if (box.maxWidth < 520 ||
+                    MediaQuery.textScalerOf(context).scale(14) > 18) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      server,
+                      Divider(color: ops.lineSoft),
+                      repository,
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: comparison,
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: server),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: comparison,
+                    ),
+                    Expanded(child: repository),
+                  ],
+                );
+              },
             ),
-            _sha(ops, Icons.commit, 'GitHub', latestSha),
-          ],
-        ],
-      ),
     );
   }
 
-  Widget _sha(OpsPalette ops, IconData icon, String label, String sha) {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: ops.accentBlue),
-          const SizedBox(width: 6),
-          Text('$label ', style: TextStyle(color: ops.muted, fontSize: 12)),
-          Flexible(
-            child: Text(
-              sha.isEmpty ? '—' : sha,
-              textDirection: TextDirection.ltr,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.w900, color: ops.ink),
+  Widget _sha(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String shortReference,
+    String fullReference,
+  ) {
+    final ops = context.ops;
+    // If the API provides an unusually short display label, use seven actual
+    // characters of its complete reference instead of repeating that truncation.
+    final display = shortReference.length >= 7
+        ? shortReference
+        : fullReference.length >= 7
+        ? fullReference.substring(0, 7)
+        : fullReference;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: ops.accentBlue),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(color: ops.slate, fontSize: 12),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Tooltip(
+                message: fullReference.isEmpty
+                    ? 'المرجع غير متاح'
+                    : fullReference,
+                child: SelectableText(
+                  display.isEmpty ? 'غير متاح' : display,
+                  textDirection: TextDirection.ltr,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(fontWeight: FontWeight.w900, color: ops.ink),
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'نسخ مرجع $label',
+              onPressed: fullReference.isEmpty
+                  ? null
+                  : () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: fullReference),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('تم نسخ مرجع $label')),
+                        );
+                      }
+                    },
+              icon: const Icon(Icons.copy_outlined, size: 18),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

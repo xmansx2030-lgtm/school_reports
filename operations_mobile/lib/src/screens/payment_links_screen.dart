@@ -224,7 +224,10 @@ class _PaymentLinksScreenState extends ConsumerState<PaymentLinksScreen> {
     ref.invalidate(paymentLinksProvider);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('تم إنشاء رابط دفع ${created.projectName} بنجاح.'),
+        content: Text(
+          'تم إنشاء رابط دفع ${created.projectName} بنجاح.',
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+        ),
         backgroundColor: context.ops.forest,
       ),
     );
@@ -561,7 +564,14 @@ class _CreatePaymentLinkScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error.message),
+            content: Text(
+              error.message,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? OpsColors.ink
+                    : Colors.white,
+              ),
+            ),
             backgroundColor: context.ops.danger,
           ),
         );
@@ -794,7 +804,13 @@ class _PaymentLinkCardState extends ConsumerState<_PaymentLinkCard> {
       widget.onChanged();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(success), backgroundColor: context.ops.forest),
+          SnackBar(
+            content: Text(
+              success,
+              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+            ),
+            backgroundColor: context.ops.forest,
+          ),
         );
       }
     } on ApiException catch (error) {
@@ -806,7 +822,17 @@ class _PaymentLinkCardState extends ConsumerState<_PaymentLinkCard> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: context.ops.danger),
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? OpsColors.ink
+                : Colors.white,
+          ),
+        ),
+        backgroundColor: context.ops.danger,
+      ),
     );
   }
 }

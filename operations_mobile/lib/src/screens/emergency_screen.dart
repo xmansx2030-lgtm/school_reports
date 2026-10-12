@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' show DateFormat;
 
 import '../api_client.dart';
 import '../models.dart';
+import '../widgets/provider_status.dart';
 
 class EmergencyScreen extends StatefulWidget {
   const EmergencyScreen({super.key});
@@ -98,6 +98,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           'snapshot' => 'إنشاء Snapshot',
           _ => action,
         }),
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,10 +121,14 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('إلغاء'),
           ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, controller.text == expected),
-            child: const Text('تنفيذ'),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, child) => FilledButton(
+              onPressed: value.text == expected
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+              child: const Text('تنفيذ'),
+            ),
           ),
         ],
       ),
@@ -221,21 +226,12 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('الخادم: ${_server?['name'] ?? '—'}'),
-                    Text('حالة Hetzner: ${_server?['status'] ?? 'غير معروفة'}'),
                     if (details != null)
-                      Text(
-                        'CPU: ${details.latestMetric('cpu')?.toStringAsFixed(1) ?? '—'}% '
-                        '· ${details.serverType} · ${details.location}',
-                      ),
+                      ProviderStatusSummary(provider: details, showName: true),
                     if (details != null)
                       Text('نسخ Hetzner المعروضة: ${details.backups.length}'),
                     if (details?.partialErrors.isNotEmpty == true)
                       Text('قراءة جزئية: ${details!.partialErrors.join('، ')}'),
-                    if (_server?['fetched_at'] != null)
-                      Text(
-                        'آخر قراءة: ${DateFormat('yyyy/MM/dd HH:mm').format(DateTime.parse(_server!['fetched_at'].toString()).toLocal())}',
-                      ),
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _busy ? null : _refresh,
@@ -247,20 +243,6 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            if (details != null && details.backups.isNotEmpty)
-              Card(
-                child: Column(
-                  children: [
-                    const ListTile(title: Text('آخر نسخ Hetzner')),
-                    for (final backup in details.backups.take(7))
-                      ListTile(
-                        dense: true,
-                        title: Text('${backup['description'] ?? 'Backup'}'),
-                        subtitle: Text('${backup['created'] ?? ''}'),
-                      ),
-                  ],
-                ),
-              ),
             if (_server?['status'] == 'off')
               FilledButton(
                 onPressed: _busy ? null : () => _act('poweron'),
@@ -301,6 +283,16 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     },
               child: const Text('إزالة مفتاح الطوارئ من هذا الجهاز'),
             ),
+            if (details != null && details.backups.isNotEmpty)
+              Card(
+                child: ExpansionTile(
+                  title: Text(
+                    'تفاصيل النسخ الاحتياطية (${details.backups.length})',
+                  ),
+                  childrenPadding: const EdgeInsets.all(16),
+                  children: [ProviderBackupList(backups: details.backups)],
+                ),
+              ),
           ],
           if (_busy) const LinearProgressIndicator(),
           if (_error != null)

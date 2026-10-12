@@ -37,12 +37,16 @@ class OperationsApp extends ConsumerWidget {
   }
 
   ThemeData _buildTheme(OpsPalette ops, Brightness brightness) {
+    final onPrimary = brightness == Brightness.dark
+        ? OpsColors.ink
+        : Colors.white;
     final scheme =
         ColorScheme.fromSeed(
           seedColor: OpsColors.forest,
           brightness: brightness,
         ).copyWith(
           primary: ops.forest,
+          onPrimary: onPrimary,
           secondary: ops.gold,
           surface: ops.surface,
           error: ops.danger,
@@ -87,12 +91,15 @@ class OperationsApp extends ConsumerWidget {
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           borderSide: BorderSide(color: ops.line),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: ops.forest,
-          foregroundColor: Colors.white,
+          foregroundColor: scheme.onPrimary,
           minimumSize: const Size(48, 54),
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -104,7 +111,7 @@ class OperationsApp extends ConsumerWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: ops.forest,
-          foregroundColor: Colors.white,
+          foregroundColor: scheme.onPrimary,
           minimumSize: const Size(48, 54),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -121,7 +128,9 @@ class OperationsApp extends ConsumerWidget {
         backgroundColor: brightness == Brightness.dark
             ? ops.surfaceAlt
             : OpsColors.ink,
-        contentTextStyle: TextStyle(color: ops.ink),
+        contentTextStyle: TextStyle(
+          color: brightness == Brightness.dark ? ops.ink : Colors.white,
+        ),
       ),
       tooltipTheme: const TooltipThemeData(
         waitDuration: Duration(milliseconds: 450),

@@ -141,17 +141,21 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
                   'تظهر بيانات الفترة السابقة إلى حين نجاح تحميل الفترة المختارة.',
                 ),
               const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              _MetricGrid(
                 children: [
-                  _metric(
-                    'المعالج · متوسط / أعلى',
-                    '${_value(data.summary['cpu_avg'], '%')} / ${_value(data.summary['cpu_max'], '%')}',
+                  _pairedMetric(
+                    'المعالج',
+                    'متوسط',
+                    _value(data.summary['cpu_avg'], '%'),
+                    'أعلى',
+                    _value(data.summary['cpu_max'], '%'),
                   ),
-                  _metric(
-                    'الذاكرة · متوسط / أعلى',
-                    '${_value(data.summary['memory_avg'], '%')} / ${_value(data.summary['memory_max'], '%')}',
+                  _pairedMetric(
+                    'الذاكرة',
+                    'متوسط',
+                    _value(data.summary['memory_avg'], '%'),
+                    'أعلى',
+                    _value(data.summary['memory_max'], '%'),
                   ),
                   if (widget.server)
                     _metric(
@@ -162,30 +166,48 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
                     'نجاح فحوص الوصول',
                     _value(data.summary['availability_percent'], '%'),
                   ),
-                  _metric(
-                    'الفحوص / الفاشلة',
-                    '${data.summary['health_checks'] ?? 0} / ${data.summary['failed_checks'] ?? 0}',
+                  _pairedMetric(
+                    'فحوص الوصول',
+                    'الإجمالي',
+                    '${data.summary['health_checks'] ?? 0}',
+                    'الفاشلة',
+                    '${data.summary['failed_checks'] ?? 0}',
                   ),
-                  _metric(
-                    'الاستجابة · متوسط / P95',
-                    '${_value(data.summary['latency_avg_ms'], ' ms')} / ${_value(data.summary['latency_p95_ms'], ' ms')}',
+                  _pairedMetric(
+                    'زمن الاستجابة',
+                    'متوسط',
+                    _value(data.summary['latency_avg_ms'], ' ms'),
+                    'P95',
+                    _value(data.summary['latency_p95_ms'], ' ms'),
                   ),
                   if (!widget.server) ...[
-                    _metric(
-                      'الذاكرة · متوسط / أعلى MB',
-                      '${_value(data.summary['memory_used_avg_mb'], '')} / ${_value(data.summary['memory_used_max_mb'], '')}',
+                    _pairedMetric(
+                      'الذاكرة المستخدمة',
+                      'متوسط',
+                      _value(data.summary['memory_used_avg_mb'], ' MB'),
+                      'أعلى',
+                      _value(data.summary['memory_used_max_mb'], ' MB'),
                     ),
-                    _metric(
-                      'الحاويات العاملة / الإجمالي',
-                      '${data.latest['running_container_count'] ?? '—'} / ${data.latest['container_count'] ?? '—'}',
+                    _pairedMetric(
+                      'الخدمات المستمرة',
+                      'تعمل',
+                      '${data.latest['running_container_count'] ?? '—'}',
+                      'الإجمالي',
+                      '${data.latest['container_count'] ?? '—'}',
                     ),
-                    _metric(
-                      'الشبكة التراكمية · استقبال / إرسال MB',
-                      '${_value(data.latest['network_rx_mb'], '')} / ${_value(data.latest['network_tx_mb'], '')}',
+                    _pairedMetric(
+                      'الشبكة التراكمية',
+                      'استقبال',
+                      _value(data.latest['network_rx_mb'], ' MB'),
+                      'إرسال',
+                      _value(data.latest['network_tx_mb'], ' MB'),
                     ),
-                    _metric(
-                      'القرص التراكمي · قراءة / كتابة MB',
-                      '${_value(data.latest['block_read_mb'], '')} / ${_value(data.latest['block_write_mb'], '')}',
+                    _pairedMetric(
+                      'القرص التراكمي',
+                      'قراءة',
+                      _value(data.latest['block_read_mb'], ' MB'),
+                      'كتابة',
+                      _value(data.latest['block_write_mb'], ' MB'),
                     ),
                   ],
                 ],
@@ -216,6 +238,7 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
                   'مقارنة المشاريع (${data.projects.length})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
+                const Text('متوسط استهلاك الموارد خلال الفترة المختارة'),
                 for (final project in data.projects) _projectRow(project),
               ],
               if (data.latest['host_details'] is Map)
@@ -231,9 +254,38 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
     );
   }
 
-  Widget _metric(String label, String value) => Container(
-    constraints: const BoxConstraints(minWidth: 145),
-    padding: const EdgeInsets.all(12),
+  Widget _metric(String label, String value) => _metricTile(
+    label,
+    Text(
+      value,
+      textDirection: TextDirection.ltr,
+      style: const TextStyle(fontWeight: FontWeight.bold),
+    ),
+  );
+
+  Widget _pairedMetric(
+    String label,
+    String firstLabel,
+    String firstValue,
+    String secondLabel,
+    String secondValue,
+  ) => _metricTile(
+    label,
+    DefaultTextStyle.merge(
+      style: const TextStyle(fontSize: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Reading(firstLabel, firstValue),
+          _Reading(secondLabel, secondValue),
+        ],
+      ),
+    ),
+  );
+
+  Widget _metricTile(String label, Widget content) => Container(
+    key: ValueKey('analytics-metric-$label'),
+    padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(12),
@@ -241,12 +293,12 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12)),
         Text(
-          value,
-          textDirection: TextDirection.ltr,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
         ),
+        const SizedBox(height: 4),
+        content,
       ],
     ),
   );
@@ -261,8 +313,16 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text('${project['name'] ?? project['slug'] ?? ''}'),
-      subtitle: Text(
-        'CPU ${_value(summary['cpu_avg'], '%')} · RAM ${_value(summary['memory_avg'], '%')} · نجاح الفحوص ${_value(summary['availability_percent'], '%')}\nالتغطية ${_value(coverage['coverage_percent'], '%')}${coverage['stale'] == true ? ' · قياسات قديمة' : ''}',
+      subtitle: Wrap(
+        spacing: 12,
+        runSpacing: 2,
+        children: [
+          _Reading('المعالج', _value(summary['cpu_avg'], '%')),
+          _Reading('الذاكرة', _value(summary['memory_avg'], '%')),
+          _Reading('نجاح الفحوص', _value(summary['availability_percent'], '%')),
+          _Reading('التغطية', _value(coverage['coverage_percent'], '%')),
+          if (coverage['stale'] == true) const Text('قياسات قديمة'),
+        ],
       ),
     );
   }
@@ -286,11 +346,9 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
         'iowait_percent': 'انتظار القرص %',
       }.entries)
         if (details.containsKey(item.key))
-          ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: Text(item.value),
-            trailing: Text(_value(details[item.key], '')),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: _Reading(item.value, _value(details[item.key], '')),
           ),
       if (details['pressure'] is Map) ...[
         const Padding(
@@ -312,25 +370,154 @@ class _AnalyticsPanelState extends ConsumerState<AnalyticsPanel> {
     ],
   );
 
-  Widget _containers(List<dynamic> containers) => ExpansionTile(
-    tilePadding: EdgeInsets.zero,
-    initiallyExpanded: !widget.server,
-    title: Text('حاويات المشروع (${containers.length})'),
-    children: [
-      for (final raw in containers)
-        if (raw is Map)
+  Widget _containers(List<dynamic> containers) {
+    final entries = containers.whereType<Map>().toList();
+    final completed = entries
+        .where((item) => item['completed_job'] == true)
+        .length;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      initiallyExpanded: !widget.server,
+      title: Text('حاويات المشروع (${entries.length})'),
+      subtitle: Text(
+        'خدمات مستمرة: ${entries.length - completed} · مهام مكتملة: $completed',
+      ),
+      children: [
+        for (final raw in entries)
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(
               '${raw['name'] ?? raw['service'] ?? raw['id'] ?? ''}',
               textDirection: TextDirection.ltr,
             ),
-            subtitle: Text(
-              'الحالة: ${raw['state'] ?? raw['status'] ?? 'غير معروفة'} · الصحة: ${raw['health'] ?? 'غير محددة'}\nCPU ${_value(raw['cpu_percent'], '%')} · RAM ${_value(raw['memory_used_mb'], ' MB')}${raw['restart_count'] != null ? ' · إعادات التشغيل ${raw['restart_count']}' : ''}\nالشبكة التراكمية MB: ↓ ${_value(raw['network_rx_mb'], '')} ↑ ${_value(raw['network_tx_mb'], '')}\nالقرص التراكمي MB: قراءة ${_value(raw['block_read_mb'], '')} · كتابة ${_value(raw['block_write_mb'], '')}${raw['oom_killed'] == true ? '\nتوقفت بسبب نفاد الذاكرة' : ''}',
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (raw['completed_job'] == true)
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Chip(
+                      avatar: const Icon(Icons.task_alt, size: 16),
+                      label: const Text('مهمة مكتملة'),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 2,
+                  children: [
+                    _Reading(
+                      'الحالة',
+                      _containerState(raw['state'] ?? raw['status']),
+                    ),
+                    _Reading('الصحة', _containerHealth(raw['health'])),
+                    _Reading('المعالج', _value(raw['cpu_percent'], '%')),
+                    _Reading('الذاكرة', _value(raw['memory_used_mb'], ' MB')),
+                    if (raw['restart_count'] != null)
+                      _Reading('إعادات التشغيل', '${raw['restart_count']}'),
+                  ],
+                ),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: const Text('الشبكة والقرص · قيم تراكمية'),
+                  children: [
+                    _Reading(
+                      'استقبال الشبكة',
+                      _value(raw['network_rx_mb'], ' MB'),
+                    ),
+                    _Reading(
+                      'إرسال الشبكة',
+                      _value(raw['network_tx_mb'], ' MB'),
+                    ),
+                    _Reading(
+                      'قراءة القرص',
+                      _value(raw['block_read_mb'], ' MB'),
+                    ),
+                    _Reading(
+                      'كتابة القرص',
+                      _value(raw['block_write_mb'], ' MB'),
+                    ),
+                  ],
+                ),
+                if (raw['oom_killed'] == true)
+                  Text(
+                    'توقفت بسبب نفاد الذاكرة',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+              ],
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Use the available width without a fixed tile height, including enlarged text.
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      const spacing = 8.0;
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final columns =
+          ((constraints.maxWidth + spacing) / (140 * scale + spacing))
+              .floor()
+              .clamp(1, 3);
+      final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+      return Wrap(
+        spacing: spacing,
+        runSpacing: spacing,
+        children: [
+          for (final child in children) SizedBox(width: width, child: child),
+        ],
+      );
+    },
+  );
+}
+
+/// A numeric value gets its own direction instead of joining mixed RTL text.
+class _Reading extends StatelessWidget {
+  const _Reading(this.label, this.value);
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 6,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      Text('$label:'),
+      Text(value, textDirection: TextDirection.ltr),
     ],
   );
+}
+
+String _containerState(dynamic raw) => switch ('$raw'.trim().toLowerCase()) {
+  'running' => 'تعمل',
+  'exited' => 'متوقفة',
+  'restarting' => 'إعادة تشغيل',
+  'paused' => 'معلقة',
+  'created' => 'تم إنشاؤها',
+  'dead' => 'متوقفة نهائيًا',
+  '' || 'null' || 'unknown' => 'غير معروفة',
+  _ => '$raw',
+};
+
+String _containerHealth(dynamic raw) {
+  if (raw == null) return 'غير محددة';
+  return switch ('$raw'.trim().toLowerCase()) {
+    '' => 'لا يوجد فحص صحة',
+    'healthy' => 'سليمة',
+    'unhealthy' => 'غير سليمة',
+    'starting' => 'جارٍ بدء الفحص',
+    _ => '$raw',
+  };
 }
 
 String _value(dynamic value, String unit) {
@@ -372,6 +559,13 @@ class _ResourceChart extends StatelessWidget {
     final minX = all.map((e) => e.x).reduce((a, b) => a < b ? a : b);
     var maxX = all.map((e) => e.x).reduce((a, b) => a > b ? a : b);
     if (minX == maxX) maxX += 60000;
+    final firstDate = DateTime.fromMillisecondsSinceEpoch(minX.toInt());
+    final lastDate = DateTime.fromMillisecondsSinceEpoch(maxX.toInt());
+    final showDate =
+        data.window != '1h' || !DateUtils.isSameDay(firstDate, lastDate);
+    final scale = MediaQuery.textScalerOf(context).scale(10) / 10;
+    final bottomSpace = (showDate ? 34.0 : 18.0) * scale + 8;
+    final leftSpace = 35.0 * scale;
     List<FlSpot> withGaps(List<FlSpot> values) => [
       for (var index = 0; index < values.length; index++) ...[
         if (index > 0 &&
@@ -380,88 +574,103 @@ class _ResourceChart extends StatelessWidget {
         values[index],
       ],
     ];
-    return SizedBox(
-      height: 225,
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: LineChart(
-          LineChartData(
-            minY: 0,
-            maxY: 100,
-            minX: minX,
-            maxX: maxX,
-            borderData: FlBorderData(show: false),
-            gridData: const FlGridData(drawVerticalLine: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              leftTitles: const AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 35,
-                  interval: 25,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tickCount = ((constraints.maxWidth - leftSpace) / (64 * scale))
+            .floor()
+            .clamp(1, 3);
+        return SizedBox(
+          height: 195 + bottomSpace,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: 100,
+                minX: minX,
+                maxX: maxX,
+                borderData: FlBorderData(show: false),
+                gridData: const FlGridData(
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
                 ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 30,
-                  interval: (maxX - minX) / 3,
-                  minIncluded: false,
-                  maxIncluded: false,
-                  getTitlesWidget: (value, meta) => Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      DateFormat(
-                        data.window == '7d' ? 'MM/dd' : 'HH:mm',
-                      ).format(
-                        DateTime.fromMillisecondsSinceEpoch(value.toInt()),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: leftSpace,
+                      interval: 25,
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: bottomSpace,
+                      interval: (maxX - minX) / tickCount,
+                      minIncluded: false,
+                      maxIncluded: false,
+                      getTitlesWidget: (value, meta) => SideTitleWidget(
+                        meta: meta,
+                        fitInside: SideTitleFitInsideData.fromTitleMeta(
+                          meta,
+                          distanceFromEdge: 2,
+                        ),
+                        child: Text(
+                          DateFormat(
+                            showDate ? 'MM/dd\nHH:mm' : 'HH:mm',
+                          ).format(
+                            DateTime.fromMillisecondsSinceEpoch(value.toInt()),
+                          ),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 10),
+                        ),
                       ),
-                      style: const TextStyle(fontSize: 10),
                     ),
                   ),
                 ),
-              ),
-            ),
-            lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipItems: (spots) => spots
-                    .map(
-                      (spot) => LineTooltipItem(
-                        '${DateFormat('MM/dd HH:mm').format(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt()))}\n${spot.barIndex == 0 ? 'CPU' : 'RAM'} ${spot.y.toStringAsFixed(1)}%',
-                        const TextStyle(color: Colors.white),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-            lineBarsData: [
-              for (final pair in [
-                (cpu, const Color(0xFF356AA0)),
-                (ram, const Color(0xFF138A4B)),
-              ])
-                LineChartBarData(
-                  spots: withGaps(pair.$1),
-                  color: pair.$2,
-                  barWidth: 2,
-                  dotData: FlDotData(
-                    show: true,
-                    getDotPainter: (spot, percent, bar, index) =>
-                        FlDotCirclePainter(
-                          radius: 1.8,
-                          color: pair.$2,
-                          strokeWidth: 0,
-                        ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (spots) => spots
+                        .map(
+                          (spot) => LineTooltipItem(
+                            '${DateFormat('MM/dd HH:mm').format(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt()))}\n${spot.barIndex == 0 ? 'CPU' : 'RAM'} ${spot.y.toStringAsFixed(1)}%',
+                            const TextStyle(color: Colors.white),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
-            ],
+                lineBarsData: [
+                  for (final pair in [
+                    (cpu, const Color(0xFF356AA0)),
+                    (ram, const Color(0xFF138A4B)),
+                  ])
+                    LineChartBarData(
+                      spots: withGaps(pair.$1),
+                      color: pair.$2,
+                      barWidth: 2,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, bar, index) =>
+                            FlDotCirclePainter(
+                              radius: 1.8,
+                              color: pair.$2,
+                              strokeWidth: 0,
+                            ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
