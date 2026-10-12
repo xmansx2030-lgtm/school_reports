@@ -28,6 +28,8 @@ from reports.moyasar_gateway import (
 from reports.totp import decrypt_secret, verify_code
 
 from .authentication import OperationsTokenAuthentication, has_operations_access
+from .action_policy import project_actions
+from .action_requests import log_parameters
 from .deployments import DeploymentIntegrationError, GitHubDeploymentClient, all_deployment_states
 from .models import (
     Incident,
@@ -514,7 +516,7 @@ def project_detail(request, project_id: int):
     if project is None:
         return Response({"detail": "المشروع غير موجود."}, status=404)
     checks = project.health_checks.all()[:48]
-    actions = project.actions.select_related("requested_by")[:30]
+    actions = project.actions.select_related("requested_by", "service")[:30]
     metrics = project.metric_snapshots.all()[:48]
     payload = ManagedProjectSerializer(project).data
     payload.update({
@@ -526,12 +528,32 @@ def project_detail(request, project_id: int):
     return Response(payload)
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @authentication_classes([OperationsTokenAuthentication])
 def create_action(request, project_id: int):
     project = ManagedProject.objects.filter(pk=project_id, is_active=True).first()
     if project is None:
         return Response({"detail": "المشروع غير موجود."}, status=404)
+    if request.method == "GET":
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 30)), 100))
+            before_id = int(request.query_params.get("before_id", 0))
+        except (TypeError, ValueError):
+            return Response({"detail": "حدود قائمة الإجراءات غير صالحة."}, status=400)
+        actions = project.actions.select_related("requested_by", "service").order_by("-pk")
+        state = str(request.query_params.get("status") or "")
+        if state:
+            if state not in dict(OperationAction.Status.choices):
+                return Response({"detail": "حالة الإجراء غير صالحة."}, status=400)
+            actions = actions.filter(status=state)
+        if before_id:
+            actions = actions.filter(pk__lt=before_id)
+        rows = list(actions[:limit + 1])
+        return Response({
+            "results": OperationActionSerializer(rows[:limit], many=True).data,
+            "has_more": len(rows) > limit,
+            "next_before_id": rows[limit - 1].pk if len(rows) > limit else None,
+        })
     action_name = str(request.data.get("action") or "")
     allowed = {choice for choice, _ in OperationAction.Action.choices}
     if action_name not in allowed:
@@ -539,26 +561,29 @@ def create_action(request, project_id: int):
     capability = {
         OperationAction.Action.CHECK_NOW: "run_checks",
         OperationAction.Action.READ_LOGS: "view_logs",
+        OperationAction.Action.DIAGNOSTICS: "run_checks",
     }.get(action_name, "run_actions")
     if not _has_capability(request.user, capability):
         return Response({"detail": "لا تملك صلاحية تنفيذ هذا الإجراء."}, status=status.HTTP_403_FORBIDDEN)
-    destructive = action_name not in {OperationAction.Action.CHECK_NOW, OperationAction.Action.READ_LOGS}
+    destructive = action_name not in {OperationAction.Action.CHECK_NOW, OperationAction.Action.READ_LOGS, OperationAction.Action.DIAGNOSTICS}
     if destructive and str(request.data.get("confirmation") or "") != project.slug:
         return Response({"detail": f"اكتب {project.slug} لتأكيد الإجراء.", "confirmation_required": project.slug}, status=409)
 
     service = None
-    if request.data.get("service_id"):
-        service = project.services.filter(pk=request.data.get("service_id"), is_active=True).first()
+    if request.data.get("service_id") and action_name in {OperationAction.Action.RESTART_SERVICE, OperationAction.Action.READ_LOGS}:
+        try:
+            service_id = int(request.data.get("service_id"))
+        except (TypeError, ValueError):
+            return Response({"detail": "معرف الخدمة غير صالح."}, status=400)
+        service = project.services.filter(pk=service_id, is_active=True).first()
         if service is None:
             return Response({"detail": "الخدمة غير موجودة ضمن المشروع."}, status=400)
         if action_name == OperationAction.Action.RESTART_SERVICE and not service.restart_allowed:
             return Response({"detail": "إعادة تشغيل هذه الخدمة غير مفعلة."}, status=403)
     if action_name in {OperationAction.Action.RESTART_SERVICE, OperationAction.Action.READ_LOGS} and service is None:
         return Response({"detail": "حدد خدمة من المشروع."}, status=400)
-    if action_name == OperationAction.Action.CREATE_BACKUP and project.slug != "tawtheeq":
-        return Response({"detail": "نسخة بيانات هذا المشروع لم تعتمد بعد؛ استخدم نسخ Hetzner للخادم."}, status=403)
-    if action_name == OperationAction.Action.RELOAD_PROXY and project.slug != "tawtheeq":
-        return Response({"detail": "إعادة تحميل الوكيل غير مفعلة لهذا المشروع."}, status=403)
+    if action_name != OperationAction.Action.CHECK_NOW and action_name not in project_actions(project):
+        return Response({"detail": "هذا الإجراء غير معتمد للمشروع على الخادم."}, status=403)
     if action_name == OperationAction.Action.RELOAD_PROXY and not _has_capability(request.user, "manage_team"):
         return Response({"detail": "إعادة تحميل الوكيل المشترك متاحة لمدير العمليات فقط."}, status=403)
     if action_name != OperationAction.Action.CHECK_NOW and not _agent_ready():
@@ -567,35 +592,44 @@ def create_action(request, project_id: int):
     parameters = {}
     if action_name == OperationAction.Action.READ_LOGS:
         try:
-            parameters = {
-                "since_minutes": max(5, min(int(request.data.get("since_minutes") or 30), 180)),
-                "tail": max(50, min(int(request.data.get("tail") or 200), 250)),
-            }
+            parameters = log_parameters(request.data)
         except (TypeError, ValueError):
             return Response({"detail": "مدة السجلات أو عدد الأسطر غير صالح."}, status=400)
-    action = OperationAction.objects.create(
-        project=project, service=service, action=action_name,
-        requested_by=request.user, parameters=parameters,
-    )
+    with transaction.atomic():
+        # Serialize action creation per project: repeated taps must not restart twice.
+        ManagedProject.objects.select_for_update().get(pk=project.pk)
+        pending = OperationAction.objects.filter(
+            project=project, service=service, action=action_name,
+            status__in=(OperationAction.Status.QUEUED, OperationAction.Status.RUNNING),
+        ).order_by("pk").first()
+        if pending is not None and action_name == OperationAction.Action.READ_LOGS:
+            keys = parameters if request.data.get("until") or request.data.get("since_at") else ("since_minutes", "tail")
+            if any(pending.parameters.get(key) != parameters[key] for key in keys):
+                return Response({"detail": "قراءة أخرى لهذه الخدمة قيد التنفيذ؛ انتظر نتيجتها قبل تغيير نطاق السجلات."}, status=409)
+        if pending is not None:
+            payload = dict(OperationActionSerializer(pending).data)
+            payload["reused"] = True
+            return Response(payload, status=202)
+        action = OperationAction.objects.create(
+            project=project, service=service, action=action_name,
+            requested_by=request.user, parameters=parameters,
+            status=OperationAction.Status.RUNNING if action_name == OperationAction.Action.CHECK_NOW else OperationAction.Status.QUEUED,
+            started_at=timezone.now() if action_name == OperationAction.Action.CHECK_NOW else None,
+            result_summary="قيد الفحص." if action_name == OperationAction.Action.CHECK_NOW else "بانتظار تنفيذ وكيل الخادم.",
+        )
     if action_name == OperationAction.Action.CHECK_NOW:
-        action.status = OperationAction.Status.RUNNING
-        action.started_at = timezone.now()
-        action.save(update_fields=("status", "started_at"))
         check = probe_project(project)
         action.status = OperationAction.Status.SUCCEEDED if check.ok else OperationAction.Status.FAILED
         action.result_summary = "اكتمل الفحص بنجاح." if check.ok else f"فشل الفحص: {check.error_code or check.status_code}."
         action.finished_at = timezone.now()
         action.save(update_fields=("status", "result_summary", "finished_at"))
-    else:
-        action.result_summary = "بانتظار تنفيذ وكيل الخادم."
-        action.save(update_fields=("result_summary",))
     return Response(OperationActionSerializer(action).data, status=201 if action_name == OperationAction.Action.CHECK_NOW else 202)
 
 
 @api_view(["GET"])
 @authentication_classes([OperationsTokenAuthentication])
 def action_detail(request, project_id: int, action_id: int):
-    action = OperationAction.objects.select_related("service").filter(
+    action = OperationAction.objects.select_related("service", "requested_by").filter(
         pk=action_id, project_id=project_id, project__is_active=True
     ).first()
     if action is None:
@@ -606,6 +640,9 @@ def action_detail(request, project_id: int, action_id: int):
             return Response({"detail": "لا تملك صلاحية قراءة السجلات."}, status=403)
         payload["log_content"] = action.log_content
         payload["log_analysis"] = action.log_analysis
+        payload["log_page"] = action.log_analysis.get("page", {})
+    if action.action == OperationAction.Action.DIAGNOSTICS:
+        payload["diagnostics"] = action.log_analysis.get("diagnostics", {})
     return Response(payload)
 
 

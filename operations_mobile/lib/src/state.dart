@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -34,10 +32,11 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
   }
 }
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
-      return ThemeModeController();
-    });
+final themeModeProvider = StateNotifierProvider<ThemeModeController, ThemeMode>(
+  (ref) {
+    return ThemeModeController();
+  },
+);
 
 enum SessionStatus { loading, signedOut, signedIn }
 
@@ -126,37 +125,42 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardData>> {
   DashboardController(this._api, this._onUnauthorized)
     : super(const AsyncLoading()) {
     refresh();
-    _timer = Timer.periodic(
-      const Duration(seconds: 60),
-      (_) => refresh(silent: true),
-    );
   }
   final OperationsApi _api;
   final Future<void> Function() _onUnauthorized;
-  Timer? _timer;
+  bool _refreshing = false;
+  String? refreshError;
 
   Future<void> refresh({bool silent = false}) async {
-    if (!silent || !state.hasValue) state = const AsyncLoading();
+    if (_refreshing) return;
+    _refreshing = true;
+    refreshError = null;
+    final previous = state.asData?.value;
+    if (previous == null) state = const AsyncLoading();
     try {
-      state = AsyncData(await _api.dashboard());
+      final result = await _api.dashboard();
+      if (mounted) state = AsyncData(result);
     } catch (error, stack) {
       if (error is ApiException &&
           (error.statusCode == 401 || error.statusCode == 403)) {
         await _onUnauthorized();
       }
-      state = AsyncError(error, stack);
+      if (mounted) {
+        refreshError = error is ApiException
+            ? error.message
+            : 'تعذر تحديث البيانات.';
+        state = previous == null
+            ? AsyncError(error, stack)
+            : AsyncData(previous);
+      }
+    } finally {
+      _refreshing = false;
     }
   }
 
   Future<void> acknowledge(int incidentId) async {
     await _api.acknowledgeIncident(incidentId);
     await refresh(silent: true);
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 }
 
@@ -181,7 +185,6 @@ final projectProvider = FutureProvider.autoDispose.family<ProjectDetails, int>((
 final deploymentProvider = FutureProvider.autoDispose<DeploymentOverview>((
   ref,
 ) {
-  ref.watch(dashboardProvider);
   return ref.watch(apiProvider).deploymentStatus();
 });
 

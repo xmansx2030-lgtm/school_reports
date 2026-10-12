@@ -2,6 +2,10 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    # This proxy serves every project on the shared edge network. Leave ample
+    # headroom while preventing an unbounded process from exhausting the host.
+    mem_limit: 512m
+    mem_reservation: 128m
     security_opt:
       - no-new-privileges:true
     depends_on:

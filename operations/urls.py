@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import server_views, views
+from . import analytics_views, server_views, views
 
 app_name = "operations"
 
@@ -11,6 +11,8 @@ urlpatterns = [
     path("accounts/", views.accounts, name="accounts"),
     path("accounts/<int:user_id>/", views.account_detail, name="account-detail"),
     path("dashboard/", views.dashboard, name="dashboard"),
+    path("servers/<int:server_id>/analytics/", analytics_views.server_history, name="server-analytics"),
+    path("projects/<int:project_id>/analytics/", analytics_views.project_history, name="project-analytics"),
     path("servers/<int:server_id>/provider/", server_views.provider_overview, name="provider-overview"),
     path("servers/<int:server_id>/provider/actions/", server_views.provider_action, name="provider-action"),
     path("servers/<int:server_id>/provider/actions/<int:action_id>/", server_views.provider_action_status, name="provider-action-status"),

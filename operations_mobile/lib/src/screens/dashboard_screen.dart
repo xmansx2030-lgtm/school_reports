@@ -25,7 +25,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   static const _titles = ['نظرة عامة', 'الخوادم', 'التنبيهات', 'الحساب'];
   static const _subtitles = [
-    'بيئة الإنتاج · اتصال مباشر',
+    'بيئة الإنتاج · متابعة وإجراءات',
     'الخوادم والمشاريع المُراقَبة',
     'الحالات التي تحتاج إلى متابعة',
     'حسابك وإعدادات الفريق',
@@ -72,7 +72,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         actions: [
           IconButton(
             tooltip: 'تحديث الحالة',
-            onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
+            onPressed: _refresh,
             icon: const Icon(Icons.sync_rounded),
           ),
           const SizedBox(width: 6),
@@ -133,8 +133,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       _ => _overviewTab(data),
     };
     return RefreshIndicator(
-      onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+      onRefresh: _refresh,
       child: ListView(
+        key: PageStorageKey('dashboard-$_index'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
@@ -150,6 +151,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _refresh() async {
+    final controller = ref.read(dashboardProvider.notifier);
+    await controller.refresh();
+    ref.invalidate(deploymentProvider);
+    if (mounted && controller.refreshError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${controller.refreshError} تبقى آخر قراءة ناجحة معروضة.',
+          ),
+        ),
+      );
+    }
   }
 
   List<Widget> _overviewTab(DashboardData data) => [
@@ -1177,23 +1193,24 @@ class _IncidentsPanel extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () async {
-                            try {
-                              await ref
-                                  .read(dashboardProvider.notifier)
-                                  .acknowledge(incident.id);
-                            } on ApiException catch (error) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(error.message)),
-                                );
+                        if (data.currentUser.can('acknowledge_incidents'))
+                          TextButton.icon(
+                            onPressed: () async {
+                              try {
+                                await ref
+                                    .read(dashboardProvider.notifier)
+                                    .acknowledge(incident.id);
+                              } on ApiException catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(error.message)),
+                                  );
+                                }
                               }
-                            }
-                          },
-                          icon: const Icon(Icons.done, size: 18),
-                          label: const Text('تم الاطلاع'),
-                        ),
+                            },
+                            icon: const Icon(Icons.done, size: 18),
+                            label: const Text('تم الاطلاع'),
+                          ),
                       ],
                     ),
                   ],

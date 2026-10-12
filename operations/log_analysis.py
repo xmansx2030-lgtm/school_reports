@@ -5,12 +5,16 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-MAX_LINES = 250
-MAX_CHARS = 60000
+MAX_LINES = 1000
+MAX_CHARS = 200000
 
-_SENSITIVE_KEY = r"(?:password|passwd|secret|client[_-]?secret|api[_-]?key|access[_-]?token|refresh[_-]?token|cookie|set-cookie|private[_-]?key)"
-_SENSITIVE_VALUE = r'''(?:"[^"]*"|'[^']*'|[^\s,;&}\]]+)'''
+_SENSITIVE_KEY = r"(?:password|passwd|secret|client[_-]?secret|api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|cookie|set-cookie|private[_-]?key|csrfmiddlewaretoken|csrftoken|sessionid)"
+_QUOTED_VALUE = r'''(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')'''
+_SENSITIVE_VALUE = rf'''(?:{_QUOTED_VALUE}|[^\s,;&}}\]]+)'''
 _REDACTIONS = (
+    # Cookie headers contain several independently named credentials separated
+    # by semicolons. Redact the entire value, including escaped JSON quotes.
+    (re.compile(rf'''(?i)((?:["']?(?:set-cookie|cookie)["']?)\s*[:=]\s*)(?:{_QUOTED_VALUE}|[^\r\n]*)'''), r"\1[REDACTED]"),
     (re.compile(r'''(?i)((?:["']?authorization["']?)\s*[:=]\s*["']?(?:bearer|basic|ops-token)\s+)[^\s,"'}]+'''), r"\1[REDACTED]"),
     (re.compile(rf'''(?i)((?:["']?{_SENSITIVE_KEY}["']?)\s*[:=]\s*){_SENSITIVE_VALUE}'''), r"\1[REDACTED]"),
     (re.compile(r"(?i)([?&](?:token|key|secret|password|signature|code)=)[^&\s]+"), r"\1[REDACTED]"),
@@ -40,16 +44,18 @@ _GUIDANCE = {
 
 
 def sanitize_and_analyze(raw: str) -> tuple[str, dict]:
-    lines = str(raw or "").splitlines()[-MAX_LINES:]
+    # Redact the complete bounded host response before cutting lines or bytes.
+    # Otherwise a BEGIN marker or a quoted secret can be cut off first.
+    lines = str(raw or "").splitlines()
     cleaned = []
-    levels: Counter[str] = Counter()
-    categories: Counter[str] = Counter()
     in_private_key = False
     for line in lines:
-        safe = line[:500]
+        safe = line
+        prefix = re.match(r"^(\d{4}-\d{2}-\d{2}T\S+Z\s+\[[^\]]+\]\s+)", safe)
+        label = prefix.group(1) if prefix else ""
         if re.search(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", safe):
             in_private_key = True
-            cleaned.append("[REDACTED_PRIVATE_KEY]")
+            cleaned.append(label + "[REDACTED_PRIVATE_KEY]")
             continue
         if in_private_key:
             if re.search(r"-----END [A-Z ]*PRIVATE KEY-----", safe):
@@ -57,15 +63,32 @@ def sanitize_and_analyze(raw: str) -> tuple[str, dict]:
             continue
         for pattern, replacement in _REDACTIONS:
             safe = pattern.sub(replacement, safe)
-        cleaned.append(safe)
-        if re.search(r"(?i)\b(error|exception|fatal|critical|traceback)\b", safe):
+        # A Docker tail can begin in the middle of a PEM block.
+        if re.search(r"(?:^|\s)[A-Za-z0-9+/]{48,}={0,2}\s*$", safe):
+            safe = label + "[REDACTED_KEY_MATERIAL]"
+        cleaned.append(safe[:2000])
+    truncated = len(cleaned) > MAX_LINES or any(len(line) > 2000 for line in lines)
+    selected = []
+    size = 0
+    for line in reversed(cleaned[-MAX_LINES:]):
+        if size + len(line) + 1 > MAX_CHARS:
+            truncated = True
+            break
+        selected.append(line)
+        size += len(line) + 1
+    omitted_lines = len(cleaned) - len(selected)
+    cleaned = list(reversed(selected))
+    levels: Counter[str] = Counter()
+    categories: Counter[str] = Counter()
+    for safe in cleaned:
+        if re.search(r"(?i)\b(error|exception|fatal|critical|traceback)\b|\b\w+(?:Error|Exception)\b", safe):
             levels["error"] += 1
         elif re.search(r"(?i)\b(warn|warning)\b", safe):
             levels["warning"] += 1
         for name, pattern in _CATEGORIES.items():
             if pattern.search(safe):
                 categories[name] += 1
-    content = "\n".join(cleaned)[-MAX_CHARS:]
+    content = "\n".join(cleaned)
     return content, {
         "lines": len(cleaned),
         "errors": levels["error"],
@@ -75,5 +98,6 @@ def sanitize_and_analyze(raw: str) -> tuple[str, dict]:
             {"category": name, "count": count, "next_check": _GUIDANCE[name]}
             for name, count in categories.most_common()
         ],
-        "truncated": len(str(raw or "").splitlines()) > MAX_LINES or len(content) >= MAX_CHARS,
+        "truncated": truncated,
+        "omitted_lines": omitted_lines,
     }

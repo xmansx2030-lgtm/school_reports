@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import timedelta
 
@@ -30,8 +31,17 @@ class Command(BaseCommand):
             return
         if operation == "claim":
             with transaction.atomic():
+                now = timezone.now()
+                OperationAction.objects.filter(
+                    status=OperationAction.Status.QUEUED,
+                    requested_at__lt=now - timedelta(minutes=30),
+                ).update(
+                    status=OperationAction.Status.FAILED, error_code="queue_expired",
+                    result_summary="انتهت صلاحية الطلب قبل بدء التنفيذ؛ أعد طلب الإجراء إذا بقي مطلوبًا.",
+                    finished_at=now,
+                )
                 # A crashed runner must not leave an action advertised as in progress forever.
-                cutoff = timezone.now() - timedelta(minutes=90)
+                cutoff = now - timedelta(minutes=90)
                 OperationAction.objects.filter(
                     status=OperationAction.Status.RUNNING, started_at__lt=cutoff
                 ).update(
@@ -40,12 +50,21 @@ class Command(BaseCommand):
                     result_summary="انتهت مهلة وكيل الخادم قبل تأكيد النتيجة.",
                     finished_at=timezone.now(),
                 )
+                OperationAction.objects.filter(
+                    status=OperationAction.Status.RUNNING,
+                    started_at__lt=now - timedelta(minutes=10),
+                ).exclude(action=OperationAction.Action.CREATE_BACKUP).update(
+                    status=OperationAction.Status.FAILED, error_code="runner_timeout",
+                    result_summary="انتهت مهلة الإجراء قبل تأكيد النتيجة؛ تحقق من الحالة قبل تكراره.",
+                    finished_at=now,
+                )
                 action = (
                     OperationAction.objects.select_for_update()
                     # service is nullable. Joining it here makes PostgreSQL reject
                     # SELECT FOR UPDATE on the nullable side of the outer join.
                     .select_related("project")
                     .filter(status=OperationAction.Status.QUEUED)
+                    .exclude(action=OperationAction.Action.CHECK_NOW)
                     .order_by("requested_at", "pk")
                     .first()
                 )
@@ -86,9 +105,32 @@ class Command(BaseCommand):
                 fields = ["status", "error_code", "result_summary", "finished_at"]
                 if action.action == OperationAction.Action.READ_LOGS:
                     action.log_content, action.log_analysis = sanitize_and_analyze(
-                        str(payload.get("log_content") or "")[:100000]
+                        str(payload.get("log_content") or "")
                     )
+                    page = payload.get("log_page")
+                    if isinstance(page, dict):
+                        action.log_analysis["page"] = {
+                            key: value for key, value in page.items()
+                            if key in {"since_at", "until", "since_minutes", "requested_tail", "returned_lines",
+                                       "earliest_at", "latest_at", "has_more", "truncated", "next_until", "retention_note",
+                                       "boundary_collision", "omitted_container_count"}
+                            and isinstance(value, (str, int, bool))
+                        }
+                        action.log_analysis["page"]["truncated"] = bool(page.get("truncated")) or action.log_analysis["truncated"]
+                        action.log_analysis["page"]["returned_lines"] = action.log_analysis["lines"]
+                        if action.log_analysis.get("omitted_lines"):
+                            stamps = re.findall(r"(?m)^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z)\s", action.log_content)
+                            # The next page must start at the displayed boundary,
+                            # not at lines removed by the storage byte limit.
+                            action.log_analysis["page"].update({
+                                "has_more": bool(stamps), "next_until": stamps[0] if stamps else "",
+                                "earliest_at": stamps[0] if stamps else "",
+                            })
                     fields.extend(("log_content", "log_analysis"))
+                elif action.action == OperationAction.Action.DIAGNOSTICS:
+                    diagnostic = payload.get("diagnostics")
+                    action.log_analysis = {"diagnostics": diagnostic if isinstance(diagnostic, dict) else {}}
+                    fields.append("log_analysis")
                 action.save(update_fields=fields)
         except (KeyError, TypeError, ValueError, OperationAction.DoesNotExist) as exc:
             raise CommandError("Invalid or stale host action result") from exc

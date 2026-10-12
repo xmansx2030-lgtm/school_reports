@@ -33,3 +33,11 @@ class OperationsInventoryScriptTests(SimpleTestCase):
             _image_priority(service="worker", labels=labels),
             _image_priority(service="web", labels={}),
         )
+
+    def test_infrastructure_revision_does_not_replace_application_identity(self):
+        labels = {"org.opencontainers.image.revision": "a" * 40,
+                  "org.opencontainers.image.source": "https://github.com/caddyserver/caddy"}
+        self.assertGreater(
+            _image_priority(service="backend", labels={}),
+            _image_priority(service="caddy", labels=labels),
+        )

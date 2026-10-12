@@ -615,19 +615,22 @@ class OperationsApiTests(TestCase):
     @override_settings(OPERATIONS_CAPACITY_SUSTAINED_SAMPLES=3, CPU_ALERT_PERCENT=80)
     @patch("operations.services.enqueue_named_task")
     def test_capacity_alert_requires_sustained_pressure(self, enqueue_task):
-        for cpu_percent in (95, 20, 95):
-            capture_server_metrics(
-                self.server,
-                {
-                    "cpu_percent": cpu_percent,
-                    "memory_percent": 40,
-                    "disk_percent": 30,
-                    "redis_used_percent": 10,
-                    "queue_lengths": {"default": 0},
-                },
-            )
+        now = timezone.now()
+        for index, cpu_percent in enumerate((95, 20, 95)):
+            with patch("operations.services.timezone.now", return_value=now - timedelta(minutes=(2 - index) * 5)):
+                capture_server_metrics(
+                    self.server,
+                    {
+                        "source": "host", "sample_duration_seconds": 300,
+                        "cpu_percent": cpu_percent,
+                        "memory_percent": 40,
+                        "disk_percent": 30,
+                        "redis_used_percent": 10,
+                        "queue_lengths": {"default": 0},
+                    },
+                )
 
-        self.assertFalse(Incident.objects.filter(dedupe_key=f"server:{self.server.pk}:capacity").exists())
+        self.assertFalse(Incident.objects.filter(dedupe_key=f"server:{self.server.pk}:host-capacity").exists())
         enqueue_task.assert_not_called()
 
     @override_settings(
@@ -637,19 +640,22 @@ class OperationsApiTests(TestCase):
     )
     @patch("operations.services.enqueue_named_task")
     def test_capacity_alert_includes_recommended_action(self, enqueue_task):
-        for _ in range(3):
-            capture_server_metrics(
-                self.server,
-                {
-                    "cpu_percent": 91,
-                    "memory_percent": 40,
-                    "disk_percent": 30,
-                    "redis_used_percent": 10,
-                    "queue_lengths": {"images": 12},
-                },
-            )
+        now = timezone.now()
+        for index in range(3):
+            with patch("operations.services.timezone.now", return_value=now - timedelta(minutes=(2 - index) * 5)):
+                capture_server_metrics(
+                    self.server,
+                    {
+                        "source": "host", "sample_duration_seconds": 300,
+                        "cpu_percent": 91,
+                        "memory_percent": 40,
+                        "disk_percent": 30,
+                        "redis_used_percent": 10,
+                        "queue_lengths": {"images": 12},
+                    },
+                )
 
-        incident = Incident.objects.get(dedupe_key=f"server:{self.server.pk}:capacity")
+        incident = Incident.objects.get(dedupe_key=f"server:{self.server.pk}:host-capacity")
         self.assertIn("CPU مرتفع بشكل مستمر", incident.message)
         self.assertIn("الإجراء المناسب", incident.message)
         self.assertIn("worker إضافي", incident.message)

@@ -4,6 +4,7 @@ import json
 import logging
 import socket
 import time
+from datetime import timedelta
 from decimal import InvalidOperation
 from urllib.parse import urlsplit
 from urllib.error import HTTPError, URLError
@@ -63,36 +64,48 @@ def _queue_names_over_threshold(snapshots: list[ServerMetricSnapshot], threshold
     return sustained
 
 
-def _capacity_pressure_messages(server: ManagedServer) -> tuple[list[str], str]:
+def _capacity_pressure_messages(server: ManagedServer, source: str) -> tuple[list[str], str, bool]:
     sample_count = _setting_int("OPERATIONS_CAPACITY_SUSTAINED_SAMPLES", 3, minimum=2, maximum=12)
-    snapshots = list(server.metric_snapshots.order_by("-captured_at")[:sample_count])
+    snapshots = list(server.metric_snapshots.filter(source=source).order_by("-captured_at")[:sample_count])
     if len(snapshots) < sample_count:
-        return [], f"لا يكفي سجل القياسات بعد. المطلوب {sample_count} قياسات متتالية قبل التنبيه."
+        return [], f"لا يكفي سجل القياسات بعد. المطلوب {sample_count} قياسات متتالية قبل التنبيه.", False
+
+    # Several samples collected in the same second do not establish sustained
+    # pressure. Neither do samples separated by a collector outage.
+    span_seconds = (snapshots[0].captured_at - snapshots[-1].captured_at).total_seconds()
+    gaps = [(left.captured_at - right.captured_at).total_seconds()
+            for left, right in zip(snapshots, snapshots[1:], strict=False)]
+    if (span_seconds < (sample_count - 1) * 240 or any(gap > 660 for gap in gaps)
+            or timezone.now() - snapshots[0].captured_at > timedelta(minutes=10)):
+        return [], "الفترة المسجلة لا تكفي لإثبات ضغط مستمر؛ لم تتغير حالة التنبيه.", False
 
     cpu_threshold = _setting_int("CPU_ALERT_PERCENT", 85, minimum=1, maximum=100)
     memory_threshold = _setting_int("MEMORY_ALERT_PERCENT", 85, minimum=1, maximum=100)
     disk_threshold = _setting_int("DISK_ALERT_PERCENT", 80, minimum=1, maximum=100)
     redis_threshold = _setting_int("REDIS_MEMORY_ALERT_PERCENT", 80, minimum=1, maximum=100)
     queue_threshold = _setting_int("CELERY_QUEUE_ALERT_LENGTH", 200, minimum=1)
-    window_minutes = sample_count * 5
+    window_minutes = round(span_seconds / 60, 1)
 
     messages: list[str] = []
     latest = snapshots[0]
     latest_queues = latest.queue_lengths or {}
 
-    if _all_at_or_above(snapshots, "cpu_percent", cpu_threshold):
+    reliable_cpu = source == ServerMetricSnapshot.Source.HOST and all(
+        (snapshot.sample_duration_seconds or 0) >= 60 for snapshot in snapshots
+    )
+    if reliable_cpu and _all_at_or_above(snapshots, "cpu_percent", cpu_threshold):
         messages.append(
             f"CPU مرتفع بشكل مستمر: آخر قراءة {latest.cpu_percent}%، والحد {cpu_threshold}% "
             f"لمدة تقارب {window_minutes} دقيقة. الإجراء المناسب: راجع المهام الثقيلة والـ workers أولًا، "
             "ثم ارفع الخادم إلى خطة CPU أعلى إذا تكرر الضغط أثناء الاستخدام الطبيعي."
         )
-    if _all_at_or_above(snapshots, "memory_percent", memory_threshold):
+    if source == ServerMetricSnapshot.Source.HOST and _all_at_or_above(snapshots, "memory_percent", memory_threshold):
         messages.append(
             f"الذاكرة مرتفعة بشكل مستمر: آخر قراءة {latest.memory_percent}%، والحد {memory_threshold}% "
             f"لمدة تقارب {window_minutes} دقيقة. الإجراء المناسب: افحص أكثر الحاويات استهلاكًا للذاكرة، "
             "ثم ارفع RAM أو افصل قاعدة البيانات/العمال إلى خادم مستقل إذا كان النمو مستمرًا."
         )
-    if _all_at_or_above(snapshots, "disk_percent", disk_threshold):
+    if source == ServerMetricSnapshot.Source.HOST and _all_at_or_above(snapshots, "disk_percent", disk_threshold):
         messages.append(
             f"القرص ممتلئ بشكل متزايد: آخر قراءة {latest.disk_percent}%، والحد {disk_threshold}% "
             f"لمدة تقارب {window_minutes} دقيقة. الإجراء المناسب: نظف صور Docker القديمة والسجلات، "
@@ -115,7 +128,11 @@ def _capacity_pressure_messages(server: ManagedServer) -> tuple[list[str], str]:
             f"لمدة تقارب {window_minutes} دقيقة. الإجراء المناسب: شغّل worker إضافي للطابور المتأخر، "
             "وافحص سبب بطء المهام قبل زيادة الزيارات أو تشغيل أعمال دفعية جديدة."
         )
-    return messages, f"تم تقييم آخر {sample_count} قياسات متتالية."
+    required = ("memory_percent", "disk_percent") if source == ServerMetricSnapshot.Source.HOST else ("redis_memory_percent",)
+    complete = all(getattr(snapshot, field) is not None for snapshot in snapshots for field in required)
+    if source == ServerMetricSnapshot.Source.HOST:
+        complete = complete and reliable_cpu and all(snapshot.cpu_percent is not None for snapshot in snapshots)
+    return messages, f"تم تقييم {sample_count} قياسات من المصدر نفسه خلال {window_minutes} دقيقة.", complete
 
 
 def _safe_error_code(exc: Exception) -> str:
@@ -263,8 +280,18 @@ def probe_all_projects() -> list[HealthCheck]:
 
 def capture_server_metrics(server: ManagedServer, report: dict) -> ServerMetricSnapshot:
     now = timezone.now()
+    source = str(report.get("source") or ServerMetricSnapshot.Source.CAPACITY)
+    if source not in {ServerMetricSnapshot.Source.HOST, ServerMetricSnapshot.Source.CAPACITY}:
+        source = ServerMetricSnapshot.Source.CAPACITY
+    try:
+        duration = max(0, min(3600, int(report.get("sample_duration_seconds") or 0))) or None
+    except (ValueError, TypeError):
+        duration = None
     snapshot = ServerMetricSnapshot.objects.create(
         server=server,
+        source=source,
+        sample_duration_seconds=duration,
+        host_details=report.get("host_details") if isinstance(report.get("host_details"), dict) else {},
         cpu_percent=report.get("cpu_percent"),
         memory_percent=report.get("memory_percent"),
         disk_percent=report.get("disk_percent"),
@@ -279,21 +306,24 @@ def capture_server_metrics(server: ManagedServer, report: dict) -> ServerMetricS
         int(getattr(settings, "DISK_ALERT_PERCENT", 80)),
     ]
     known = [(float(value), threshold) for value, threshold in zip(values, thresholds, strict=True) if value is not None]
-    status = ManagedServer.Status.DEGRADED if any(value >= threshold for value, threshold in known) else ManagedServer.Status.HEALTHY
-    ManagedServer.objects.filter(pk=server.pk).update(
-        status=status,
-        cpu_percent=report.get("cpu_percent"),
-        memory_percent=report.get("memory_percent"),
-        disk_percent=report.get("disk_percent"),
-        last_checked_at=now,
-    )
-    key = f"server:{server.pk}:capacity"
+    status = (ManagedServer.Status.UNKNOWN if not known else
+              ManagedServer.Status.DEGRADED if any(value >= threshold for value, threshold in known)
+              else ManagedServer.Status.HEALTHY)
+    if source == ServerMetricSnapshot.Source.HOST:
+        ManagedServer.objects.filter(pk=server.pk).update(
+            status=status,
+            cpu_percent=report.get("cpu_percent"),
+            memory_percent=report.get("memory_percent"),
+            disk_percent=report.get("disk_percent"),
+            last_checked_at=now,
+        )
+    key = f"server:{server.pk}:{'host-capacity' if source == ServerMetricSnapshot.Source.HOST else 'capacity'}"
     open_incident = Incident.objects.filter(
         dedupe_key=key,
         status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED),
     ).first()
     notify_incident = None
-    alerts, evaluation_summary = _capacity_pressure_messages(server)
+    alerts, evaluation_summary, complete = _capacity_pressure_messages(server, source)
     severity = Incident.Severity.CRITICAL if any("القرص" in alert for alert in alerts) else Incident.Severity.WARNING
     if alerts and open_incident is None:
         notify_incident = Incident.objects.create(
@@ -308,7 +338,7 @@ def capture_server_metrics(server: ManagedServer, report: dict) -> ServerMetricS
         open_incident.message = ("\n\n".join(alerts) + f"\n\n{evaluation_summary}")[:2000]
         open_incident.severity = severity
         open_incident.save(update_fields=("title", "message", "severity"))
-    elif not alerts and open_incident is not None:
+    elif not alerts and complete and open_incident is not None:
         open_incident.status = Incident.Status.RESOLVED
         open_incident.resolved_at = now
         open_incident.save(update_fields=("status", "resolved_at"))

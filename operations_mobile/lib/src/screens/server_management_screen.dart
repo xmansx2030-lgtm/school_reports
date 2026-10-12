@@ -7,6 +7,7 @@ import '../config.dart';
 import '../models.dart';
 import '../state.dart';
 import 'emergency_screen.dart';
+import 'analytics_panel.dart';
 
 class ServerManagementScreen extends ConsumerStatefulWidget {
   const ServerManagementScreen({super.key, required this.server});
@@ -40,15 +41,28 @@ class _ServerManagementScreenState
           !(await emergency.hasToken())) {
         return provider;
       }
-    } on ApiException {
+    } on ApiException catch (error) {
       if (AppConfig.emergencyUrl.isEmpty || !(await emergency.hasToken())) {
-        rethrow;
+        return ProviderOverview.fromJson({
+          'configured': false,
+          'can_control': false,
+          'detail': error.message,
+        });
       }
     }
-    return emergency.overview();
+    try {
+      return await emergency.overview();
+    } on ApiException catch (error) {
+      return ProviderOverview.fromJson({
+        'configured': false,
+        'can_control': false,
+        'detail': error.message,
+      });
+    }
   }
 
   void _refresh() {
+    ref.read(dashboardProvider.notifier).refresh(silent: true);
     setState(() {
       _overview = _loadOverview();
     });
@@ -153,207 +167,219 @@ class _ServerManagementScreenState
   };
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(widget.server.name),
-      actions: [
-        IconButton(
-          onPressed: _refresh,
-          tooltip: 'تحديث بيانات Hetzner',
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
-    ),
-    body: FutureBuilder<ProviderOverview>(
-      future: _overview,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData && !snapshot.hasError) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          final error = snapshot.error;
-          return Center(
-            child: Text(
-              error is ApiException
-                  ? error.message
-                  : 'تعذر قراءة حالة Hetzner.',
+  Widget build(BuildContext context) {
+    final servers =
+        ref.watch(dashboardProvider).asData?.value.servers ??
+        const <ServerInfo>[];
+    final currentServer =
+        servers.where((server) => server.id == widget.server.id).firstOrNull ??
+        widget.server;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.server.name),
+        actions: [
+          IconButton(
+            onPressed: _refresh,
+            tooltip: 'تحديث بيانات Hetzner',
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: FutureBuilder<ProviderOverview>(
+        future: _overview,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData && !snapshot.hasError) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            final error = snapshot.error;
+            return Center(
+              child: Text(
+                error is ApiException
+                    ? error.message
+                    : 'تعذر قراءة حالة Hetzner.',
+              ),
+            );
+          }
+          final overview = snapshot.data!;
+          final provider = overview.server;
+          return RefreshIndicator(
+            onRefresh: () async {
+              _refresh();
+              await _overview;
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                AnalyticsPanel(id: widget.server.id, server: true),
+                const SizedBox(height: 12),
+                if (_notice != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(_notice!),
+                    ),
+                  ),
+                if (AppConfig.emergencyUrl.isNotEmpty) ...[
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const EmergencyScreen(),
+                        ),
+                      );
+                      if (mounted) _refresh();
+                    },
+                    icon: const Icon(Icons.power_settings_new),
+                    label: const Text('مسار الطوارئ المستقل'),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (provider == null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Text(
+                        overview.detail.isEmpty
+                            ? 'بيانات Hetzner غير متاحة.'
+                            : overview.detail,
+                      ),
+                    ),
+                  )
+                else ...[
+                  if (provider.partialErrors.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'تعذرت قراءة بعض بيانات Hetzner: ${provider.partialErrors.join('، ')}. حدّث الصفحة لاحقًا.',
+                      ),
+                    ),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hetzner: ${provider.status} · ${provider.serverType} · ${provider.location}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'CPU لدى Hetzner: ${provider.latestMetric('cpu')?.toStringAsFixed(1) ?? '—'}% '
+                            '· RAM داخل الخادم: ${currentServer.memory?.toStringAsFixed(1) ?? '—'}% '
+                            '· القرص داخل الخادم: ${currentServer.disk?.toStringAsFixed(1) ?? '—'}%',
+                          ),
+                          Text(
+                            'حماية الحذف: ${provider.deleteProtected ? 'مفعلة' : 'غير مفعلة'} '
+                            '· النسخ التلقائية: ${provider.backupWindow.isEmpty ? 'غير مفعلة' : 'مفعلة'}',
+                          ),
+                          if (provider.fetchedAt != null)
+                            Text(
+                              'آخر قراءة من Hetzner: ${DateFormat('yyyy/MM/dd HH:mm').format(provider.fetchedAt!)}',
+                            ),
+                          if (currentServer.lastCheckedAt != null)
+                            Text(
+                              'آخر جرد من المضيف: ${DateFormat('yyyy/MM/dd HH:mm').format(currentServer.lastCheckedAt!)}',
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'إجراءات الخادم',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          if (!overview.canControl)
+                            const Text(
+                              'التحكم عبر Django غير مهيأ لهذا الحساب؛ استخدم مسار الطوارئ المستقل.',
+                            ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final action in [
+                                if (provider.status == 'off') 'poweron',
+                                if (provider.status == 'running') ...[
+                                  'reboot',
+                                  'shutdown',
+                                ],
+                                'snapshot',
+                              ])
+                                OutlinedButton(
+                                  onPressed: overview.canControl && !_busy
+                                      ? () => _run(action)
+                                      : null,
+                                  child: Text(_actionTitle(action)),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'نسخ Hetzner الأخيرة',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          for (final backup in provider.backups.take(7))
+                            ListTile(
+                              dense: true,
+                              title: Text(
+                                '${backup['description'] ?? 'Backup'}',
+                              ),
+                              subtitle: Text('${backup['created'] ?? ''}'),
+                              trailing: Text('${backup['status'] ?? ''}'),
+                            ),
+                          if (provider.backups.isEmpty)
+                            const Text('لا توجد نسخ معروضة.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'إجراءات Hetzner الأخيرة',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          for (final action in provider.recentActions.take(10))
+                            ListTile(
+                              dense: true,
+                              title: Text('${action['command'] ?? ''}'),
+                              subtitle: Text('${action['started'] ?? ''}'),
+                              trailing: Text('${action['status'] ?? ''}'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           );
-        }
-        final overview = snapshot.data!;
-        final provider = overview.server;
-        return RefreshIndicator(
-          onRefresh: () async {
-            _refresh();
-            await _overview;
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (_notice != null)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(_notice!),
-                  ),
-                ),
-              if (AppConfig.emergencyUrl.isNotEmpty) ...[
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const EmergencyScreen(),
-                      ),
-                    );
-                    if (mounted) _refresh();
-                  },
-                  icon: const Icon(Icons.power_settings_new),
-                  label: const Text('مسار الطوارئ المستقل'),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (provider == null)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Text(
-                      overview.detail.isEmpty
-                          ? 'بيانات Hetzner غير متاحة.'
-                          : overview.detail,
-                    ),
-                  ),
-                )
-              else ...[
-                if (provider.partialErrors.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'تعذرت قراءة بعض بيانات Hetzner: ${provider.partialErrors.join('، ')}. حدّث الصفحة لاحقًا.',
-                    ),
-                  ),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hetzner: ${provider.status} · ${provider.serverType} · ${provider.location}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'CPU لدى Hetzner: ${provider.latestMetric('cpu')?.toStringAsFixed(1) ?? '—'}% '
-                          '· RAM داخل الخادم: ${widget.server.memory?.toStringAsFixed(1) ?? '—'}% '
-                          '· القرص داخل الخادم: ${widget.server.disk?.toStringAsFixed(1) ?? '—'}%',
-                        ),
-                        Text(
-                          'حماية الحذف: ${provider.deleteProtected ? 'مفعلة' : 'غير مفعلة'} '
-                          '· النسخ التلقائية: ${provider.backupWindow.isEmpty ? 'غير مفعلة' : 'مفعلة'}',
-                        ),
-                        if (provider.fetchedAt != null)
-                          Text(
-                            'آخر قراءة من Hetzner: ${DateFormat('yyyy/MM/dd HH:mm').format(provider.fetchedAt!)}',
-                          ),
-                        if (widget.server.lastCheckedAt != null)
-                          Text(
-                            'آخر جرد من المضيف: ${DateFormat('yyyy/MM/dd HH:mm').format(widget.server.lastCheckedAt!)}',
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'إجراءات الخادم',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        if (!overview.canControl)
-                          const Text(
-                            'التحكم عبر Django غير مهيأ لهذا الحساب؛ استخدم مسار الطوارئ المستقل.',
-                          ),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final action in [
-                              if (provider.status == 'off') 'poweron',
-                              if (provider.status == 'running') ...[
-                                'reboot',
-                                'shutdown',
-                              ],
-                              'snapshot',
-                            ])
-                              OutlinedButton(
-                                onPressed: overview.canControl && !_busy
-                                    ? () => _run(action)
-                                    : null,
-                                child: Text(_actionTitle(action)),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'نسخ Hetzner الأخيرة',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        for (final backup in provider.backups.take(7))
-                          ListTile(
-                            dense: true,
-                            title: Text('${backup['description'] ?? 'Backup'}'),
-                            subtitle: Text('${backup['created'] ?? ''}'),
-                            trailing: Text('${backup['status'] ?? ''}'),
-                          ),
-                        if (provider.backups.isEmpty)
-                          const Text('لا توجد نسخ معروضة.'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'إجراءات Hetzner الأخيرة',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        for (final action in provider.recentActions.take(10))
-                          ListTile(
-                            dense: true,
-                            title: Text('${action['command'] ?? ''}'),
-                            subtitle: Text('${action['started'] ?? ''}'),
-                            trailing: Text('${action['status'] ?? ''}'),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    ),
-  );
+        },
+      ),
+    );
+  }
 }
