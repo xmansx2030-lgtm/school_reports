@@ -18,19 +18,23 @@ from operations.models import HostAgentHeartbeat, OperationAction
 
 class Command(BaseCommand):
     help = "Heartbeat, claim, or complete one host operation. For the host runner only."
+    # CI and deployment run the full checks. Loading every URL/view/PDF module
+    # for each minute's DB-only poll is expensive and provides no new safety.
+    requires_system_checks = []
 
     def add_arguments(self, parser):
-        parser.add_argument("operation", choices=("heartbeat", "claim", "complete"))
+        parser.add_argument("operation", choices=("heartbeat", "claim", "poll", "complete"))
 
     def handle(self, *args, **options):
         operation = options["operation"]
-        if operation == "heartbeat":
+        if operation in {"heartbeat", "poll"}:
             HostAgentHeartbeat.objects.update_or_create(
                 name="primary", defaults={"last_seen_at": timezone.now()}
             )
-            self.stdout.write('{"ready":true}')
-            return
-        if operation == "claim":
+            if operation == "heartbeat":
+                self.stdout.write('{"ready":true}')
+                return
+        if operation in {"claim", "poll"}:
             with transaction.atomic():
                 now = timezone.now()
                 OperationAction.objects.filter(

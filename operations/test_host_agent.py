@@ -7,8 +7,9 @@ import json
 import sys
 import types
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 def _module():
@@ -30,6 +31,38 @@ def _module():
 class HostAgentCommandTests(TestCase):
     def setUp(self):
         self.agent = _module()
+
+    def test_idle_cycle_boots_django_only_once_and_starts_no_heartbeat_thread(self):
+        locking = types.SimpleNamespace(flock=Mock(), LOCK_EX=2, LOCK_NB=4)
+        with TemporaryDirectory() as folder, patch.object(self.agent, "DEPLOY_PATH", Path(folder)), \
+                patch.object(self.agent, "fcntl", locking), patch.object(sys, "argv", ["agent"]), \
+                patch.object(self.agent, "django", return_value={}) as django, \
+                patch.object(self.agent.threading, "Thread") as thread:
+            self.agent.main()
+        django.assert_called_once_with("poll")
+        thread.assert_not_called()
+
+    def test_bounded_batch_does_not_claim_an_unexecuted_sixth_action(self):
+        locking = types.SimpleNamespace(flock=Mock(), LOCK_EX=2, LOCK_NB=4)
+        jobs = [{"id": n, "request_id": f"request-{n}"} for n in range(5)]
+        results = [value for job in jobs for value in (job, {"completed": True})]
+        with TemporaryDirectory() as folder, patch.object(self.agent, "DEPLOY_PATH", Path(folder)), \
+                patch.object(self.agent, "fcntl", locking), patch.object(sys, "argv", ["agent"]), \
+                patch.object(self.agent, "django", side_effect=results) as django, \
+                patch.object(self.agent.threading, "Thread"), \
+                patch.object(self.agent, "execute", return_value={"summary": "done"}) as execute:
+            self.agent.main()
+        self.assertEqual(execute.call_count, 5)
+        self.assertEqual(django.call_count, 10)
+        self.assertEqual(django.call_args.args[0], "complete")
+
+    def test_heartbeat_waits_before_first_refresh_and_stops_promptly(self):
+        stop = Mock()
+        stop.wait.side_effect = [False, True]
+        with patch.object(self.agent, "django") as django:
+            self.agent.heartbeat_loop(stop)
+        django.assert_called_once_with("heartbeat")
+        self.assertEqual([call.args for call in stop.wait.call_args_list], [(45,), (45,)])
 
     def test_unknown_project_cannot_execute_a_host_command(self):
         with patch.object(self.agent, "run") as run:

@@ -207,12 +207,12 @@ def django(operation: str, payload: dict | None = None) -> dict:
 
 
 def heartbeat_loop(stop: threading.Event) -> None:
-    while not stop.is_set():
+    # poll just refreshed the heartbeat; only long-running work needs another.
+    while not stop.wait(45):
         try:
             django("heartbeat")
         except (OSError, subprocess.SubprocessError, ValueError):
             pass
-        stop.wait(45)
 
 
 def containers(compose_project: str, service_key: str) -> list[dict]:
@@ -422,16 +422,15 @@ def main() -> None:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return
-        django("heartbeat")
+        job = django("poll")
+        if not job:
+            return
         stop = threading.Event()
         thread = threading.Thread(target=heartbeat_loop, args=(stop,), daemon=True)
         thread.start()
         try:
             deadline = time.monotonic() + 50
-            for _ in range(5):
-                job = django("claim")
-                if not job:
-                    break
+            for index in range(5):
                 outcome = {"id": job["id"], "request_id": job["request_id"], "status": "succeeded"}
                 try:
                     outcome.update(execute(job))
@@ -449,7 +448,10 @@ def main() -> None:
                     })
                     print(f"Host action {job['id']} failed: {type(exc).__name__}", file=sys.stderr)
                 django("complete", outcome)
-                if time.monotonic() >= deadline:
+                if index == 4 or time.monotonic() >= deadline:
+                    break
+                job = django("poll")
+                if not job:
                     break
         finally:
             stop.set()

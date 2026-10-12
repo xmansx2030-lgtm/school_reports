@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type UPDATE-REBOOT to run production host maintenance
+        description: Type READ-ONLY for diagnostics, or UPDATE-REBOOT for maintenance
         required: true
         type: string
       mode:
@@ -17,6 +17,7 @@ on:
           - verify
           - post
           - proxy
+          - diagnostics
 
 permissions:
   contents: read
@@ -26,9 +27,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  diagnostics:
+    name: Read-only host diagnostics
+    if: inputs.mode == 'diagnostics' && inputs.confirmation == 'READ-ONLY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect host without changing services or data
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          SSH_TARGET: ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$SSH_TARGET" 'sudo -n python3 -' < scripts/host_diagnostics.py
+
   maintain:
     name: Update, clean and reboot host
-    if: inputs.confirmation == 'UPDATE-REBOOT'
+    if: inputs.mode != 'diagnostics' && inputs.confirmation == 'UPDATE-REBOOT'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: production

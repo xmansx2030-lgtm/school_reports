@@ -130,3 +130,25 @@ class ActionRequestTests(TestCase):
         self.assertEqual(old.error_code, "queue_expired")
         self.assertEqual(backup.status, "running")
         self.assertEqual(check.status, "queued")
+
+    def test_idle_poll_refreshes_heartbeat_without_system_checks(self):
+        from .management.commands.operations_agent import Command
+
+        HostAgentHeartbeat.objects.update(last_seen_at=timezone.now() - timedelta(minutes=5))
+        output = StringIO()
+        with patch.object(Command, "check", side_effect=AssertionError("Repeated URL checks")):
+            Command(stdout=output).execute(operation="poll", force_color=False, no_color=False)
+        self.assertEqual(json.loads(output.getvalue()), {})
+        self.assertGreater(HostAgentHeartbeat.objects.get(name="primary").last_seen_at,
+                           timezone.now() - timedelta(seconds=5))
+
+    def test_poll_claims_once_and_preserves_request_identity(self):
+        action = OperationAction.objects.create(requested_by=self.user, project=self.project, action="diagnostics")
+        first, second = StringIO(), StringIO()
+        call_command("operations_agent", "poll", stdout=first)
+        call_command("operations_agent", "poll", stdout=second)
+        self.assertEqual(json.loads(first.getvalue())["id"], action.pk)
+        self.assertEqual(json.loads(first.getvalue())["request_id"], str(action.request_id))
+        self.assertEqual(json.loads(second.getvalue()), {})
+        action.refresh_from_db()
+        self.assertEqual(action.status, "running")

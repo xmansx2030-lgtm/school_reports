@@ -298,6 +298,8 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
                     "health": str(item.get("health") or "")[:24],
                     "completed_job": _is_completed_job(item),
                     "cpu_percent": _metric_number(item.get("cpu_percent")),
+                    "cpu_measurement": str(item.get("cpu_measurement") or "snapshot")[:24],
+                    "sample_duration_seconds": _metric_number(item.get("sample_duration_seconds")),
                     "memory_used_mb": _metric_number(item.get("memory_used_mb")),
                     "memory_limit_mb": _metric_number(item.get("memory_limit_mb")),
                     "network_rx_mb": _metric_number(item.get("network_rx_mb")),
