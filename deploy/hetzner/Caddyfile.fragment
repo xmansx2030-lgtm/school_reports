@@ -147,6 +147,11 @@ www.tawtheeq-ksa.com, app.tawtheeq-ksa.com {
 # these routes tracked here so a Tawtheeq deployment preserves its origin.
 mowadhabah.com {
 	import cloudflare_only
+	tls {
+		issuer acme {
+			disable_tlsalpn_challenge
+		}
+	}
 	encode zstd gzip
 	reverse_proxy mowadhabah-frontend:80 {
 		lb_try_duration 15s
@@ -163,5 +168,10 @@ mowadhabah.com {
 
 www.mowadhabah.com {
 	import cloudflare_only
+	tls {
+		issuer acme {
+			disable_tlsalpn_challenge
+		}
+	}
 	redir https://mowadhabah.com{uri} permanent
 }
