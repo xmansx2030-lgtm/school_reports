@@ -28,6 +28,22 @@ def cpu():
     return sum(values[:8]), values[3] + values[4], values[4], values[7]
 
 
+def container_cpu(inspected):
+    result = {}
+    for item in inspected:
+        pid = item['State'].get('Pid', 0)
+        if not pid:
+            continue
+        try:
+            group = next(line[3:] for line in Path(f'/proc/{pid}/cgroup').read_text().splitlines() if line.startswith('0::'))
+            path = Path('/sys/fs/cgroup', group.lstrip('/'), 'cpu.stat')
+            values = dict(line.split() for line in path.read_text().splitlines())
+            result[item['Name']] = int(values['usage_usec'])
+        except (OSError, StopIteration, KeyError, ValueError):
+            print('cgroup sample unavailable', flush=True)
+    return result
+
+
 def main():
     emit('captured_at', datetime.now(timezone.utc).isoformat())
     emit('host', {'cpus': os.cpu_count(), 'load': os.getloadavg(),
@@ -53,10 +69,19 @@ def main():
                            'runtime': safe_env})
     emit('containers', containers)
     first = cpu()
+    container_first = container_cpu(inspected)
+    started = time.monotonic()
     emit('stats_start', run('docker', 'stats', '--no-stream', '--format', '{{json .}}'))
     emit('processes', run('ps', '-eo', 'pid,ppid,comm,pcpu,pmem,rss,etimes', '--sort=-pcpu').splitlines()[:45])
-    time.sleep(30)
+    for _ in range(2):
+        time.sleep(30)
     last = cpu()
+    container_last = container_cpu(inspected)
+    elapsed = time.monotonic() - started
+    emit('container_cpu_interval', {'duration_seconds': round(elapsed, 2), 'host_percent': {
+        name: round((value - container_first[name]) / 1e6 / elapsed / os.cpu_count() * 100, 3)
+        for name, value in container_last.items() if name in container_first
+    }})
     total = last[0] - first[0]
     emit('cpu_interval', {'busy_percent': round(100 * (1 - (last[1] - first[1]) / total), 2),
                           'iowait_percent': round(100 * (last[2] - first[2]) / total, 2),
