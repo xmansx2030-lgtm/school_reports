@@ -218,12 +218,13 @@ def _deployed_sha(labels: dict, image: str = "") -> str:
 def _image_priority(*, service: str, labels: dict) -> int:
     """Prefer the application image over Postgres/Redis/other dependencies."""
     normalized = service.lower()
+    revision_bonus = 10 if labels.get("org.opencontainers.image.revision") else 0
     if normalized in {"web", "backend", "api", "app"}:
-        return 5
+        return 5 + revision_bonus
     if "frontend" in normalized:
-        return 4
+        return 4 + revision_bonus
     if any(token in normalized for token in ("web", "backend", "worker", "celery", "api")):
-        return 3
+        return 3 + revision_bonus
     return 2 if labels.get("org.opencontainers.image.source") else 1
 
 
