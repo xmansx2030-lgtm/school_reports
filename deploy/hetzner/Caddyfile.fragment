@@ -142,3 +142,26 @@ www.tawtheeq-ksa.com, app.tawtheeq-ksa.com {
 
 	redir https://tawtheeq-ksa.com{uri} permanent
 }
+
+# Mowadhabah uses its own Compose project on the shared edge network. Keep
+# these routes tracked here so a Tawtheeq deployment preserves its origin.
+mowadhabah.com {
+	import cloudflare_only
+	encode zstd gzip
+	reverse_proxy mowadhabah-frontend:80 {
+		lb_try_duration 15s
+		lb_try_interval 250ms
+		header_up X-Forwarded-For {http.request.header.Cf-Connecting-Ip}
+		header_up X-Real-IP {http.request.header.Cf-Connecting-Ip}
+	}
+	header -Server
+	log {
+		output stdout
+		format json
+	}
+}
+
+www.mowadhabah.com {
+	import cloudflare_only
+	redir https://mowadhabah.com{uri} permanent
+}
