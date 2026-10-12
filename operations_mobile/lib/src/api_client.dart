@@ -116,6 +116,36 @@ class OperationsApi {
     await _request(() => _dio.get<Map<String, dynamic>>('/projects/$id/')),
   );
 
+  Future<AnalyticsData> analytics(
+    int id, {
+    required bool server,
+    String window = '48h',
+  }) async => AnalyticsData.fromJson(
+    await _request(
+      () => _dio.get<Map<String, dynamic>>(
+        '/${server ? 'servers' : 'projects'}/$id/analytics/',
+        queryParameters: {'window': window},
+      ),
+    ),
+  );
+
+  Future<ActionPage> actionHistory(
+    int projectId, {
+    int? beforeId,
+    String? status,
+  }) async => ActionPage.fromJson(
+    await _request(
+      () => _dio.get<Map<String, dynamic>>(
+        '/projects/$projectId/actions/',
+        queryParameters: {
+          'limit': 30,
+          'before_id': ?beforeId,
+          if (status?.isNotEmpty == true) 'status': status,
+        },
+      ),
+    ),
+  );
+
   Future<ProviderOverview> providerOverview(int serverId) async =>
       ProviderOverview.fromJson(
         await _request(
@@ -176,6 +206,8 @@ class OperationsApi {
     String? confirmation,
     int? sinceMinutes,
     int? tail,
+    String? until,
+    String? sinceAt,
   }) async {
     return OperationActionInfo.fromJson(
       await _request(
@@ -187,6 +219,8 @@ class OperationsApi {
             'confirmation': ?confirmation,
             'since_minutes': ?sinceMinutes,
             'tail': ?tail,
+            'until': ?until,
+            'since_at': ?sinceAt,
           },
         ),
       ),

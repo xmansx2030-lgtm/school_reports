@@ -9,8 +9,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
-from .inventory import SERVER_DEFAULTS, canonical_project, project_defaults
-from .models import ManagedProject, ManagedServer, ManagedService, ProjectMetricSnapshot
+from .inventory import PROJECTS, SERVER_DEFAULTS, canonical_project, project_defaults
+from .models import ManagedProject, ManagedServer, ManagedService, ProjectMetricSnapshot, ServerMetricSnapshot
 from .services import capture_server_metrics
 
 
@@ -30,6 +30,8 @@ def _decimal(value, *, maximum: Decimal | None = None) -> Decimal | None:
     try:
         parsed = Decimal(str(value)).quantize(Decimal("0.1"))
     except (InvalidOperation, TypeError, ValueError):
+        return None
+    if not parsed.is_finite():
         return None
     parsed = max(Decimal("0"), parsed)
     return min(parsed, maximum) if maximum is not None else parsed
@@ -80,7 +82,7 @@ def _service_kind(service_key: str) -> str:
         return ManagedService.Kind.WORKER
     if any(token in key for token in ("caddy", "nginx", "traefik", "proxy")):
         return ManagedService.Kind.PROXY
-    if any(token in key for token in ("web", "api", "app", "frontend")):
+    if any(token in key for token in ("web", "api", "app", "frontend", "backend")):
         return ManagedService.Kind.WEB
     return ManagedService.Kind.OTHER
 
@@ -117,6 +119,29 @@ def _sum(containers: list[dict], key: str, *, maximum: Decimal | None = None) ->
         return None
     total = sum(known, Decimal("0"))
     return min(total, maximum) if maximum is not None else total
+
+
+def _metric_number(value):
+    parsed = _decimal(value)
+    return float(parsed) if parsed is not None else None
+
+
+def _host_details(payload) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+    details = {key: _metric_number(payload.get(key)) for key in (
+        "cpu_count", "load1", "load5", "load15", "memory_total_mb", "memory_available_mb",
+        "swap_used_mb", "swap_total_mb", "disk_used_gb", "disk_total_gb", "disk_free_gb",
+        "disk_inode_percent", "iowait_percent", "uptime_seconds",
+    )}
+    pressure = payload.get("pressure") if isinstance(payload.get("pressure"), dict) else {}
+    details["pressure"] = {
+        key: {metric: _metric_number(values.get(metric)) for metric in ("avg10", "avg60", "avg300")}
+        for key, values in pressure.items()
+        if key in {"cpu_some", "memory_some", "memory_full", "io_some", "io_full"} and isinstance(values, dict)
+    }
+    details["cpu_measurement"] = str(payload.get("cpu_measurement") or "sample")[:40]
+    return details
 
 
 def _runtime_status(containers: list[dict]) -> str:
@@ -187,6 +212,9 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
     capture_server_metrics(
         server,
         {
+            "source": ServerMetricSnapshot.Source.HOST,
+            "sample_duration_seconds": server_payload.get("sample_duration_seconds"),
+            "host_details": _host_details(server_payload.get("host_details")),
             "cpu_percent": _decimal(server_payload.get("cpu_percent"), maximum=Decimal("100")),
             "memory_percent": _decimal(server_payload.get("memory_percent"), maximum=Decimal("100")),
             "disk_percent": _decimal(server_payload.get("disk_percent"), maximum=Decimal("100")),
@@ -206,7 +234,7 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
         known = canonical_project(compose_project)
         slug = known["slug"] if known else _safe_slug(compose_project)
         if known:
-            defaults = project_defaults(known, server=server, sort_order=order)
+            defaults = project_defaults(known, server=server, sort_order=PROJECTS.index(known) + 1)
             defaults["compose_project"] = compose_project
             discovered_repository = _repository(payload.get("repository"))
             if discovered_repository and not defaults["repository"]:
@@ -269,6 +297,17 @@ def sync_inventory_report(report: dict) -> dict[str, int]:
                     "state": str(item.get("state") or "unknown")[:24],
                     "health": str(item.get("health") or "")[:24],
                     "completed_job": _is_completed_job(item),
+                    "cpu_percent": _metric_number(item.get("cpu_percent")),
+                    "memory_used_mb": _metric_number(item.get("memory_used_mb")),
+                    "memory_limit_mb": _metric_number(item.get("memory_limit_mb")),
+                    "network_rx_mb": _metric_number(item.get("network_rx_mb")),
+                    "network_tx_mb": _metric_number(item.get("network_tx_mb")),
+                    "block_read_mb": _metric_number(item.get("block_read_mb")),
+                    "block_write_mb": _metric_number(item.get("block_write_mb")),
+                    "restart_count": _metric_number(item.get("restart_count")),
+                    "oom_killed": bool(item.get("oom_killed", False)),
+                    "started_at": str(item.get("started_at") or "")[:40],
+                    "image": _deployed_image(item.get("image")),
                 }
                 for item in containers
             ],

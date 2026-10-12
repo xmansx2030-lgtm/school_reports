@@ -56,6 +56,8 @@ class ProjectInfo {
     this.lastCheckedAt,
     this.lastRuntimeCheckedAt,
     this.latestMetric,
+    this.backupAllowed = false,
+    this.backupDescription = '',
   });
   final int id;
   final String name;
@@ -68,6 +70,8 @@ class ProjectInfo {
   final DateTime? lastCheckedAt;
   final DateTime? lastRuntimeCheckedAt;
   final MetricPoint? latestMetric;
+  final bool backupAllowed;
+  final String backupDescription;
   final List<ServiceInfo> services;
 
   factory ProjectInfo.fromJson(Map<String, dynamic> json) => ProjectInfo(
@@ -79,6 +83,10 @@ class ProjectInfo {
     latencyMs: (json['last_latency_ms'] as num?)?.toInt(),
     failures: (json['consecutive_failures'] as num?)?.toInt() ?? 0,
     alertsEnabled: json['alerts_enabled'] == true,
+    backupAllowed: json.containsKey('backup_allowed')
+        ? json['backup_allowed'] == true
+        : json['slug'] == 'tawtheeq',
+    backupDescription: '${json['backup_description'] ?? ''}',
     lastCheckedAt: _date(json['last_checked_at']),
     lastRuntimeCheckedAt: _date(json['last_runtime_checked_at']),
     latestMetric: json['latest_metric'] is Map
@@ -562,6 +570,12 @@ class OperationActionInfo {
     this.finishedAt,
     this.logContent = '',
     this.logAnalysis = const {},
+    this.logPage = const {},
+    this.diagnostics = const {},
+    this.parameters = const {},
+    this.serviceName = '',
+    this.requestedByName = '',
+    this.startedAt,
   });
   final int id;
   final String requestId;
@@ -574,6 +588,15 @@ class OperationActionInfo {
   final DateTime? finishedAt;
   final String logContent;
   final Map<String, dynamic> logAnalysis;
+  final Map<String, dynamic> logPage;
+  final Map<String, dynamic> diagnostics;
+  final Map<String, dynamic> parameters;
+  final String serviceName;
+  final String requestedByName;
+  final DateTime? startedAt;
+  bool get finished =>
+      const ['succeeded', 'failed', 'cancelled', 'expired'].contains(status);
+  String get statusLabel => actionStatusLabel(status);
 
   factory OperationActionInfo.fromJson(Map<String, dynamic> json) =>
       OperationActionInfo(
@@ -590,7 +613,74 @@ class OperationActionInfo {
         logAnalysis: Map<String, dynamic>.from(
           json['log_analysis'] as Map? ?? const {},
         ),
+        logPage: _map(json['log_page']),
+        diagnostics: _map(json['diagnostics']),
+        parameters: _map(json['parameters']),
+        serviceName: '${json['service_name'] ?? ''}',
+        requestedByName: '${json['requested_by_name'] ?? ''}',
+        startedAt: _date(json['started_at']),
       );
+}
+
+Map<String, dynamic> _map(dynamic value) =>
+    value is Map ? Map<String, dynamic>.from(value) : {};
+
+String actionStatusLabel(String status) => switch (status) {
+  'queued' => 'بانتظار الوكيل',
+  'running' => 'قيد التنفيذ',
+  'succeeded' => 'اكتمل بنجاح',
+  'failed' => 'فشل',
+  'cancelled' => 'ملغى',
+  'expired' => 'انتهت المهلة',
+  _ => status,
+};
+
+class ActionPage {
+  const ActionPage({required this.actions, this.nextBeforeId});
+  final List<OperationActionInfo> actions;
+  final int? nextBeforeId;
+  factory ActionPage.fromJson(Map<String, dynamic> json) => ActionPage(
+    actions: (json['actions'] as List? ?? json['results'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => OperationActionInfo.fromJson(_map(item)))
+        .toList(),
+    nextBeforeId: (json['next_before_id'] as num?)?.toInt(),
+  );
+}
+
+class AnalyticsData {
+  AnalyticsData.fromJson(Map<String, dynamic> json)
+    : window = '${json['window'] ?? '48h'}',
+      start = _date(json['start']),
+      end = _date(json['end']),
+      source = '${json['source'] ?? ''}',
+      bucketMinutes = (json['bucket_minutes'] as num?)?.toInt() ?? 5,
+      notes = (json['notes'] as List? ?? const [])
+          .map((item) => '$item')
+          .toList(),
+      coverage = _map(json['coverage']),
+      summary = _map(json['summary']),
+      latest = _map(json['latest']),
+      series = (json['series'] as List? ?? const [])
+          .whereType<Map>()
+          .map(_map)
+          .toList(),
+      projects = (json['projects'] as List? ?? const [])
+          .whereType<Map>()
+          .map(_map)
+          .toList();
+  final String window;
+  final String source;
+  final int bucketMinutes;
+  final List<String> notes;
+  final DateTime? start;
+  final DateTime? end;
+  final Map<String, dynamic> coverage;
+  final Map<String, dynamic> summary;
+  final Map<String, dynamic> latest;
+  final List<Map<String, dynamic>> series;
+  final List<Map<String, dynamic>> projects;
+  bool get stale => coverage['stale'] == true;
 }
 
 class OperationsAccount {

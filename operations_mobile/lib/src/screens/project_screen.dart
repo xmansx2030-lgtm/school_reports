@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
@@ -9,6 +8,8 @@ import '../models.dart';
 import '../state.dart';
 import '../widgets/status_widgets.dart';
 import 'project_logs_screen.dart';
+import 'analytics_panel.dart';
+import 'action_history_screen.dart';
 
 class ProjectScreen extends ConsumerWidget {
   const ProjectScreen({
@@ -66,10 +67,41 @@ class ProjectScreen extends ConsumerWidget {
                   children: [
                     _ProjectHeader(
                       project: data.project,
-                      onCheck: () => _runCheck(context, ref, data.project),
+                      onCheck: dashboard?.currentUser.can('run_checks') == true
+                          ? () => _runCheck(context, ref, data.project)
+                          : null,
                     ),
                     const SizedBox(height: 14),
-                    _MetricChart(metrics: data.metrics),
+                    AnalyticsPanel(id: projectId),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ActionHistoryScreen(project: data.project),
+                            ),
+                          ),
+                          icon: const Icon(Icons.history),
+                          label: const Text('سجل الإجراءات ونتائجها'),
+                        ),
+                        if (dashboard?.currentUser.can('run_checks') == true)
+                          OutlinedButton.icon(
+                            onPressed: agentReady
+                                ? () => _runDiagnostics(
+                                    context,
+                                    ref,
+                                    data.project,
+                                  )
+                                : null,
+                            icon: const Icon(Icons.troubleshoot),
+                            label: const Text('تشخيص المشروع'),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 14),
                     _ServicesPanel(
                       project: data.project,
@@ -125,7 +157,7 @@ class ProjectScreen extends ConsumerWidget {
                           'وكيل الخادم غير متصل؛ إجراءات الخدمات والسجلات معطلة.',
                         ),
                       ),
-                    if (data.project.slug == 'tawtheeq')
+                    if (data.project.backupAllowed)
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -143,7 +175,9 @@ class ProjectScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'ينشئ نسخة مدققة من بيانات المشروع عبر وكيل العمليات.',
+                                      data.project.backupDescription.isEmpty
+                                          ? 'ينفذ مسار النسخ المعتمد لهذا المشروع عبر وكيل العمليات.'
+                                          : data.project.backupDescription,
                                       style: TextStyle(
                                         color: context.ops.slate,
                                       ),
@@ -199,7 +233,15 @@ class ProjectScreen extends ConsumerWidget {
                                 dense: true,
                                 title: Text(action.actionLabel),
                                 subtitle: Text(action.resultSummary),
-                                trailing: Text(action.status),
+                                trailing: Text(action.statusLabel),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ActionDetailScreen(
+                                      projectId: projectId,
+                                      initialAction: action,
+                                    ),
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -229,6 +271,35 @@ class ProjectScreen extends ConsumerWidget {
           context,
         ).showSnackBar(const SnackBar(content: Text('اكتمل فحص المشروع.')));
       }
+    } on ApiException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  Future<void> _runDiagnostics(
+    BuildContext context,
+    WidgetRef ref,
+    ProjectInfo project,
+  ) async {
+    try {
+      final result = await ref
+          .read(apiProvider)
+          .runAction(project.id, 'diagnostics');
+      if (context.mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ActionDetailScreen(
+              projectId: project.id,
+              initialAction: result,
+            ),
+          ),
+        );
+      }
+      ref.invalidate(projectProvider(project.id));
     } on ApiException catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -304,11 +375,15 @@ class ProjectScreen extends ConsumerWidget {
           );
       ref.invalidate(projectProvider(project.id));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('الإجراء #${result.id}: ${result.resultSummary}'),
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ActionDetailScreen(
+              projectId: project.id,
+              initialAction: result,
+            ),
           ),
         );
+        ref.invalidate(projectProvider(project.id));
       }
     } on ApiException catch (error) {
       if (context.mounted) {
@@ -323,7 +398,7 @@ class ProjectScreen extends ConsumerWidget {
 class _ProjectHeader extends StatelessWidget {
   const _ProjectHeader({required this.project, required this.onCheck});
   final ProjectInfo project;
-  final VoidCallback onCheck;
+  final VoidCallback? onCheck;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -376,186 +451,6 @@ class _ProjectHeader extends StatelessWidget {
         ],
       ),
     ),
-  );
-}
-
-class _MetricChart extends StatelessWidget {
-  const _MetricChart({required this.metrics});
-  final List<MetricPoint> metrics;
-  @override
-  Widget build(BuildContext context) {
-    final ordered = metrics.reversed.toList();
-    List<FlSpot> spots(double? Function(MetricPoint) read) => [
-      for (var i = 0; i < ordered.length; i++)
-        if (read(ordered[i]) != null) FlSpot(i.toDouble(), read(ordered[i])!),
-    ];
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'استهلاك المشروع المستقل',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              'CPU وRAM نسبةً إلى إجمالي قدرة الخادم، مع حركة الشبكة وكتابة القرص الخاصة بحاويات المشروع.',
-              style: TextStyle(color: context.ops.slate),
-            ),
-            const SizedBox(height: 18),
-            if (ordered.isEmpty)
-              const EmptyState(
-                icon: Icons.show_chart,
-                title: 'لا توجد قياسات بعد',
-                message: 'ستظهر بعد تشغيل دورة المراقبة الأولى.',
-              )
-            else ...[
-              _CurrentUsage(metric: metrics.first),
-              const SizedBox(height: 18),
-              SizedBox(
-                height: 210,
-                child: LineChart(
-                  LineChartData(
-                    minY: 0,
-                    maxY: 100,
-                    gridData: const FlGridData(
-                      show: true,
-                      drawVerticalLine: false,
-                    ),
-                    borderData: FlBorderData(show: false),
-                    titlesData: const FlTitlesData(
-                      topTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      rightTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 34,
-                          interval: 25,
-                        ),
-                      ),
-                    ),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: spots((m) => m.cpu),
-                        color: const Color(0xFF356AA0),
-                        barWidth: 3,
-                        dotData: const FlDotData(show: false),
-                      ),
-                      LineChartBarData(
-                        spots: spots((m) => m.memory),
-                        color: const Color(0xFF138A4B),
-                        barWidth: 3,
-                        dotData: const FlDotData(show: false),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            const Wrap(
-              spacing: 18,
-              children: [
-                _Legend(color: Color(0xFF356AA0), label: 'المعالج'),
-                _Legend(color: Color(0xFF138A4B), label: 'الذاكرة'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CurrentUsage extends StatelessWidget {
-  const _CurrentUsage({required this.metric});
-  final MetricPoint metric;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 10,
-    runSpacing: 10,
-    children: [
-      _UsageChip(label: 'CPU', value: _percent(metric.cpu)),
-      _UsageChip(label: 'RAM', value: _memory(metric)),
-      _UsageChip(
-        label: 'الحاويات',
-        value: '${metric.runningContainerCount}/${metric.containerCount}',
-      ),
-      _UsageChip(
-        label: 'الشبكة',
-        value: '↓ ${_mb(metric.networkRxMb)}  ↑ ${_mb(metric.networkTxMb)}',
-      ),
-      _UsageChip(
-        label: 'القرص I/O',
-        value:
-            'قراءة ${_mb(metric.blockReadMb)} · كتابة ${_mb(metric.blockWriteMb)}',
-      ),
-    ],
-  );
-
-  static String _percent(double? value) =>
-      value == null ? 'غير متاح' : '${value.toStringAsFixed(1)}%';
-
-  static String _mb(double? value) =>
-      value == null ? '—' : '${value.toStringAsFixed(1)} MB';
-
-  static String _memory(MetricPoint metric) {
-    final used = _mb(metric.memoryUsedMb);
-    final percent = _percent(metric.memory);
-    return '$used · $percent';
-  }
-}
-
-class _UsageChip extends StatelessWidget {
-  const _UsageChip({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final ops = context.ops;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: ops.surfaceAlt,
-        border: Border.all(color: ops.lineSoft),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        '$label: $value',
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: ops.ink,
-        ),
-      ),
-    );
-  }
-}
-
-class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label});
-  final Color color;
-  final String label;
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(width: 12, height: 4, color: color),
-      const SizedBox(width: 6),
-      Text(label),
-    ],
   );
 }
 

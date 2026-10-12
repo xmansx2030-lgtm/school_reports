@@ -1,0 +1,14 @@
+# Only the host operations runner logs belong to this policy. Application,
+# database, proxy, and backup logs retain their existing policies.
+@DEPLOY_PATH@/deploy/hetzner/operations-collector.log
+@DEPLOY_PATH@/deploy/hetzner/operations-agent.log {
+    daily
+    maxsize 10M
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    su root root
+}

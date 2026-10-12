@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client.dart';
@@ -20,6 +21,17 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
   OperationActionInfo? _capture;
   String? _error;
   String _filter = '';
+  String _severity = 'all';
+  int _tail = 500;
+  final List<OperationActionInfo> _pages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.project.services.isNotEmpty) {
+      _serviceId = widget.project.services.first.id;
+    }
+  }
 
   Future<void> _refreshCapture() async {
     final id = _capture?.id;
@@ -32,6 +44,10 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
       if (mounted) {
         setState(() {
           _capture = current;
+          if (current.finished &&
+              !_pages.any((page) => page.id == current.id)) {
+            _pages.add(current);
+          }
           _error = null;
         });
       }
@@ -42,12 +58,12 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
     }
   }
 
-  Future<void> _load() async {
+  Future<void> _load({String? until}) async {
     if (_loading || _serviceId == null) return;
     setState(() {
       _loading = true;
       _error = null;
-      _capture = null;
+      if (until == null) _pages.clear();
     });
     try {
       final requested = await ref
@@ -57,7 +73,11 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
             'read_logs',
             serviceId: _serviceId,
             sinceMinutes: _sinceMinutes,
-            tail: 250,
+            tail: _tail,
+            until: until,
+            sinceAt: until == null
+                ? null
+                : _capture?.logPage['since_at']?.toString(),
           );
       if (!mounted) return;
       setState(() => _capture = requested);
@@ -69,7 +89,10 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
             .actionDetail(widget.project.id, requested.id);
         if (!mounted) return;
         setState(() => _capture = current);
-        if (current.status == 'succeeded' || current.status == 'failed') break;
+        if (current.finished) {
+          setState(() => _pages.add(current));
+          break;
+        }
       }
       if (_capture?.status == 'queued' || _capture?.status == 'running') {
         setState(
@@ -85,15 +108,28 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final content = _capture?.logContent ?? '';
-    final lines = _filter.trim().isEmpty
-        ? content
-        : content
-              .split('\n')
-              .where(
-                (line) => line.toLowerCase().contains(_filter.toLowerCase()),
-              )
-              .join('\n');
+    final content = _pages.reversed.map((page) => page.logContent).join('\n');
+    final lines = content
+        .split('\n')
+        .where((line) {
+          final lower = line.toLowerCase();
+          if (_filter.trim().isNotEmpty &&
+              !lower.contains(_filter.toLowerCase().trim())) {
+            return false;
+          }
+          return switch (_severity) {
+            'error' => RegExp(
+              r'error|exception|fatal|critical|traceback|panic',
+              caseSensitive: false,
+            ).hasMatch(line),
+            'warning' => RegExp(
+              r'warn|warning',
+              caseSensitive: false,
+            ).hasMatch(line),
+            _ => true,
+          };
+        })
+        .join('\n');
     final analysis = _capture?.logAnalysis ?? const <String, dynamic>{};
     final categories = Map<String, dynamic>.from(
       analysis['categories'] as Map? ?? const {},
@@ -105,23 +141,28 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
-            'تعرض هذه الصفحة آخر أسطر Docker للخدمة المحددة بعد حجب أنماط بيانات الاعتماد. التحليل محلي وقائم على تصنيف الأخطاء الظاهرة.',
+            'اقرأ سجلات خدمة محددة وصفحاتها الأقدم خلال الفترة المختارة. تُحجب أنماط بيانات الاعتماد قبل العرض؛ التحليل يصف الأسطر المسترجعة فقط.',
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
+            isExpanded: true,
             initialValue: _serviceId,
             decoration: const InputDecoration(labelText: 'الخدمة'),
             items: widget.project.services
                 .map(
                   (service) => DropdownMenuItem<int>(
                     value: service.id,
-                    child: Text(service.name),
+                    child: Text(service.name, overflow: TextOverflow.ellipsis),
                   ),
                 )
                 .toList(),
             onChanged: _loading
                 ? null
-                : (value) => setState(() => _serviceId = value),
+                : (value) => setState(() {
+                    _serviceId = value;
+                    _capture = null;
+                    _pages.clear();
+                  }),
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<int>(
@@ -132,10 +173,32 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
               DropdownMenuItem(value: 30, child: Text('آخر 30 دقيقة')),
               DropdownMenuItem(value: 60, child: Text('آخر ساعة')),
               DropdownMenuItem(value: 180, child: Text('آخر 3 ساعات')),
+              DropdownMenuItem(value: 1440, child: Text('آخر 24 ساعة')),
+              DropdownMenuItem(value: 2880, child: Text('آخر 48 ساعة')),
+              DropdownMenuItem(value: 10080, child: Text('آخر 7 أيام')),
             ],
             onChanged: _loading
                 ? null
-                : (value) => setState(() => _sinceMinutes = value ?? 30),
+                : (value) => setState(() {
+                    _sinceMinutes = value ?? 30;
+                    _capture = null;
+                    _pages.clear();
+                  }),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            initialValue: _tail,
+            decoration: const InputDecoration(
+              labelText: 'الحد الأقصى لأسطر الصفحة',
+            ),
+            items: const [
+              DropdownMenuItem(value: 250, child: Text('250 سطرًا')),
+              DropdownMenuItem(value: 500, child: Text('500 سطر')),
+              DropdownMenuItem(value: 1000, child: Text('1000 سطر')),
+            ],
+            onChanged: _loading
+                ? null
+                : (value) => setState(() => _tail = value ?? 500),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
@@ -164,10 +227,10 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'الحالة: ${_capture!.status} · ${_capture!.resultSummary}',
+                      'الحالة: ${_capture!.statusLabel} · ${_capture!.resultSummary}',
                     ),
                     Text(
-                      'الأسطر: ${analysis['lines'] ?? 0} · '
+                      'الصفحة الأخيرة · الأسطر: ${analysis['lines'] ?? 0} · '
                       'الأخطاء: ${analysis['errors'] ?? 0} · '
                       'التحذيرات: ${analysis['warnings'] ?? 0}',
                     ),
@@ -183,8 +246,26 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
                             '${item['category']} (${item['count']}): ${item['next_check']}',
                           ),
                         ),
-                    if (analysis['truncated'] == true)
-                      const Text('اقتُطع العرض عند حد الأمان.'),
+                    if (analysis['truncated'] == true ||
+                        _capture!.logPage['truncated'] == true)
+                      const Text(
+                        'النتيجة مقتطعة عند حد الصفحة أو حد الحماية. هذه ليست كل سجلات الفترة.',
+                      ),
+                    if (_capture!.logPage['has_more'] == true &&
+                        '${_capture!.logPage['next_until'] ?? ''}'.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: _loading
+                            ? null
+                            : () => _load(
+                                until: '${_capture!.logPage['next_until']}',
+                              ),
+                        icon: const Icon(Icons.history),
+                        label: const Text('تحميل صفحة أقدم'),
+                      ),
+                    Text('الصفحات المسترجعة: ${_pages.length}'),
+                    if ('${_capture!.logPage['retention_note'] ?? ''}'
+                        .isNotEmpty)
+                      Text('${_capture!.logPage['retention_note']}'),
                   ],
                 ),
               ),
@@ -196,6 +277,39 @@ class _ProjectLogsScreenState extends ConsumerState<ProjectLogsScreen> {
                 labelText: 'تصفية الأسطر المعروضة',
                 prefixIcon: Icon(Icons.search),
               ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final item in const {
+                  'all': 'كل المستويات',
+                  'error': 'أخطاء',
+                  'warning': 'تحذيرات',
+                }.entries)
+                  ChoiceChip(
+                    label: Text(item.value),
+                    selected: _severity == item.key,
+                    onSelected: (_) => setState(() => _severity = item.key),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: lines.isEmpty
+                      ? null
+                      : () async {
+                          await Clipboard.setData(ClipboardData(text: lines));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تم نسخ الأسطر المعروضة.'),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('نسخ المعروض'),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Card(

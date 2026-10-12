@@ -200,6 +200,26 @@ else
   log "warning: crontab is unavailable; inventory and host-agent refresh were not installed"
 fi
 
+# Render the two explicit log paths instead of rotating unrelated project or
+# backup logs. Validate before replacing the installed rule; debug mode does
+# not rotate files or update logrotate's state.
+if command -v logrotate >/dev/null 2>&1; then
+  case "$DEPLOY_PATH" in
+    *[!a-zA-Z0-9_./-]*) die "DEPLOY_PATH contains unsupported logrotate path characters." ;;
+  esac
+  OPERATIONS_LOGROTATE_TMP="$(mktemp)"
+  sed "s|@DEPLOY_PATH@|$DEPLOY_PATH|g" deploy/hetzner/operations.logrotate > "$OPERATIONS_LOGROTATE_TMP"
+  if ! logrotate --debug "$OPERATIONS_LOGROTATE_TMP" >/dev/null 2>&1; then
+    rm -f -- "$OPERATIONS_LOGROTATE_TMP"
+    die "operations log rotation configuration is invalid."
+  fi
+  install -m 644 -o root -g root "$OPERATIONS_LOGROTATE_TMP" /etc/logrotate.d/tawtheeq-operations
+  rm -f -- "$OPERATIONS_LOGROTATE_TMP"
+  log "installed bounded operations collector and agent log rotation"
+else
+  log "warning: logrotate is unavailable; operations log rotation was not installed"
+fi
+
 docker image prune --force --filter "until=168h" >/dev/null 2>&1 || true
 
 log "deployed $APP_IMAGE successfully"

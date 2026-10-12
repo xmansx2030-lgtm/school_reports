@@ -18,6 +18,10 @@ def _action_request_id() -> str:
     return secrets.token_hex(16)
 
 
+def _observation_is_stale(checked_at) -> bool:
+    return checked_at is None or timezone.now() - checked_at > timedelta(minutes=15)
+
+
 class ManagedServer(models.Model):
     class Status(models.TextChoices):
         HEALTHY = "healthy", "سليم"
@@ -46,6 +50,18 @@ class ManagedServer(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def is_stale(self) -> bool:
+        return _observation_is_stale(self.last_checked_at)
+
+    @property
+    def effective_status(self) -> str:
+        # Keep recorded failures visible, but old success cannot prove that
+        # the host is still healthy after its collector stops reporting.
+        if self.status == self.Status.HEALTHY and self.is_stale:
+            return self.Status.UNKNOWN
+        return self.status
 
 
 class ManagedProject(models.Model):
@@ -99,8 +115,16 @@ class ManagedProject(models.Model):
         return f"{self.base_url.rstrip('/')}/{self.health_path.lstrip('/')}"
 
     @property
+    def is_stale(self) -> bool:
+        return (
+            bool(self.compose_project) and _observation_is_stale(self.last_runtime_checked_at)
+        ) or (
+            bool(self.base_url) and _observation_is_stale(self.last_checked_at)
+        )
+
+    @property
     def effective_status(self) -> str:
-        """Return the worst of the public health probe and Docker runtime state."""
+        """Preserve failures; report healthy only with current required evidence."""
         priority = {
             self.Status.UNKNOWN: 0,
             self.Status.HEALTHY: 1,
@@ -108,7 +132,13 @@ class ManagedProject(models.Model):
             self.Status.DEGRADED: 3,
             self.Status.DOWN: 4,
         }
-        return max((self.status, self.runtime_status), key=lambda value: priority.get(value, 0))
+        status = max((self.status, self.runtime_status), key=lambda value: priority.get(value, 0))
+        if status == self.Status.HEALTHY:
+            runtime_unknown = bool(self.compose_project) and self.runtime_status != self.Status.HEALTHY
+            public_unknown = bool(self.base_url) and self.status != self.Status.HEALTHY
+            if self.is_stale or runtime_unknown or public_unknown:
+                return self.Status.UNKNOWN
+        return status
 
     def __str__(self) -> str:
         return self.name
@@ -162,7 +192,15 @@ class HealthCheck(models.Model):
 
 
 class ServerMetricSnapshot(models.Model):
+    class Source(models.TextChoices):
+        HOST = "host", "جامع المضيف"
+        CAPACITY = "capacity", "مراقب سعة توثيق"
+        LEGACY = "legacy", "سجل سابق مختلط المصادر"
+
     server = models.ForeignKey(ManagedServer, on_delete=models.CASCADE, related_name="metric_snapshots")
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.LEGACY, db_index=True)
+    sample_duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    host_details = models.JSONField(default=dict, blank=True)
     cpu_percent = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
     memory_percent = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
     disk_percent = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
@@ -235,6 +273,7 @@ class OperationAction(models.Model):
         RELOAD_PROXY = "reload_proxy", "إعادة تحميل الوكيل"
         CREATE_BACKUP = "create_backup", "إنشاء نسخة احتياطية"
         READ_LOGS = "read_logs", "قراءة السجلات"
+        DIAGNOSTICS = "diagnostics", "تشخيص المشروع"
 
     class Status(models.TextChoices):
         QUEUED = "queued", "في الانتظار"

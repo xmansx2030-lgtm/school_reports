@@ -63,6 +63,20 @@ PROJECTS: Final = (
         "deploy_workflow": "deploy.yml",
         "deploy_container": "school-display-web-1",
     },
+    {
+        "slug": "mowadhabah",
+        "compose_aliases": ("mowadhabah",),
+        "name": "منصة مواظبة",
+        "base_url": "https://mowadhabah.com",
+        "health_path": "/api/v1/health/",
+        "repository": "xmansx2030-lgtm/xmansx",
+        # This host currently receives immutable image digests. A Render-owned
+        # workflow must not be advertised as a deployment path for this host.
+        "ci_workflow": "ci.yml",
+        "deploy_workflow": "",
+        "deploy_container": "mowadhabah-backend-1",
+        "deployment_enabled": False,
+    },
 )
 
 

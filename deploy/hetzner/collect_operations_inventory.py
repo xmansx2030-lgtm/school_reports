@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -69,18 +70,70 @@ def _mb(value: float | int | None) -> float | None:
     return round(float(value) / (1024**2), 1) if value is not None else None
 
 
-def _cpu_sample() -> tuple[int, int]:
+def _cpu_sample() -> tuple[int, int, int]:
     fields = [int(value) for value in Path("/proc/stat").read_text(encoding="ascii").splitlines()[0].split()[1:]]
     idle = fields[3] + (fields[4] if len(fields) > 4 else 0)
-    return sum(fields), idle
+    # guest/guest_nice are already included in user/nice ticks.
+    return sum(fields[:8]), idle, fields[4] if len(fields) > 4 else 0
+
+
+def _cpu_metrics() -> tuple[float, float, int, str]:
+    """Average the interval since the previous collector run, across one boot."""
+    state_path = Path(__file__).resolve().parent / ".operations-cpu-sample.json"
+    boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+    current = {"boot_id": boot_id, "monotonic": time.monotonic(), "ticks": _cpu_sample()}
+    try:
+        previous = json.loads(state_path.read_text(encoding="ascii"))
+        elapsed = current["monotonic"] - float(previous["monotonic"])
+        valid = previous["boot_id"] == boot_id and 60 <= elapsed <= 1800 and len(previous["ticks"]) == 3
+        valid = valid and all(isinstance(value, (int, float)) for value in previous["ticks"])
+    except (OSError, ValueError, KeyError, TypeError):
+        previous, elapsed, valid = {}, 0, False
+    measurement = "interval" if valid else "initial_sample"
+    if not valid:
+        previous = current
+        time.sleep(1)
+        current = {"boot_id": boot_id, "monotonic": time.monotonic(), "ticks": _cpu_sample()}
+        elapsed = current["monotonic"] - previous["monotonic"]
+    total_delta = current["ticks"][0] - previous["ticks"][0]
+    idle_delta = current["ticks"][1] - previous["ticks"][1]
+    iowait_delta = current["ticks"][2] - previous["ticks"][2]
+    if total_delta <= 0 or idle_delta < 0:
+        raise ValueError("Invalid CPU counter interval")
+    temporary = state_path.with_suffix(".tmp")
+    try:
+        temporary.write_text(json.dumps(current), encoding="ascii")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, state_path)
+    except OSError:
+        print("operations collector: CPU interval state could not be saved", file=sys.stderr)
+    return (
+        round(max(0, min(100, (1 - idle_delta / total_delta) * 100)), 1),
+        round(max(0, min(100, iowait_delta / total_delta * 100)), 2),
+        max(1, round(elapsed)), measurement,
+    )
+
+
+def _pressure() -> dict:
+    values = {}
+    for resource in ("cpu", "memory", "io"):
+        try:
+            lines = Path(f"/proc/pressure/{resource}").read_text(encoding="ascii").splitlines()
+        except OSError:
+            # PSI is optional on older kernels; absence remains visible as no data.
+            lines = []
+        for line in lines:
+            parts = line.split()
+            if parts:
+                values[f"{resource}_{parts[0]}"] = {
+                    key: float(value) for key, value in (part.split("=", 1) for part in parts[1:])
+                    if key in {"avg10", "avg60", "avg300"}
+                }
+    return values
 
 
 def _host_metrics() -> tuple[dict, float]:
-    total_before, idle_before = _cpu_sample()
-    time.sleep(0.15)
-    total_after, idle_after = _cpu_sample()
-    total_delta = max(1, total_after - total_before)
-    cpu_percent = round((1 - ((idle_after - idle_before) / total_delta)) * 100, 1)
+    cpu_percent, iowait_percent, duration, measurement = _cpu_metrics()
 
     meminfo = {}
     for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines():
@@ -92,6 +145,8 @@ def _host_metrics() -> tuple[dict, float]:
 
     disk = shutil.disk_usage("/")
     disk_percent = round((disk.used / disk.total) * 100, 1) if disk.total else 0
+    filesystem = os.statvfs("/")
+    loads = os.getloadavg()
     return {
         "slug": "school-reports-prod",
         "name": os.uname().nodename,
@@ -99,6 +154,23 @@ def _host_metrics() -> tuple[dict, float]:
         "cpu_percent": max(0.0, min(cpu_percent, 100.0)),
         "memory_percent": memory_percent,
         "disk_percent": disk_percent,
+        "source": "host",
+        "sample_duration_seconds": duration,
+        "host_details": {
+            "cpu_count": os.cpu_count() or 1,
+            "cpu_measurement": measurement,
+            "iowait_percent": iowait_percent,
+            "load1": round(loads[0], 2), "load5": round(loads[1], 2), "load15": round(loads[2], 2),
+            "memory_total_mb": _mb(memory_total), "memory_available_mb": _mb(memory_available),
+            "swap_total_mb": _mb(meminfo.get("SwapTotal", 0)),
+            "swap_used_mb": _mb(meminfo.get("SwapTotal", 0) - meminfo.get("SwapFree", 0)),
+            "disk_total_gb": round(disk.total / 1024**3, 2),
+            "disk_used_gb": round(disk.used / 1024**3, 2),
+            "disk_free_gb": round(disk.free / 1024**3, 2),
+            "disk_inode_percent": round((1 - filesystem.f_ffree / filesystem.f_files) * 100, 2) if filesystem.f_files else None,
+            "uptime_seconds": float(Path("/proc/uptime").read_text(encoding="ascii").split()[0]),
+            "pressure": _pressure(),
+        },
     }, memory_total
 
 
@@ -123,7 +195,10 @@ def _repository(labels: dict) -> str:
         return ""
 
 
-def _deployed_sha(labels: dict) -> str:
+def _deployed_sha(labels: dict, image: str = "") -> str:
+    tag = image.rsplit(":", 1)[-1]
+    if re.fullmatch(r"[0-9a-f]{40}", tag):
+        return tag
     revision = str(labels.get("org.opencontainers.image.revision") or "").strip().lower()
     if re.fullmatch(r"[0-9a-f]{40}", revision):
         return revision
@@ -142,11 +217,14 @@ def _deployed_sha(labels: dict) -> str:
 
 def _image_priority(*, service: str, labels: dict) -> int:
     """Prefer the application image over Postgres/Redis/other dependencies."""
-    if _deployed_sha(labels) or labels.get("org.opencontainers.image.source"):
+    normalized = service.lower()
+    if normalized in {"web", "backend", "api", "app"}:
+        return 5
+    if "frontend" in normalized:
+        return 4
+    if any(token in normalized for token in ("web", "backend", "worker", "celery", "api")):
         return 3
-    if any(token in service.lower() for token in ("web", "api", "app", "frontend")):
-        return 2
-    return 1
+    return 2 if labels.get("org.opencontainers.image.source") else 1
 
 
 def _docker_inventory(memory_total: float) -> list[dict]:
@@ -214,6 +292,10 @@ def _docker_inventory(memory_total: float) -> list[dict]:
                 # work" apart from "a service crashed".
                 "exit_code": state_payload.get("ExitCode"),
                 "restart_policy": str(restart_policy),
+                "restart_count": item.get("RestartCount", 0),
+                "oom_killed": bool(state_payload.get("OOMKilled")),
+                "started_at": str(state_payload.get("StartedAt") or ""),
+                "image": str(config.get("Image") or ""),
                 # Docker CPU% is per logical CPU. Normalize it to total host capacity.
                 "cpu_percent": round(raw_cpu / cpu_count, 1) if raw_cpu is not None else None,
                 "memory_host_percent": (
@@ -239,14 +321,12 @@ def _docker_inventory(memory_total: float) -> list[dict]:
             if repository:
                 repositories[compose_project] = repository
             repository_checks.add(compose_project)
-        revision = _deployed_sha(labels)
-        if revision:
-            deployed_revisions[compose_project] = revision
         image = str(config.get("Image") or "").strip()
         if image:
             candidate = (_image_priority(service=service, labels=labels), image)
             if candidate[0] > deployed_images.get(compose_project, (0, ""))[0]:
                 deployed_images[compose_project] = candidate
+                deployed_revisions[compose_project] = _deployed_sha(labels, image)
 
     return [
         {

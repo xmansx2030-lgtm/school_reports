@@ -4,6 +4,8 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 
+from .action_policy import BACKUP_UNITS, backup_description, project_actions
+
 from .models import (
     HealthCheck,
     Incident,
@@ -45,10 +47,29 @@ class ProjectMetricSerializer(serializers.ModelSerializer):
 
 
 class ManagedProjectSerializer(serializers.ModelSerializer):
-    services = ManagedServiceSerializer(many=True, read_only=True)
+    services = serializers.SerializerMethodField()
     health_url = serializers.CharField(read_only=True)
     status = serializers.CharField(source="effective_status", read_only=True)
     latest_metric = serializers.SerializerMethodField()
+    available_actions = serializers.SerializerMethodField()
+    backup_allowed = serializers.SerializerMethodField()
+    backup_description = serializers.SerializerMethodField()
+    stale = serializers.SerializerMethodField()
+
+    def get_services(self, obj):
+        return ManagedServiceSerializer([service for service in obj.services.all() if service.is_active], many=True).data
+
+    def get_available_actions(self, obj):
+        return project_actions(obj)
+
+    def get_backup_allowed(self, obj):
+        return obj.slug in BACKUP_UNITS and "create_backup" in project_actions(obj)
+
+    def get_backup_description(self, obj):
+        return backup_description(obj.slug)
+
+    def get_stale(self, obj):
+        return obj.is_stale
 
     def get_latest_metric(self, obj):
         metric = obj.metric_snapshots.first()
@@ -60,18 +81,21 @@ class ManagedProjectSerializer(serializers.ModelSerializer):
             "id", "name", "slug", "base_url", "health_url", "compose_project", "status",
             "runtime_status", "last_latency_ms", "last_checked_at", "last_runtime_checked_at",
             "consecutive_failures", "alerts_enabled", "latest_metric", "services",
+            "available_actions", "backup_allowed", "backup_description", "stale",
         )
 
 
 class ManagedServerSerializer(serializers.ModelSerializer):
     projects = ManagedProjectSerializer(many=True, read_only=True)
+    status = serializers.CharField(source="effective_status", read_only=True)
+    stale = serializers.BooleanField(source="is_stale", read_only=True)
 
     class Meta:
         model = ManagedServer
         fields = (
             "id", "name", "slug", "provider", "provider_server_id", "public_ip", "region",
             "server_type", "status", "cpu_percent", "memory_percent", "disk_percent",
-            "last_checked_at", "projects",
+            "last_checked_at", "projects", "stale",
         )
 
 
@@ -98,12 +122,15 @@ class ServerMetricSerializer(serializers.ModelSerializer):
 class OperationActionSerializer(serializers.ModelSerializer):
     action_label = serializers.CharField(source="get_action_display", read_only=True)
     requested_by_name = serializers.CharField(source="requested_by.name", read_only=True)
+    service_name = serializers.CharField(source="service.name", default="", read_only=True)
+    service_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = OperationAction
         fields = (
             "id", "request_id", "action", "action_label", "status", "requested_by_name",
             "result_summary", "error_code", "requested_at", "started_at", "finished_at",
+            "project_id", "service_id", "service_name", "parameters",
         )
 
 
