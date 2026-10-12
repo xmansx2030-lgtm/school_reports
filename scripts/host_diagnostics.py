@@ -119,7 +119,7 @@ from datetime import timedelta
 from django.db import connection, transaction
 from django.db.models import Avg, Max, Count
 from django.utils import timezone
-from operations.models import ProjectMetricSnapshot, ServerMetricSnapshot, OperationAction
+from operations.models import ProjectMetricSnapshot, ServerMetricSnapshot, OperationAction, HostAgentHeartbeat, ManagedProject
 from django.conf import settings
 with transaction.atomic():
  with connection.cursor() as c:
@@ -136,7 +136,25 @@ with transaction.atomic():
   print(json.dumps({'hours':hours,'projects': list(ProjectMetricSnapshot.objects.filter(captured_at__gte=since).values('project__slug').annotate(samples=Count('id'),cpu_avg=Avg('cpu_percent'),cpu_max=Max('cpu_percent'),memory_mb_avg=Avg('memory_used_mb')))},default=str))
   print(json.dumps({'hours':hours,'host':list(ServerMetricSnapshot.objects.filter(captured_at__gte=since).values('source').annotate(samples=Count('id'),cpu_avg=Avg('cpu_percent'),cpu_max=Max('cpu_percent'),memory_avg=Avg('memory_percent')))},default=str))
  print(json.dumps({'actions':list(OperationAction.objects.filter(requested_at__gte=cutoff).values('action','status','error_code').annotate(count=Count('id')))},default=str))
+ latest=[]
+ for project in ManagedProject.objects.filter(is_active=True):
+  metric=project.metric_snapshots.first()
+  if metric:
+   latest.append({'project':project.slug,'captured_at':metric.captured_at,'cpu_percent':metric.cpu_percent,
+    'containers':[{'name':row.get('name'),'cpu_percent':row.get('cpu_percent'),
+     'cpu_measurement':row.get('cpu_measurement'),'sample_duration_seconds':row.get('sample_duration_seconds')}
+     for row in metric.container_states]})
+ print(json.dumps({'latest_project_metrics':latest},default=str))
+ heartbeat=HostAgentHeartbeat.objects.filter(name='primary').first()
+ print(json.dumps({'host_agent_age_seconds':(timezone.now()-heartbeat.last_seen_at).total_seconds() if heartbeat else None}))
  print(json.dumps({'beat': {k: {'task':v['task'],'schedule':str(v['schedule'])} for k,v in settings.CELERY_BEAT_SCHEDULE.items()}}))
+import redis
+broker=redis.Redis.from_url(settings.CELERY_BROKER_URL,socket_connect_timeout=2,socket_timeout=2)
+info=broker.info('memory')
+stats=broker.info('stats')
+print(json.dumps({'redis': {key: info.get(key) for key in ('used_memory','used_memory_peak','maxmemory','maxmemory_policy')},
+ 'redis_stats': {key:stats.get(key) for key in ('evicted_keys','rejected_connections','instantaneous_ops_per_sec')},
+ 'queue_lengths':{name:broker.llen(name) for name in ('default','notifications','images','periodic')}}))
 """
     emit('application', run('docker', 'exec', 'school-reports-web-1', 'python', '-c', source, timeout=90))
 
