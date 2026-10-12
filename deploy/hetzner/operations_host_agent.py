@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections import deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -32,10 +33,15 @@ BACKUP_UNITS = {
 }
 LOG_TIMESTAMP = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z)\s(.*)$")
 MAX_LOG_CAPTURE_BYTES = 1024 * 1024
+MAX_LOG_SCAN_BYTES = 64 * 1024 * 1024
 
 
 class LogOutputLimitExceeded(RuntimeError):
     """An entire log request fails rather than returning a secret cut mid-value."""
+
+
+class LogScanLimitExceeded(LogOutputLimitExceeded):
+    """The fixed query window exceeds the aggregate stream scan budget."""
 
 
 def timestamp_key(stamp: str) -> str:
@@ -110,6 +116,86 @@ def run(*args: str, input_text: str | None = None, timeout: int = 30, include_st
     return (result.stdout + ("\n" + result.stderr if include_stderr else "")).strip()
 
 
+def stream_log_lines(args: tuple[str, ...], *, tail: int, scan_budget: int,
+                     timeout: int = 30) -> tuple[list[str], int, bool, bool]:
+    """Scan the fixed time window; retain only complete recent records in RAM.
+
+    Docker applies --tail BEFORE --until. A tail flag therefore cannot paginate
+    historical windows: it would keep rereading the container's latest N rows.
+    The stream is bounded independently by time, total bytes, record bytes and
+    ring bytes; overflow never returns an incomplete record or a false EOF.
+    """
+    if scan_budget <= 0:
+        raise LogScanLimitExceeded("Log window scan budget exhausted")
+    records = deque()
+    ring_bytes = 0
+    scanned_bytes = 0
+    evicted = False
+    last_evicted_stamp = ""
+    errors = []
+    with subprocess.Popen(  # noqa: S603 - fixed Docker argv, no shell.
+        args, cwd=DEPLOY_PATH, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    ) as process:
+        def append_record(record: bytes):
+            nonlocal ring_bytes, evicted, last_evicted_stamp
+            if len(record) > MAX_LOG_CAPTURE_BYTES:
+                raise LogOutputLimitExceeded("A complete log record exceeds the safe size")
+            records.append(record)
+            ring_bytes += len(record)
+            while len(records) > tail or ring_bytes > MAX_LOG_CAPTURE_BYTES:
+                removed = records.popleft()
+                ring_bytes -= len(removed)
+                last_evicted_stamp = removed[:40].split(maxsplit=1)[0].decode("ascii", errors="ignore") if removed.strip() else ""
+                evicted = True
+
+        def collect():
+            nonlocal scanned_bytes
+            pending = bytearray()
+            try:
+                while chunk := process.stdout.read(65536):
+                    scanned_bytes += len(chunk)
+                    if scanned_bytes > scan_budget:
+                        raise LogScanLimitExceeded("Log window exceeds the aggregate scan size")
+                    pending.extend(chunk)
+                    complete = pending.split(b"\n")
+                    pending = complete.pop()
+                    for line in complete:
+                        append_record(bytes(line) + b"\n")
+                    if len(pending) > MAX_LOG_CAPTURE_BYTES:
+                        raise LogOutputLimitExceeded("A complete log record exceeds the safe size")
+                if pending:
+                    append_record(bytes(pending))
+            except (OSError, LogOutputLimitExceeded) as exc:
+                errors.append(exc)
+                try:
+                    process.kill()
+                except OSError:
+                    # The child may have exited between the read and kill.
+                    errors.append(RuntimeError("Log reader process already stopped"))
+
+        reader = threading.Thread(target=collect, daemon=True)
+        reader.start()
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+            raise
+        finally:
+            reader.join(timeout=5)
+        if errors:
+            raise errors[0]
+        if reader.is_alive():
+            raise RuntimeError("Log window could not be read completely")
+        if process.returncode:
+            raise subprocess.CalledProcessError(process.returncode, args)
+    lines = [record.decode("utf-8", errors="replace").rstrip("\r\n") for record in records]
+    first_match = LOG_TIMESTAMP.match(lines[0]) if lines else None
+    collision = bool(first_match and last_evicted_stamp and
+                     timestamp_key(first_match.group(1)) == timestamp_key(last_evicted_stamp))
+    return lines, scanned_bytes, evicted, collision
+
+
 def django(operation: str, payload: dict | None = None) -> dict:
     output = run(
         *COMPOSE, "exec", "-T", "web", "python", "manage.py",
@@ -164,23 +250,46 @@ def read_logs(selected: list[dict], params: dict) -> dict:
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z", value):
             raise ValueError("Invalid log time boundary")
     records = []
+    scanned_bytes = 0
+    evicted = False
+    evicted_boundaries = []
+    collision_boundaries = set()
     for item in selected[:4]:
-        output = run(
+        lines, scanned, removed, collision = stream_log_lines((
             "docker", "logs", "--timestamps", "--since", since,
-            "--until", until, "--tail", str(tail + 1), item["id"],
-            timeout=30, include_stderr=True, max_output_bytes=MAX_LOG_CAPTURE_BYTES,
-        )
-        for line in output.splitlines():
+            "--until", until, item["id"],
+        ), tail=tail + 1, scan_budget=MAX_LOG_SCAN_BYTES - scanned_bytes, timeout=30)
+        scanned_bytes += scanned
+        evicted = evicted or removed
+        retained_stamps = []
+        for line in lines:
             match = LOG_TIMESTAMP.match(line)
             stamp, message = match.groups() if match else ("", line)
+            if stamp:
+                retained_stamps.append(stamp)
             records.append((stamp, f"{stamp} [{item['name']}] {message}".strip()))
+        if removed:
+            if not retained_stamps:
+                raise RuntimeError("Evicted log stream has no safe timestamp cursor")
+            boundary = min(retained_stamps, key=timestamp_key)
+            evicted_boundaries.append(timestamp_key(boundary))
+            if collision:
+                collision_boundaries.add(timestamp_key(boundary))
+    if evicted_boundaries:
+        # A byte-limited replica may retain fewer than one page. Other replicas
+        # must not pull the global cursor behind that replica's unseen records.
+        # Only this newest suffix is known to be complete across all replicas.
+        cutoff = max(evicted_boundaries)
+        records = [record for record in records if timestamp_key(record[0]) >= cutoff]
     records.sort(key=lambda record: timestamp_key(record[0]))
-    has_more = len(records) > tail
+    has_more = len(records) > tail or evicted
     chosen = records[-tail:]
     timestamps = [stamp for stamp, _ in chosen if stamp]
     oldest = timestamps[0] if timestamps else ""
-    boundary_collision = bool(oldest) and any(
-        timestamp_key(stamp) == timestamp_key(oldest) for stamp, _ in records[:-tail]
+    boundary_collision = bool(oldest) and (
+        timestamp_key(oldest) in collision_boundaries or any(
+            timestamp_key(stamp) == timestamp_key(oldest) for stamp, _ in records[:-tail]
+        )
     )
     omitted_containers = max(0, len(selected) - 4)
     retention_note = "المتاح هو السجل الذي ما زال Docker يحتفظ به؛ قد تغيب سجلات الحاويات المستبدلة."
@@ -331,7 +440,9 @@ def main() -> None:
                     outcome.update({
                         "status": "failed", "error_code": type(exc).__name__[:80],
                         "summary": (
-                            "تجاوز حجم السجل حد القراءة الآمن؛ قلل عدد الأسطر أو الفترة ثم أعد الطلب. لم يُحفظ محتوى جزئي."
+                            "تجاوزت الفترة حد قراءة السجلات الآمن؛ قلص الفترة ثم أعد الطلب. لم يُحفظ محتوى جزئي."
+                            if isinstance(exc, LogScanLimitExceeded)
+                            else "تجاوز حجم أحد أسطر السجل الحد الآمن؛ اختر فترة أخرى. لم يُحفظ محتوى جزئي."
                             if isinstance(exc, LogOutputLimitExceeded)
                             else "فشل تنفيذ الإجراء على المضيف. راجع سجل وكيل العمليات."
                         ),
