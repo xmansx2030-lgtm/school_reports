@@ -228,12 +228,78 @@ def _image_priority(*, service: str, labels: dict) -> int:
     return 2 if labels.get("org.opencontainers.image.source") else 1
 
 
+
+def _container_cpu_usage(item: dict) -> int | None:
+    """Read cumulative CPU microseconds from this container's cgroup v2."""
+    pid = (item.get("State") or {}).get("Pid")
+    if not isinstance(pid, int) or pid <= 0:
+        return None
+    try:
+        lines = Path(f"/proc/{pid}/cgroup").read_text(encoding="ascii").splitlines()
+        group = next(line[3:] for line in lines if line.startswith("0::"))
+        root = Path("/sys/fs/cgroup").resolve()
+        path = (root / group.lstrip("/") / "cpu.stat").resolve()
+        if not path.is_relative_to(root):
+            return None
+        values = dict(line.split() for line in path.read_text(encoding="ascii").splitlines())
+        return int(values["usage_usec"])
+    except (OSError, ValueError, KeyError, StopIteration):
+        # Older cgroup v1 hosts retain the explicitly marked Docker snapshot.
+        return None
+
+
+def _container_cpu_metrics(inspections: list[dict]) -> dict[str, dict]:
+    """Average container CPU over the collector interval, excluding stale boots."""
+    state_path = Path(__file__).resolve().parent / ".operations-container-cpu.json"
+    try:
+        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+    except OSError:
+        return {}
+    now = time.monotonic()
+    current = {}
+    for item in inspections:
+        usage = _container_cpu_usage(item)
+        if usage is not None and item.get("Id"):
+            current[item["Id"]] = {"usage": usage, "started_at": (item.get("State") or {}).get("StartedAt")}
+    try:
+        previous = json.loads(state_path.read_text(encoding="ascii"))
+        elapsed = now - float(previous["monotonic"])
+        valid = previous["boot_id"] == boot_id and 60 <= elapsed <= 1800
+        old_containers = previous["containers"] if valid else {}
+        if not isinstance(old_containers, dict):
+            old_containers = {}
+    except (OSError, ValueError, KeyError, TypeError):
+        elapsed, old_containers = 0, {}
+    result = {}
+    for container_id, sample in current.items():
+        before = old_containers.get(container_id)
+        if not isinstance(before, dict) or sample["started_at"] != before.get("started_at"):
+            continue
+        usage_before = before.get("usage")
+        if not isinstance(usage_before, (int, float)) or usage_before < 0 or sample["usage"] < usage_before:
+            continue
+        percent = (sample["usage"] - usage_before) / 1_000_000 / elapsed / max(1, os.cpu_count() or 1) * 100
+        result[container_id] = {
+            "cpu_percent": round(max(0, min(100, percent)), 2),
+            "cpu_measurement": "interval",
+            "sample_duration_seconds": round(elapsed),
+        }
+    temporary = state_path.with_suffix(".tmp")
+    try:
+        temporary.write_text(json.dumps({"boot_id": boot_id, "monotonic": now, "containers": current}), encoding="ascii")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, state_path)
+    except OSError:
+        print("operations collector: container CPU interval state could not be saved", file=sys.stderr)
+    return result
+
 def _docker_inventory(memory_total: float) -> list[dict]:
     raw_ids = _run("docker", "ps", "-aq")
     container_ids = [value for value in raw_ids.splitlines() if value.strip()]
     if not container_ids:
         return []
     inspections = json.loads(_run("docker", "inspect", *container_ids, timeout=30))
+    cpu_metrics = _container_cpu_metrics(inspections)
 
     running_names = [
         str(item.get("Name") or "").lstrip("/")
@@ -278,6 +344,11 @@ def _docker_inventory(memory_total: float) -> list[dict]:
         restart_policy = ((item.get("HostConfig") or {}).get("RestartPolicy") or {}).get("Name") or ""
         stats = stats_by_name.get(name, {})
         raw_cpu = _percent(stats.get("CPUPerc"))
+        cpu_reading = cpu_metrics.get(item.get("Id"), {
+            "cpu_percent": round(raw_cpu / cpu_count, 2) if raw_cpu is not None else None,
+            "cpu_measurement": "snapshot" if raw_cpu is not None else "unavailable",
+            "sample_duration_seconds": None,
+        })
         mem_used, _ = _io_pair(stats.get("MemUsage", ""))
         network_rx, network_tx = _io_pair(stats.get("NetIO", ""))
         block_read, block_write = _io_pair(stats.get("BlockIO", ""))
@@ -298,7 +369,7 @@ def _docker_inventory(memory_total: float) -> list[dict]:
                 "started_at": str(state_payload.get("StartedAt") or ""),
                 "image": str(config.get("Image") or ""),
                 # Docker CPU% is per logical CPU. Normalize it to total host capacity.
-                "cpu_percent": round(raw_cpu / cpu_count, 1) if raw_cpu is not None else None,
+                **cpu_reading,
                 "memory_host_percent": (
                     round((mem_used / memory_total) * 100, 1)
                     if mem_used is not None and memory_total

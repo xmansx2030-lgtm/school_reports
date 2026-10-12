@@ -11,6 +11,7 @@ from operations.collector import sync_inventory_report
 
 class Command(BaseCommand):
     help = "Synchronize Docker projects and their resource usage from a host collector report."
+    requires_system_checks = []
 
     def add_arguments(self, parser):
         parser.add_argument("report", nargs="?", help="JSON report path; omit or use - to read stdin.")
