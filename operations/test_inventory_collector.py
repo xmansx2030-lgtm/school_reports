@@ -58,6 +58,20 @@ class HostInventoryCollectorTests(TestCase):
             self.assertIsNone(self.collector._container_cpu_usage({"State": {"Pid": 123}}))
         self.assertIsNone(self.collector._container_cpu_usage({"State": {"Pid": 0}}))
 
+    def test_inventory_uses_interval_cpu_instead_of_startup_snapshot(self):
+        rows = [{"Id": "one", "Name": "/web", "Config": {"Image": "app:latest", "Labels": {
+            "com.docker.compose.project": "school-reports", "com.docker.compose.service": "web",
+        }}, "State": {"Running": True, "Status": "running"}}]
+        sample = {"cpu_percent": 1.25, "cpu_measurement": "interval", "sample_duration_seconds": 300}
+        with patch.object(self.collector, "_run", side_effect=["one", json.dumps(rows),
+                json.dumps({"Name": "web", "CPUPerc": "190%"})]), \
+                patch.object(self.collector, "_container_cpu_metrics", return_value={"one": sample}), \
+                patch.object(self.collector, "_repository", return_value=""), \
+                patch.object(self.collector.os, "cpu_count", return_value=4):
+            result = self.collector._docker_inventory(8192 * 1024**2)
+        for key, value in sample.items():
+            self.assertEqual(result[0]["containers"][0][key], value)
+
     def test_cpu_uses_previous_same_boot_interval(self):
         previous = json.dumps({"boot_id": "same-boot", "monotonic": 1000, "ticks": [1000, 500, 50]})
 

@@ -130,3 +130,4 @@ tmp/darkaudit.sqlite3
 tmp/urls.json
 .claude/skills/dark-mode-audit/node_modules/
 deploy/hetzner/.operations-cpu-sample.json
+deploy/hetzner/.operations-container-cpu.json
