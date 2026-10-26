@@ -40,3 +40,10 @@ for item in items:
             examples.append({'type':kind,'message':scrub(message),'frames':frames[-12:]})
             frames = []
     emit('logs_'+name,{'lines':len(lines),'window':'90m; max 20000 lines','errors':errors,'examples':examples[-8:],'http_500_lines':sum(bool(re.search(r'\b500\b',line)) for line in lines),'worker_timeouts':sum('WORKER TIMEOUT' in line for line in lines),'categories':{term:sum(term in line.lower() for line in lines) for term in ('too many clients','remaining connection slots','deadlock detected','terminating connection','could not connect','connection refused','connection reset','out of memory','error:','fatal:')}})
+
+for query in ('SHOW max_connections', "SELECT state,client_addr,application_name,count(*),max(now()-backend_start) AS oldest_connection FROM pg_stat_activity WHERE backend_type='client backend' GROUP BY state,client_addr,application_name ORDER BY count(*) DESC"):
+    code, output = run('docker','exec','school-display-postgres-1','sh','-c','exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "$1"','sh',query)
+    emit('postgres_connections', {'code':code,'output':output})
+emit('container_addresses', [{'name':x['Name'],'networks':{k:v.get('IPAddress') for k,v in x['NetworkSettings']['Networks'].items()},'connection_age':[e for e in x['Config'].get('Env',[]) if e.startswith('CONN_MAX_AGE=')]} for x in items])
+code, output = run('docker','exec','school-display-web-1','python','-c',"import os,json; os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings'); from django.conf import settings; print(json.dumps({'CONN_MAX_AGE':settings.DATABASES['default'].get('CONN_MAX_AGE'),'CONN_HEALTH_CHECKS':settings.DATABASES['default'].get('CONN_HEALTH_CHECKS')}))")
+emit('web_database_settings', {'code':code,'output':output})
