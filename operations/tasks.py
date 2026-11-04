@@ -5,9 +5,11 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from .deployments import all_deployment_states
+from .incidents import observe_incident
 from .models import (
     HealthCheck,
     Incident,
+    IncidentEvent,
     ManagedProject,
     ManagedServer,
     OperationAction,
@@ -67,34 +69,25 @@ def reconcile_payment_links_task() -> dict[str, int | bool]:
 def monitor_deployment_state_task() -> dict[str, object]:
     if not getattr(settings, "OPERATIONS_DEPLOY_MONITOR_ENABLED", True):
         return {"enabled": False}
-    server = ManagedServer.objects.filter(is_active=True).order_by("id").first()
     states = all_deployment_states()
-    key = "deployment:repository-ahead"
-    open_incident = Incident.objects.filter(
-        dedupe_key=key,
-        status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED),
-    ).first()
-    notify_incident = None
+    projects = ManagedProject.objects.in_bulk(state.project_id for state in states)
     ahead = [state for state in states if state.repository_ahead]
-    if ahead and open_incident is None:
-        names = "، ".join(state.project_name for state in ahead[:5])
-        notify_incident = Incident.objects.create(
-            server=server,
-            dedupe_key=key,
-            title="يوجد إصدار أحدث في المستودع",
-            message=(
-                f"المشاريع التي لديها نسخة أحدث: {names}. الإجراء المناسب: افتح بطاقة النشر "
-                "في التطبيق واختر المشروع المطلوب ثم اضغط نشر إذا كان مساره مفعلاً."
-            ),
+    for state in states:
+        if not state.latest_sha or not state.deployed_sha or state.deployed_sha == "unknown":
+            continue
+        project = projects.get(state.project_id)
+        if project is None:
+            continue
+        event = observe_incident(
+            f"deployment:{project.pk}:repository-ahead",
+            problem=state.repository_ahead,
+            project=project, server=project.server,
+            title=f"يوجد إصدار أحدث لـ {project.name}",
+            message="راجع بطاقة النشر للتحقق من الإصدار قبل تشغيل النشر.",
             severity=Incident.Severity.INFO,
         )
-    elif not ahead and open_incident is not None:
-        open_incident.status = Incident.Status.RESOLVED
-        open_incident.resolved_at = timezone.now()
-        open_incident.save(update_fields=("status", "resolved_at"))
-        notify_incident = open_incident
-    if notify_incident is not None:
-        send_incident_push_task.delay(notify_incident.pk)
+        if event is not None and project.alerts_enabled:
+            send_incident_push_task.delay(event.incident_id, event.pk)
     return {
         "enabled": True,
         "repository_ahead": bool(ahead),
@@ -109,9 +102,14 @@ def monitor_deployment_state_task() -> dict[str, object]:
     retry_backoff=True,
     retry_kwargs={"max_retries": 3},
 )
-def send_incident_push_task(incident_id: int) -> dict[str, int]:
-    incident = Incident.objects.filter(pk=incident_id).first()
-    return send_incident_push(incident) if incident is not None else {"sent": 0, "failed": 0, "disabled": 0}
+def send_incident_push_task(incident_id: int, event_id: int | None = None) -> dict[str, int]:
+    incident = Incident.objects.filter(pk=incident_id, merged_into__isnull=True).first()
+    event = None
+    if incident is not None and event_id is not None:
+        event = IncidentEvent.objects.filter(pk=event_id, incident=incident).first()
+        if event is None:
+            return {"sent": 0, "failed": 0, "disabled": 0}
+    return send_incident_push(incident, event=event) if incident is not None else {"sent": 0, "failed": 0, "disabled": 0}
 
 
 @shared_task(

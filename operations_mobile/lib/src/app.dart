@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,12 +16,17 @@ class OperationsApp extends ConsumerWidget {
     ref.listen<SessionState>(sessionProvider, (previous, next) {
       if (next.status == SessionStatus.signedIn &&
           previous?.status != SessionStatus.signedIn) {
-        ref.read(notificationProvider).initialize();
+        unawaited(ref.read(notificationProvider).initialize());
+      } else if (previous?.status == SessionStatus.signedIn &&
+          next.status != SessionStatus.signedIn) {
+        unawaited(ref.read(notificationProvider).stop());
+        ref.read(incidentNotificationProvider.notifier).state = null;
       }
     });
     final session = ref.watch(sessionProvider);
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
+      key: ValueKey(session.status == SessionStatus.signedIn),
       debugShowCheckedModeBanner: false,
       title: 'مركز العمليات',
       locale: const Locale('ar'),
@@ -30,7 +37,12 @@ class OperationsApp extends ConsumerWidget {
       darkTheme: _buildTheme(OpsPalette.dark, Brightness.dark),
       home: switch (session.status) {
         SessionStatus.loading => const _StartupScreen(),
-        SessionStatus.signedOut => LoginScreen(notice: session.error),
+        SessionStatus.signedOut => LoginScreen(
+          notice: session.error,
+          onRetry: session.canRetry
+              ? ref.read(sessionProvider.notifier).retry
+              : null,
+        ),
         SessionStatus.signedIn => const DashboardScreen(),
       },
     );

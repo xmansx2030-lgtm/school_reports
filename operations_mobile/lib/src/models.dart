@@ -270,6 +270,9 @@ class IncidentInfo {
     required this.status,
     required this.projectName,
     required this.openedAt,
+    this.resolvedAt,
+    this.lastSeenAt,
+    this.occurrenceCount = 1,
   });
   final int id;
   final String title;
@@ -278,6 +281,9 @@ class IncidentInfo {
   final String status;
   final String projectName;
   final DateTime? openedAt;
+  final DateTime? resolvedAt;
+  final DateTime? lastSeenAt;
+  final int occurrenceCount;
 
   factory IncidentInfo.fromJson(Map<String, dynamic> json) => IncidentInfo(
     id: json['id'] as int,
@@ -287,13 +293,100 @@ class IncidentInfo {
     status: '${json['status'] ?? 'open'}',
     projectName: '${json['project_name'] ?? ''}',
     openedAt: _date(json['opened_at']),
+    resolvedAt: _date(json['resolved_at']),
+    lastSeenAt: _date(json['last_seen_at']),
+    occurrenceCount: (json['occurrence_count'] as num?)?.toInt() ?? 1,
   );
+}
+
+int? _nextOffset(Object? next) {
+  final value = next is String
+      ? Uri.tryParse(next)?.queryParameters['offset']
+      : null;
+  return value == null ? null : int.tryParse(value);
+}
+
+class IncidentPage {
+  const IncidentPage(this.cases, this.nextOffset);
+  final List<IncidentInfo> cases;
+  final int? nextOffset;
+
+  factory IncidentPage.fromJson(Map<String, dynamic> json) => IncidentPage(
+    (json['results'] as List? ?? const [])
+        .map(
+          (item) =>
+              IncidentInfo.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList(),
+    _nextOffset(json['next']),
+  );
+}
+
+class IncidentEventInfo {
+  const IncidentEventInfo(
+    this.label,
+    this.severity,
+    this.message,
+    this.occurredAt,
+  );
+  final String label;
+  final String severity;
+  final String message;
+  final DateTime? occurredAt;
+
+  factory IncidentEventInfo.fromJson(Map<String, dynamic> json) =>
+      IncidentEventInfo(
+        '${json['label'] ?? ''}',
+        '${json['severity'] ?? ''}',
+        '${json['message'] ?? ''}',
+        _date(json['occurred_at']),
+      );
+}
+
+class IncidentTimeline {
+  const IncidentTimeline(this.incident, this.events, this.nextOffset);
+  final IncidentInfo incident;
+  final List<IncidentEventInfo> events;
+  final int? nextOffset;
+
+  factory IncidentTimeline.fromJson(
+    Map<String, dynamic> json,
+  ) => IncidentTimeline(
+    IncidentInfo.fromJson(Map<String, dynamic>.from(json['incident'] as Map)),
+    (json['events'] as List? ?? const [])
+        .map(
+          (item) => IncidentEventInfo.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList(),
+    _nextOffset(json['next']),
+  );
+}
+
+class IncidentPreferences {
+  const IncidentPreferences(this.start, this.end);
+  final int? start;
+  final int? end;
+  bool get enabled => start != null && end != null;
+
+  factory IncidentPreferences.fromJson(Map<String, dynamic> json) =>
+      IncidentPreferences(
+        (json['quiet_start_minute'] as num?)?.toInt(),
+        (json['quiet_end_minute'] as num?)?.toInt(),
+      );
+
+  Map<String, int?> toJson() => {
+    'quiet_start_minute': start,
+    'quiet_end_minute': end,
+  };
 }
 
 class DashboardData {
   const DashboardData({
     required this.servers,
     required this.incidents,
+    this.recentResolvedIncidents = const [],
     required this.serverCount,
     required this.projectCount,
     required this.healthyProjectCount,
@@ -306,6 +399,7 @@ class DashboardData {
   });
   final List<ServerInfo> servers;
   final List<IncidentInfo> incidents;
+  final List<IncidentInfo> recentResolvedIncidents;
   final int serverCount;
   final int projectCount;
   final int healthyProjectCount;
@@ -335,6 +429,14 @@ class DashboardData {
                 IncidentInfo.fromJson(Map<String, dynamic>.from(item as Map)),
           )
           .toList(),
+      recentResolvedIncidents:
+          (json['recent_resolved_incidents'] as List? ?? const [])
+              .map(
+                (item) => IncidentInfo.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ),
+              )
+              .toList(),
       serverCount: (summary['servers'] as num?)?.toInt() ?? 0,
       projectCount: (summary['projects'] as num?)?.toInt() ?? 0,
       healthyProjectCount: (summary['healthy_projects'] as num?)?.toInt() ?? 0,
@@ -342,7 +444,7 @@ class DashboardData {
       teamMemberCount: (summary['team_members'] as num?)?.toInt() ?? 0,
       generatedAt: _date(json['generated_at']),
       currentUser: currentUserPayload == null
-          ? OperationsAccount.legacyOwner()
+          ? OperationsAccount.fromJson(const {})
           : OperationsAccount.fromJson(
               Map<String, dynamic>.from(currentUserPayload),
             ),
@@ -714,28 +816,6 @@ class OperationsAccount {
   final DateTime? lastSeenAt;
 
   bool can(String capability) => capabilities.contains(capability);
-
-  factory OperationsAccount.legacyOwner() => const OperationsAccount(
-    id: 0,
-    name: '',
-    phone: '',
-    email: '',
-    isActive: true,
-    isStaff: true,
-    isSuperuser: true,
-    role: 'owner',
-    roleLabel: 'مالك مركز العمليات',
-    capabilities: {
-      'view',
-      'run_checks',
-      'run_actions',
-      'acknowledge_incidents',
-      'manage_team',
-      'view_payment_links',
-      'manage_payment_links',
-    },
-    activeDevices: 0,
-  );
 
   factory OperationsAccount.fromJson(Map<String, dynamic> json) =>
       OperationsAccount(

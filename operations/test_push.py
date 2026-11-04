@@ -1,19 +1,22 @@
 from types import SimpleNamespace
+from datetime import datetime, timezone as dt_timezone
 from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
+from requests.exceptions import ConnectTimeout
 
 from reports.models import Teacher
 
 from .models import (
     Incident,
+    IncidentEvent,
     ManagedProject,
     ManagedServer,
     MobileDevice,
     OperationsMembership,
     OperationsPaymentLink,
 )
-from .push import send_incident_push, send_payment_paid_push
+from .push import FCMConnectionError, send_incident_push, send_payment_paid_push
 
 
 @override_settings(FCM_PROJECT_ID="isolated-project")
@@ -67,8 +70,42 @@ class IncidentPushContractTests(TestCase):
             {"sent": 0, "failed": 0, "disabled": 1},
         )
 
+    @patch("operations.push._send_push", return_value={"sent": 0, "failed": 0, "disabled": 0})
+    def test_quiet_hours_cross_midnight_and_critical_bypasses_even_after_downgrade(self, send):
+        device = self._device("quiet-device", "test-quiet-token")
+        OperationsMembership.objects.filter(user=self.user).update(quiet_start_minute=1320, quiet_end_minute=420)
+        self.incident.severity = Incident.Severity.INFO
+        event = IncidentEvent(
+            incident=self.incident, kind=IncidentEvent.Kind.OPENED, severity=Incident.Severity.INFO,
+            occurred_at=datetime(2026, 11, 5, 20, tzinfo=dt_timezone.utc),
+        )
+        send_incident_push(self.incident, event=event)
+        self.assertEqual(send.call_args.args[0], [])
+        event.severity = Incident.Severity.CRITICAL
+        send_incident_push(self.incident, event=event)
+        self.assertEqual(send.call_args.args[0], [device])
+        self.assertEqual(send.call_args.kwargs["data"]["severity"], "critical")
+        event.severity = Incident.Severity.INFO
+        event.occurred_at = datetime(2026, 11, 6, 4, tzinfo=dt_timezone.utc)
+        send_incident_push(self.incident, event=event)
+        self.assertEqual(send.call_args.args[0], [device])
+
     @patch("google.oauth2.service_account.Credentials.from_service_account_file")
-    @patch("requests.post")
+    @patch("requests.Session.post", side_effect=ConnectTimeout)
+    @patch.dict("os.environ", {"GOOGLE_APPLICATION_CREDENTIALS": "isolated-service-account.json"})
+    def test_connection_outage_can_retry_without_marking_incident_notified(self, post, credentials_factory):
+        self._device("offline", "token-offline")
+
+        with self.assertRaises(FCMConnectionError):
+            send_incident_push(self.incident)
+
+        post.assert_called_once()
+        credentials_factory.return_value.refresh.assert_called_once()
+        self.incident.refresh_from_db()
+        self.assertIsNone(self.incident.last_notified_at)
+
+    @patch("google.oauth2.service_account.Credentials.from_service_account_file")
+    @patch("requests.Session.post")
     @patch.dict(
         "os.environ",
         {"GOOGLE_APPLICATION_CREDENTIALS": "isolated-service-account.json"},
@@ -81,6 +118,16 @@ class IncidentPushContractTests(TestCase):
     ):
         invalid = self._device("invalid", "token-invalid")
         self._device("valid", "token-valid")
+        former_member = Teacher.objects.create_user(
+            phone="0500000096",
+            name="Former operator",
+        )
+        OperationsMembership.objects.create(
+            user=former_member, role=OperationsMembership.Role.OPERATOR, is_active=False,
+        )
+        MobileDevice.objects.create(
+            user=former_member, device_id="former", fcm_token="token-former",  # noqa: S106
+        )
         credentials = SimpleNamespace(
             token="short-lived-test-token",  # noqa: S106 - synthetic OAuth token.
             refresh=Mock(),
@@ -98,6 +145,7 @@ class IncidentPushContractTests(TestCase):
         result = send_incident_push(self.incident)
 
         self.assertEqual(result, {"sent": 1, "failed": 1, "disabled": 0})
+        self.assertEqual(post.call_count, 2)
         invalid.refresh_from_db()
         self.assertFalse(invalid.is_active)
         self.assertEqual(invalid.fcm_token, "")
@@ -115,12 +163,16 @@ class IncidentPushContractTests(TestCase):
             second_payload["message"]["android"]["notification"]["channel_id"],
             "operations_alerts",
         )
+        self.assertEqual(
+            second_payload["message"]["android"]["notification"]["tag"],
+            f"incident-{self.incident.pk}",
+        )
         credentials.refresh.assert_called_once()
         self.incident.refresh_from_db()
         self.assertIsNotNone(self.incident.last_notified_at)
 
     @patch("google.oauth2.service_account.Credentials.from_service_account_file")
-    @patch("requests.post")
+    @patch("requests.Session.post")
     @patch.dict(
         "os.environ",
         {"GOOGLE_APPLICATION_CREDENTIALS": "isolated-service-account.json"},

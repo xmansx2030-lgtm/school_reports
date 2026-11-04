@@ -10,10 +10,11 @@ import '../state.dart';
 import 'emergency_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key, this.notice});
+  const LoginScreen({super.key, this.notice, this.onRetry});
 
   /// An optional message carried over from a previous session (e.g. expiry).
   final String? notice;
+  final VoidCallback? onRetry;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -48,7 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_busy || !_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() {
       _busy = true;
@@ -65,6 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       // On success the app shell swaps this screen out automatically.
     } on ApiException catch (error) {
+      if (!mounted) return;
       final needsOtp =
           error.statusCode == 401 &&
           (error.data?['otp_required'] == true ||
@@ -75,6 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (needsOtp) _needsOtp = true;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _busy = false;
         _error = 'تعذر إكمال تسجيل الدخول الآن.';
@@ -133,11 +136,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 14),
                             ] else if (widget.notice != null) ...[
                               _noticeBanner(widget.notice!),
+                              if (widget.onRetry != null)
+                                TextButton(
+                                  onPressed: _busy ? null : widget.onRetry,
+                                  child: const Text('إعادة الاتصال بالجلسة'),
+                                ),
                               const SizedBox(height: 14),
                             ],
                             TextFormField(
                               controller: _phone,
                               keyboardType: TextInputType.phone,
+                              textDirection: TextDirection.ltr,
                               textInputAction: TextInputAction.next,
                               inputFormatters: [
                                 FilteringTextInputFormatter.allow(
@@ -188,6 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               TextFormField(
                                 controller: _otp,
                                 keyboardType: TextInputType.number,
+                                textDirection: TextDirection.ltr,
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => _submit(),
                                 inputFormatters: [
@@ -195,7 +205,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ],
                                 decoration: const InputDecoration(
                                   labelText: 'رمز التحقق',
-                                  hintText: 'الرمز المرسل إلى جوالك',
+                                  hintText: 'الرمز من تطبيق المصادقة',
                                   prefixIcon: Icon(Icons.pin_outlined),
                                 ),
                                 validator: (value) =>

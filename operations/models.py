@@ -260,10 +260,39 @@ class Incident(models.Model):
     )
     resolved_at = models.DateTimeField(null=True, blank=True)
     last_notified_at = models.DateTimeField(null=True, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    occurrence_count = models.PositiveIntegerField(default=1)
+    merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="merged_cases")
 
     class Meta:
         ordering = ("-opened_at", "-id")
         indexes = [models.Index(fields=("status", "severity", "-opened_at"))]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("dedupe_key",),
+                condition=models.Q(merged_into__isnull=True) & ~models.Q(dedupe_key=""),
+                name="operations_unique_incident_case",
+            )
+        ]
+
+
+class IncidentEvent(models.Model):
+    class Kind(models.TextChoices):
+        OPENED = "opened", "بدأت الحالة"
+        REOPENED = "reopened", "تكررت الحالة بعد الحل"
+        ACKNOWLEDGED = "acknowledged", "تم الاطلاع"
+        SEVERITY = "severity_changed", "تغيّرت الخطورة"
+        RESOLVED = "resolved", "تم الحل"
+
+    incident = models.ForeignKey(Incident, on_delete=models.CASCADE, related_name="events")
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    occurred_at = models.DateTimeField(default=timezone.now)
+    severity = models.CharField(max_length=12, choices=Incident.Severity.choices)
+    message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-occurred_at", "-pk")
+        indexes = [models.Index(fields=("incident", "-occurred_at"))]
 
 
 class OperationAction(models.Model):
@@ -401,6 +430,8 @@ class OperationsMembership(models.Model):
     )
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.VIEWER, db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
+    quiet_start_minute = models.PositiveSmallIntegerField(null=True, blank=True)
+    quiet_end_minute = models.PositiveSmallIntegerField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

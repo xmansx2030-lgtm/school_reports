@@ -38,5 +38,8 @@ urlpatterns = [
     path("projects/<int:project_id>/actions/", views.create_action, name="create-action"),
     path("projects/<int:project_id>/actions/<int:action_id>/", views.action_detail, name="action-detail"),
     path("devices/", views.device_registration, name="device-registration"),
+    path("incidents/", views.incident_list, name="incident-list"),
+    path("incidents/preferences/", views.incident_preferences, name="incident-preferences"),
+    path("incidents/<int:incident_id>/", views.incident_detail, name="incident-detail"),
     path("incidents/<int:incident_id>/acknowledge/", views.acknowledge_incident, name="acknowledge-incident"),
 ]

@@ -155,22 +155,19 @@ void main() {
     expect(info.canDeploy, isFalse);
   });
 
-  test(
-    'keeps legacy superuser access and labels a missing agent as disabled',
-    () {
-      final dashboard = DashboardData.fromJson({
-        'summary': const {},
-        'servers': const [],
-        'incidents': const [],
-      });
+  test('missing account data does not expose privileged actions', () {
+    final dashboard = DashboardData.fromJson({
+      'summary': const {},
+      'servers': const [],
+      'incidents': const [],
+    });
 
-      expect(dashboard.currentUser.isSuperuser, isTrue);
-      expect(dashboard.currentUser.can('run_checks'), isTrue);
-      expect(dashboard.currentUser.can('manage_team'), isTrue);
-      expect(dashboard.agentReady, isFalse);
-      expect(dashboard.agentLabel, 'غير مفعّل');
-    },
-  );
+    expect(dashboard.currentUser.isSuperuser, isFalse);
+    expect(dashboard.currentUser.can('run_checks'), isFalse);
+    expect(dashboard.currentUser.can('manage_team'), isFalse);
+    expect(dashboard.agentReady, isFalse);
+    expect(dashboard.agentLabel, 'غير مفعّل');
+  });
 
   test('parses payment links and builds an encoded WhatsApp handoff', () {
     final data = _paymentLinksFixture();
