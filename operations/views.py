@@ -13,7 +13,8 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
-from rest_framework import permissions, status
+from rest_framework import permissions, serializers, status
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -31,8 +32,10 @@ from .authentication import OperationsTokenAuthentication, has_operations_access
 from .action_policy import project_actions
 from .action_requests import log_parameters
 from .deployments import DeploymentIntegrationError, GitHubDeploymentClient, all_deployment_states
+from .incidents import canonical_incidents
 from .models import (
     Incident,
+    IncidentEvent,
     HostAgentHeartbeat,
     ManagedProject,
     ManagedServer,
@@ -276,7 +279,11 @@ def account_detail(request, user_id: int):
 def dashboard(request):
     servers = ManagedServer.objects.filter(is_active=True).prefetch_related("projects__services")
     projects = list(ManagedProject.objects.filter(is_active=True))
-    incidents = Incident.objects.filter(status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED)).select_related("project")[:20]
+    active_cases = canonical_incidents().filter(status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED))
+    incidents = active_cases.select_related("project").order_by("-last_seen_at", "-pk")[:20]
+    recent_resolved = canonical_incidents().filter(
+        status=Incident.Status.RESOLVED, resolved_at__isnull=False,
+    ).select_related("project").order_by("-resolved_at", "-pk")[:20]
     return Response({
         "generated_at": timezone.now(),
         "summary": {
@@ -285,7 +292,7 @@ def dashboard(request):
             "healthy_projects": sum(
                 project.effective_status == ManagedProject.Status.HEALTHY for project in projects
             ),
-            "open_incidents": Incident.objects.filter(status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED)).count(),
+            "open_incidents": active_cases.count(),
             "team_members": OperationsMembership.objects.filter(is_active=True, user__is_active=True).count(),
         },
         "current_user": _account_payload(request.user),
@@ -295,6 +302,7 @@ def dashboard(request):
         },
         "servers": ManagedServerSerializer(servers, many=True).data,
         "incidents": IncidentSerializer(incidents, many=True).data,
+        "recent_resolved_incidents": IncidentSerializer(recent_resolved, many=True).data,
     })
 
 
@@ -655,18 +663,25 @@ def device_registration(request):
     if request.method == "DELETE":
         MobileDevice.objects.filter(user=request.user, device_id=device_id).update(is_active=False, fcm_token="")
         return Response(status=204)
-    device, _ = MobileDevice.objects.update_or_create(
-        user=request.user,
-        device_id=device_id[:160],
-        defaults={
-            "name": str(request.data.get("name") or "")[:120],
-            "platform": str(request.data.get("platform") or "android")[:24],
-            "fcm_token": str(request.data.get("fcm_token") or ""),
-            "alerts_enabled": bool(request.data.get("alerts_enabled", True)),
-            "is_active": True,
-            "last_seen_at": timezone.now(),
-        },
-    )
+    fcm_token = str(request.data.get("fcm_token") or "").strip()
+    with transaction.atomic():
+        if fcm_token:
+            # Retire the same user's previous registration when this installation is upgraded.
+            MobileDevice.objects.filter(user=request.user, fcm_token=fcm_token).exclude(
+                device_id=device_id[:160],
+            ).update(is_active=False, fcm_token="")
+        device, _ = MobileDevice.objects.update_or_create(
+            user=request.user,
+            device_id=device_id[:160],
+            defaults={
+                "name": str(request.data.get("name") or "")[:120],
+                "platform": str(request.data.get("platform") or "android")[:24],
+                "fcm_token": fcm_token,
+                "alerts_enabled": bool(request.data.get("alerts_enabled", True)),
+                "is_active": True,
+                "last_seen_at": timezone.now(),
+            },
+        )
     return Response({"id": device.pk, "alerts_enabled": device.alerts_enabled})
 
 
@@ -675,11 +690,78 @@ def device_registration(request):
 def acknowledge_incident(request, incident_id: int):
     if not _has_capability(request.user, "acknowledge_incidents"):
         return Response({"detail": "لا تملك صلاحية التعامل مع التنبيهات."}, status=status.HTTP_403_FORBIDDEN)
-    incident = Incident.objects.filter(pk=incident_id, status=Incident.Status.OPEN).first()
-    if incident is None:
-        return Response({"detail": "التنبيه غير موجود أو تمت معالجته."}, status=404)
-    incident.status = Incident.Status.ACKNOWLEDGED
-    incident.acknowledged_at = timezone.now()
-    incident.acknowledged_by = request.user
-    incident.save(update_fields=("status", "acknowledged_at", "acknowledged_by"))
+    with transaction.atomic():
+        incident = canonical_incidents().select_for_update().filter(pk=incident_id, status=Incident.Status.OPEN).first()
+        if incident is None:
+            return Response({"detail": "التنبيه غير موجود أو تمت معالجته."}, status=404)
+        incident.status = Incident.Status.ACKNOWLEDGED
+        incident.acknowledged_at = timezone.now()
+        incident.acknowledged_by = request.user
+        incident.save(update_fields=("status", "acknowledged_at", "acknowledged_by"))
+        IncidentEvent.objects.create(
+            incident=incident, kind=IncidentEvent.Kind.ACKNOWLEDGED,
+            occurred_at=incident.acknowledged_at, severity=incident.severity,
+        )
     return Response(IncidentSerializer(incident).data)
+
+
+class IncidentPagination(LimitOffsetPagination):
+    default_limit = 30
+    max_limit = 100
+
+
+@api_view(["GET"])
+@authentication_classes([OperationsTokenAuthentication])
+def incident_list(request):
+    cases = canonical_incidents().select_related("project").order_by("-last_seen_at", "-pk")
+    severity = request.query_params.get("severity", "")
+    if severity:
+        if severity not in Incident.Severity.values:
+            return Response({"detail": "درجة الخطورة غير صالحة."}, status=400)
+        cases = cases.filter(severity=severity)
+    pager = IncidentPagination()
+    page = pager.paginate_queryset(cases, request)
+    return pager.get_paginated_response(IncidentSerializer(page, many=True).data)
+
+
+@api_view(["GET"])
+@authentication_classes([OperationsTokenAuthentication])
+def incident_detail(request, incident_id: int):
+    incident = Incident.objects.select_related("merged_into__project", "project").filter(pk=incident_id).first()
+    if incident is None:
+        return Response({"detail": "الحالة غير موجودة."}, status=404)
+    incident = incident.merged_into or incident
+    pager = IncidentPagination()
+    events = pager.paginate_queryset(incident.events.all(), request)
+    return Response({
+        "incident": IncidentSerializer(incident).data,
+        "events": [
+            {"kind": event.kind, "label": event.get_kind_display(), "occurred_at": event.occurred_at,
+             "severity": event.severity, "message": event.message}
+            for event in events
+        ],
+        "next": pager.get_next_link(),
+    })
+
+
+class IncidentPreferencesSerializer(serializers.Serializer):
+    quiet_start_minute = serializers.IntegerField(min_value=0, max_value=1439, allow_null=True)
+    quiet_end_minute = serializers.IntegerField(min_value=0, max_value=1439, allow_null=True)
+
+    def validate(self, attrs):
+        start, end = attrs["quiet_start_minute"], attrs["quiet_end_minute"]
+        if (start is None) != (end is None) or (start is not None and start == end):
+            raise serializers.ValidationError({"detail": "حدد وقت بداية ونهاية مختلفين، أو أوقف ساعات الهدوء."})
+        return attrs
+
+
+@api_view(["GET", "PUT"])
+@authentication_classes([OperationsTokenAuthentication])
+def incident_preferences(request):
+    membership = OperationsMembership.objects.get(user=request.user, is_active=True)
+    if request.method == "PUT":
+        serializer = IncidentPreferencesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        OperationsMembership.objects.filter(pk=membership.pk).update(**serializer.validated_data)
+        membership.refresh_from_db()
+    return Response(IncidentPreferencesSerializer(membership).data)

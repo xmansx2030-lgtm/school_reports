@@ -20,6 +20,7 @@ from reports.models import (
     School,
     Teacher,
 )
+from reports.resend_email import process_webhook_event, send_platform_email
 
 
 WEBHOOK_KEY = b"platform-email-test-secret-32bytes"
@@ -465,6 +466,39 @@ class PlatformEmailTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(email.status, PlatformEmail.Status.DELIVERED)
         self.assertIsNotNone(email.delivered_at)
+
+    @patch("reports.resend_email._api_request")
+    def test_delivery_webhook_arriving_before_send_response_keeps_original_message(self, api_request):
+        def send_and_deliver(*args, **kwargs):
+            payload = kwargs["payload"]
+            event = {
+                "type": "email.delivered",
+                "data": {
+                    "email_id": "early_delivery",
+                    "from": payload["from"],
+                    "to": payload["to"],
+                    "tags": {tag["name"]: tag["value"] for tag in payload["tags"]},
+                },
+            }
+            process_webhook_event(event, "evt_early_delivery")
+            return {"id": "early_delivery"}
+
+        api_request.side_effect = send_and_deliver
+        email = send_platform_email(
+            created_by=self.admin, to=["recipient@example.com"], subject="رسالة", body="النص الأصلي",
+        )
+
+        self.assertEqual(PlatformEmail.objects.count(), 1)
+        self.assertEqual(email.provider_id, "early_delivery")
+        self.assertEqual(email.status, PlatformEmail.Status.DELIVERED)
+        self.assertEqual(email.text_body, "النص الأصلي")
+        self.assertEqual(PlatformEmailEvent.objects.get(provider_event_id="evt_early_delivery").email_id, email.pk)
+
+        process_webhook_event(
+            {"type": "email.sent", "data": {"email_id": "early_delivery"}}, "evt_late_acceptance",
+        )
+        email.refresh_from_db()
+        self.assertEqual(email.status, PlatformEmail.Status.DELIVERED)
 
     def test_webhook_ignores_unknown_outbound_events_from_other_projects(self):
         event = {

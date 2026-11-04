@@ -392,6 +392,56 @@ class OperationsApi {
     );
   }
 
+  Future<IncidentPage> incidentCases({
+    String severity = '',
+    int offset = 0,
+  }) async => IncidentPage.fromJson(
+    await _request(
+      () => _dio.get<Map<String, dynamic>>(
+        '/incidents/',
+        queryParameters: {
+          'offset': offset,
+          if (severity.isNotEmpty) 'severity': severity,
+        },
+      ),
+    ),
+  );
+
+  Future<IncidentTimeline> incidentTimeline(int id, {int offset = 0}) async =>
+      IncidentTimeline.fromJson(
+        await _request(
+          () => _dio.get<Map<String, dynamic>>(
+            '/incidents/$id/',
+            queryParameters: {'offset': offset},
+          ),
+        ),
+      );
+
+  Future<IncidentPreferences> incidentPreferences() async =>
+      IncidentPreferences.fromJson(
+        await _request(
+          () => _dio.get<Map<String, dynamic>>('/incidents/preferences/'),
+        ),
+      );
+
+  Future<void> saveIncidentPreferences(IncidentPreferences preferences) async {
+    await _request(
+      () => _dio.put<Map<String, dynamic>>(
+        '/incidents/preferences/',
+        data: preferences.toJson(),
+      ),
+    );
+  }
+
+  Future<void> unregisterDevice(String deviceId) async {
+    await _request(
+      () => _dio.delete<Map<String, dynamic>>(
+        '/devices/',
+        data: {'device_id': deviceId},
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> _request(
     Future<Response<Map<String, dynamic>>> Function() call,
   ) async {

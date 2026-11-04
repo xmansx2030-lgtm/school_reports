@@ -41,36 +41,43 @@ final themeModeProvider = StateNotifierProvider<ThemeModeController, ThemeMode>(
 enum SessionStatus { loading, signedOut, signedIn }
 
 class SessionState {
-  const SessionState({required this.status, this.error});
+  const SessionState({required this.status, this.error, this.canRetry = false});
   final SessionStatus status;
   final String? error;
+  final bool canRetry;
 }
 
 class SessionController extends StateNotifier<SessionState> {
-  SessionController(this._api)
+  SessionController(this._api, {this.beforeSignOut})
     : super(const SessionState(status: SessionStatus.loading)) {
     _restore();
   }
   final OperationsApi _api;
+  final Future<void> Function()? beforeSignOut;
 
   Future<void> _restore() async {
-    if (!await _api.restoreSession()) {
-      // No stored/provisioned token yet — surface the sign-in screen.
-      state = const SessionState(status: SessionStatus.signedOut);
-      return;
-    }
     try {
+      if (!await _api.restoreSession()) {
+        if (mounted) {
+          state = const SessionState(status: SessionStatus.signedOut);
+        }
+        return;
+      }
       await _api.dashboard();
-      state = const SessionState(status: SessionStatus.signedIn);
+      if (mounted) state = const SessionState(status: SessionStatus.signedIn);
     } catch (error) {
+      if (!mounted) return;
       if (error is ApiException &&
           (error.statusCode == 401 || error.statusCode == 403)) {
         await _api.clearSession();
-        state = const SessionState(status: SessionStatus.signedOut);
+        if (mounted) {
+          state = const SessionState(status: SessionStatus.signedOut);
+        }
         return;
       }
       state = SessionState(
         status: SessionStatus.signedOut,
+        canRetry: true,
         error: error is ApiException
             ? error.message
             : 'تعذر الاتصال بمركز العمليات.',
@@ -97,6 +104,7 @@ class SessionController extends StateNotifier<SessionState> {
   }
 
   Future<void> signOut() async {
+    await beforeSignOut?.call();
     await _api.logout();
     state = const SessionState(status: SessionStatus.signedOut);
   }
@@ -118,7 +126,10 @@ class SessionController extends StateNotifier<SessionState> {
 final sessionProvider = StateNotifierProvider<SessionController, SessionState>((
   ref,
 ) {
-  return SessionController(ref.watch(apiProvider));
+  return SessionController(
+    ref.watch(apiProvider),
+    beforeSignOut: () => ref.read(notificationProvider).stop(unregister: true),
+  );
 });
 
 class DashboardController extends StateNotifier<AsyncValue<DashboardData>> {
@@ -141,7 +152,8 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardData>> {
       final result = await _api.dashboard();
       if (mounted) state = AsyncData(result);
     } catch (error, stack) {
-      if (error is ApiException &&
+      if (mounted &&
+          error is ApiException &&
           (error.statusCode == 401 || error.statusCode == 403)) {
         await _onUnauthorized();
       }
@@ -200,8 +212,31 @@ final paymentLinksProvider = FutureProvider.autoDispose<PaymentLinksData>((
   return ref.watch(apiProvider).paymentLinks();
 });
 
+final incidentNotificationProvider = StateProvider<int?>((ref) => null);
+
+final incidentCasesProvider = FutureProvider.autoDispose
+    .family<IncidentPage, ({String severity, int offset})>((ref, query) {
+      return ref
+          .watch(apiProvider)
+          .incidentCases(severity: query.severity, offset: query.offset);
+    });
+
+final incidentTimelineProvider = FutureProvider.autoDispose
+    .family<IncidentTimeline, ({int id, int offset})>((ref, query) {
+      return ref
+          .watch(apiProvider)
+          .incidentTimeline(query.id, offset: query.offset);
+    });
+
 final notificationProvider = Provider<NotificationService>((ref) {
-  final service = NotificationService(ref.watch(apiProvider));
+  final service = NotificationService(
+    ref.watch(apiProvider),
+    onIncidentOpened: (id) {
+      final selection = ref.read(incidentNotificationProvider.notifier);
+      selection.state = null;
+      selection.state = id;
+    },
+  );
   ref.onDispose(service.dispose);
   return service;
 });

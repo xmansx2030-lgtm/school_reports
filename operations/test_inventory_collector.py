@@ -118,3 +118,17 @@ class HostInventoryCollectorTests(TestCase):
         self.assertEqual(result[0]["deployed_sha"], app_sha)
         self.assertEqual(result[0]["deployed_image"], f"ghcr.io/owner/app:{app_sha}")
 
+    def test_tawtheeq_hotfix_uses_runtime_base_sha_and_keeps_hotfix_image(self):
+        image = "school-reports-maintenance:hotfix"
+        base_sha = "b" * 40
+        rows = [{"Name": "/web", "Config": {"Image": image, "Env": [f"RELEASE_SHA={base_sha}"], "Labels": {
+            "com.docker.compose.project": "school-reports",
+            "com.docker.compose.service": "web",
+            "org.opencontainers.image.revision": "c" * 40,
+        }}, "State": {"Status": "running", "Running": True}}]
+        with patch.object(self.collector, "_run", side_effect=["web-id", json.dumps(rows), ""]), \
+                patch.object(self.collector, "_container_cpu_metrics", return_value={}):
+            result = self.collector._docker_inventory(8192 * 1024**2)
+        self.assertEqual(result[0]["deployed_sha"], base_sha)
+        self.assertEqual(result[0]["deployed_image"], image)
+

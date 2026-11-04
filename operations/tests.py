@@ -127,10 +127,18 @@ class OperationsApiTests(TestCase):
 
     def test_dashboard_requires_ops_token_and_returns_inventory(self):
         self.assertEqual(self.client.get(reverse("operations:dashboard")).status_code, 401)
+        resolved = Incident.objects.create(
+            project=self.project, server=self.server, dedupe_key="history",
+            title="Recovered", message="Healthy again", status=Incident.Status.RESOLVED,
+            resolved_at=timezone.now(),
+        )
         _, token = MobileAccessToken.issue(user=self.admin, device_name="test")
         response = self.client.get(reverse("operations:dashboard"), HTTP_AUTHORIZATION=f"Ops-Token {token}")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["summary"]["projects"], 1)
+        self.assertEqual(response.json()["summary"]["open_incidents"], 0)
+        self.assertEqual(response.json()["incidents"], [])
+        self.assertEqual(response.json()["recent_resolved_incidents"][0]["id"], resolved.pk)
 
     def test_dashboard_returns_project_specific_latest_usage(self):
         ProjectMetricSnapshot.objects.create(
@@ -565,6 +573,9 @@ class OperationsApiTests(TestCase):
         self.assertEqual(metric.running_container_count, 1)
 
     def test_device_registration_never_exposes_other_devices(self):
+        legacy = MobileDevice.objects.create(
+            user=self.admin, device_id="android-build-id", fcm_token="secret-fcm-token",  # noqa: S106
+        )
         token = self._login()
         response = self.client.post(
             reverse("operations:device-registration"),
@@ -573,7 +584,10 @@ class OperationsApiTests(TestCase):
             HTTP_AUTHORIZATION=f"Ops-Token {token}",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(MobileDevice.objects.get().user, self.admin)
+        self.assertEqual(MobileDevice.objects.get(is_active=True).user, self.admin)
+        legacy.refresh_from_db()
+        self.assertFalse(legacy.is_active)
+        self.assertEqual(legacy.fcm_token, "")
         self.assertNotIn("fcm_token", response.json())
 
     @patch("operations.views.probe_project")
@@ -611,6 +625,35 @@ class OperationsApiTests(TestCase):
         incident.refresh_from_db()
         self.assertEqual(incident.status, Incident.Status.ACKNOWLEDGED)
         self.assertEqual(incident.acknowledged_by, self.admin)
+        self.assertEqual(incident.events.get().kind, "acknowledged")
+
+    def test_incident_center_groups_observations_and_filters_timeline(self):
+        from operations.incidents import observe_incident
+
+        key = "project:test:health"
+        detail = {"project": self.project, "title": "Outage", "message": "Probe failed", "severity": "critical"}
+        opened = observe_incident(key, problem=True, **detail)
+        self.assertIsNone(observe_incident(key, problem=True, **detail))
+        resolved = observe_incident(key, problem=False)
+        reopened = observe_incident(key, problem=True, **detail)
+        self.assertEqual(opened.incident_id, resolved.incident_id)
+        self.assertEqual(opened.incident_id, reopened.incident_id)
+        self.assertEqual(Incident.objects.filter(dedupe_key=key).count(), 1)
+        auth = {"HTTP_AUTHORIZATION": f"Ops-Token {self._login()}"}
+        cases = self.client.get(reverse("operations:incident-list"), {"severity": "critical"}, **auth).json()
+        self.assertEqual(cases["results"][0]["occurrence_count"], 3)
+        self.assertEqual(self.client.get(reverse("operations:incident-list"), {"severity": "info"}, **auth).json()["count"], 0)
+        timeline = self.client.get(reverse("operations:incident-detail", args=[opened.incident_id]), **auth).json()
+        self.assertEqual([event["kind"] for event in timeline["events"]], ["reopened", "resolved", "opened"])
+
+    def test_quiet_hours_are_validated_and_belong_to_authenticated_account(self):
+        endpoint = reverse("operations:incident-preferences")
+        auth = {"HTTP_AUTHORIZATION": f"Ops-Token {self._login()}"}
+        settings = {"quiet_start_minute": 1320, "quiet_end_minute": 420}
+        self.assertEqual(self.client.put(endpoint, settings, content_type="application/json", **auth).json(), settings)
+        invalid = {"quiet_start_minute": 420, "quiet_end_minute": 420}
+        self.assertEqual(self.client.put(endpoint, invalid, content_type="application/json", **auth).status_code, 400)
+        self.assertEqual(self.client.get(endpoint, **auth).json(), settings)
 
     @override_settings(OPERATIONS_CAPACITY_SUSTAINED_SAMPLES=3, CPU_ALERT_PERCENT=80)
     @patch("operations.services.enqueue_named_task")
@@ -661,7 +704,7 @@ class OperationsApiTests(TestCase):
         self.assertIn("worker إضافي", incident.message)
         enqueue_task.assert_called_once_with(
             "operations.tasks.send_incident_push_task",
-            args=(incident.pk,),
+            args=(incident.pk, incident.events.get().pk),
         )
 
     @patch("operations.views.all_deployment_states")

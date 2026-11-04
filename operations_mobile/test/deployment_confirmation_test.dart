@@ -42,19 +42,62 @@ class _DeploymentApi extends OperationsApi {
   final DeploymentInfo release;
   final requests = <Map<String, Object>>[];
   final pending = Completer<DeploymentInfo>();
+  bool offline = false;
+  IncidentPreferences preferences = const IncidentPreferences(null, null);
 
   @override
-  Future<DashboardData> dashboard() async => DashboardData.fromJson({
-    'summary': {'projects': 1, 'healthy_projects': 1},
-    'servers': [],
-    'incidents': [],
-    'current_user': {
-      'id': 2,
-      'name': 'مشغل العمليات',
-      'role': canRunActions ? 'operator' : 'viewer',
-      'capabilities': ['view', if (canRunActions) 'run_actions'],
-    },
+  Future<IncidentPreferences> incidentPreferences() async => preferences;
+
+  @override
+  Future<void> saveIncidentPreferences(IncidentPreferences preferences) async {
+    this.preferences = preferences;
+  }
+
+  IncidentInfo get _resolved => IncidentInfo.fromJson({
+    'id': 8,
+    'status': 'resolved',
+    'title': 'عودة الخدمة',
+    'severity': 'info',
   });
+
+  @override
+  Future<IncidentPage> incidentCases({
+    String severity = '',
+    int offset = 0,
+  }) async => IncidentPage(
+    severity.isEmpty || severity == 'info' ? [_resolved] : [],
+    null,
+  );
+
+  @override
+  Future<IncidentTimeline> incidentTimeline(int id, {int offset = 0}) async =>
+      IncidentTimeline(_resolved, [
+        const IncidentEventInfo('تم الحل', 'info', '', null),
+      ], null);
+
+  @override
+  Future<DashboardData> dashboard() async {
+    if (offline) throw const ApiException('تعذر الاتصال');
+    return DashboardData.fromJson({
+      'summary': {'projects': 1, 'healthy_projects': 1},
+      'servers': [],
+      'incidents': [],
+      'recent_resolved_incidents': [
+        {
+          'id': 8,
+          'status': 'resolved',
+          'title': 'عودة الخدمة',
+          'severity': 'info',
+        },
+      ],
+      'current_user': {
+        'id': 2,
+        'name': 'مشغل العمليات',
+        'role': canRunActions ? 'operator' : 'viewer',
+        'capabilities': ['view', if (canRunActions) 'run_actions'],
+      },
+    });
+  }
 
   @override
   Future<DeploymentOverview> deploymentStatus() async => DeploymentOverview(
@@ -111,6 +154,69 @@ void main() {
     final font = FontLoader('Tajawal')
       ..addFont(rootBundle.load('assets/fonts/Tajawal-Regular.ttf'));
     await font.load();
+  });
+
+  testWidgets('refresh failure labels cached health on a narrow phone', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(375, 900);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final api = _DeploymentApi();
+    await tester.pumpWidget(_app(api));
+    await tester.pumpAndSettle();
+    api.offline = true;
+    await tester.tap(find.byTooltip('تحديث الحالة'));
+    await tester.pumpAndSettle();
+    expect(find.text('تُعرض آخر قراءة ناجحة'), findsOneWidget);
+    expect(find.text('حالة المشاريع حسب آخر قراءة'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    api.offline = false;
+    await tester.tap(find.byTooltip('إعادة التحديث'));
+    await tester.pumpAndSettle();
+    expect(find.text('تُعرض آخر قراءة ناجحة'), findsNothing);
+  });
+
+  testWidgets('incident tap focuses an already resolved incident', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(_DeploymentApi()));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DashboardScreen)),
+    );
+    container.read(incidentNotificationProvider.notifier).state = 8;
+    await tester.pumpAndSettle();
+    expect(find.text('التنبيه المحدد'), findsOneWidget);
+    expect(find.text('عودة الخدمة'), findsOneWidget);
+    expect(find.text('تسجيل الاطلاع'), findsNothing);
+    await tester.tap(find.text('الخط الزمني').first);
+    await tester.pumpAndSettle();
+    expect(find.text('الخط الزمني للحالة'), findsOneWidget);
+    expect(find.text('تم الحل · معلومة'), findsOneWidget);
+  });
+
+  testWidgets('incident severity filter and quiet hours persist', (
+    tester,
+  ) async {
+    final api = _DeploymentApi();
+    await tester.pumpWidget(_app(api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('التنبيهات'));
+    await tester.pumpAndSettle();
+    expect(find.text('عودة الخدمة'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'حرج'));
+    await tester.pumpAndSettle();
+    expect(find.text('لا توجد حالات مطابقة'), findsOneWidget);
+    await tester.tap(find.text('ساعات الهدوء'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('حفظ'));
+    await tester.pumpAndSettle();
+    expect(api.preferences.start, 1320);
+    expect(api.preferences.end, 420);
   });
 
   testWidgets('cancel, back and barrier dismissal never send a deployment', (

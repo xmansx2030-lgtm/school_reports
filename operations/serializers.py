@@ -104,7 +104,10 @@ class IncidentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Incident
-        fields = ("id", "title", "message", "severity", "status", "project_name", "opened_at", "acknowledged_at", "resolved_at")
+        fields = (
+            "id", "title", "message", "severity", "status", "project_name", "opened_at",
+            "acknowledged_at", "resolved_at", "last_seen_at", "occurrence_count",
+        )
 
 
 class HealthCheckSerializer(serializers.ModelSerializer):

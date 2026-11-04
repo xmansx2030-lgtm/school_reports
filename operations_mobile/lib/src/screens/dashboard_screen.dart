@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import '../state.dart';
 import '../widgets/deployment_confirmation.dart';
 import '../widgets/status_widgets.dart';
 import 'accounts_screen.dart';
+import 'incident_center.dart';
 import 'change_password_screen.dart';
 import 'payment_links_screen.dart';
 import 'project_screen.dart';
@@ -22,8 +25,29 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with WidgetsBindingObserver {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (ref.read(incidentNotificationProvider) != null) _index = 2;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(ref.read(dashboardProvider.notifier).refresh(silent: true));
+    unawaited(ref.read(notificationProvider).initialize());
+  }
 
   static const _titles = ['نظرة عامة', 'الخوادم', 'التنبيهات', 'الحساب'];
   static const _subtitles = [
@@ -35,9 +59,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(incidentNotificationProvider, (_, id) {
+      if (id == null) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      setState(() => _index = 2);
+      unawaited(ref.read(dashboardProvider.notifier).refresh(silent: true));
+    });
     final dashboard = ref.watch(dashboardProvider);
     final data = dashboard.asData?.value;
     final openIncidents = data?.openIncidentCount ?? 0;
+    final isCurrent =
+        data != null &&
+        ref.read(dashboardProvider.notifier).refreshError == null;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 76,
@@ -54,17 +87,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF58D68D),
+                  decoration: BoxDecoration(
+                    color: !isCurrent
+                        ? const Color(0xFFB9CAC2)
+                        : openIncidents > 0
+                        ? OpsColors.gold
+                        : const Color(0xFF58D68D),
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  _subtitles[_index],
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFFB9CAC2),
+                Flexible(
+                  child: Text(
+                    _subtitles[_index],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFFB9CAC2),
+                    ),
                   ),
                 ),
               ],
@@ -128,11 +169,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _tabBody(DashboardData data) {
+    final refreshError = ref.read(dashboardProvider.notifier).refreshError;
     final body = switch (_index) {
       1 => _serversTab(data),
-      2 => [_IncidentsPanel(data: data)],
+      2 => [
+        IncidentCenter(selectedId: ref.watch(incidentNotificationProvider)),
+      ],
       3 => [_AccountTab(user: data.currentUser)],
-      _ => _overviewTab(data),
+      _ => _overviewTab(data, stale: refreshError != null),
     };
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -146,7 +190,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               constraints: const BoxConstraints(maxWidth: 900),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: body,
+                children: [
+                  if (refreshError != null) ...[
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.cloud_off_outlined),
+                        title: const Text('تُعرض آخر قراءة ناجحة'),
+                        subtitle: Text(refreshError),
+                        trailing: IconButton(
+                          tooltip: 'إعادة التحديث',
+                          onPressed: _refresh,
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  ...body,
+                ],
               ),
             ),
           ),
@@ -158,20 +219,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _refresh() async {
     final controller = ref.read(dashboardProvider.notifier);
     await controller.refresh();
+    if (!mounted) return;
     ref.invalidate(deploymentProvider);
-    if (mounted && controller.refreshError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${controller.refreshError} تبقى آخر قراءة ناجحة معروضة.',
-          ),
-        ),
-      );
-    }
+    ref.invalidate(incidentCasesProvider);
+    ref.invalidate(incidentTimelineProvider);
   }
 
-  List<Widget> _overviewTab(DashboardData data) => [
-    _Overview(data: data),
+  List<Widget> _overviewTab(DashboardData data, {required bool stale}) => [
+    _Overview(data: data, stale: stale),
     if (data.currentUser.can('view_payment_links')) ...[
       const SizedBox(height: 16),
       const _PaymentLinksLauncher(),
@@ -439,11 +494,13 @@ class _ThemeSelector extends StatelessWidget {
 }
 
 class _Overview extends StatelessWidget {
-  const _Overview({required this.data});
+  const _Overview({required this.data, required this.stale});
   final DashboardData data;
+  final bool stale;
   @override
   Widget build(BuildContext context) {
     final allHealthy =
+        !stale &&
         data.projectCount > 0 &&
         data.healthyProjectCount == data.projectCount &&
         data.openIncidentCount == 0;
@@ -482,7 +539,9 @@ class _Overview extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      allHealthy
+                      stale
+                          ? 'حالة المشاريع حسب آخر قراءة'
+                          : allHealthy
                           ? 'جميع المشاريع تعمل بصورة طبيعية'
                           : 'توجد حالة تحتاج إلى المتابعة',
                       style: const TextStyle(
@@ -493,7 +552,7 @@ class _Overview extends StatelessWidget {
                     ),
                     if (data.generatedAt != null)
                       Text(
-                        'آخر مزامنة ${DateFormat('HH:mm:ss').format(data.generatedAt!)}',
+                        'آخر مزامنة ${DateFormat('dd/MM HH:mm:ss').format(data.generatedAt!.toLocal())}',
                         style: const TextStyle(color: Color(0xFFC7D8D0)),
                       ),
                   ],
@@ -1256,112 +1315,6 @@ class _ProjectRow extends StatelessWidget {
 
   static String _usage(double? value) =>
       value == null ? '—' : '${value.toStringAsFixed(1)}%';
-}
-
-class _IncidentsPanel extends ConsumerWidget {
-  const _IncidentsPanel({required this.data});
-  final DashboardData data;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(
-                Icons.notifications_active_outlined,
-                color: context.ops.danger,
-              ),
-              const SizedBox(width: 9),
-              Text(
-                'التنبيهات المفتوحة',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  color: context.ops.ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        if (data.incidents.isEmpty)
-          const EmptyState(
-            icon: Icons.notifications_none,
-            title: 'لا توجد تنبيهات',
-            message: 'ستظهر هنا أي حالة تحتاج إلى تدخل.',
-          )
-        else
-          ...data.incidents.map(
-            (incident) => Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: incident.severity == 'critical'
-                      ? context.ops.dangerSoft
-                      : context.ops.goldSoft,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: context.ops.lineSoft),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      incident.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: context.ops.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      incident.message,
-                      style: TextStyle(color: context.ops.slate),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            incident.projectName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        if (data.currentUser.can('acknowledge_incidents'))
-                          TextButton.icon(
-                            onPressed: () async {
-                              try {
-                                await ref
-                                    .read(dashboardProvider.notifier)
-                                    .acknowledge(incident.id);
-                              } on ApiException catch (error) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(error.message)),
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.done, size: 18),
-                            label: const Text('تم الاطلاع'),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        const SizedBox(height: 10),
-      ],
-    ),
-  );
 }
 
 class _ErrorView extends StatelessWidget {

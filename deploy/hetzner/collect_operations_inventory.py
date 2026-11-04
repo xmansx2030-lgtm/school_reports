@@ -195,10 +195,12 @@ def _repository(labels: dict) -> str:
         return ""
 
 
-def _deployed_sha(labels: dict, image: str = "") -> str:
+def _deployed_sha(labels: dict, image: str = "", *, release_sha: str = "") -> str:
     tag = image.rsplit(":", 1)[-1]
     if re.fullmatch(r"[0-9a-f]{40}", tag):
         return tag
+    if re.fullmatch(r"[0-9a-f]{40}", release_sha):
+        return release_sha
     revision = str(labels.get("org.opencontainers.image.revision") or "").strip().lower()
     if re.fullmatch(r"[0-9a-f]{40}", revision):
         return revision
@@ -398,7 +400,15 @@ def _docker_inventory(memory_total: float) -> list[dict]:
             candidate = (_image_priority(service=service, labels=labels), image)
             if candidate[0] > deployed_images.get(compose_project, (0, ""))[0]:
                 deployed_images[compose_project] = candidate
-                deployed_revisions[compose_project] = _deployed_sha(labels, image)
+                release_sha = ""
+                if compose_project in {"school-reports", "school_reports"} and service == "web":
+                    # Compose pins the GitHub base revision even when the image includes a local hotfix.
+                    release_sha = next(
+                        (entry.removeprefix("RELEASE_SHA=") for entry in config.get("Env") or ()
+                         if entry.startswith("RELEASE_SHA=")),
+                        "",
+                    )
+                deployed_revisions[compose_project] = _deployed_sha(labels, image, release_sha=release_sha)
 
     return [
         {

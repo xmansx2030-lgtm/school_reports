@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from core.task_dispatch import enqueue_named_task
 
+from .incidents import observe_incident
 from .models import HealthCheck, Incident, ManagedProject, ManagedServer, ManagedService, ServerMetricSnapshot
 from .task_names import SEND_INCIDENT_PUSH_TASK
 
@@ -247,25 +248,17 @@ def probe_project(project: ManagedProject) -> HealthCheck:
         )
         _update_service_health(project, health_payload, project_ok=ok, checked_at=now)
 
-        key = f"project:{project.pk}:health"
-        open_incident = Incident.objects.filter(dedupe_key=key, status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED)).first()
-        new_incident = None
-        if not ok and failures >= 2 and open_incident is None:
-            new_incident = Incident.objects.create(
-                project=project,
-                server=project.server,
-                dedupe_key=key,
-                title=f"تعذر الوصول إلى {project.name}",
-                message=f"فشل فحص الصحة مرتين متتاليتين. الرمز: {error_code or status_code or 'unknown'}.",
-                severity=Incident.Severity.CRITICAL,
-            )
-        elif ok and open_incident is not None:
-            open_incident.status = Incident.Status.RESOLVED
-            open_incident.resolved_at = now
-            open_incident.save(update_fields=("status", "resolved_at"))
-            new_incident = open_incident
-    if new_incident is not None and project.alerts_enabled:
-        enqueue_named_task(SEND_INCIDENT_PUSH_TASK, args=(new_incident.pk,))
+        event = observe_incident(
+            f"project:{project.pk}:health",
+            problem=not ok and failures >= 2,
+            can_resolve=ok,
+            project=project, server=project.server,
+            title=f"تعذر الوصول إلى {project.name}",
+            message=f"فشل فحص الصحة مرتين متتاليتين. الرمز: {error_code or status_code or 'unknown'}.",
+            severity=Incident.Severity.CRITICAL,
+        )
+    if event is not None and project.alerts_enabled:
+        enqueue_named_task(SEND_INCIDENT_PUSH_TASK, args=(event.incident_id, event.pk))
     return check
 
 
@@ -318,31 +311,16 @@ def capture_server_metrics(server: ManagedServer, report: dict) -> ServerMetricS
             last_checked_at=now,
         )
     key = f"server:{server.pk}:{'host-capacity' if source == ServerMetricSnapshot.Source.HOST else 'capacity'}"
-    open_incident = Incident.objects.filter(
-        dedupe_key=key,
-        status__in=(Incident.Status.OPEN, Incident.Status.ACKNOWLEDGED),
-    ).first()
-    notify_incident = None
     alerts, evaluation_summary, complete = _capacity_pressure_messages(server, source)
     severity = Incident.Severity.CRITICAL if any("القرص" in alert for alert in alerts) else Incident.Severity.WARNING
-    if alerts and open_incident is None:
-        notify_incident = Incident.objects.create(
-            server=server,
-            dedupe_key=key,
-            title=f"ضغط مرتفع على {server.name}",
-            message=("\n\n".join(alerts) + f"\n\n{evaluation_summary}")[:2000],
-            severity=severity,
-        )
-    elif alerts and open_incident is not None:
-        open_incident.title = f"ضغط مرتفع على {server.name}"
-        open_incident.message = ("\n\n".join(alerts) + f"\n\n{evaluation_summary}")[:2000]
-        open_incident.severity = severity
-        open_incident.save(update_fields=("title", "message", "severity"))
-    elif not alerts and complete and open_incident is not None:
-        open_incident.status = Incident.Status.RESOLVED
-        open_incident.resolved_at = now
-        open_incident.save(update_fields=("status", "resolved_at"))
-        notify_incident = open_incident
-    if notify_incident is not None:
-        enqueue_named_task(SEND_INCIDENT_PUSH_TASK, args=(notify_incident.pk,))
+    event = observe_incident(
+        key,
+        problem=bool(alerts), can_resolve=complete,
+        server=server,
+        title=f"ضغط مرتفع على {server.name}",
+        message=("\n\n".join(alerts) + f"\n\n{evaluation_summary}")[:2000],
+        severity=severity,
+    )
+    if event is not None:
+        enqueue_named_task(SEND_INCIDENT_PUSH_TASK, args=(event.incident_id, event.pk))
     return snapshot

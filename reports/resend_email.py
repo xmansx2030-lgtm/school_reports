@@ -284,28 +284,26 @@ def send_platform_email(
     try:
         response = _api_request("/emails", method="POST", payload=payload, idempotency_key=idempotency_key)
         provider_id = str(response.get("id") or "").strip()
-        email.provider_id = provider_id or None
-        email.status = PlatformEmail.Status.SENT
-        email.sent_at = now
-        email.last_event_at = now
-        email.provider_payload = {"idempotency_key": idempotency_key, "send_response": response}
-        email.save(
-            update_fields=(
-                "provider_id",
-                "status",
-                "sent_at",
-                "last_event_at",
-                "provider_payload",
-                "updated_at",
+        with transaction.atomic():
+            email = PlatformEmail.objects.select_for_update().get(pk=email.pk)
+            email.provider_id = provider_id or email.provider_id
+            if email.status == PlatformEmail.Status.QUEUED:
+                email.status = PlatformEmail.Status.SENT
+                email.last_event_at = now
+            email.sent_at = now
+            email.provider_payload = {"idempotency_key": idempotency_key, "send_response": response}
+            email.save(
+                update_fields=(
+                    "provider_id", "status", "sent_at", "last_event_at", "provider_payload", "updated_at",
+                )
             )
-        )
-        for item in attachments or []:
-            PlatformEmailAttachment.objects.create(
-                email=email,
-                filename=item["filename"],
-                content_type=item.get("content_type", ""),
-                size=item.get("size", 0),
-            )
+            for item in attachments or []:
+                PlatformEmailAttachment.objects.create(
+                    email=email,
+                    filename=item["filename"],
+                    content_type=item.get("content_type", ""),
+                    size=item.get("size", 0),
+                )
         return email
     except ResendError as exc:
         email.status = PlatformEmail.Status.FAILED
@@ -383,13 +381,19 @@ EVENT_STATUS_MAP = {
 }
 
 
+@transaction.atomic
 def process_webhook_event(event: dict, provider_event_id: str) -> PlatformEmailEvent:
     event_type = str(event.get("type") or "")
-    data = event.get("data") if isinstance(event.get("data"), dict) else {}
+    data = event.get("data")
+    if not isinstance(data, dict):
+        data = {}
     occurred_at = _parse_datetime(event.get("created_at"))
-    existing = PlatformEmailEvent.objects.filter(provider_event_id=provider_event_id).first()
-    if existing:
-        return existing
+    recorded, created = PlatformEmailEvent.objects.get_or_create(
+        provider_event_id=provider_event_id,
+        defaults={"event_type": event_type or "unknown", "occurred_at": occurred_at, "payload": event},
+    )
+    if not created:
+        return recorded
 
     email = None
     provider_id = str(data.get("email_id") or data.get("id") or "").strip()
@@ -403,7 +407,8 @@ def process_webhook_event(event: dict, provider_event_id: str) -> PlatformEmailE
                 provider_id,
             )
     elif provider_id:
-        email = PlatformEmail.objects.filter(provider_id=provider_id).first()
+        messages = PlatformEmail.objects.select_for_update()
+        email = messages.filter(provider_id=provider_id).first()
         if email is None:
             if not _event_is_for_platform_mail(event_type, data):
                 logger.info(
@@ -413,27 +418,45 @@ def process_webhook_event(event: dict, provider_event_id: str) -> PlatformEmailE
                 )
             else:
                 sender_name, sender_email = parseaddr(str(data.get("from") or ""))
-                email = PlatformEmail.objects.create(
-                    provider_id=provider_id,
-                    direction=PlatformEmail.Direction.OUTBOUND,
-                    status=EVENT_STATUS_MAP.get(event_type, PlatformEmail.Status.SENT),
-                    from_email=sender_email or "unknown@example.invalid",
-                    from_name=sender_name,
-                    to_emails=_addresses(data.get("to")),
-                    cc_emails=_addresses(data.get("cc")),
-                    bcc_emails=_addresses(data.get("bcc")),
-                    subject=str(data.get("subject") or "(رسالة مرسلة من المنصة)")[:500],
-                    snippet="سُجلت الرسالة من أحداث مزود البريد.",
-                    is_read=True,
-                    sent_at=occurred_at,
-                    last_event_at=occurred_at,
-                    provider_payload=data,
-                )
+                tags = data.get("tags")
+                if isinstance(tags, dict) and tags.get("source") == "platform_mailbox":
+                    local_id = str(tags.get("local_id") or "")
+                    if re.fullmatch(r"[1-9][0-9]{0,17}", local_id):
+                        email = messages.filter(
+                            pk=int(local_id), direction=PlatformEmail.Direction.OUTBOUND, from_email__iexact=sender_email,
+                        ).first()
+                        if email and email.provider_id is None:
+                            email.provider_id = provider_id
+                            email.save(update_fields=("provider_id", "updated_at"))
+                        elif email and email.provider_id != provider_id:
+                            email = None
+                if email is None:
+                    email, _ = messages.get_or_create(
+                        provider_id=provider_id,
+                        defaults={
+                            "direction": PlatformEmail.Direction.OUTBOUND,
+                            "status": EVENT_STATUS_MAP.get(event_type, PlatformEmail.Status.SENT),
+                            "from_email": sender_email or "unknown@example.invalid",
+                            "from_name": sender_name,
+                            "to_emails": _addresses(data.get("to")),
+                            "cc_emails": _addresses(data.get("cc")),
+                            "bcc_emails": _addresses(data.get("bcc")),
+                            "subject": str(data.get("subject") or "(رسالة مرسلة من المنصة)")[:500],
+                            "snippet": "سُجلت الرسالة من أحداث مزود البريد.",
+                            "is_read": True,
+                            "sent_at": occurred_at,
+                            "last_event_at": occurred_at,
+                            "provider_payload": data,
+                        },
+                    )
 
     if email is not None:
         update_fields = ["last_event_at", "updated_at"]
         email.last_event_at = occurred_at
-        if event_type in EVENT_STATUS_MAP:
+        # Resend can deliver the initial acceptance event after a delivery outcome.
+        if event_type in EVENT_STATUS_MAP and (
+            event_type != "email.sent" or email.status in (PlatformEmail.Status.QUEUED, PlatformEmail.Status.SENT)
+        ):
             email.status = EVENT_STATUS_MAP[event_type]
             update_fields.append("status")
         if event_type == "email.delivered":
@@ -455,13 +478,10 @@ def process_webhook_event(event: dict, provider_event_id: str) -> PlatformEmailE
             update_fields.append("failure_reason")
         email.save(update_fields=tuple(dict.fromkeys(update_fields)))
 
-    return PlatformEmailEvent.objects.create(
-        provider_event_id=provider_event_id,
-        email=email,
-        event_type=event_type or "unknown",
-        occurred_at=occurred_at,
-        payload=event,
-    )
+    if email is not None:
+        recorded.email = email
+        recorded.save(update_fields=("email",))
+    return recorded
 
 
 def sync_recent_received_emails(limit: int = 50) -> tuple[int, int]:
